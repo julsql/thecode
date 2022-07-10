@@ -1,0 +1,30 @@
+<resources>
+
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Theme.AppCompat.DayNight.DarkActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">@color/colorPrimaryDark</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+        <item name="android:textColorPrimary">@color/colorText</item>
+    </style>
+
+    <style name="TickMarkSeekBar" parent="Widget.AppCompat.SeekBar.Discrete">
+        <item name="tickMark">@drawable/tick_mark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+    </style>
+
+    <style name="AlertDialogCustom" parent="Theme.AppCompat.Dialog.Alert">
+        <!-- Used for the buttons and links-->
+        <item name="colorAccent">@color/colorAccent</item>
+        <!-- Used for the title and text -->
+        <item name="android:textColorPrimary">@color/colorText</item>
+        <!-- Used for the background -->
+        <item name="android:background">@color/colorPrimaryDark</item>
+        <!-- Used for the selectItem text -->
+        <item name="android:textColorAlertDialogListItem">@color/colorText</item>
+        <!-- Used for the selectItem checkboxes -->
+        <item name="colorControlNormal">@color/colorText</item>
+    </style>
+
+</resources>

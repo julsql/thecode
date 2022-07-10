@@ -1,0 +1,17 @@
+<resources>
+    <string name="app_name">TheCode</string>
+    <string name="info_app">"      Cette application vous permet de générer des mots de passe, non pas aléatoirement, mais en fonction du nom du site où vous souhaitez vous connecter.
+
+      Par exemple, vous désirez changer le mot de passe de votre compte Google. Vous devez choisir entre une clef à se souvenir ou une question personnelle, puis entrer 'google' dans « nom du site », les caractères souhaités, la longueur du mot de passe, et le code sera généré.
+
+      Ensuite, pour le retrouver, vous n’avez qu’à reprendre l’application, toujours mettre 'google' dans nom du site, les mêmes informations, et vous obtiendrez le même mot de passe.
+
+      Attention, pour ne pas confondre les O et les zéros, il n'y a jamais de zéro dans les mots de passe générés.
+
+      Le bouton à côté du mot de passe généré sert à copier le mot de passe dans votre presse-papier.
+
+      Pour plus d'information sur la sécurité des mots de passe, vous pouvez consulter ce site :
+      * https://www.ssi.gouv.fr/administration/precautions-elementaires/calculer-la-force-dun-mot-de-passe/
+      "</string>
+    <string name="info_questions">"Vous pouvez choisir entre coder avec une clef dont vous devez vous souvenir, ou entrer une information personnelle qui servira de clef."</string>
+</resources>

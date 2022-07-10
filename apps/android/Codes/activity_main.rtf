@@ -1,0 +1,456 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2513
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica-Oblique;\f1\fswiss\fcharset0 Helvetica;\f2\fswiss\fcharset0 Helvetica-Bold;
+}
+{\colortbl;\red255\green255\blue255;\red255\green255\blue255;\red255\green255\blue255;\red193\green161\blue157;
+\red90\green254\blue7;\red25\green173\blue186;\red250\green78\blue8;\red236\green254\blue73;\red162\green102\blue234;
+}
+{\*\expandedcolortbl;;\cssrgb\c100000\c100000\c99985;\cssrgb\c100000\c100000\c100000\c0;\cssrgb\c80418\c69465\c67753;
+\cssrgb\c39842\c97486\c0;\cssrgb\c4448\c72763\c77700;\cssrgb\c99490\c39861\c0;\cssrgb\c93975\c98373\c35430;\cssrgb\c69973\c50384\c93377;
+}
+\paperw11900\paperh16840\margl1440\margr1440\vieww10800\viewh8400\viewkind0
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+
+\f0\i\fs24 \cf2 \cb3 <?
+\f1\i0 \cf4 xml version\cf5 ="1.0" \cf4 encoding\cf5 ="utf-8"
+\f0\i \cf2 ?>\
+
+\f1\i0 \cf6 <
+\f2\b \cf7 ScrollView 
+\f1\b0 \cf4 xmlns:\cf8 android\cf5 ="http://schemas.android.com/apk/res/android"\
+    \cf4 xmlns:\cf8 tools\cf5 ="http://schemas.android.com/tools"\
+    \cf8 android\cf4 :layout_width\cf5 ="match_parent"\
+    \cf8 android\cf4 :layout_height\cf5 ="match_parent"\
+    \cf8 android\cf4 :background\cf5 ="@color/colorPrimaryDark"\
+    \cf8 android\cf4 :clickable\cf5 ="true"\
+    \cf8 android\cf4 :clipChildren\cf5 ="false"\
+    \cf8 android\cf4 :orientation\cf5 ="vertical"\
+    \cf8 android\cf4 :scrollbarStyle\cf5 ="insideOverlay"\
+    \cf8 android\cf4 :focusable\cf5 ="true"\cf6 >\
+\
+    <
+\f2\b \cf7 LinearLayout\
+        
+\f1\b0 \cf8 android\cf4 :layout_width\cf5 ="match_parent"\
+        \cf8 android\cf4 :layout_height\cf5 ="wrap_content"\
+        \cf8 android\cf4 :orientation\cf5 ="vertical"\cf6 >\
+\
+        <
+\f2\b \cf7 RadioGroup\
+            
+\f1\b0 \cf8 android\cf4 :id\cf5 ="@+id/questionGroup"\
+            \cf8 android\cf4 :layout_width\cf5 ="fill_parent"\
+            \cf8 android\cf4 :layout_height\cf5 ="wrap_content"\
+            \cf8 android\cf4 :gravity\cf5 ="center"\
+            \cf8 android\cf4 :layout_marginTop\cf5 ="15dp"\
+            \cf8 android\cf4 :checkedButton\cf5 ="@+id/radio2"\
+            \cf8 android\cf4 :orientation\cf5 ="horizontal"\cf6 >\
+\
+        <
+\f2\b \cf7 Button\
+            
+\f1\b0 \cf8 android\cf4 :id\cf5 ="@+id/questionButton"\
+            \cf8 android\cf4 :layout_width\cf5 ="wrap_content"\
+            \cf8 android\cf4 :layout_height\cf5 ="30dp"\
+            \cf8 android\cf4 :background\cf5 ="@drawable/button"\
+            \cf8 android\cf4 :textAllCaps\cf5 ="false"\
+            \cf8 android\cf4 :text\cf5 ="   Question personnelle   "\
+            \cf8 android\cf4 :textColor\cf5 ="@color/colorPrimaryDark"\
+            \cf8 android\cf4 :textSize\cf5 ="20sp" \cf6 />\
+\
+        </
+\f2\b \cf7 RadioGroup
+\f1\b0 \cf6 >\
+\
+        <
+\f2\b \cf7 RadioGroup\
+            
+\f1\b0 \cf8 android\cf4 :id\cf5 ="@+id/groupClef"\
+            \cf8 android\cf4 :layout_width\cf5 ="fill_parent"\
+            \cf8 android\cf4 :layout_height\cf5 ="wrap_content"\
+            \cf8 android\cf4 :layout_marginStart\cf5 ="20dp"\
+            \cf8 android\cf4 :layout_marginLeft\cf5 ="20dp"\
+            \cf8 android\cf4 :layout_marginTop\cf5 ="5dp"\
+            \cf8 android\cf4 :checkedButton\cf5 ="@+id/radio2"\
+            \cf8 android\cf4 :orientation\cf5 ="horizontal"\cf6 >\
+\
+            <
+\f2\b \cf7 TextView\
+                
+\f1\b0 \cf8 android\cf4 :id\cf5 ="@+id/typedecodage"\
+                \cf8 android\cf4 :layout_width\cf5 ="wrap_content"\
+                \cf8 android\cf4 :layout_height\cf5 ="wrap_content"\
+                \cf8 android\cf4 :text\cf5 ="Clef :"\
+                \cf8 android\cf4 :textColor\cf5 ="@color/colorPrimary"\
+                \cf8 android\cf4 :textSize\cf5 ="20sp" \cf6 />\
+\
+            <
+\f2\b \cf7 EditText\
+                
+\f1\b0 \cf8 android\cf4 :id\cf5 ="@+id/clefEditText"\
+                \cf8 android\cf4 :layout_width\cf5 ="fill_parent"\
+                \cf8 android\cf4 :layout_height\cf5 ="wrap_content"\
+                \cf8 android\cf4 :layout_marginLeft\cf5 ="10dp"\
+                \cf8 android\cf4 :layout_marginRight\cf5 ="10dp"\
+                \cf8 android\cf4 :autofillHints\cf5 =""\
+                \cf8 android\cf4 :hint\cf5 ="mot clef"\
+                \cf8 android\cf4 :maxLines\cf5 ="1"\
+                \cf8 android\cf4 :singleLine\cf5 ="true"\
+                \cf8 android\cf4 :textColor\cf5 ="@color/colorPrimary"\
+                \cf8 android\cf4 :textColorHint\cf5 ="@color/colorPrimary"\
+                \cf8 android\cf4 :textSize\cf5 ="17sp"\
+                \cf8 android\cf4 :typeface\cf5 ="serif"\
+                \cf8 tools\cf4 :ignore\cf5 ="LabelFor,TextFields" \cf6 />\
+            \cf9 <!--android:digits="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"-->\
+        \cf6 </
+\f2\b \cf7 RadioGroup
+\f1\b0 \cf6 >\
+\
+        <
+\f2\b \cf7 RadioGroup\
+            
+\f1\b0 \cf8 android\cf4 :id\cf5 ="@+id/groupSite"\
+            \cf8 android\cf4 :layout_width\cf5 ="fill_parent"\
+            \cf8 android\cf4 :layout_height\cf5 ="wrap_content"\
+            \cf8 android\cf4 :layout_marginStart\cf5 ="20dp"\
+            \cf8 android\cf4 :layout_marginLeft\cf5 ="20dp"\
+            \cf8 android\cf4 :layout_marginTop\cf5 ="5dp"\
+            \cf8 android\cf4 :checkedButton\cf5 ="@+id/radio2"\
+            \cf8 android\cf4 :orientation\cf5 ="horizontal"\cf6 >\
+\
+            <
+\f2\b \cf7 TextView\
+                
+\f1\b0 \cf8 android\cf4 :id\cf5 ="@+id/siteTextView"\
+                \cf8 android\cf4 :layout_width\cf5 ="wrap_content"\
+                \cf8 android\cf4 :layout_height\cf5 ="wrap_content"\
+                \cf8 android\cf4 :text\cf5 ="Nom du site :"\
+                \cf8 android\cf4 :textColor\cf5 ="@color/colorPrimary"\
+                \cf8 android\cf4 :textSize\cf5 ="20sp" \cf6 />\
+\
+            <
+\f2\b \cf7 EditText\
+                
+\f1\b0 \cf8 android\cf4 :id\cf5 ="@+id/siteEditText"\
+                \cf8 android\cf4 :layout_width\cf5 ="fill_parent"\
+                \cf8 android\cf4 :layout_height\cf5 ="wrap_content"\
+                \cf8 android\cf4 :layout_marginLeft\cf5 ="10dp"\
+                \cf8 android\cf4 :layout_marginRight\cf5 ="10dp"\
+                \cf8 android\cf4 :autofillHints\cf5 =""\
+                \cf8 android\cf4 :hint\cf5 ="nom du site"\
+                \cf8 android\cf4 :maxLines\cf5 ="1"\
+                \cf8 android\cf4 :singleLine\cf5 ="true"\
+                \cf8 android\cf4 :textColor\cf5 ="@color/colorPrimary"\
+                \cf8 android\cf4 :textColorHint\cf5 ="@color/colorPrimary"\
+                \cf8 android\cf4 :textSize\cf5 ="17sp"\
+                \cf8 android\cf4 :typeface\cf5 ="serif"\
+                \cf8 tools\cf4 :ignore\cf5 ="LabelFor,TextFields" \cf6 />\
+        </
+\f2\b \cf7 RadioGroup
+\f1\b0 \cf6 >\
+\
+        <
+\f2\b \cf7 ImageView\
+            
+\f1\b0 \cf8 android\cf4 :id\cf5 ="@+id/separate1"\
+            \cf8 android\cf4 :layout_width\cf5 ="fill_parent"\
+            \cf8 android\cf4 :layout_height\cf5 ="1dp"\
+            \cf8 android\cf4 :layout_marginLeft\cf5 ="10dp"\
+            \cf8 android\cf4 :layout_marginTop\cf5 ="15dp"\
+            \cf8 android\cf4 :layout_marginRight\cf5 ="10dp"\
+            \cf8 android\cf4 :background\cf5 ="@color/colorPrimary"\
+            \cf8 android\cf4 :gravity\cf5 ="center"\
+            \cf8 android\cf4 :textSize\cf5 ="20sp" \cf6 />\
+\
+        <
+\f2\b \cf7 TextView\
+            
+\f1\b0 \cf8 android\cf4 :id\cf5 ="@+id/caracTextView"\
+            \cf8 android\cf4 :layout_width\cf5 ="fill_parent"\
+            \cf8 android\cf4 :layout_height\cf5 ="wrap_content"\
+            \cf8 android\cf4 :layout_marginStart\cf5 ="20dp"\
+            \cf8 android\cf4 :layout_marginLeft\cf5 ="20dp"\
+            \cf8 android\cf4 :textStyle\cf5 ="normal|bold"\
+            \cf8 android\cf4 :layout_marginTop\cf5 ="10dp"\
+            \cf8 android\cf4 :text\cf5 ="Param\'e8tres du mot de passe :"\
+            \cf8 android\cf4 :textColor\cf5 ="@color/colorPrimary"\
+            \cf8 android\cf4 :textSize\cf5 ="20sp" \cf6 />\
+\
+        <
+\f2\b \cf7 RadioGroup\
+            
+\f1\b0 \cf8 android\cf4 :id\cf5 ="@+id/groupLongueur"\
+            \cf8 android\cf4 :layout_width\cf5 ="fill_parent"\
+            \cf8 android\cf4 :layout_height\cf5 ="wrap_content"\
+            \cf8 android\cf4 :layout_marginStart\cf5 ="20dp"\
+            \cf8 android\cf4 :layout_marginLeft\cf5 ="20dp"\
+            \cf8 android\cf4 :layout_marginTop\cf5 ="5dp"\
+            \cf8 android\cf4 :checkedButton\cf5 ="@+id/radio2"\
+            \cf8 android\cf4 :orientation\cf5 ="horizontal"\cf6 >\
+\
+            <
+\f2\b \cf7 TextView\
+                
+\f1\b0 \cf8 android\cf4 :id\cf5 ="@+id/longueurTextView"\
+                \cf8 android\cf4 :layout_width\cf5 ="wrap_content"\
+                \cf8 android\cf4 :layout_height\cf5 ="wrap_content"\
+                \cf8 android\cf4 :text\cf5 ="Longueur : 20"\
+                \cf8 android\cf4 :textColor\cf5 ="@color/colorPrimary"\
+                \cf8 android\cf4 :textSize\cf5 ="20sp" \cf6 />\
+\
+            <
+\f2\b \cf7 SeekBar\
+                
+\f1\b0 \cf8 android\cf4 :id\cf5 ="@+id/longueurSeekBar"\
+                \cf8 android\cf4 :theme\cf5 ="@style/TickMarkSeekBar"\
+                \cf8 android\cf4 :layout_width\cf5 ="fill_parent"\
+                \cf8 android\cf4 :layout_height\cf5 ="fill_parent"\
+                \cf8 android\cf4 :layout_marginLeft\cf5 ="0dp"\
+                \cf8 android\cf4 :layout_marginTop\cf5 ="0dp"\
+                \cf8 android\cf4 :layout_marginRight\cf5 ="0dp"\
+                \cf8 android\cf4 :maxHeight\cf5 ="1000dp"\
+                \cf8 android\cf4 :minHeight\cf5 ="1000dp"\
+                \cf8 android\cf4 :focusable\cf5 ="true"\
+                \cf8 android\cf4 :thumb\cf5 ="@drawable/thumb"\
+                \cf8 android\cf4 :indeterminate\cf5 ="false"\
+                \cf8 android\cf4 :max\cf5 ="2"\
+                \cf8 android\cf4 :progress\cf5 ="2" \cf6 />\
+            \cf9 <!--\
+            android:background="@drawable/button"\
+            android:progressBackgroundTint="@color/colorAccent"\
+            android:thumb="@drawable/thumb"\
+            android:tickMarkTint="@color/colorSecurity"\
+            android:tickMark="@drawable/thumb"\
+            android:progressTint="@color/colorAccent"\
+            -->\
+\
+        \cf6 </
+\f2\b \cf7 RadioGroup
+\f1\b0 \cf6 >\
+\
+        <
+\f2\b \cf7 TextView\
+            
+\f1\b0 \cf8 android\cf4 :id\cf5 ="@+id/caracteresTextView"\
+            \cf8 android\cf4 :layout_width\cf5 ="fill_parent"\
+            \cf8 android\cf4 :layout_height\cf5 ="wrap_content"\
+            \cf8 android\cf4 :layout_marginStart\cf5 ="20dp"\
+            \cf8 android\cf4 :layout_marginLeft\cf5 ="20dp"\
+            \cf8 android\cf4 :layout_marginTop\cf5 ="10dp"\
+            \cf8 android\cf4 :text\cf5 ="Caract\'e8res :"\
+            \cf8 android\cf4 :textColor\cf5 ="@color/colorPrimary"\
+            \cf8 android\cf4 :textSize\cf5 ="20sp" \cf6 />\
+\
+        <
+\f2\b \cf7 RadioGroup\
+            
+\f1\b0 \cf8 android\cf4 :id\cf5 ="@+id/groupMajMin"\
+            \cf8 android\cf4 :layout_width\cf5 ="fill_parent"\
+            \cf8 android\cf4 :layout_height\cf5 ="wrap_content"\
+            \cf8 android\cf4 :layout_marginTop\cf5 ="10dp"\
+            \cf8 android\cf4 :checkedButton\cf5 ="@+id/radio2"\
+            \cf8 android\cf4 :gravity\cf5 ="center"\
+            \cf8 android\cf4 :orientation\cf5 ="horizontal"\cf6 >\
+\
+            <
+\f2\b \cf7 Switch\
+                
+\f1\b0 \cf8 android\cf4 :id\cf5 ="@+id/minSwitch"\
+                \cf8 android\cf4 :layout_width\cf5 ="140dp"\
+                \cf8 android\cf4 :layout_height\cf5 ="20dp"\
+                \cf8 android\cf4 :background\cf5 ="#00FFFFFF"\
+                \cf8 android\cf4 :checked\cf5 ="true"\
+                \cf8 android\cf4 :text\cf5 ="Minuscules"\
+                \cf8 android\cf4 :textColor\cf5 ="@color/colorPrimary"\
+                \cf8 android\cf4 :textSize\cf5 ="16sp" \cf6 />\
+\
+            <
+\f2\b \cf7 Switch\
+                
+\f1\b0 \cf8 android\cf4 :id\cf5 ="@+id/majSwitch"\
+                \cf8 android\cf4 :layout_width\cf5 ="140dp"\
+                \cf8 android\cf4 :layout_height\cf5 ="20dp"\
+                \cf8 android\cf4 :layout_marginStart\cf5 ="15dp"\
+                \cf8 android\cf4 :layout_marginLeft\cf5 ="15dp"\
+                \cf8 android\cf4 :background\cf5 ="#00FFFFFF"\
+                \cf8 android\cf4 :checked\cf5 ="true"\
+                \cf8 android\cf4 :text\cf5 ="Majuscules"\
+                \cf8 android\cf4 :textColor\cf5 ="@color/colorPrimary"\
+                \cf8 android\cf4 :textSize\cf5 ="16sp" \cf6 />\
+        </
+\f2\b \cf7 RadioGroup
+\f1\b0 \cf6 >\
+\
+        <
+\f2\b \cf7 RadioGroup\
+            
+\f1\b0 \cf8 android\cf4 :id\cf5 ="@+id/groupSymChi"\
+            \cf8 android\cf4 :layout_width\cf5 ="fill_parent"\
+            \cf8 android\cf4 :layout_height\cf5 ="wrap_content"\
+            \cf8 android\cf4 :layout_marginTop\cf5 ="10dp"\
+            \cf8 android\cf4 :checkedButton\cf5 ="@+id/radio2"\
+            \cf8 android\cf4 :gravity\cf5 ="center"\
+            \cf8 android\cf4 :orientation\cf5 ="horizontal"\cf6 >\
+\
+            <
+\f2\b \cf7 Switch\
+                
+\f1\b0 \cf8 android\cf4 :id\cf5 ="@+id/symSwitch"\
+                \cf8 android\cf4 :layout_width\cf5 ="140dp"\
+                \cf8 android\cf4 :layout_height\cf5 ="20dp"\
+                \cf8 android\cf4 :background\cf5 ="#00FFFFFF"\
+                \cf8 android\cf4 :checked\cf5 ="true"\
+                \cf8 android\cf4 :text\cf5 ="Symboles"\
+                \cf8 android\cf4 :textColor\cf5 ="@color/colorPrimary"\
+                \cf8 android\cf4 :textSize\cf5 ="16sp" \cf6 />\
+\
+            <
+\f2\b \cf7 Switch\
+                
+\f1\b0 \cf8 android\cf4 :id\cf5 ="@+id/chiSwitch"\
+                \cf8 android\cf4 :layout_width\cf5 ="140dp"\
+                \cf8 android\cf4 :layout_height\cf5 ="20dp"\
+                \cf8 android\cf4 :layout_marginStart\cf5 ="15dp"\
+                \cf8 android\cf4 :layout_marginLeft\cf5 ="15dp"\
+                \cf8 android\cf4 :background\cf5 ="#00FFFFFF"\
+                \cf8 android\cf4 :checked\cf5 ="true"\
+                \cf8 android\cf4 :text\cf5 ="Chiffres"\
+                \cf8 android\cf4 :textColor\cf5 ="@color/colorPrimary"\
+                \cf8 android\cf4 :textSize\cf5 ="16sp" \cf6 />\
+            \cf9 <!--android:layout_width="130dp"-->\
+        \cf6 </
+\f2\b \cf7 RadioGroup
+\f1\b0 \cf6 >\
+\
+        <
+\f2\b \cf7 ImageView\
+            
+\f1\b0 \cf8 android\cf4 :id\cf5 ="@+id/separate"\
+            \cf8 android\cf4 :layout_width\cf5 ="fill_parent"\
+            \cf8 android\cf4 :layout_height\cf5 ="1dp"\
+            \cf8 android\cf4 :layout_marginLeft\cf5 ="10dp"\
+            \cf8 android\cf4 :layout_marginTop\cf5 ="15dp"\
+            \cf8 android\cf4 :layout_marginRight\cf5 ="10dp"\
+            \cf8 android\cf4 :background\cf5 ="@color/colorPrimary"\
+            \cf8 android\cf4 :gravity\cf5 ="center"\
+            \cf8 android\cf4 :textSize\cf5 ="20sp" \cf6 />\
+\
+        <
+\f2\b \cf7 TextView\
+            
+\f1\b0 \cf8 android\cf4 :id\cf5 ="@+id/motPasseTextView"\
+            \cf8 android\cf4 :layout_width\cf5 ="fill_parent"\
+            \cf8 android\cf4 :layout_height\cf5 ="wrap_content"\
+            \cf8 android\cf4 :layout_marginStart\cf5 ="20dp"\
+            \cf8 android\cf4 :textStyle\cf5 ="normal|bold"\
+            \cf8 android\cf4 :layout_marginLeft\cf5 ="20dp"\
+            \cf8 android\cf4 :layout_marginTop\cf5 ="10dp"\
+            \cf8 android\cf4 :text\cf5 ="Le mot de passe est :"\
+            \cf8 android\cf4 :textColor\cf5 ="@color/colorPrimary"\
+            \cf8 android\cf4 :textSize\cf5 ="20sp" \cf6 />\
+\
+        <
+\f2\b \cf7 EditText\
+            
+\f1\b0 \cf8 android\cf4 :id\cf5 ="@+id/motPasseEditText"\
+            \cf8 android\cf4 :layout_width\cf5 ="match_parent"\
+            \cf8 android\cf4 :layout_height\cf5 ="wrap_content"\
+            \cf8 android\cf4 :layout_marginLeft\cf5 ="30dp"\
+            \cf8 android\cf4 :layout_marginRight\cf5 ="50dp"\
+            \cf8 android\cf4 :focusableInTouchMode\cf5 ="false"\
+            \cf8 android\cf4 :gravity\cf5 ="center"\
+            \cf8 android\cf4 :text\cf5 =""\
+            \cf8 android\cf4 :textColor\cf5 ="@color/colorPrimary"\
+            \cf8 android\cf4 :textSize\cf5 ="18sp"\
+            \cf8 android\cf4 :typeface\cf5 ="serif"\
+            \cf8 android\cf4 :layout_marginStart\cf5 ="30dp"\
+            \cf8 android\cf4 :layout_marginEnd\cf5 ="50dp"\cf6 >\
+            \cf9 <!--android:typeface="monospace"-->\
+        \cf6 </
+\f2\b \cf7 EditText
+\f1\b0 \cf6 >\
+\
+        <
+\f2\b \cf7 RadioGroup\
+            
+\f1\b0 \cf8 android\cf4 :id\cf5 ="@+id/groupMotPasse"\
+            \cf8 android\cf4 :layout_width\cf5 ="fill_parent"\
+            \cf8 android\cf4 :layout_height\cf5 ="wrap_content"\
+            \cf8 android\cf4 :layout_marginStart\cf5 ="40dp"\
+            \cf8 android\cf4 :layout_marginLeft\cf5 ="30dp"\
+            \cf8 android\cf4 :layout_marginTop\cf5 ="-40dp"\
+            \cf8 android\cf4 :layout_marginEnd\cf5 ="20dp"\
+            \cf8 android\cf4 :layout_marginRight\cf5 ="30dp"\
+            \cf8 android\cf4 :checkedButton\cf5 ="@+id/radio2"\
+            \cf8 android\cf4 :gravity\cf5 ="right"\
+            \cf8 android\cf4 :orientation\cf5 ="horizontal"\cf6 >\
+\
+            <
+\f2\b \cf7 Button\
+                
+\f1\b0 \cf8 android\cf4 :id\cf5 ="@+id/copierButton"\
+                \cf8 android\cf4 :layout_width\cf5 ="35dp"\
+                \cf8 android\cf4 :layout_height\cf5 ="35dp"\
+                \cf8 android\cf4 :background\cf5 ="@drawable/clipboard"\
+                \cf8 android\cf4 :textColor\cf5 ="@color/colorPrimaryDark" \cf6 />\
+\
+        </
+\f2\b \cf7 RadioGroup
+\f1\b0 \cf6 >\
+\
+        <
+\f2\b \cf7 RadioGroup\
+            
+\f1\b0 \cf8 android\cf4 :id\cf5 ="@+id/groupSecurite"\
+            \cf8 android\cf4 :layout_width\cf5 ="fill_parent"\
+            \cf8 android\cf4 :layout_height\cf5 ="wrap_content"\
+            \cf8 android\cf4 :layout_marginTop\cf5 ="10dp"\
+            \cf8 android\cf4 :checkedButton\cf5 ="@+id/radio2"\
+            \cf8 android\cf4 :gravity\cf5 ="center"\
+            \cf8 android\cf4 :orientation\cf5 ="horizontal"\cf6 >\
+\
+            <
+\f2\b \cf7 TextView\
+                
+\f1\b0 \cf8 android\cf4 :id\cf5 ="@+id/securiteSimple"\
+                \cf8 android\cf4 :layout_width\cf5 ="wrap_content"\
+                \cf8 android\cf4 :layout_height\cf5 ="wrap_content"\
+                \cf8 android\cf4 :text\cf5 ="S\'e9curite :"\
+                \cf8 android\cf4 :textColor\cf5 ="@color/colorPrimary"\
+                \cf8 android\cf4 :textSize\cf5 ="20sp" \cf6 />\
+\
+            <
+\f2\b \cf7 TextView\
+                
+\f1\b0 \cf8 android\cf4 :id\cf5 ="@+id/securiteTextView"\
+                \cf8 android\cf4 :layout_width\cf5 ="wrap_content"\
+                \cf8 android\cf4 :layout_height\cf5 ="wrap_content"\
+                \cf8 android\cf4 :text\cf5 =""\
+                \cf8 android\cf4 :textColor\cf5 ="@color/colorPrimary"\
+                \cf8 android\cf4 :textSize\cf5 ="20sp" \cf6 />\
+\
+        </
+\f2\b \cf7 RadioGroup
+\f1\b0 \cf6 >\
+\
+        <
+\f2\b \cf7 SeekBar\
+            
+\f1\b0 \cf8 android\cf4 :id\cf5 ="@+id/securiteSeekBar"\
+            \cf8 android\cf4 :layout_width\cf5 ="fill_parent"\
+            \cf8 android\cf4 :layout_height\cf5 ="wrap_content"\
+            \cf8 android\cf4 :layout_marginLeft\cf5 ="50dp"\
+            \cf8 android\cf4 :layout_marginTop\cf5 ="10dp"\
+            \cf8 android\cf4 :layout_marginRight\cf5 ="50dp"\
+            \cf8 android\cf4 :thumb\cf5 ="@drawable/thumb"\
+            \cf8 android\cf4 :clickable\cf5 ="true"\
+            \cf8 android\cf4 :gravity\cf5 ="center"\
+            \cf8 android\cf4 :max\cf5 ="94"\
+            \cf8 android\cf4 :progress\cf5 ="94" \cf6 />\
+\
+    </
+\f2\b \cf7 LinearLayout
+\f1\b0 \cf6 >\
+</
+\f2\b \cf7 ScrollView
+\f1\b0 \cf6 >\
+}

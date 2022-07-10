@@ -1,0 +1,409 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/colorPrimaryDark"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <TextView
+            android:id="@+id/typeDeCodage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:layout_marginLeft="20dp"
+            android:text="Type de clef :"
+            android:textColor="@color/colorPrimary"
+            android:textSize="20sp"
+            android:layout_marginStart="20dp" />
+
+        <RadioGroup
+            android:id="@+id/groupTypeCode"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:layout_marginTop="10dp"
+            android:checkedButton="@+id/radio2"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/chiffreButton"
+                android:layout_width="90dp"
+                android:layout_height="30dp"
+                android:text="chiffre"
+                android:background="@drawable/button"
+                android:textColor="@color/colorPrimaryDark"
+                android:textSize="14sp"
+                android:layout_marginEnd="15dp"
+                android:layout_marginRight="15dp" />
+            <Button
+                android:id="@+id/motButton"
+                android:layout_width="90dp"
+                android:layout_height="30dp"
+                android:layout_marginRight="15dp"
+                android:text="mot"
+                android:background="@drawable/button"
+                android:textColor="@color/colorPrimaryDark"
+                android:textSize="14sp"
+                android:layout_marginEnd="15dp" />
+            <Button
+                android:id="@+id/questionButton"
+                android:layout_width="90dp"
+                android:layout_height="30dp"
+                android:text="questions"
+                android:background="@drawable/button"
+                android:textColor="@color/colorPrimaryDark"
+                android:textSize="14sp" />
+        </RadioGroup>
+
+        <Button
+            android:id="@+id/helpButton"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_marginLeft="5dp"
+            android:layout_marginTop="-30dp"
+            android:background="@drawable/help"
+            android:layout_marginStart="10dp" />
+
+        <RadioGroup
+            android:id="@+id/groupClef"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:checkedButton="@+id/radio2"
+            android:layout_marginLeft="20dp"
+            android:layout_marginTop="5dp"
+            android:orientation="horizontal"
+            android:layout_marginStart="20dp">
+
+            <TextView
+                android:id="@+id/typedecodage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Clefs :"
+                android:textColor="@color/colorPrimary"
+                android:textSize="20sp" />
+
+            <EditText
+                android:id="@+id/clefEditText"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:digits="qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM"
+                android:singleLine="true"
+                android:layout_marginLeft="10dp"
+                android:layout_marginRight="10dp"
+                android:textColorHint="@color/colorPrimary"
+                android:hint="mot clef"
+                android:textColor="@color/colorPrimary"
+                android:textSize="17sp"
+                android:maxLines="1"
+                android:autofillHints=""
+                tools:ignore="LabelFor,TextFields" />
+
+            <EditText
+                android:id="@+id/aEditText"
+                android:layout_width="100dp"
+                android:layout_height="wrap_content"
+                android:singleLine="true"
+                android:textColorHint="@color/colorPrimary"
+                android:textColor="@color/colorPrimary"
+                android:textSize="17sp"
+                android:inputType="number"
+                android:hint="a"
+                android:layout_marginLeft="10dp"
+                android:maxLength="3"
+                android:maxLines="1"
+                android:autofillHints=""
+                tools:ignore="LabelFor,TextFields"
+                android:layout_marginStart="10dp" />
+
+
+            <EditText
+                android:id="@+id/bEditText"
+                android:layout_width="100dp"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="20dp"
+                android:singleLine="true"
+                android:textColorHint="@color/colorPrimary"
+                android:textColor="@color/colorPrimary"
+                android:textSize="17sp"
+                android:inputType="number"
+                android:hint="b"
+                android:maxLength="3"
+                android:maxLines="1"
+                android:layout_marginStart="20dp"
+                android:autofillHints=""
+                tools:ignore="LabelFor,TextFields" />
+        </RadioGroup>
+
+        <RadioGroup
+            android:id="@+id/groupLongueur"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:checkedButton="@+id/radio2"
+            android:layout_marginLeft="20dp"
+            android:layout_marginTop="5dp"
+            android:orientation="horizontal"
+            android:layout_marginStart="20dp">
+
+            <TextView
+                android:id="@+id/longueurTextView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Longueur : 20"
+                android:textColor="@color/colorPrimary"
+                android:textSize="20sp" />
+
+            <SeekBar
+                android:id="@+id/longueurSeekBar"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="0dp"
+                android:layout_marginTop="0dp"
+                android:layout_marginRight="0dp"
+                android:max="2"
+                android:progress="2"
+                />
+        </RadioGroup>
+
+        <TextView
+            android:id="@+id/caracteresTextView"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:layout_marginLeft="20dp"
+            android:text="Caractères :"
+            android:textColor="@color/colorPrimary"
+            android:textSize="20sp"
+            android:layout_marginStart="20dp" />
+
+        <RadioGroup
+            android:id="@+id/groupMajMin"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:layout_marginTop="10dp"
+            android:checkedButton="@+id/radio2"
+            android:orientation="horizontal">
+
+            <Switch
+                android:id="@+id/minSwitch"
+                android:layout_width="130dp"
+                android:layout_height="20dp"
+                android:text="Minuscules"
+                android:checked="true"
+                android:background="#00FFFFFF"
+                android:textColor="@color/colorPrimary"
+                android:textSize="16sp"
+                />
+
+            <Switch
+                android:id="@+id/majSwitch"
+                android:layout_width="130dp"
+                android:layout_height="20dp"
+                android:text="Majuscules"
+                android:checked="true"
+                android:background="#00FFFFFF"
+                android:textColor="@color/colorPrimary"
+                android:textSize="16sp"
+                android:layout_marginStart="15dp"
+                android:layout_marginLeft="15dp" />
+        </RadioGroup>
+
+        <RadioGroup
+            android:id="@+id/groupSymChi"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:layout_marginTop="10dp"
+            android:checkedButton="@+id/radio2"
+            android:orientation="horizontal">
+
+            <Switch
+                android:id="@+id/symSwitch"
+                android:layout_width="130dp"
+                android:layout_height="20dp"
+                android:text="Symboles"
+                android:checked="true"
+                android:background="#00FFFFFF"
+                android:textColor="@color/colorPrimary"
+                android:textSize="16sp" />
+
+            <Switch
+                android:id="@+id/chiSwitch"
+                android:layout_width="130dp"
+                android:layout_height="20dp"
+                android:text="Chiffres"
+                android:checked="true"
+                android:background="#00FFFFFF"
+                android:textColor="@color/colorPrimary"
+                android:textSize="16sp"
+                android:layout_marginStart="15dp"
+                android:layout_marginLeft="15dp" />
+        </RadioGroup>
+
+        <RadioGroup
+            android:id="@+id/groupSite"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:checkedButton="@+id/radio2"
+            android:layout_marginLeft="20dp"
+            android:layout_marginTop="5dp"
+            android:orientation="horizontal"
+            android:layout_marginStart="20dp">
+
+            <TextView
+                android:id="@+id/siteTextView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Nom du site :"
+                android:textColor="@color/colorPrimary"
+                android:textSize="20sp" />
+
+            <EditText
+                android:id="@+id/siteEditText"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:digits="qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM"
+                android:singleLine="true"
+                android:layout_marginLeft="10dp"
+                android:layout_marginRight="10dp"
+                android:textColorHint="@color/colorPrimary"
+                android:hint="nom du site"
+                android:textColor="@color/colorPrimary"
+                android:textSize="17sp"
+                android:maxLines="1"
+                android:autofillHints=""
+                tools:ignore="LabelFor,TextFields" />
+        </RadioGroup>
+
+        <Button
+            android:id="@+id/genererButton"
+            android:layout_width="fill_parent"
+            android:layout_height="40dp"
+            android:layout_marginTop="15dp"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="10dp"
+            android:text="Génerer"
+            android:background="@drawable/bigbutton"
+            android:gravity="center"
+            android:textColor="@color/colorPrimaryDark"
+            android:textSize="20sp" />
+
+        <ImageView
+            android:id="@+id/separate"
+            android:layout_width="fill_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="15dp"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="10dp"
+            android:background="@color/colorPrimary"
+            android:gravity="center"
+            android:textSize="20sp" />
+
+        <!--TextView
+            android:id="@+id/motPasseTextView"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="Le mot de passe est :"
+            android:gravity="center"
+            android:textColor="@color/colorPrimary"
+            android:textSize="20sp"
+            /-->
+
+        <TextView
+            android:id="@+id/motPasseTextView"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:layout_marginLeft="20dp"
+            android:text="Le mot de passe est :"
+            android:textColor="@color/colorPrimary"
+            android:textSize="20sp"
+            android:layout_marginStart="20dp" />
+
+        <EditText
+            android:id="@+id/motPasseEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:layout_marginLeft="55dp"
+            android:layout_marginRight="55dp"
+            android:focusableInTouchMode="false"
+            android:gravity="center"
+            android:textColor="@color/colorPrimary"
+            android:textSize="18sp">
+        </EditText>
+
+        <RadioGroup
+            android:id="@+id/groupMotPasse"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:gravity="right"
+            android:checkedButton="@+id/radio2"
+            android:layout_marginTop="-40dp"
+            android:layout_marginLeft="40dp"
+            android:layout_marginRight="40dp"
+            android:orientation="horizontal"
+            android:layout_marginStart="40dp"
+            android:layout_marginEnd="20dp">
+
+            <Button
+                android:id="@+id/copyButton"
+                android:layout_width="35dp"
+                android:layout_height="35dp"
+                android:layout_marginTop="0dp"
+                android:background="@drawable/clipboard"
+                android:textColor="@color/colorPrimaryDark"/>
+
+        </RadioGroup>
+
+        <RadioGroup
+            android:id="@+id/groupSecurite"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:checkedButton="@+id/radio2"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal"
+            >
+
+            <TextView
+                android:id="@+id/securiteSimple"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Sécurite :"
+                android:textColor="@color/colorPrimary"
+                android:textSize="20sp"
+                />
+
+            <TextView
+                android:id="@+id/securiteTextView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textColor="@color/colorPrimary"
+                android:textSize="20sp"
+                />
+
+        </RadioGroup>
+
+        <SeekBar
+            android:id="@+id/securiteSeekBar"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="50dp"
+            android:layout_marginTop="10dp"
+            android:layout_marginRight="50dp"
+            android:clickable="true"
+            android:gravity="center"
+            android:max="96"
+            android:progress="96" />
+
+    </LinearLayout>
+</ScrollView>
