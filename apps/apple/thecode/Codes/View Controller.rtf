@@ -1,0 +1,1584 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2513
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fnil\fcharset0 Menlo-Regular;\f1\fnil\fcharset0 Menlo-Bold;}
+{\colortbl;\red255\green255\blue255;\red114\green167\blue77;\red255\green255\blue255;\red255\green255\blue255;
+\red252\green95\blue162;\red93\green217\blue255;\red209\green168\blue255;\red65\green161\blue193;\red162\green103\blue230;
+\red103\green183\blue164;\red252\green106\blue93;\red208\green191\blue105;\red158\green241\blue221;}
+{\*\expandedcolortbl;;\cssrgb\c51704\c70124\c37488;\cssrgb\c100000\c100000\c100000\c0;\cssrgb\c100000\c100000\c99985\c85000;
+\cssrgb\c100000\c47841\c69704;\cssrgb\c42155\c87691\c100000;\cssrgb\c85688\c73151\c100000;\cssrgb\c30749\c69219\c80161;\cssrgb\c70040\c50842\c92347;
+\cssrgb\c47067\c76106\c70158;\cssrgb\c99989\c50533\c43741;\cssrgb\c85014\c78710\c48407;\cssrgb\c67457\c94925\c89343;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww10800\viewh8400\viewkind0
+\deftab593
+\pard\tx593\pardeftab593\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf2 \cb3 //\cf4 \
+\cf2 //  ViewController.swift\cf4 \
+\cf2 //  TheCode\cf4 \
+\cf2 //\cf4 \
+\cf2 //  Created by Jul SQL on 17/04/2020.\cf4 \
+\cf2 //  Copyright \'a9 2020 Jul SQL. All rights reserved.\cf4 \
+\cf2 //\cf4 \
+\
+
+\f1\b \cf5 import
+\f0\b0 \cf4  UIKit\
+
+\f1\b \cf5 import
+\f0\b0 \cf4  Foundation\
+
+\f1\b \cf5 import
+\f0\b0 \cf4  CryptoKit\
+
+\f1\b \cf5 import
+\f0\b0 \cf4  Darwin\
+\
+
+\f1\b \cf5 class
+\f0\b0 \cf4  \cf6 ViewController\cf4 : \cf7 UIViewController\cf4  \{\
+    \
+    \cf2 // MARK : Outlets\cf4 \
+    
+\f1\b \cf5 @IBOutlet
+\f0\b0 \cf4  
+\f1\b \cf5 weak
+\f0\b0 \cf4  
+\f1\b \cf5 var
+\f0\b0 \cf4  \cf8 securiteLabel\cf4 : \cf7 UILabel\cf4 !\
+    
+\f1\b \cf5 @IBOutlet
+\f0\b0 \cf4  
+\f1\b \cf5 weak
+\f0\b0 \cf4  
+\f1\b \cf5 var
+\f0\b0 \cf4  \cf8 longueurLabel\cf4 : \cf7 UILabel\cf4 !\
+    \
+    
+\f1\b \cf5 @IBOutlet
+\f0\b0 \cf4  
+\f1\b \cf5 weak
+\f0\b0 \cf4  
+\f1\b \cf5 var
+\f0\b0 \cf4  \cf8 clefTextField\cf4 : \cf7 UITextField\cf4 !\
+    
+\f1\b \cf5 @IBOutlet
+\f0\b0 \cf4  
+\f1\b \cf5 weak
+\f0\b0 \cf4  
+\f1\b \cf5 var
+\f0\b0 \cf4  \cf8 siteTextField\cf4 : \cf7 UITextField\cf4 !\
+    
+\f1\b \cf5 @IBOutlet
+\f0\b0 \cf4  
+\f1\b \cf5 weak
+\f0\b0 \cf4  
+\f1\b \cf5 var
+\f0\b0 \cf4  \cf8 motPasseTextField\cf4 : \cf7 UITextField\cf4 !\
+    \
+    
+\f1\b \cf5 @IBOutlet
+\f0\b0 \cf4  
+\f1\b \cf5 weak
+\f0\b0 \cf4  
+\f1\b \cf5 var
+\f0\b0 \cf4  \cf8 questionButton\cf4 : \cf7 UIButton\cf4 !\
+    
+\f1\b \cf5 @IBOutlet
+\f0\b0 \cf4  
+\f1\b \cf5 weak
+\f0\b0 \cf4  
+\f1\b \cf5 var
+\f0\b0 \cf4  \cf8 copyButton\cf4 : \cf7 UIButton\cf4 !\
+    
+\f1\b \cf5 @IBOutlet
+\f0\b0 \cf4  
+\f1\b \cf5 weak
+\f0\b0 \cf4  
+\f1\b \cf5 var
+\f0\b0 \cf4  \cf8 infoApp\cf4 : \cf7 UIButton\cf4 !\
+    
+\f1\b \cf5 @IBOutlet
+\f0\b0 \cf4  
+\f1\b \cf5 weak
+\f0\b0 \cf4  
+\f1\b \cf5 var
+\f0\b0 \cf4  \cf8 shareButton\cf4 : \cf7 UIButton\cf4 !\
+    \
+    
+\f1\b \cf5 @IBOutlet
+\f0\b0 \cf4  
+\f1\b \cf5 weak
+\f0\b0 \cf4  
+\f1\b \cf5 var
+\f0\b0 \cf4  \cf8 minSwitch\cf4 : \cf7 UISwitch\cf4 !\
+    
+\f1\b \cf5 @IBOutlet
+\f0\b0 \cf4  
+\f1\b \cf5 weak
+\f0\b0 \cf4  
+\f1\b \cf5 var
+\f0\b0 \cf4  \cf8 majSwitch\cf4 : \cf7 UISwitch\cf4 !\
+    
+\f1\b \cf5 @IBOutlet
+\f0\b0 \cf4  
+\f1\b \cf5 weak
+\f0\b0 \cf4  
+\f1\b \cf5 var
+\f0\b0 \cf4  \cf8 symSwitch\cf4 : \cf7 UISwitch\cf4 !\
+    
+\f1\b \cf5 @IBOutlet
+\f0\b0 \cf4  
+\f1\b \cf5 weak
+\f0\b0 \cf4  
+\f1\b \cf5 var
+\f0\b0 \cf4  \cf8 chiSwitch\cf4 : \cf7 UISwitch\cf4 !\
+    \
+    
+\f1\b \cf5 @IBOutlet
+\f0\b0 \cf4  
+\f1\b \cf5 weak
+\f0\b0 \cf4  
+\f1\b \cf5 var
+\f0\b0 \cf4  \cf8 longueurSlider\cf4 : \cf7 UISlider\cf4 !\
+    
+\f1\b \cf5 @IBOutlet
+\f0\b0 \cf4  
+\f1\b \cf5 weak
+\f0\b0 \cf4  
+\f1\b \cf5 var
+\f0\b0 \cf4  \cf8 securiteSlider\cf4 : \cf7 UISlider\cf4 !\
+    \
+    \cf2 // Mark : Propreties\cf4 \
+    \
+    
+\f1\b \cf5 override
+\f0\b0 \cf4  
+\f1\b \cf5 func
+\f0\b0 \cf4  \cf8 viewDidLoad\cf4 () \{\
+        \cf2 // Au d\'e9marrage de l'application\cf4 \
+        
+\f1\b \cf5 super
+\f0\b0 \cf4 .\cf9 viewDidLoad\cf4 ()\
+        \cf10 securiteLabel\cf4 .\cf9 text\cf4  = \cf11 "Tr\'e8s Forte 126 bits"\cf4 \
+        \cf10 securiteLabel\cf4 .\cf9 textColor\cf4  = \cf7 UIColor\cf4 .\cf9 green\cf4 \
+        \cf10 setupbutton\cf4 ()\
+        \cf10 ViewTextFieldManager\cf4 ()\
+        \cf10 copyButton\cf4 .\cf9 setImage\cf4 (\cf7 UIImage\cf4 (named: \cf11 "pressepapier.png"\cf4 ), for: \cf7 UIControl\cf4 .\cf7 State\cf4 .\cf9 normal\cf4 )\
+        \cf10 shareButton\cf4 .\cf9 setImage\cf4 (\cf7 UIImage\cf4 (named: \cf11 "partager.png"\cf4 ), for: \cf7 UIControl\cf4 .\cf7 State\cf4 .\cf9 normal\cf4 )\
+    \}\
+    \
+    \
+    \cf2 // Mark : Variables initialisation\cf4 \
+    \
+    
+\f1\b \cf5 var
+\f0\b0 \cf4  \cf8 minState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+    
+\f1\b \cf5 var
+\f0\b0 \cf4  \cf8 majState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+    
+\f1\b \cf5 var
+\f0\b0 \cf4  \cf8 symState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+    
+\f1\b \cf5 var
+\f0\b0 \cf4  \cf8 chiState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+    
+\f1\b \cf5 var
+\f0\b0 \cf4  \cf8 longueur\cf4  = \cf12 20\cf4 \
+    
+\f1\b \cf5 var
+\f0\b0 \cf4  \cf8 base\cf4  = \cf11 ""\cf4 \
+\
+    \cf2 // Mark : private function\cf4 \
+\
+    
+\f1\b \cf5 private
+\f0\b0 \cf4  
+\f1\b \cf5 func
+\f0\b0 \cf4  \cf8 setupbutton\cf4 () \{\
+        \cf2 // Changer les coins des boutons\cf4 \
+        \cf10 questionButton\cf4 .\cf9 layer\cf4 .\cf9 cornerRadius\cf4  = \cf12 15\cf4 \
+        \cf10 copyButton\cf4 .\cf9 layer\cf4 .\cf9 cornerRadius\cf4  = \cf12 15\cf4 \
+        \cf10 infoApp\cf4 .\cf9 layer\cf4 .\cf9 cornerRadius\cf4  = \cf12 15\cf4 \
+    \}\
+    \
+    \
+    
+\f1\b \cf5 private
+\f0\b0 \cf4  
+\f1\b \cf5 func
+\f0\b0 \cf4  \cf8 ViewTextFieldManager\cf4 () \{\
+        \cf2 // Ferme le clavier lorsqu'on tape sur l'ecran\cf4 \
+        \cf10 clefTextField\cf4 .\cf9 delegate\cf4  = 
+\f1\b \cf5 self
+\f0\b0 \cf4 \
+        \cf10 siteTextField\cf4 .\cf9 delegate\cf4  = 
+\f1\b \cf5 self
+\f0\b0 \cf4 \
+        \cf10 motPasseTextField\cf4 .\cf9 delegate\cf4  = 
+\f1\b \cf5 self
+\f0\b0 \cf4 \
+        \
+        
+\f1\b \cf5 let
+\f0\b0 \cf4  tapGesture = \cf7 UITapGestureRecognizer\cf4 (target: 
+\f1\b \cf5 self
+\f0\b0 \cf4 , action: 
+\f1\b \cf5 #selector
+\f0\b0 \cf4 (\cf10 hideKeyboard\cf4 ))\
+        \cf9 view\cf4 .\cf9 addGestureRecognizer\cf4 (tapGesture)\
+    \}\
+    \
+    \
+    
+\f1\b \cf5 private
+\f0\b0 \cf4  
+\f1\b \cf5 func
+\f0\b0 \cf4  \cf8 dec2base\cf4 (x : \cf13 BInt\cf4 , base : \cf7 String\cf4 ) -> \cf7 String\cf4 \{\
+        \cf2 // Convertit un BigInteger dans une base ayant base comme support\cf4 \
+        \
+        
+\f1\b \cf5 let
+\f0\b0 \cf4  b = base.\cf9 count\cf4 \
+        
+\f1\b \cf5 var
+\f0\b0 \cf4  inter = x\
+        
+\f1\b \cf5 var
+\f0\b0 \cf4  result  = \cf11 ""\cf4 \
+        
+\f1\b \cf5 if
+\f0\b0 \cf4  x \cf10 ==\cf4  \cf12 0\cf4  \{\
+            result = \cf7 String\cf4 (base[\cf12 0\cf4 ])\
+        \}\
+        
+\f1\b \cf5 else
+\f0\b0 \cf4  \{\
+            
+\f1\b \cf5 while
+\f0\b0 \cf4  inter \cf10 !=\cf4  \cf12 0\cf4  \{\
+                result = \cf7 String\cf4 (base[\cf7 Int\cf4 (inter \cf10 %\cf4  b)]) \cf9 +\cf4  result\
+                inter = inter \cf10 /\cf4  b\
+            \}\
+        \}\
+        
+\f1\b \cf5 return
+\f0\b0 \cf4  result\
+    \}\
+    \
+    \
+    
+\f1\b \cf5 private
+\f0\b0 \cf4  
+\f1\b \cf5 func
+\f0\b0 \cf4  \cf8 generer\cf4 () \{\
+        \cf2 // G\'e9n\'e8re le mot de passe\cf4 \
+        \
+        \cf10 modifBase\cf4 ()\
+        \cf10 motPasseTextField\cf4 .\cf9 text\cf4  = \cf11 "Il manque des valeurs"\cf4 \
+        \cf10 modifSecurite\cf4 ()\
+        
+\f1\b \cf5 if
+\f0\b0 \cf4  \cf10 clefTextField\cf4 .\cf9 text\cf4  \cf9 ==\cf4  \cf11 ""\cf4  \cf9 ||\cf4  \cf10 siteTextField\cf4 .\cf9 text\cf4  \cf9 ==\cf4  \cf11 ""\cf4  \{\
+            \cf2 // Rien dans site ou dans clef\cf4 \
+        \}\
+        
+\f1\b \cf5 else
+\f0\b0 \cf4  
+\f1\b \cf5 if
+\f0\b0 \cf4  \cf9 !\cf4 (\cf10 minState\cf4  \cf9 ||\cf4  \cf10 majState\cf4  \cf9 ||\cf4  \cf10 symState\cf4  \cf9 ||\cf4  \cf10 chiState\cf4 ) \{\
+            \cf10 showToast\cf4 (message : \cf11 "Rien n'est coch\'e9"\cf4 )\
+        \}\
+        
+\f1\b \cf5 else
+\f0\b0 \cf4  \{\
+            
+\f1\b \cf5 let
+\f0\b0 \cf4  result = \cf10 modification\cf4 (mot : \cf10 siteTextField\cf4 .\cf9 text\cf4 ! \cf9 +\cf4  \cf10 clefTextField\cf4 .\cf9 text\cf4 !)\
+            \cf10 motPasseTextField\cf4 .\cf9 text\cf4  = result[\cf12 0\cf4 ] 
+\f1\b \cf5 as
+\f0\b0 \cf4 ? \cf7 String\cf4 \
+        \}\
+    \}\
+    \
+    \
+    
+\f1\b \cf5 private
+\f0\b0 \cf4  
+\f1\b \cf5 func
+\f0\b0 \cf4  \cf8 hex2dec\cf4 (hex : \cf7 String\cf4 ) -> \cf13 BInt\cf4  \{\
+        \cf2 // Convertit un nombre en base 16 en un nombre en base 10\cf4 \
+        \
+        
+\f1\b \cf5 let
+\f0\b0 \cf4  baseHex = \cf11 "0123456789ABCDEF"\cf4 \
+        
+\f1\b \cf5 var
+\f0\b0 \cf4  a = \cf13 BInt\cf4 (\cf12 0\cf4 )\
+        
+\f1\b \cf5 var
+\f0\b0 \cf4  c : \cf13 BInt\cf4 \
+        
+\f1\b \cf5 for
+\f0\b0 \cf4  i 
+\f1\b \cf5 in
+\f0\b0 \cf4  \cf12 0\cf9 ...\cf4 hex.\cf9 count\cf4  \cf9 -\cf4  \cf12 1\cf4  \{\
+            c = \cf13 BInt\cf4 (\cf10 index\cf4 (lettre: hex[i], ref: baseHex))\
+            
+\f1\b \cf5 let
+\f0\b0 \cf4  b = hex.\cf9 count\cf4  \cf9 -\cf4  i \cf9 -\cf4  \cf12 1\cf4 \
+            a \cf10 +=\cf4  c \cf10 *\cf4  \cf10 power\cf4 (a : \cf12 16\cf4 , b : b)\
+        \}\
+        
+\f1\b \cf5 return
+\f0\b0 \cf4  a\
+    \}\
+    \
+    \
+    
+\f1\b \cf5 private
+\f0\b0 \cf4  
+\f1\b \cf5 func
+\f0\b0 \cf4  \cf8 index\cf4 (lettre : \cf7 Character\cf4 , ref : \cf7 String\cf4 ) -> \cf7 Int\cf4  \{\
+        \cf2 // Renvoie la place de la lettre dans la ref\'e9rence donn\'e9e\cf4 \
+        
+\f1\b \cf5 let
+\f0\b0 \cf4  index: \cf7 Int\cf4  = ref.\cf9 distance\cf4 (from: ref.\cf9 startIndex\cf4 , to: ref.\cf9 range\cf4 (of: \cf7 String\cf4 (lettre))!.\cf9 lowerBound\cf4 )\
+        
+\f1\b \cf5 return
+\f0\b0 \cf4  index\
+    \}\
+    \
+    \
+    
+\f1\b \cf5 private
+\f0\b0 \cf4  
+\f1\b \cf5 func
+\f0\b0 \cf4  \cf8 modifBase\cf4 () \{\
+        \cf2 // Mdifie la base suivant les caract\'e8res coch\'e9s\cf4 \
+\
+        \cf10 base\cf4  = \cf11 ""\cf4 ;\
+        
+\f1\b \cf5 if
+\f0\b0 \cf4  (\cf10 minState\cf4 ) \{\
+            \cf10 base\cf4  \cf9 +=\cf4  \cf11 "portezcviuxwhskyajgblndqfm"\cf4 ;\
+        \}\
+        
+\f1\b \cf5 if
+\f0\b0 \cf4  (\cf10 majState\cf4 ) \{\
+            \cf10 base\cf4  \cf9 +=\cf4  \cf11 "THEQUICKBROWNFXJMPSVLAZYDG"\cf4 ;\
+        \}\
+        
+\f1\b \cf5 if
+\f0\b0 \cf4  (\cf10 symState\cf4 ) \{\
+            \cf10 base\cf4  \cf9 +=\cf4  \cf11 "@#&!)-%;<:*$+=/?>("\cf4 ;\
+        \}\
+        
+\f1\b \cf5 if
+\f0\b0 \cf4  (\cf10 chiState\cf4 ) \{\
+            \cf10 base\cf4  \cf9 +=\cf4  \cf11 "567438921"\cf4 ;\
+        \}\
+    \}\
+    \
+    \
+    
+\f1\b \cf5 private
+\f0\b0 \cf4  
+\f1\b \cf5 func
+\f0\b0 \cf4  \cf8 modifSecurite\cf4 () \{\
+        \cf2 // Modifie la s\'e9curit\'e9 en fonction des param\'e8tres coch\'e9s\cf4 \
+        \cf10 longueurLabel\cf4 .\cf9 text\cf4  = \cf11 "Longueur : "\cf4  \cf9 +\cf4  \cf7 String\cf4 (\cf10 longueur\cf4 )\
+        
+\f1\b \cf5 var
+\f0\b0 \cf4  bits = \cf12 0\cf4 \
+        
+\f1\b \cf5 let
+\f0\b0 \cf4  nb_carac = \cf10 base\cf4 .\cf9 count\cf4 \
+        
+\f1\b \cf5 if
+\f0\b0 \cf4  \cf9 !\cf4 (\cf10 minState\cf4  \cf9 ||\cf4  \cf10 majState\cf4  \cf9 ||\cf4  \cf10 symState\cf4  \cf9 ||\cf4  \cf10 chiState\cf4 ) \{\
+            bits = \cf12 0\cf4 \
+            \cf10 securiteSlider\cf4 .\cf9 value\cf4  = \cf7 Float\cf4 (bits)\
+        \}\
+        
+\f1\b \cf5 else
+\f0\b0 \cf4  \{\
+            bits = \cf7 Int\cf4 (\cf9 round\cf4 ((\cf9 log\cf4 (\cf9 pow\cf4 (\cf7 Double\cf4 (nb_carac), \cf7 Double\cf4 (\cf10 longueur\cf4 )))\cf9 /log\cf4 (\cf12 2.0\cf4 ))))\
+            \cf10 securiteSlider\cf4 .\cf9 value\cf4  = \cf7 Float\cf4 (bits \cf9 -\cf4  \cf12 32\cf4 )\
+        \}\
+        \
+        
+\f1\b \cf5 let
+\f0\b0 \cf4  result = \cf10 securite\cf4 (bits: bits)\
+        \cf10 securiteLabel\cf4 .\cf9 text\cf4  = result[\cf12 0\cf4 ] 
+\f1\b \cf5 as
+\f0\b0 \cf4 ! \cf7 String\cf4  \cf9 +\cf4  \cf7 String\cf4 (bits) \cf9 +\cf4  \cf11 " bits"\cf4 \
+        \cf10 securiteLabel\cf4 .\cf9 textColor\cf4  = result[\cf12 1\cf4 ] 
+\f1\b \cf5 as
+\f0\b0 \cf4 ? \cf7 UIColor\cf4 \
+        \}\
+    \
+    \
+    
+\f1\b \cf5 private
+\f0\b0 \cf4  
+\f1\b \cf5 func
+\f0\b0 \cf4  \cf8 modification\cf4 (mot : \cf7 String\cf4 ) -> \cf7 Array\cf4 <
+\f1\b \cf5 Any
+\f0\b0 \cf4 > \{\
+        \cf2 // Complexifie le mot de passe\cf4 \
+        \
+        
+\f1\b \cf5 guard
+\f0\b0 \cf4  
+\f1\b \cf5 let
+\f0\b0 \cf4  data = mot.\cf9 data\cf4 (using: .\cf9 utf8\cf4 ) 
+\f1\b \cf5 else
+\f0\b0 \cf4  \{ 
+\f1\b \cf5 return
+\f0\b0 \cf4  [\cf12 0\cf4 ]\}\
+        
+\f1\b \cf5 let
+\f0\b0 \cf4  digest = \cf7 SHA256\cf4 .\cf9 hash\cf4 (data: data)\
+        
+\f1\b \cf5 let
+\f0\b0 \cf4  inter2 = digest.\cf10 hexStr\cf4 \
+        \cf9 print\cf4 (inter2)\
+        
+\f1\b \cf5 let
+\f0\b0 \cf4  inter = \cf10 hex2dec\cf4 (hex : inter2)\
+        \cf9 print\cf4 (\cf11 "dec :"\cf4 )\
+        \cf9 print\cf4 (inter)\
+        
+\f1\b \cf5 let
+\f0\b0 \cf4  code2 = \cf7 String\cf4 (\cf10 dec2base\cf4 (x : inter, base: \cf10 base\cf4 ).\cf9 prefix\cf4 (\cf10 longueur\cf4 ))\
+        \cf9 print\cf4 (\cf11 "code :"\cf4 )\
+        \cf9 print\cf4 (code2)\
+        
+\f1\b \cf5 let
+\f0\b0 \cf4  nb_carac = \cf10 base\cf4 .\cf9 count\cf4  \cf9 +\cf4  \cf12 1\cf4 \
+        
+\f1\b \cf5 let
+\f0\b0 \cf4  bits = \cf7 Int\cf4 (\cf9 round\cf4 ((\cf9 log\cf4 (\cf9 pow\cf4 (\cf7 Double\cf4 (nb_carac),\cf7 Double\cf4 (\cf10 longueur\cf4 )))\cf9 /log\cf4 (\cf12 2.0\cf4 ))))\
+        
+\f1\b \cf5 let
+\f0\b0 \cf4  result = \cf10 securite\cf4 (bits : bits)\
+    \
+        
+\f1\b \cf5 return
+\f0\b0 \cf4  [code2, result[\cf12 0\cf4 ] 
+\f1\b \cf5 as
+\f0\b0 \cf4 ! \cf7 String\cf4  \cf9 +\cf4  \cf7 String\cf4 (bits) \cf9 +\cf4  \cf11 " bits"\cf4 , bits , result[\cf12 1\cf4 ] 
+\f1\b \cf5 as
+\f0\b0 \cf4 ! \cf7 UIColor\cf4 ]\
+    \}\
+    \
+    \
+    
+\f1\b \cf5 private
+\f0\b0 \cf4  
+\f1\b \cf5 func
+\f0\b0 \cf4  \cf8 power\cf4 (a : \cf13 BInt\cf4 , b : \cf7 Int\cf4 ) -> \cf13 BInt\cf4  \{\
+        \cf2 // a ** b\cf4 \
+        
+\f1\b \cf5 var
+\f0\b0 \cf4  result = \cf13 BInt\cf4 (\cf12 1\cf4 )\
+        
+\f1\b \cf5 if
+\f0\b0 \cf4  b \cf9 ==\cf4  \cf12 0\cf4  \{\
+        \}\
+        
+\f1\b \cf5 else
+\f0\b0 \cf4 \{\
+            
+\f1\b \cf5 for
+\f0\b0 \cf4  
+\f1\b \cf5 _
+\f0\b0 \cf4  
+\f1\b \cf5 in
+\f0\b0 \cf4  \cf12 0\cf9 ...\cf4 b\cf9 -\cf12 1\cf4  \{\
+                result \cf10 *=\cf4  a\
+            \}\
+        \}\
+        
+\f1\b \cf5 return
+\f0\b0 \cf4  result\
+    \}\
+    \
+    \
+    
+\f1\b \cf5 private
+\f0\b0 \cf4  
+\f1\b \cf5 func
+\f0\b0 \cf4  \cf8 securite\cf4 (bits : \cf7 Int\cf4 ) -> \cf7 Array\cf4 <
+\f1\b \cf5 Any
+\f0\b0 \cf4 > \{\
+        \cf2 // Renvoie la bonne couleur ainsi que la s\'e9curit\'e9 suivant le nombre de bits\cf4 \
+        \
+        
+\f1\b \cf5 let
+\f0\b0 \cf4  secure: \cf7 String\cf4 \
+        
+\f1\b \cf5 let
+\f0\b0 \cf4  color: \cf7 UIColor\cf4 \
+        \
+        
+\f1\b \cf5 if
+\f0\b0 \cf4  bits \cf9 ==\cf4  \cf12 0\cf4  \{\
+            secure = \cf11 "Aucune "\cf4 \
+            color = \cf7 UIColor\cf4 .\cf9 red\cf4 \
+        \} 
+\f1\b \cf5 else
+\f0\b0 \cf4  
+\f1\b \cf5 if
+\f0\b0 \cf4  bits \cf9 <\cf4  \cf12 64\cf4  \{\
+            secure = \cf11 "Tr\'e8s Faible "\cf4 \
+            color = \cf7 UIColor\cf4 .\cf9 red\cf4 \
+        \} 
+\f1\b \cf5 else
+\f0\b0 \cf4  
+\f1\b \cf5 if
+\f0\b0 \cf4  bits \cf9 <\cf4  \cf12 80\cf4  \{\
+            secure = \cf11 "Faible "\cf4 \
+            color = \cf7 UIColor\cf4 .\cf9 red\cf2 //(red: 1, green: 0.2, blue: 0.2, alpha: 1)\cf4 \
+        \} 
+\f1\b \cf5 else
+\f0\b0 \cf4  
+\f1\b \cf5 if
+\f0\b0 \cf4  bits \cf9 <\cf4  \cf12 100\cf4  \{\
+            secure = \cf11 "Moyenne "\cf4 \
+            color = \cf7 UIColor\cf4 .\cf9 orange\cf4 \
+        \} 
+\f1\b \cf5 else
+\f0\b0 \cf4  
+\f1\b \cf5 if
+\f0\b0 \cf4  bits \cf9 <\cf4  \cf12 128\cf4  \{\
+            secure = \cf11 "Forte "\cf4 \
+            color = \cf7 UIColor\cf4 .\cf9 green\cf2 //(red: 0.2, green: 1, blue: 0.2, alpha: 1)\cf4 \
+        \} 
+\f1\b \cf5 else
+\f0\b0 \cf4  \{\
+            secure = \cf11 "Tr\'e8s Forte "\cf4 \
+            color = \cf7 UIColor\cf4 .\cf9 green\cf4 \
+        \}\
+        
+\f1\b \cf5 return
+\f0\b0 \cf4  [secure, color]\
+    \}\
+\
+    \
+    \cf2 // Mark : Actions\cf4 \
+    \
+    
+\f1\b \cf5 @objc
+\f0\b0 \cf4  
+\f1\b \cf5 private
+\f0\b0 \cf4  
+\f1\b \cf5 func
+\f0\b0 \cf4  \cf8 hideKeyboard\cf4 () \{\
+        \cf2 // Cache le clavier\cf4 \
+        \cf10 clefTextField\cf4 .\cf9 resignFirstResponder\cf4 ()\
+        \cf10 siteTextField\cf4 .\cf9 resignFirstResponder\cf4 ()\
+        \cf10 motPasseTextField\cf4 .\cf9 resignFirstResponder\cf4 ()\
+    \}\
+    \
+    \
+    
+\f1\b \cf5 @IBAction
+\f0\b0 \cf4  
+\f1\b \cf5 func
+\f0\b0 \cf4  \cf8 clefChanged\cf4 (
+\f1\b \cf5 _
+\f0\b0 \cf4  sender: 
+\f1\b \cf5 Any
+\f0\b0 \cf4 ) \{\
+        \cf2 // G\'e9n\'e8re le mot de passe lorsque clef Text Field chang\'e9\cf4 \
+        \cf10 generer\cf4 ()\
+    \}\
+    \
+    \
+    
+\f1\b \cf5 @IBAction
+\f0\b0 \cf4  
+\f1\b \cf5 func
+\f0\b0 \cf4  \cf8 siteChanged\cf4 (
+\f1\b \cf5 _
+\f0\b0 \cf4  sender: 
+\f1\b \cf5 Any
+\f0\b0 \cf4 ) \{\
+        \cf2 // G\'e9n\'e8re le mot de passe lorsque site Text Field chang\'e9\cf4 \
+        \cf10 generer\cf4 ()\
+    \}\
+    \
+    \
+    
+\f1\b \cf5 @IBAction
+\f0\b0 \cf4  
+\f1\b \cf5 func
+\f0\b0 \cf4  \cf8 questionButtonPressed\cf4 (
+\f1\b \cf5 _
+\f0\b0 \cf4  sender: \cf7 UIButton\cf4 ) \{\
+        \cf2 // G\'e9n\'e8re une alert box qui change la trace du Text Field clef lorsque questionButton est press\'e9\cf4 \
+        \
+        \cf2 // Create the alert\cf4 \
+        
+\f1\b \cf5 let
+\f0\b0 \cf4  alert = \cf7 UIAlertController\cf4 (title: \cf11 "Question personnelle"\cf4 , message: \cf11 "Vous pouvez choisir entre coder avec une clef dont vous devez vous souvenir, ou entrer une information personnelle qui servira de clef."\cf4 , preferredStyle: \cf7 UIAlertController\cf4 .\cf7 Style\cf4 .\cf9 alert\cf4 )\
+\
+        \cf2 // Add the actions (buttons)\cf4 \
+        \
+        alert.\cf9 addAction\cf4 (\cf7 UIAlertAction\cf4 (title: \cf11 "nom de jeune fille de votre m\'e8re"\cf4 , style: \cf7 UIAlertAction\cf4 .\cf7 Style\cf4 .\cf9 default\cf4 , handler: \{ action 
+\f1\b \cf5 in
+\f0\b0 \cf4  
+\f1\b \cf5 self
+\f0\b0 \cf4 .\cf10 clefTextField\cf4 .\cf9 placeholder\cf4  = \cf11 "nom jeune fille m\'e8re"\cf4 \
+            
+\f1\b \cf5 self
+\f0\b0 \cf4 .\cf10 clefTextField\cf4 .\cf9 text\cf4  = \cf11 ""\cf4 \
+        \}))\
+        alert.\cf9 addAction\cf4 (\cf7 UIAlertAction\cf4 (title: \cf11 "nom de votre premier animal de compagnie"\cf4 , style: \cf7 UIAlertAction\cf4 .\cf7 Style\cf4 .\cf9 default\cf4 , handler: \{ action 
+\f1\b \cf5 in
+\f0\b0 \cf4  
+\f1\b \cf5 self
+\f0\b0 \cf4 .\cf10 clefTextField\cf4 .\cf9 placeholder\cf4  = \cf11 "nom premier animal de compagnie"\cf4 \
+            
+\f1\b \cf5 self
+\f0\b0 \cf4 .\cf10 clefTextField\cf4 .\cf9 text\cf4  = \cf11 ""\cf4 \
+        \}))\
+        alert.\cf9 addAction\cf4 (\cf7 UIAlertAction\cf4 (title: \cf11 "rue de votre maison d'enfance"\cf4 , style: \cf7 UIAlertAction\cf4 .\cf7 Style\cf4 .\cf9 default\cf4 , handler: \{ action 
+\f1\b \cf5 in
+\f0\b0 \cf4  
+\f1\b \cf5 self
+\f0\b0 \cf4 .\cf10 clefTextField\cf4 .\cf9 placeholder\cf4  = \cf11 "rue maison enfance"\cf4 \
+            
+\f1\b \cf5 self
+\f0\b0 \cf4 .\cf10 clefTextField\cf4 .\cf9 text\cf4  = \cf11 ""\cf4 \
+        \}))\
+        \
+        alert.\cf9 addAction\cf4 (\cf7 UIAlertAction\cf4 (title: \cf11 "pas de question"\cf4 , style: \cf7 UIAlertAction\cf4 .\cf7 Style\cf4 .\cf9 default\cf4 , handler: \{ action 
+\f1\b \cf5 in
+\f0\b0 \cf4  
+\f1\b \cf5 self
+\f0\b0 \cf4 .\cf10 clefTextField\cf4 .\cf9 placeholder\cf4  = \cf11 "mot clef"\cf4 \
+            
+\f1\b \cf5 self
+\f0\b0 \cf4 .\cf10 clefTextField\cf4 .\cf9 text\cf4  = \cf11 ""\cf4 \
+        \}))\
+        \
+        alert.\cf9 addAction\cf4 (\cf7 UIAlertAction\cf4 (title: \cf11 "Annuler"\cf4 , style: \cf7 UIAlertAction\cf4 .\cf7 Style\cf4 .\cf9 cancel\cf4 , handler: 
+\f1\b \cf5 nil
+\f0\b0 \cf4 ))\
+\
+        \cf2 // Show the alert\cf4 \
+        
+\f1\b \cf5 self
+\f0\b0 \cf4 .\cf9 present\cf4 (alert, animated: 
+\f1\b \cf5 true
+\f0\b0 \cf4 , completion: 
+\f1\b \cf5 nil
+\f0\b0 \cf4 )\
+    \}\
+\
+    \
+    
+\f1\b \cf5 @IBAction
+\f0\b0 \cf4  
+\f1\b \cf5 func
+\f0\b0 \cf4  \cf8 infoAppPressed\cf4 (
+\f1\b \cf5 _
+\f0\b0 \cf4  sender: 
+\f1\b \cf5 Any
+\f0\b0 \cf4 ) \{\
+        \cf2 // G\'e9n\'e8re une alert box lorsque infoAppButton est press\'e9\cf4 \
+        \
+        \cf2 // Create the alert\cf4 \
+        
+\f1\b \cf5 let
+\f0\b0 \cf4  mess = \cf11 "     Cette application vous permet de g\'e9n\'e9rer des mots de passe, non pas al\'e9atoirement, mais en fonction du nom du site o\'f9 vous souhaitez vous connecter.\\n\\n     Par exemple, vous d\'e9sirez changer le mot de passe de votre compte Google. Vous devez choisir entre une clef \'e0 se souvenir ou une question personnelle, puis entrer 'google' dans \'ab\'a0nom du site\'a0\'bb, les caract\'e8res souhait\'e9s, la longueur du mot de passe, et le code sera g\'e9n\'e9r\'e9.\\n\\n     Ensuite, pour le retrouver, vous n\'92avez qu\'92\'e0 reprendre l\'92application, toujours mettre 'google' dans nom du site, les m\'eames informations, et vous obtiendrez le m\'eame mot de passe.\\n\\n     Attention, pour ne pas confondre les O et les z\'e9ros, il n'y a jamais de z\'e9ro dans les mots de passe g\'e9n\'e9r\'e9s.\\n\\n     Le bouton \'e0 c\'f4t\'e9 du mot de passe g\'e9n\'e9r\'e9 sert \'e0 copier le mot de passe dans votre presse-papier.\\n\\n     Pour plus d'information sur la s\'e9curit\'e9 des mots de passe, vous pouvez consulter ce site :\\n  * https://www.ssi.gouv.fr/administration/precautions-elementaires/calculer-la-force-dun-mot-de-passe/"\cf4 \
+        
+\f1\b \cf5 let
+\f0\b0 \cf4  alert = \cf7 UIAlertController\cf4 (title: \cf11 "Information"\cf4 , message: mess, preferredStyle: \cf7 UIAlertController\cf4 .\cf7 Style\cf4 .\cf9 alert\cf4 )\
+\
+        \cf2 // Add the actions (buttons)\cf4 \
+        alert.\cf9 addAction\cf4 (\cf7 UIAlertAction\cf4 (title: \cf11 "OK"\cf4 , style: \cf7 UIAlertAction\cf4 .\cf7 Style\cf4 .\cf9 cancel\cf4 , handler: 
+\f1\b \cf5 nil
+\f0\b0 \cf4 ))\
+        \
+        \cf2 // Show the alert\cf4 \
+        
+\f1\b \cf5 self
+\f0\b0 \cf4 .\cf9 present\cf4 (alert, animated: 
+\f1\b \cf5 true
+\f0\b0 \cf4 , completion: 
+\f1\b \cf5 nil
+\f0\b0 \cf4 )\
+    \}\
+    \
+    \
+    
+\f1\b \cf5 @IBAction
+\f0\b0 \cf4  
+\f1\b \cf5 func
+\f0\b0 \cf4  \cf8 copyButtonPressed\cf4 (
+\f1\b \cf5 _
+\f0\b0 \cf4  sender: 
+\f1\b \cf5 Any
+\f0\b0 \cf4 ) \{\
+        \cf2 // Copie le mot de passe lorsque copyButton est press\'e9\cf4 \
+        
+\f1\b \cf5 if
+\f0\b0 \cf4  \cf10 motPasseTextField\cf4 .\cf9 text\cf4  \cf9 ==\cf4  \cf11 "                            "\cf4  \{\
+            \cf10 showToast\cf4 (message : \cf11 "Aucun mot de passe \'e0 copier"\cf4 )\
+        \}\
+        
+\f1\b \cf5 else
+\f0\b0 \cf4  \{\
+           \
+            \cf7 UIPasteboard\cf4 .\cf9 general\cf4 .\cf9 string\cf4  = \cf10 motPasseTextField\cf4 .\cf9 text\cf4 \
+            \cf10 showToast\cf4 (message : \cf11 "Mot de passe copi\'e9"\cf4 )\
+        \}\
+    \}\
+    \
+    \
+    
+\f1\b \cf5 @IBAction
+\f0\b0 \cf4  
+\f1\b \cf5 func
+\f0\b0 \cf4  \cf8 sharePressed\cf4 (
+\f1\b \cf5 _
+\f0\b0 \cf4  sender: 
+\f1\b \cf5 Any
+\f0\b0 \cf4 ) \{\
+        \cf2 // Partage le mot de passe lorsque shareButton est press\'e9\cf4 \
+        
+\f1\b \cf5 if
+\f0\b0 \cf4  \cf10 motPasseTextField\cf4 .\cf9 text\cf4  \cf9 ==\cf4  \cf11 "                            "\cf4  \{\
+            \cf10 showToast\cf4 (message : \cf11 "Aucun mot de passe \'e0 partager"\cf4 )\
+        \}\
+        
+\f1\b \cf5 else
+\f0\b0 \cf4  \{\
+            
+\f1\b \cf5 let
+\f0\b0 \cf4  text = \cf11 "Mon mot de passe pour "\cf4  \cf9 +\cf4  \cf10 siteTextField\cf4 .\cf9 text\cf4 ! \cf9 +\cf4  \cf11 " est :\\n"\cf4  \cf9 +\cf4  \cf10 motPasseTextField\cf4 .\cf9 text\cf4 !\
+            text.\cf10 share\cf4 ()\
+        \}\
+    \}\
+    \
+    \
+    
+\f1\b \cf5 @IBAction
+\f0\b0 \cf4  
+\f1\b \cf5 func
+\f0\b0 \cf4  \cf8 minChanges\cf4 (
+\f1\b \cf5 _
+\f0\b0 \cf4  sender: 
+\f1\b \cf5 Any
+\f0\b0 \cf4 ) \{\
+        \cf2 // Minuscules Switch chang\'e9\cf4 \
+        
+\f1\b \cf5 if
+\f0\b0 \cf4  \cf10 minSwitch\cf4 .\cf9 isOn\cf4  \{\
+            \cf10 minState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+        \}\
+        
+\f1\b \cf5 else
+\f0\b0 \cf4  \{\
+            \cf10 minState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+        \}\
+        \cf10 generer\cf4 ()\
+    \}\
+    \
+    \
+    
+\f1\b \cf5 @IBAction
+\f0\b0 \cf4  
+\f1\b \cf5 func
+\f0\b0 \cf4  \cf8 majChanged\cf4 (
+\f1\b \cf5 _
+\f0\b0 \cf4  sender: 
+\f1\b \cf5 Any
+\f0\b0 \cf4 ) \{\
+        \cf2 // Majuscules Switch chang\'e9\cf4 \
+        
+\f1\b \cf5 if
+\f0\b0 \cf4  \cf10 majSwitch\cf4 .\cf9 isOn\cf4  \{\
+            \cf10 majState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+        \}\
+        
+\f1\b \cf5 else
+\f0\b0 \cf4  \{\
+            \cf10 majState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+        \}\
+        \cf10 generer\cf4 ()\
+    \}\
+    \
+    \
+    
+\f1\b \cf5 @IBAction
+\f0\b0 \cf4  
+\f1\b \cf5 func
+\f0\b0 \cf4  \cf8 symChanged\cf4 (
+\f1\b \cf5 _
+\f0\b0 \cf4  sender: 
+\f1\b \cf5 Any
+\f0\b0 \cf4 ) \{\
+        \cf2 // Symboles Switch chang\'e9\cf4 \
+        
+\f1\b \cf5 if
+\f0\b0 \cf4  \cf10 symSwitch\cf4 .\cf9 isOn\cf4  \{\
+            \cf10 symState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+        \}\
+        
+\f1\b \cf5 else
+\f0\b0 \cf4  \{\
+            \cf10 symState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+        \}\
+        \cf10 generer\cf4 ()\
+    \}\
+    \
+    \
+    
+\f1\b \cf5 @IBAction
+\f0\b0 \cf4  
+\f1\b \cf5 func
+\f0\b0 \cf4  \cf8 chiChanged\cf4 (
+\f1\b \cf5 _
+\f0\b0 \cf4  sender: 
+\f1\b \cf5 Any
+\f0\b0 \cf4 ) \{\
+        \cf2 // Chiffres Switch chang\'e9\cf4 \
+        
+\f1\b \cf5 if
+\f0\b0 \cf4  \cf10 chiSwitch\cf4 .\cf9 isOn\cf4  \{\
+            \cf10 chiState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+        \}\
+        
+\f1\b \cf5 else
+\f0\b0 \cf4  \{\
+            \cf10 chiState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+        \}\
+        \cf10 generer\cf4 ()\
+    \}\
+   \
+    \
+    
+\f1\b \cf5 @IBAction
+\f0\b0 \cf4  
+\f1\b \cf5 func
+\f0\b0 \cf4  \cf8 longueurSlider\cf4 (
+\f1\b \cf5 _
+\f0\b0 \cf4  sender: \cf7 UISlider\cf4 , forEvent event: \cf7 UIEvent\cf4 ) \{\
+ \
+        \cf2 // Longueur Slider change\cf4 \
+        
+\f1\b \cf5 let
+\f0\b0 \cf4  a = \cf10 longueurSlider\cf4 .\cf9 value\cf4 \
+        
+\f1\b \cf5 let
+\f0\b0 \cf4  len : \cf7 Float\cf4 \
+        
+\f1\b \cf5 if
+\f0\b0 \cf4  a <  \cf12 0.75\cf4  \{\
+            len = \cf12 0.0\cf4 \
+        \}\
+        
+\f1\b \cf5 else
+\f0\b0 \cf4  
+\f1\b \cf5 if
+\f0\b0 \cf4  a >= \cf12 0.75\cf4  \cf9 &&\cf4  a <= \cf12 1.25\cf4  \{\
+             len = \cf12 1.0\cf4 \
+        \}\
+        
+\f1\b \cf5 else
+\f0\b0 \cf4  \{\
+            len = \cf12 2.0\cf4 \
+        \}\
+        \cf10 longueur\cf4  = \cf7 Int\cf4 (len \cf9 *\cf4  len \cf9 +\cf4  \cf12 3.0\cf4  \cf9 *\cf4  len \cf9 +\cf4  \cf12 10.0\cf4 )\
+        \cf10 longueurSlider\cf4 .\cf9 value\cf4  = len\
+        \cf10 longueurLabel\cf4 .\cf9 text\cf4  = \cf11 "Longueur : "\cf4  \cf9 +\cf4  \cf7 String\cf4 (\cf10 longueur\cf4 )\
+        \cf10 generer\cf4 ()\
+    \}\
+    \
+    \
+    
+\f1\b \cf5 @IBAction
+\f0\b0 \cf4  
+\f1\b \cf5 func
+\f0\b0 \cf4  \cf8 securiteSliderChanged\cf4 (
+\f1\b \cf5 _
+\f0\b0 \cf4  sender: 
+\f1\b \cf5 Any
+\f0\b0 \cf4 ) \{\
+        \cf2 // S\'e9curit\'e9 Slider change\cf4 \
+        
+\f1\b \cf5 let
+\f0\b0 \cf4  bits = \cf10 securiteSlider\cf4 .\cf9 value\cf4  \cf9 +\cf4  \cf12 32\cf4 \
+        
+\f1\b \cf5 let
+\f0\b0 \cf4  len: \cf7 Float\cf4 \
+        \
+        
+\f1\b \cf5 if
+\f0\b0 \cf4  bits < \cf12 42\cf4  \{\
+            len = \cf12 0.0\cf4 \
+            \cf10 minState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+            \cf10 majState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+            \cf10 symState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+            \cf10 chiState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+        \} 
+\f1\b \cf5 else
+\f0\b0 \cf4  
+\f1\b \cf5 if
+\f0\b0 \cf4  bits < \cf12 47\cf4  \{\
+            len = \cf12 0.0\cf4 \
+            \cf10 minState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+            \cf10 majState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+            \cf10 symState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 chiState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+        \} 
+\f1\b \cf5 else
+\f0\b0 \cf4  
+\f1\b \cf5 if
+\f0\b0 \cf4  bits < \cf12 48\cf4  \{\
+            len = \cf12 0.0\cf4 \
+            \cf10 minState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 majState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+            \cf10 symState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+            \cf10 chiState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+        \} 
+\f1\b \cf5 else
+\f0\b0 \cf4  
+\f1\b \cf5 if
+\f0\b0 \cf4  bits < \cf12 51\cf4  \{\
+            len = \cf12 0.0\cf4 \
+            \cf10 minState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+            \cf10 majState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+            \cf10 symState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 chiState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+        \} 
+\f1\b \cf5 else
+\f0\b0 \cf4  
+\f1\b \cf5 if
+\f0\b0 \cf4  bits < \cf12 55\cf4  \{\
+            len = \cf12 0.0\cf4 \
+            \cf10 minState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 majState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+            \cf10 symState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+            \cf10 chiState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+        \} 
+\f1\b \cf5 else
+\f0\b0 \cf4  
+\f1\b \cf5 if
+\f0\b0 \cf4  bits < \cf12 57\cf4  \{\
+            len = \cf12 0.0\cf4 \
+            \cf10 minState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 majState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+            \cf10 symState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 chiState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+        \} 
+\f1\b \cf5 else
+\f0\b0 \cf4  
+\f1\b \cf5 if
+\f0\b0 \cf4  bits < \cf12 61\cf4  \{\
+            len = \cf12 0.0\cf4 \
+            \cf10 minState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 majState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 symState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+            \cf10 chiState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+        \} 
+\f1\b \cf5 else
+\f0\b0 \cf4  
+\f1\b \cf5 if
+\f0\b0 \cf4  bits < \cf12 63\cf4  \{\
+            len = \cf12 0.0\cf4 \
+            \cf10 minState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 majState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 symState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 chiState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+        \} 
+\f1\b \cf5 else
+\f0\b0 \cf4  
+\f1\b \cf5 if
+\f0\b0 \cf4  bits < \cf12 66\cf4  \{\
+            len = \cf12 0.0\cf4 \
+            \cf10 minState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 majState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 symState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 chiState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+        \} 
+\f1\b \cf5 else
+\f0\b0 \cf4  
+\f1\b \cf5 if
+\f0\b0 \cf4  bits < \cf12 67\cf4  \{\
+            len = \cf12 1.0\cf4 \
+            \cf10 minState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 majState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+            \cf10 symState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+            \cf10 chiState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+        \} 
+\f1\b \cf5 else
+\f0\b0 \cf4  
+\f1\b \cf5 if
+\f0\b0 \cf4  bits < \cf12 72\cf4  \{\
+            len = \cf12 1.0\cf4 \
+            \cf10 minState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+            \cf10 majState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+            \cf10 symState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 chiState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+        \} 
+\f1\b \cf5 else
+\f0\b0 \cf4  
+\f1\b \cf5 if
+\f0\b0 \cf4  bits < \cf12 76\cf4  \{\
+            len = \cf12 1.0\cf4 \
+            \cf10 minState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 majState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+            \cf10 symState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+            \cf10 chiState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+        \} 
+\f1\b \cf5 else
+\f0\b0 \cf4  
+\f1\b \cf5 if
+\f0\b0 \cf4  bits < \cf12 80\cf4  \{\
+            len = \cf12 1.0\cf4 \
+            \cf10 minState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 majState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+            \cf10 symState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 chiState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+        \} 
+\f1\b \cf5 else
+\f0\b0 \cf4  
+\f1\b \cf5 if
+\f0\b0 \cf4  bits < \cf12 86\cf4  \{\
+            len = \cf12 1.0\cf4 \
+            \cf10 minState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 majState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 symState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+            \cf10 chiState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+        \} 
+\f1\b \cf5 else
+\f0\b0 \cf4  
+\f1\b \cf5 if
+\f0\b0 \cf4  bits < \cf12 88\cf4  \{\
+            len = \cf12 1.0\cf4 \
+            \cf10 minState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 majState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 symState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 chiState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+        \} 
+\f1\b \cf5 else
+\f0\b0 \cf4  
+\f1\b \cf5 if
+\f0\b0 \cf4  bits < \cf12 94\cf4  \{\
+            len = \cf12 1.0\cf4 \
+            \cf10 minState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 majState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 symState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 chiState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+        \} 
+\f1\b \cf5 else
+\f0\b0 \cf4  
+\f1\b \cf5 if
+\f0\b0 \cf4  bits < \cf12 95\cf4  \{\
+            len = \cf12 2.0\cf4 \
+            \cf10 minState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 majState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+            \cf10 symState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+            \cf10 chiState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+        \} 
+\f1\b \cf5 else
+\f0\b0 \cf4  
+\f1\b \cf5 if
+\f0\b0 \cf4  bits < \cf12 103\cf4  \{\
+            len = \cf12 2.0\cf4 \
+            \cf10 minState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+            \cf10 majState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+            \cf10 symState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 chiState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+        \} 
+\f1\b \cf5 else
+\f0\b0 \cf4  
+\f1\b \cf5 if
+\f0\b0 \cf4  bits < \cf12 109\cf4  \{\
+            len = \cf12 2.0\cf4 \
+            \cf10 minState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 majState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+            \cf10 symState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+            \cf10 chiState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+        \} 
+\f1\b \cf5 else
+\f0\b0 \cf4  
+\f1\b \cf5 if
+\f0\b0 \cf4  bits < \cf12 114\cf4  \{\
+            len = \cf12 2.0\cf4 \
+            \cf10 minState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 majState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+            \cf10 symState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 chiState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+        \} 
+\f1\b \cf5 else
+\f0\b0 \cf4  
+\f1\b \cf5 if
+\f0\b0 \cf4  bits < \cf12 115\cf4  \{\
+            len = \cf12 2.0\cf4 \
+            \cf10 minState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 majState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 symState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+            \cf10 chiState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+        \} 
+\f1\b \cf5 else
+\f0\b0 \cf4  
+\f1\b \cf5 if
+\f0\b0 \cf4  bits < \cf12 123\cf4  \{\
+            len = \cf12 2.0\cf4 \
+            \cf10 minState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 majState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+            \cf10 symState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 chiState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+        \} 
+\f1\b \cf5 else
+\f0\b0 \cf4  
+\f1\b \cf5 if
+\f0\b0 \cf4  bits < \cf12 126\cf4  \{\
+            len = \cf12 2.0\cf4 \
+            \cf10 minState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 majState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 symState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 chiState\cf4  = 
+\f1\b \cf5 false
+\f0\b0 \cf4 \
+        \} 
+\f1\b \cf5 else
+\f0\b0 \cf4  \{\
+            len = \cf12 2.0\cf4 \
+            \cf10 minState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 majState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 symState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+            \cf10 chiState\cf4  = 
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+        \}\
+        \cf10 minSwitch\cf4 .\cf9 isOn\cf4  = \cf10 minState\cf4 \
+        \cf10 majSwitch\cf4 .\cf9 isOn\cf4  = \cf10 majState\cf4 \
+        \cf10 symSwitch\cf4 .\cf9 isOn\cf4  = \cf10 symState\cf4 \
+        \cf10 chiSwitch\cf4 .\cf9 isOn\cf4  = \cf10 chiState\cf4 \
+        \cf10 longueurSlider\cf4 .\cf9 value\cf4  = len\
+        \cf10 longueur\cf4  = \cf7 Int\cf4 (len \cf9 *\cf4  len \cf9 +\cf4  \cf12 3.0\cf4  \cf9 *\cf4  len \cf9 +\cf4  \cf12 10.0\cf4 )\
+        \cf10 generer\cf4 ()\
+    \}\
+\}\
+\
+\cf2 // MARK : Extension\cf4 \
+\
+
+\f1\b \cf5 extension
+\f0\b0 \cf4  \cf13 ViewController\cf4 : \cf7 UITextFieldDelegate\cf4 \{\
+    \cf2 // Enl\'e8ve le clavier losque bouton retour est press\'e9\cf4 \
+    
+\f1\b \cf5 func
+\f0\b0 \cf4  \cf8 textFieldShouldReturn\cf4 (
+\f1\b \cf5 _
+\f0\b0 \cf4  textField: \cf7 UITextField\cf4 ) -> \cf7 Bool\cf4  \{\
+        textField.\cf9 resignFirstResponder\cf4 ()\
+        
+\f1\b \cf5 return
+\f0\b0 \cf4  
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+    \}\
+\}\
+\
+\
+
+\f1\b \cf5 extension
+\f0\b0 \cf4  \cf13 ViewController\cf4 \{\
+    \cf2 // Toast\cf4 \
+    
+\f1\b \cf5 func
+\f0\b0 \cf4  \cf8 showToast\cf4 (message : \cf7 String\cf4 ) \{\
+        
+\f1\b \cf5 let
+\f0\b0 \cf4  toastLabel = \cf7 UILabel\cf4 (frame: \cf7 CGRect\cf4 (x: 
+\f1\b \cf5 self
+\f0\b0 \cf4 .\cf9 view\cf4 .\cf9 frame\cf4 .\cf9 size\cf4 .\cf9 width/\cf12 2\cf4  \cf9 -\cf4  \cf12 125\cf4 , y: 
+\f1\b \cf5 self
+\f0\b0 \cf4 .\cf9 view\cf4 .\cf9 frame\cf4 .\cf9 size\cf4 .\cf9 height-\cf12 100\cf4 , width: \cf12 250\cf4 , height: \cf12 35\cf4 ))\
+        toastLabel.\cf9 backgroundColor\cf4  = \cf7 UIColor\cf4 .\cf9 black\cf4 .\cf9 withAlphaComponent\cf4 (\cf12 0.6\cf4 )\
+        toastLabel.\cf9 textColor\cf4  = \cf7 UIColor\cf4 .\cf9 white\cf4 \
+        toastLabel.\cf9 textAlignment\cf4  = .\cf9 center\cf4 ;\
+        toastLabel.\cf9 font\cf4  = \cf7 UIFont\cf4 (name: \cf11 "Montserrat-Light"\cf4 , size: \cf12 12.0\cf4 )\
+        toastLabel.\cf9 text\cf4  = message\
+        toastLabel.\cf9 alpha\cf4  = \cf12 1.0\cf4 \
+        toastLabel.\cf9 layer\cf4 .\cf9 cornerRadius\cf4  = \cf12 10\cf4 ;\
+        toastLabel.\cf9 clipsToBounds\cf4   =  
+\f1\b \cf5 true
+\f0\b0 \cf4 \
+        
+\f1\b \cf5 self
+\f0\b0 \cf4 .\cf9 view\cf4 .\cf9 addSubview\cf4 (toastLabel)\
+        \cf7 UIView\cf4 .\cf9 animate\cf4 (withDuration: \cf12 4.0\cf4 , delay: \cf12 0.1\cf4 , options: .\cf9 curveEaseOut\cf4 , animations: \{\
+            toastLabel.\cf9 alpha\cf4  = \cf12 0.0\cf4 \
+        \}, completion: \{(isCompleted) 
+\f1\b \cf5 in
+\f0\b0 \cf4 \
+            toastLabel.\cf9 removeFromSuperview\cf4 ()\
+        \})\
+    \}\
+\}\
+\
+\
+
+\f1\b \cf5 extension
+\f0\b0 \cf4  \cf7 UIApplication\cf4  \{\
+    \cf2 // Share\cf4 \
+    
+\f1\b \cf5 class
+\f0\b0 \cf4  
+\f1\b \cf5 var
+\f0\b0 \cf4  \cf8 topViewController\cf4 : \cf7 UIViewController\cf4 ? \{ 
+\f1\b \cf5 return
+\f0\b0 \cf4  \cf10 getTopViewController\cf4 () \}\
+    
+\f1\b \cf5 private
+\f0\b0 \cf4  
+\f1\b \cf5 class
+\f0\b0 \cf4  
+\f1\b \cf5 func
+\f0\b0 \cf4  \cf8 getTopViewController\cf4 (base: \cf7 UIViewController\cf4 ? = \cf7 UIApplication\cf4 .\cf9 shared\cf4 .\cf9 keyWindow\cf4 ?.\cf9 rootViewController\cf4 ) -> \cf7 UIViewController\cf4 ? \{\
+        
+\f1\b \cf5 if
+\f0\b0 \cf4  
+\f1\b \cf5 let
+\f0\b0 \cf4  nav = base 
+\f1\b \cf5 as
+\f0\b0 \cf4 ? \cf7 UINavigationController\cf4  \{ 
+\f1\b \cf5 return
+\f0\b0 \cf4  \cf10 getTopViewController\cf4 (base: nav.\cf9 visibleViewController\cf4 ) \}\
+        
+\f1\b \cf5 if
+\f0\b0 \cf4  
+\f1\b \cf5 let
+\f0\b0 \cf4  tab = base 
+\f1\b \cf5 as
+\f0\b0 \cf4 ? \cf7 UITabBarController\cf4  \{\
+            
+\f1\b \cf5 if
+\f0\b0 \cf4  
+\f1\b \cf5 let
+\f0\b0 \cf4  selected = tab.\cf9 selectedViewController\cf4  \{ 
+\f1\b \cf5 return
+\f0\b0 \cf4  \cf10 getTopViewController\cf4 (base: selected) \}\
+        \}\
+        
+\f1\b \cf5 if
+\f0\b0 \cf4  
+\f1\b \cf5 let
+\f0\b0 \cf4  presented = base?.\cf9 presentedViewController\cf4  \{ 
+\f1\b \cf5 return
+\f0\b0 \cf4  \cf10 getTopViewController\cf4 (base: presented) \}\
+        
+\f1\b \cf5 return
+\f0\b0 \cf4  base\
+    \}\
+\}\
+\
+\
+
+\f1\b \cf5 extension
+\f0\b0 \cf4  \cf7 Hashable\cf4  \{\
+    \cf2 // Share\cf4 \
+    
+\f1\b \cf5 func
+\f0\b0 \cf4  \cf8 share\cf4 () \{\
+        
+\f1\b \cf5 let
+\f0\b0 \cf4  activity = \cf7 UIActivityViewController\cf4 (activityItems: [
+\f1\b \cf5 self
+\f0\b0 \cf4 ], applicationActivities: 
+\f1\b \cf5 nil
+\f0\b0 \cf4 )\
+        \cf7 UIApplication\cf4 .\cf10 topViewController\cf4 ?.\cf9 present\cf4 (activity, animated: 
+\f1\b \cf5 true
+\f0\b0 \cf4 , completion: 
+\f1\b \cf5 nil
+\f0\b0 \cf4 )\
+    \}\
+\}\
+\
+\
+
+\f1\b \cf5 extension
+\f0\b0 \cf4  \cf7 Digest\cf4  \{\
+    
+\f1\b \cf5 var
+\f0\b0 \cf4  \cf8 bytes\cf4 : [\cf7 UInt8\cf4 ] \{ \cf7 Array\cf4 (\cf9 makeIterator\cf4 ()) \}\
+    
+\f1\b \cf5 var
+\f0\b0 \cf4  \cf8 data\cf4 : \cf7 Data\cf4  \{ \cf7 Data\cf4 (\cf10 bytes\cf4 ) \}\
+\
+    
+\f1\b \cf5 var
+\f0\b0 \cf4  \cf8 hexStr\cf4 : \cf7 String\cf4  \{\
+        \cf10 bytes\cf4 .\cf9 map\cf4  \{ \cf7 String\cf4 (format: \cf11 "%02X"\cf4 , $0) \}.\cf9 joined\cf4 ()\
+    \}\
+  \
+\}\
+\
+\
+
+\f1\b \cf5 extension
+\f0\b0 \cf4  \cf7 String\cf4  \{\
+    
+\f1\b \cf5 subscript
+\f0\b0 \cf4  (index: \cf7 Int\cf4 ) -> \cf7 Character\cf4  \{\
+        
+\f1\b \cf5 let
+\f0\b0 \cf4  charIndex = 
+\f1\b \cf5 self
+\f0\b0 \cf4 .\cf9 index\cf4 (
+\f1\b \cf5 self
+\f0\b0 \cf4 .\cf9 startIndex\cf4 , offsetBy: index)\
+        
+\f1\b \cf5 return
+\f0\b0 \cf4  
+\f1\b \cf5 self
+\f0\b0 \cf4 [charIndex]\
+    \}\
+\
+    
+\f1\b \cf5 subscript
+\f0\b0 \cf4  (range: \cf7 Range\cf4 <\cf7 Int\cf4 >) -> \cf7 Substring\cf4  \{\
+        
+\f1\b \cf5 let
+\f0\b0 \cf4  startIndex = 
+\f1\b \cf5 self
+\f0\b0 \cf4 .\cf9 index\cf4 (
+\f1\b \cf5 self
+\f0\b0 \cf4 .\cf9 startIndex\cf4 , offsetBy: range.\cf9 startIndex\cf4 )\
+        
+\f1\b \cf5 let
+\f0\b0 \cf4  stopIndex = 
+\f1\b \cf5 self
+\f0\b0 \cf4 .\cf9 index\cf4 (
+\f1\b \cf5 self
+\f0\b0 \cf4 .\cf9 startIndex\cf4 , offsetBy: range.\cf9 startIndex\cf4  \cf9 +\cf4  range.\cf9 count\cf4 )\
+        
+\f1\b \cf5 return
+\f0\b0 \cf4  
+\f1\b \cf5 self
+\f0\b0 \cf4 [startIndex\cf9 ..<\cf4 stopIndex]\
+    \}\
+\}\
+\
+}
