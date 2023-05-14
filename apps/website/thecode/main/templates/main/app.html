@@ -1,0 +1,37 @@
+{% extends 'main/base.html' %}
+{% load static %}
+{% block nav %}
+    <ul>
+        <li><a href="{% url 'home' %}" class="active">Générateur</a></li>
+    </ul>
+{% endblock %}
+
+{% block main %}
+
+<section id="intro" class="main">
+<div class="spotlight">
+	<div class="content">
+		<p>Vous souhaitez utiliser TheCode hors ligne ? Pas de soucis, il existe l'application sur smartphone et ordinateur, téléchargez-la !</p>
+		<header class="major">
+			<h2>Sur Smartphone</h2>
+		</header>
+
+		<h2>Android</h2>
+		<p><a href="https://play.google.com/store/apps/details?id=fr.juliette.thecode" title="Télécharger TheCode sur Android">Télécharger TheCode sur Android</a></p>
+
+		<h2>Iphone</h2>
+		<p>Disponible prochainement</p>
+
+		<header class="major">
+			<h2>Sur Ordinateur</h2>
+		</header>
+
+		<h2>Sur Mac</h2>
+		<p><a href="TheCode.zip" download="TheCode.zip" title="Télécharger TheCode sur MAC">Télécharger TheCode sur Mac</a></p>
+	</div>
+<span class="img_rond_ext"><span class="img_rond_int_gros"><img src="/static/main/images/appareils.svg" alt="appareils" /></span></span>
+
+</div>
+</section>
+
+{% endblock %}

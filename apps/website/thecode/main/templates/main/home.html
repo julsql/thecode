@@ -1,0 +1,151 @@
+{% extends 'main/base.html' %}
+{% load static %}
+
+{% block nav %}
+    <ul>
+        <li><a href="#intro" class="active">Générateur</a></li>
+        <li><a href="#first">Exemple</a></li>
+        <li><a href="#second">Informations</a></li>
+        <li><a href="#cta">Application</a></li>
+    </ul>
+{% endblock %}
+
+{% block main %}
+
+<!-- Introduction -->
+    <section id="intro" class="main">
+        <div class="spotlight">
+            <div class="content">
+                <header class="major">
+                    <h2>Générateur</h2>
+                </header>
+
+                <form id="my_form" action="" method="post" novalidate>
+                    {% csrf_token %}
+
+                    <fieldset>
+                        <h3>Données</h3>
+
+                        <p>
+                            {{ form.clef.label_tag }}
+                            {{ form.clef }}
+                            <button type="button" onclick="togglePassword()">Afficher la clef</button>
+
+                        </p>
+
+                        <p>
+                            {{ form.site.label_tag }}
+                            {{ form.site }}
+                        </p>
+                    </fieldset>
+
+                    <p></p>
+
+                    <fieldset>
+                        <h3>Paramètres du mot de passe</h3>
+
+                        <p>
+                            <div class="inline-items">
+                                {{ form.longueur.label_tag }}<output id="longueur-value" style="margin-left: 5px; margin-top: -1.5px;">20</output>
+                            </div>
+                            {{ form.longueur }}
+
+
+                        </p>
+
+                        <p>
+                        Caractères :<br />
+                            {{ form.minuscules }}
+                            {{ form.minuscules.label_tag }}<br />
+
+                            {{ form.majuscules }}
+                            {{ form.majuscules.label_tag }}<br />
+
+                            {{ form.symboles }}
+                            {{ form.symboles.label_tag }}<br />
+
+                            {{ form.chiffres }}
+                            {{ form.chiffres.label_tag }}
+
+                        </p>
+                    </fieldset>
+                    <!--input type="submit" value="Générer" class="button" title="Générer le mot de passe"/-->
+                </form>
+                <h3>Mot de passe</h3>
+
+                <p>
+                    <label for="mdp">Le mot de passe est :</label>
+                    <input type="text" name="mdp" id="mdp" placeholder="Données invalides"
+                  value = "{{ mdp }}" readonly/>
+                </p>
+
+                <p>
+                    Sécurité : <span id="couleur"></span>
+                </p>
+
+                <input type="range" name="secutite" id="securite" min="32" max="126" step="1" value = "{{ bits }}"/>
+
+            </div>
+            <span class="image"><img src="/static/main/images/chaines.svg" alt="image chaines" /></span>
+        </div>
+    </section>
+
+<!-- First Section -->
+    <section id="first" class="main special">
+        <header class="major">
+            <h2>Exemple</h2>
+        </header>
+        <ul class="features">
+            <li>
+                <span class="img_rond_ext"><span class="img_rond_int"><img src="/static/main/images/bouclier.svg" alt=" image bouclier" /></span></span>
+                <p></p>
+                <h3>Créez votre mot de passe</h3>
+                <p>Vous désirez changer le mot de passe de votre compte Google. Vous devez choisir entre une clef à se souvenir, puis entrer <em>google</em> dans <strong>nom du site</strong>, les caractères souhaités, la longueur du mot de passe, et le code sera généré.</p>
+            </li>
+            <li>
+                <span class="img_rond_ext"><span class="img_rond_int"><img src="/static/main/images/head.svg" alt="image tête" /></span></span>
+                <p></p>
+                <h3>Retrouvez le mot de passe</h3>
+                <p>Pour le retrouver, vous n’avez qu’à reprendre l’application, toujours mettre <em>google</em> dans <strong>nom du site</strong>, les mêmes informations, et vous obtiendrez le même mot de passe.</p>
+            </li>
+            <li>
+                <span class="img_rond_ext"><span class="img_rond_int"><img src="/static/main/images/connexions.svg" alt="image connexions" /></span></span>
+                <p></p>
+                <h3>Utilisez-le sur tous vos comptes !</h3>
+                <p>Maintenant, il ne vous reste plus qu'à utiliser ce générateur pour tous vos comptes !</p>
+            </li>
+        </ul>
+    </section>
+
+<!-- Second Section -->
+    <section id="second" class="main special">
+        <header class="major">
+            <h2>Informations</h2>
+            <p>Attention, pour ne pas confondre les O et les zéros, il n'y a jamais de zéro dans les mots de passe générés.<br /><br />La sécurité des mots de passe en bits donne une idée de la force d'un mot de passe. Une sécurité supérieure à 80 est déjà bien pour une utilisation classique.</p>
+        </header>
+
+        <footer class="major">
+            <ul class="actions special">
+                <li><a href="https://www.ssi.gouv.fr/administration/precautions-elementaires/calculer-la-force-dun-mot-de-passe/" title="Site gouvernement ANSSI"class="button">En savoir plus</a></li>
+            </ul>
+        </footer>
+    </section>
+
+<!-- Get Started -->
+    <section id="cta" class="main special">
+        <header class="major">
+            <h2>Application</h2>
+            <p>Vous souhaitez utiliser TheCode hors ligne ? C'est possible avec les applications pour ordinateurs ou mobiles !</p>
+        </header>
+        <footer class="major">
+            <ul class="actions special">
+                <li><a href="{% url 'app'%}" class="button primary" title="Page application">Application</a></li>
+            </ul>
+        </footer>
+    </section>
+
+{% endblock %}
+{% block javascript %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sjcl/1.0.8/sjcl.min.js"></script>
+<script src="/static/main/assets/js/formulaire.js"></script>
+{% endblock %}
