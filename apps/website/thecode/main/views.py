@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from main.forms import CodeForm
+from forms import CodeForm
 
 
 # Create your views here.
