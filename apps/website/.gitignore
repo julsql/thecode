@@ -3,7 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 *DS_Store
-
+*settings.py
 
 # C extensions
 *.so
