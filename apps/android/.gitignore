@@ -1,0 +1,60 @@
+# Ignore les fichiers générés par Android Studio
+*.iml
+.gradle/
+/build/
+/captures/
+/local.properties
+
+# Ignore les fichiers de configuration
+.idea/
+
+# Ignore les fichiers de build générés
+*.class
+*.jar
+*.war
+*.ear
+out/
+build/
+
+# Ignore les fichiers de cache
+*.swp
+*.bak
+*.cache
+
+# Ignore les fichiers de déploiement
+*.apk
+*.ap_
+
+# Ignore les fichiers de logs
+*.log
+
+# Ignore les fichiers de configuration Android
+/gradle-wrapper.properties
+/gradle-local.properties
+
+# Ignore les fichiers de sauvegarde
+.idea/**/workspace.xml
+.idea/**/tasks.xml
+.idea/**/gradle.xml
+.idea/**/assetWizardSettings.xml
+.idea/**/dictionaries
+.idea/**/libraries
+.idea/**/dataSources.ids
+
+# Ignore les fichiers de génération de projet
+.gradle
+/local.properties
+/.idea/workspace.xml
+/.idea/tasks.xml
+/.idea/gradle.xml
+/.idea/assetWizardSettings.xml
+/.idea/dictionaries
+/.idea/libraries
+
+# Ignore les fichiers système
+.DS_Store
+Thumbs.db
+
+# Ignore les fichiers de sauvegarde Emacs
+*~
+# Ajoutez d'autres fichiers/dossiers à ignorer au besoin
