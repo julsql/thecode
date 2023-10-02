@@ -23,7 +23,7 @@ You have secured & different passwords for all your accounts by remembering only
 ## Information
 
 TheCode uses the secret key + the website name and hash it with sha256.\
-With the hex data générate by the hash, it converts it in a new base with the characters selected (lower alphabet, UPPER alphabet, numbers…)\
+With the hex data generate by the hash, it converts it in a new base with the characters selected (lower alphabet, UPPER alphabet, numbers…)
 
 ## App Structure
 
@@ -40,7 +40,7 @@ With the hex data générate by the hash, it converts it in a new base with the 
 1. Clone git repository
 
     ```bash
-    git clone git@github.com:juliette39/thecode_website.git
+    git clone git@github.com:TheCodeDevLab/thecode_website.git
     ```
 
 2. Don't forget to add the settings file in `./thecode/thecode`
