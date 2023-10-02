@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="18122" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="BYZ-38-t0r">
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="20037" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="BYZ-38-t0r">
     <device id="retina6_5" orientation="portrait" appearance="light"/>
     <dependencies>
         <deployment identifier="iOS"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="18093"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="20020"/>
         <capability name="Safe area layout guides" minToolsVersion="9.0"/>
         <capability name="System colors in document resources" minToolsVersion="11.0"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
@@ -116,13 +116,13 @@
                                 <rect key="frame" x="10" y="248.33333333333337" width="394" height="30"/>
                                 <subviews>
                                     <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Longueur : 20" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="CLl-Lw-Gm5">
-                                        <rect key="frame" x="0.0" y="0.0" width="6.333333333333333" height="30"/>
+                                        <rect key="frame" x="0.0" y="0.0" width="0.0" height="30"/>
                                         <fontDescription key="fontDescription" type="system" pointSize="17"/>
                                         <color key="textColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                         <nil key="highlightedColor"/>
                                     </label>
                                     <slider opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" value="2" minValue="0.0" maxValue="2" translatesAutoresizingMaskIntoConstraints="NO" id="bky-il-qPI">
-                                        <rect key="frame" x="12.333333333333343" y="0.0" width="383.66666666666663" height="31"/>
+                                        <rect key="frame" x="6" y="0.0" width="390" height="31"/>
                                         <color key="tintColor" red="0.1732362211" green="0.35677924750000001" blue="0.33386433119999998" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                         <color key="thumbTintColor" red="0.36042213439999998" green="0.81970936059999999" blue="0.75016671420000003" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                         <connections>
@@ -298,7 +298,7 @@
                                 </connections>
                             </button>
                             <stackView opaque="NO" contentMode="scaleToFill" spacing="7" translatesAutoresizingMaskIntoConstraints="NO" id="MaN-fx-ed5" userLabel="Sécurité View">
-                                <rect key="frame" x="94.333333333333329" y="522.66666666666663" width="225.66666666666669" height="20"/>
+                                <rect key="frame" x="94.333333333333329" y="522.66666666666663" width="225.33333333333337" height="20"/>
                                 <subviews>
                                     <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Sécurité :" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Vem-cR-9D5">
                                         <rect key="frame" x="0.0" y="0.0" width="72" height="20"/>
@@ -307,7 +307,7 @@
                                         <nil key="highlightedColor"/>
                                     </label>
                                     <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Très forte : 129 bits" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="AsF-ny-YdZ">
-                                        <rect key="frame" x="79.000000000000014" y="0.0" width="146.66666666666669" height="20"/>
+                                        <rect key="frame" x="79.000000000000014" y="0.0" width="146.33333333333337" height="20"/>
                                         <constraints>
                                             <constraint firstAttribute="height" constant="20" id="xSk-F5-Dcs"/>
                                         </constraints>
