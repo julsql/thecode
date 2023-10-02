@@ -48,14 +48,17 @@ def modifSecurite():
     return "Securite :" + secure + str(bits) + " bits", couleur
 
 
-def dec2base(x, caracteres):
+def dec2base(x, base):
     """Convertit x en base 10 en x en base lon avec la liste de caractères caracteres"""
 
-    lon = len(caracteres)
-    result = caracteres[0]
+    b = len(base)
+    result = base[x % b]
+    x = (x // b) - 1
 
-    while x != 0:
-        x, result = x // lon , caracteres[x % lon] + result
+    while (x + 2) != 1:
+        inter = x % b
+        result = base[inter] + result
+        x = (x // b) - 1
 
     return result
 
@@ -82,10 +85,7 @@ def modifie(site, clef) :
 
     resultint = int(hashlib.sha256((site + clef).encode()).hexdigest(), 16)
 
-    nb_carac = len(base)
-
     code2 = dec2base(resultint, base)[:longueur]
-
     securite, couleur = modifSecurite()
 
     return (code2, securite, couleur)

@@ -1,0 +1,37 @@
+*.DS_Store
+
+# Fichiers de bytecode Python
+__pycache__/
+
+# Fichiers de configuration de l'environnement virtuel (si vous utilisez venv ou virtualenv)
+venv/
+env/
+*.pyc
+*.pyo
+
+# Dossiers générés par des outils de construction
+build/
+dist/
+
+# Dossiers spécifiques à certaines IDE
+.idea/
+.vscode/
+
+# Fichiers de sauvegarde
+*~
+*.bak
+
+# Fichiers de journalisation
+*.log
+
+# Fichiers de données de test et de développement
+.db
+.sqlite
+*.sqlite3
+
+# Fichiers de dépendances (peut varier en fonction de l'environnement)
+*.egg-info/
+*.egg
+__pycache__
+.env
+

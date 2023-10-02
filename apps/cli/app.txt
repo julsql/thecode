@@ -1,0 +1,8 @@
+cd Documents/App/App\ Python
+
+pyinstaller --noconsole TheCodeApp.py
+
+Then copy files tcl, tk and python in app : dist
+
+In Bash : 
+/Users/julsql/Documents/App/App\ Python/dist/TheCodeApp/TheCodeApp
