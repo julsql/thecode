@@ -64,14 +64,17 @@ function coder(site, clef, longueur, minState, majState, symState, chiState) {
         color: securite.color};
 }
 
-function dec2base(i, base) {
-    const l = base.length;
-    let result = base[i % l];
-    i = Math.floor(i / l) - 1;
+function dec2base(x, base) {
+    const b = BigInt(base.length);
+    let result = base[x % b];
+    const un = BigInt(1);
+    const deux = BigInt(2);
+    x = (x / b) - un;
 
-    while (i > -1) {
-        result = base[i % l] + result;
-        i = Math.floor(i / l) - 1;
+    while (x + deux !== un) {
+        const inter = Number(x % b);
+        result = base.charAt(inter) + result;
+        x = (x / b) - un;
     }
 
     return result;
@@ -87,13 +90,12 @@ function sha256(message) {
 
 function code(site, clef, base, longueur) {
     const hexHash = sha256(site + clef);
-    const resultint = parseInt(hexHash, 16);
-
-    console.log(dec2base(resultint, base));
+    const resultint = BigInt("0x" + hexHash);
+    const pass = dec2base(resultint, base);
     if (longueur == 15) {
-        return dec2base(resultint, base).slice(0, 14);
+        return pass.slice(0, 14);
     }
-    return dec2base(resultint, base).slice(0, longueur);
+    return pass.slice(0, longueur);
 }
 
 function get_bits(base, longueur) {

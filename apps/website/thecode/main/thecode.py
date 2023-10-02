@@ -34,20 +34,6 @@ def get_securite(base, longueur):
     return secure, bits, couleur
 
 
-def dec2base(x, base):
-    """Convertit x en base 10 en x en base b avec la liste de caractères base"""
-
-    b = len(base)
-    if x == 0:
-        return base[0]
-
-    result = ''
-    while x:
-        x, result = x // b, base[x % b] + result
-
-    return result
-
-
 def dec2base(i, base="portezcviuxwhskyajgblndqfm"):
     """Convertit i en base 10 en result en base len(base) avec la liste de caractères base"""
     l = len(base)
@@ -60,7 +46,7 @@ def dec2base(i, base="portezcviuxwhskyajgblndqfm"):
 
 
 def get_base(minState, majState, symState, chiState):
-    """Modifie la base en fonction des caractères séléctionnés"""
+    """Modifie la base en fonction des caractères selectionnés"""
 
     base = ""
     if minState:
@@ -83,9 +69,13 @@ def main(site, clef, longueur, minState, majState, symState, chiState):
 
     resultint = int(hashlib.sha256((site + clef).encode()).hexdigest(), 16)
 
+    print("=========CODE HEXA==========")
     print(resultint)
 
     mdp = dec2base(resultint, base)[:longueur]
+
+    print("=========CODE FINAL==========")
+    print(mdp)
 
     securite, bits, couleur = get_securite(base, longueur)
 
