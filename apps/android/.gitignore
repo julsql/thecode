@@ -52,7 +52,7 @@ build/
 /.idea/libraries
 
 # Ignore les fichiers système
-.DS_Store
+*/.DS_Store
 Thumbs.db
 
 # Ignore les fichiers de sauvegarde Emacs
