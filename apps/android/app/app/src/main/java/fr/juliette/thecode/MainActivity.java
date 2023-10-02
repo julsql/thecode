@@ -324,10 +324,12 @@ public class MainActivity extends AppCompatActivity {
         int len2 = len * len + 3 * len + 10;
 
         BigInteger code = new BigInteger(sha256(mot), 16);
-
         int nb_carac = base.length();
 
+
         String code2 = dec2Base(code, base).substring(0, len2);
+        System.out.println("=========CODE FINAL==========");
+        System.out.println(code2);
 
         int bits = (int) ((Math.round(Math.log(Math.pow(nb_carac, code2.length())) / Math.log(2))));
         String[] result = securite(bits);
