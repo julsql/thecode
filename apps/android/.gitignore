@@ -32,25 +32,6 @@ build/
 /gradle-wrapper.properties
 /gradle-local.properties
 
-# Ignore les fichiers de sauvegarde
-.idea/**/workspace.xml
-.idea/**/tasks.xml
-.idea/**/gradle.xml
-.idea/**/assetWizardSettings.xml
-.idea/**/dictionaries
-.idea/**/libraries
-.idea/**/dataSources.ids
-
-# Ignore les fichiers de génération de projet
-.gradle
-/local.properties
-/.idea/workspace.xml
-/.idea/tasks.xml
-/.idea/gradle.xml
-/.idea/assetWizardSettings.xml
-/.idea/dictionaries
-/.idea/libraries
-
 # Ignore les fichiers système
 *.DS_Store
 Thumbs.db
