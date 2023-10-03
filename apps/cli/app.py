@@ -235,4 +235,3 @@ dark_mode()
 
 # Creation fenetre
 root.configure(bg=back)
-root.mainloop()

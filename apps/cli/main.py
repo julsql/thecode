@@ -1,10 +1,10 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import app
 
 
 def main():
-    """Run application."""
-    app.main()
+    """Run the application."""
+    app.root.mainloop()
 
 
 if __name__ == '__main__':
