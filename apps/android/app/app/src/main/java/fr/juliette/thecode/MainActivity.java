@@ -7,7 +7,6 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.os.Environment;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.app.AppCompatDelegate;
 import android.text.Editable;
@@ -24,14 +23,6 @@ import android.widget.SeekBar;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.math.BigInteger;
-import java.security.MessageDigest;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -54,8 +45,6 @@ public class MainActivity extends AppCompatActivity {
 
     SeekBar longueurSeekBar;
     SeekBar securiteSeekBar;
-
-    private String fileName = "modeSombre.txt";
 
     @SuppressLint({"SetTextI18n", "ResourceType"})
     public void onCreate(Bundle savedInstanceState) {
@@ -99,16 +88,15 @@ public class MainActivity extends AppCompatActivity {
     
     // MARK : Initialisations
 
-    private String base = "";
     private static boolean darkMode;
+    FileDarkMode fileDarkMode = new FileDarkMode(this, "modeSombre.txt");
+    Code code = new Code();
 
     // MARK : Fonctions
 
     private void lancer() {
 
-        File mFile = new File(Environment.getExternalStorageDirectory().getPath() + "/Android/data/" + getPackageName() + "/files/" + fileName);
-
-        String text = read(mFile);
+        String text = fileDarkMode.read();
 
         int actualMode = AppCompatDelegate.getDefaultNightMode(); // 1 : Mode Sombre, 2 : Mode clair
         
@@ -119,103 +107,18 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private String setDarkMode() {
-
-        File mFile = new File(Environment.getExternalStorageDirectory().getPath() + "/Android/data/" + getPackageName() + "/files/" + fileName);
-
-        String message;
-
+    private void setDarkMode() {
         if (!darkMode){
             AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
-            message = "Mode clair activé";
-            write("LIGHT", mFile);
+            fileDarkMode.write("LIGHT");
         }
         else {
             AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
-            message = "Mode sombre activé";
-            write("DARK", mFile);
+            fileDarkMode.write("DARK");
         }
 
         startActivity(new Intent(getApplicationContext(), MainActivity.class));
-
         finish();
-
-        return message;
-    }
-
-
-    private void write(String text, File mFile) {
-        try {
-            // Flux interne
-            FileOutputStream output = openFileOutput(fileName, MODE_PRIVATE);
-
-            // On écrit dans le flux interne
-
-            output.write(text.getBytes());
-
-            if(output != null)
-                output.close();
-
-            // Si le fichier est lisible et qu'on peut écrire dedans
-            if(Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState())
-                    && !Environment.MEDIA_MOUNTED_READ_ONLY.equals(Environment.getExternalStorageState())) {
-                // On crée un nouveau fichier. Si le fichier existe déjà, il ne sera pas créé
-                mFile.createNewFile();
-                output = new FileOutputStream(mFile);
-                String darkName = "DARK";
-                output.write(darkName.getBytes());
-                if(output != null)
-                    output.close();
-            }
-        }
-        catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-
-    private String read(File mFile) {
-        String text = "";
-        try{
-            FileInputStream input = openFileInput(fileName);
-            int value;
-
-            // On utilise un StringBuffer pour construire la chaîne au fur et à mesure
-            StringBuffer lu = new StringBuffer();
-            // On lit les caractères les uns après les autres
-            while ((value = input.read()) != -1) {
-                // On écrit dans le fichier le caractère lu
-                lu.append((char) value);
-            }
-
-            text = lu.toString();
-
-            if (input != null)
-                input.close();
-
-            if (Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState())) {
-                lu = new StringBuffer();
-                try {
-                    input = new FileInputStream(mFile);
-                } catch (FileNotFoundException ex) {
-                    ex.printStackTrace();
-                }
-                while ((value = input.read()) != -1)
-                    lu.append((char) value);
-
-                text = lu.toString();
-
-                if (input != null)
-                    input.close();
-            }
-        }catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return text;
     }
 
 
@@ -231,30 +134,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    private String dec2Base(BigInteger x, String base) {
-        // Convertit un BigInteger dans une base ayant base comme support
-
-        BigInteger b = new BigInteger(String.valueOf(base.length()));
-        StringBuilder result = new StringBuilder(base.charAt(x.mod(b).intValue()));
-        BigInteger un = new BigInteger("1");
-        BigInteger deux = new BigInteger("2");
-        x = (x.divide(b)).subtract(un);
-
-        while (! (x.add(deux)).equals(un)) {
-            int inter = x.mod(b).intValue();
-            result.insert(0, base.charAt(inter));
-            x = (x.divide(b)).subtract(un);
-        }
-
-        return result.toString();
-    }
-
-
     @SuppressLint("SetTextI18n")
-    private void generer() {
+    private void generate() {
         // Génère le mot de passe
-
-        modifBase();
         motPasseEditText.setText("Il manque des valeurs");
 
         if (clefEditText.getText().toString().length() == 0 || siteEditText.getText().toString().length() == 0) {
@@ -268,123 +150,53 @@ public class MainActivity extends AppCompatActivity {
 
             String clef = clefEditText.getText().toString();
             String site = siteEditText.getText().toString();
-            String[] result = modification(site + clef);
+            updateCode();
+            String result = code.getCode(clef, site);
 
-            motPasseEditText.setText(result[0]);
+            motPasseEditText.setText(result);
         }
-        modifSecurite();
+        modifySecurity();
     }
 
+    private void updateCode() {
+        code.setMinState(minSwitch.isChecked());
+        code.setMajState(majSwitch.isChecked());
+        code.setSymState(symSwitch.isChecked());
+        code.setChiState(chiSwitch.isChecked());
+        code.setLength(longueurSeekBar.getProgress());
+        code.setColor();
+        code.setSafety();
+    }
 
-    private void modifBase() {
-        // Modifie la base suivant les caractères cochés
-
-        base = "";
-        if (minSwitch.isChecked()) {
-            base += "portezcviuxwhskyajgblndqfm";
-        }
-        if (majSwitch.isChecked()) {
-            base += "THEQUICKBROWNFXJMPSVLAZYDG";
-        }
-        if (symSwitch.isChecked()) {
-            base += "@#&!)-%;<:*$+=/?>(";
-        }
-        if (chiSwitch.isChecked()) {
-            base += "567438921";
-        }
+    private void updateValue() {
+        longueurSeekBar.setProgress(code.getLength());
+        minSwitch.setChecked(code.isMinState());
+        majSwitch.setChecked(code.isMajState());
+        symSwitch.setChecked(code.isSymState());
+        chiSwitch.setChecked(code.isChiState());
     }
 
 
     @SuppressLint("SetTextI18n")
-    private void modifSecurite() {
+    private void modifySecurity() {
         // Modifie la sécurité en fonction des paramètres cochés
-
-        int len2 = longueurSeekBar.getProgress();
-        int len = len2 * len2 + 3 * len2 + 10;
-        longueurTextView.setText("Longueur : " + len);
-
-        int nb_carac = base.length();
-
-        int bits = (int) ((Math.round(Math.log(Math.pow(nb_carac, len)) / Math.log(2))));
+        updateCode();
+        int bits = code.getBits();
         if (bits == 0) {
             securiteSeekBar.setProgress(bits);
         } else {
             securiteSeekBar.setProgress(bits - 32);
         }
-        String[] result = securite(bits);
-        securiteTextView.setText(result[0] + bits + " bits");
-        securiteTextView.setTextColor(Color.parseColor(result[1]));
+        modifySecurity(bits);
     }
 
+    @SuppressLint("SetTextI18n")
+    private void modifySecurity(int bits) {
+        // Modifie la sécurité en fonction des paramètres cochés
+        longueurTextView.setText("Longueur : " + code.getBigLength());
 
-    private String[] modification(String mot) {
-        // Modifie le site et la clef en un mot de passe (mot = site + clef)
-
-        int len = longueurSeekBar.getProgress();
-        int len2 = len * len + 3 * len + 10;
-
-        BigInteger code = new BigInteger(sha256(mot), 16);
-        int nb_carac = base.length();
-
-
-        String code2 = dec2Base(code, base).substring(0, len2);
-        System.out.println("=========CODE FINAL==========");
-        System.out.println(code2);
-
-        int bits = (int) ((Math.round(Math.log(Math.pow(nb_carac, code2.length())) / Math.log(2))));
-        String[] result = securite(bits);
-        if (bits == 0) {
-            code2 = "";
-        }
-        return new String[]{code2, result[0] + bits + " bits", Integer.toString(bits), result[1]};
-    }
-
-
-    private String[] securite(int bits) {
-        // Renvoie la bonne couleur ainsi que la sécurité suivant le nombre de bits
-
-        String secure;
-        String color;
-        if (bits == 0) {
-            secure = " Aucune ";
-            color = "#FE0101";
-        } else if (bits < 64) {
-            secure = " Très Faible ";
-            color = "#FE0101";
-        } else if (bits < 80) {
-            secure = " Faible ";
-            color = "#FE4501";
-        } else if (bits < 100) {
-            secure = " Moyenne ";
-            color = "#FE7601";
-        } else if (bits < 126) {
-            secure = " Forte ";
-            color = "#53FE38";
-        } else {
-            secure = " Très Forte ";
-            color = "#1CD001";
-        }
-        return new String[]{secure, color};
-    }
-
-
-    private static String sha256(String mot) {
-        // Modifie mot en un chiffre en hexadécimal suivant la fonction de hachage sha256
-
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(mot.getBytes("UTF-8"));
-            StringBuilder hexString = new StringBuilder();
-
-            for (byte b : hash) {
-                String hex = Integer.toHexString(0xff & b);
-                if (hex.length() == 1) hexString.append('0');
-                hexString.append(hex);
-            }
-            return hexString.toString();
-        } catch (Exception ex) {
-            throw new RuntimeException(ex);
-        }
+        securiteTextView.setText(code.getSafety() + bits + " bits");
+        securiteTextView.setTextColor(code.getColor());
     }
 
 
@@ -403,6 +215,8 @@ public class MainActivity extends AppCompatActivity {
         // Questions dans les CheckButtons
         String[] questions = {"nom de jeune fille de votre mère", "nom de votre premier animal de compagnie",
                 "rue de votre maison d'enfance", "pas de question"};
+        String[] hints = {"nom jeune fille mère", "nom premier animal de compagnie",
+                "rue maison enfance", "mot clef"};
         final boolean[] checkedItems = {false, false, false, false};
 
         // Création alert box
@@ -414,22 +228,16 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onClick(DialogInterface dialog, int which, boolean isChecked) {
                         if (checkedItems[0]) {
-                            clefEditText.setHint("nom jeune fille mère");
-                            clefEditText.setText("");
-                            dialog.cancel();
+                            clefEditText.setHint(hints[0]);
                         } else if (checkedItems[1]) {
-                            clefEditText.setHint("nom premier animal de compagnie");
-                            clefEditText.setText("");
-                            dialog.cancel();
+                            clefEditText.setHint(hints[1]);
                         } else if (checkedItems[2]) {
-                            clefEditText.setHint("rue maison enfance");
-                            clefEditText.setText("");
-                            dialog.cancel();
+                            clefEditText.setHint(hints[2]);
                         } else if (checkedItems[3]) {
-                            clefEditText.setHint("mot clef");
-                            clefEditText.setText("");
-                            dialog.cancel();
+                            clefEditText.setHint(hints[3]);
                         }
+                        clefEditText.setText("");
+                        dialog.cancel();
                     }
                 });
         builder.show(); // Monter Alert box
@@ -447,11 +255,10 @@ public class MainActivity extends AppCompatActivity {
 
     public void checkChange(View view) {
         // Switch Changé
-
-        generer();
+        generate();
     }
 
-    private TextWatcher textWatcher = new TextWatcher() {
+    private final TextWatcher textWatcher = new TextWatcher() {
         //Text Watch : génère le mot de passe quand on a fini de modifier le texte
         @Override
         public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
@@ -463,18 +270,17 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void afterTextChanged(Editable editable) {
-            generer();
+            generate();
         }
     };
 
 
-    private SeekBar.OnSeekBarChangeListener longueurListener = new SeekBar.OnSeekBarChangeListener() {
+    private final SeekBar.OnSeekBarChangeListener longueurListener = new SeekBar.OnSeekBarChangeListener() {
         @SuppressLint("SetTextI18n")
         @Override
         public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
             // Longueur Slider en changement
-
-            generer();
+            generate();
         }
 
         @Override
@@ -489,16 +295,14 @@ public class MainActivity extends AppCompatActivity {
     };
 
 
-    private SeekBar.OnSeekBarChangeListener securiteListener = new SeekBar.OnSeekBarChangeListener() {
+    private final SeekBar.OnSeekBarChangeListener securiteListener = new SeekBar.OnSeekBarChangeListener() {
         @SuppressLint("SetTextI18n")
         @Override
         public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
             // Sécurité Slider en changement
 
             int bits = securiteSeekBar.getProgress() + 32;
-            String[] result = securite(bits);
-            securiteTextView.setText(result[0] + bits + " bits");
-            securiteTextView.setTextColor(Color.parseColor(result[1]));
+            modifySecurity(bits);
         }
 
         @Override
@@ -512,152 +316,9 @@ public class MainActivity extends AppCompatActivity {
             // Sécurité Slider une fois changée
 
             int bits = securiteSeekBar.getProgress() + 32;
-            if (bits < 42) {
-                longueurSeekBar.setProgress(0);
-                minSwitch.setChecked(false);
-                majSwitch.setChecked(false);
-                symSwitch.setChecked(false);
-                chiSwitch.setChecked(true);
-            } else if (bits < 47) {
-                longueurSeekBar.setProgress(0);
-                minSwitch.setChecked(false);
-                majSwitch.setChecked(false);
-                symSwitch.setChecked(true);
-                chiSwitch.setChecked(false);
-            } else if (bits < 48) {
-                longueurSeekBar.setProgress(0);
-                minSwitch.setChecked(true);
-                majSwitch.setChecked(false);
-                symSwitch.setChecked(false);
-                chiSwitch.setChecked(false);
-            } else if (bits < 51) {
-                longueurSeekBar.setProgress(0);
-                minSwitch.setChecked(false);
-                majSwitch.setChecked(false);
-                symSwitch.setChecked(true);
-                chiSwitch.setChecked(true);
-            } else if (bits < 55) {
-                longueurSeekBar.setProgress(0);
-                minSwitch.setChecked(true);
-                majSwitch.setChecked(false);
-                symSwitch.setChecked(false);
-                chiSwitch.setChecked(true);
-            } else if (bits < 57) {
-                longueurSeekBar.setProgress(0);
-                minSwitch.setChecked(true);
-                majSwitch.setChecked(false);
-                symSwitch.setChecked(true);
-                chiSwitch.setChecked(false);
-            } else if (bits < 61) {
-                longueurSeekBar.setProgress(0);
-                minSwitch.setChecked(true);
-                majSwitch.setChecked(true);
-                symSwitch.setChecked(false);
-                chiSwitch.setChecked(false);
-            } else if (bits < 63) {
-                longueurSeekBar.setProgress(0);
-                minSwitch.setChecked(true);
-                majSwitch.setChecked(true);
-                symSwitch.setChecked(true);
-                chiSwitch.setChecked(false);
-            } else if (bits < 66) {
-                longueurSeekBar.setProgress(0);
-                minSwitch.setChecked(true);
-                majSwitch.setChecked(true);
-                symSwitch.setChecked(true);
-                chiSwitch.setChecked(true);
-            } else if (bits < 67) {
-                longueurSeekBar.setProgress(1);
-                minSwitch.setChecked(true);
-                majSwitch.setChecked(false);
-                symSwitch.setChecked(false);
-                chiSwitch.setChecked(false);
-            } else if (bits < 72) {
-                longueurSeekBar.setProgress(1);
-                minSwitch.setChecked(false);
-                majSwitch.setChecked(false);
-                symSwitch.setChecked(true);
-                chiSwitch.setChecked(true);
-            } else if (bits < 76) {
-                longueurSeekBar.setProgress(1);
-                minSwitch.setChecked(true);
-                majSwitch.setChecked(false);
-                symSwitch.setChecked(false);
-                chiSwitch.setChecked(true);
-            } else if (bits < 80) {
-                longueurSeekBar.setProgress(1);
-                minSwitch.setChecked(true);
-                majSwitch.setChecked(false);
-                symSwitch.setChecked(true);
-                chiSwitch.setChecked(false);
-            } else if (bits < 86) {
-                longueurSeekBar.setProgress(1);
-                minSwitch.setChecked(true);
-                majSwitch.setChecked(true);
-                symSwitch.setChecked(false);
-                chiSwitch.setChecked(false);
-            } else if (bits < 88) {
-                longueurSeekBar.setProgress(1);
-                minSwitch.setChecked(true);
-                majSwitch.setChecked(true);
-                symSwitch.setChecked(true);
-                chiSwitch.setChecked(false);
-            } else if (bits < 94) {
-                longueurSeekBar.setProgress(1);
-                minSwitch.setChecked(true);
-                majSwitch.setChecked(true);
-                symSwitch.setChecked(true);
-                chiSwitch.setChecked(true);
-            } else if (bits < 95) {
-                longueurSeekBar.setProgress(2);
-                minSwitch.setChecked(true);
-                majSwitch.setChecked(false);
-                symSwitch.setChecked(false);
-                chiSwitch.setChecked(false);
-            } else if (bits < 103) {
-                longueurSeekBar.setProgress(2);
-                minSwitch.setChecked(false);
-                majSwitch.setChecked(false);
-                symSwitch.setChecked(true);
-                chiSwitch.setChecked(true);
-            } else if (bits < 109) {
-                longueurSeekBar.setProgress(2);
-                minSwitch.setChecked(true);
-                majSwitch.setChecked(false);
-                symSwitch.setChecked(false);
-                chiSwitch.setChecked(true);
-            } else if (bits < 114) {
-                longueurSeekBar.setProgress(2);
-                minSwitch.setChecked(true);
-                majSwitch.setChecked(false);
-                symSwitch.setChecked(true);
-                chiSwitch.setChecked(false);
-            } else if (bits < 115) {
-                longueurSeekBar.setProgress(2);
-                minSwitch.setChecked(true);
-                majSwitch.setChecked(true);
-                symSwitch.setChecked(false);
-                chiSwitch.setChecked(false);
-            } else if (bits < 123) {
-                longueurSeekBar.setProgress(2);
-                minSwitch.setChecked(true);
-                majSwitch.setChecked(false);
-                symSwitch.setChecked(true);
-                chiSwitch.setChecked(true);
-            } else if (bits < 126) {
-                longueurSeekBar.setProgress(2);
-                minSwitch.setChecked(true);
-                majSwitch.setChecked(true);
-                symSwitch.setChecked(true);
-                chiSwitch.setChecked(false);
-            } else {
-                longueurSeekBar.setProgress(2);
-                minSwitch.setChecked(true);
-                majSwitch.setChecked(true);
-                symSwitch.setChecked(true);
-                chiSwitch.setChecked(true);
-            }
-            generer();
+            code.setBits(bits);
+            updateValue();
+            generate();
         }
     };
 
@@ -683,7 +344,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    @SuppressLint("Assert")
+    @SuppressLint({"Assert", "NonConstantResourceId"})
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         // Action boutons menu
@@ -693,8 +354,7 @@ public class MainActivity extends AppCompatActivity {
             case R.id.darkmode:
                 // DarkMode
                 darkMode = !darkMode;
-                String message  = setDarkMode();
-                //Toast.makeText(MainActivity.this, message, Toast.LENGTH_LONG).show();
+                setDarkMode();
                 break;
 
             case R.id.aide:
@@ -704,7 +364,7 @@ public class MainActivity extends AppCompatActivity {
                 Linkify.addLinks(s, Linkify.ALL);
 
                 final AlertDialog d = new AlertDialog.Builder(this, R.style.AlertDialogCustom)
-                        .setTitle("Informations")
+                        .setTitle("Information")
                         .setPositiveButton(android.R.string.ok, null)
                         .setMessage(s)
                         .create();
