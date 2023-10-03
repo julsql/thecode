@@ -136,7 +136,7 @@ sudo service apache2 restart
 To run the tests, you need to [install Node](https://nodejs.org/fr). Then:
 
 ```bash
-cd static/main/assets/js 
+cd thecode/main/static/main/assets/js 
 npm init -y
 npm install sjcl
 npx jest
