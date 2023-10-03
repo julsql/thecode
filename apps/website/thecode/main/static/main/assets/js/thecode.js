@@ -1,17 +1,15 @@
 function coder(site, clef, longueur, minState, majState, symState, chiState) {
 
-    console.log(site, clef, longueur, minState, majState, symState, chiState);
-
     const base = get_base(minState, majState, symState, chiState);
     if (base === "") {
         return {
         mdp: null,
-        securite: "Aucune",
+        security: "Aucune",
         bits: 0,
         color: "#FE0101"}
     }
     const bits = get_bits(base, longueur);
-    const securite = get_security(bits);
+    const security = get_security(bits);
     let mdp = "";
     if (site !== "" && clef !== "") {
         mdp = code(site, clef, base, longueur);
@@ -20,9 +18,9 @@ function coder(site, clef, longueur, minState, majState, symState, chiState) {
 
     return {
         mdp: mdp,
-        securite: securite.secure,
+        security: security.secure,
         bits: bits,
-        color: securite.color};
+        color: security.color};
 }
 
 function get_bits(base, longueur) {

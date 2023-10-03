@@ -138,6 +138,7 @@ To run the tests, you need to [install Node](https://nodejs.org/fr). Then:
 ```bash
 cd thecode/main/static/main/assets/js 
 npm init -y
+npm install --save-dev jest
 npm install sjcl
 npx jest
 ```

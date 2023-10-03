@@ -15,7 +15,7 @@ const longueurValueOutput = document.querySelector('#longueur-value');
 const securityInput = document.querySelector('#security');
 
 const mdpOutput = document.querySelector('#mdp');
-securiteOutput = document.querySelector('#couleur');
+securityOutput = document.querySelector('#couleur');
 
 function chargerScript(url, callback) {
   const script = document.createElement('script');
@@ -52,12 +52,11 @@ formulaireInput.addEventListener('change', () => {
 
     if (result !== undefined) {
         mdpOutput.value = result.mdp;
-        console.log(result.securite);
-        securiteOutput.textContent = result.securite + ', ' + result.bits + ' bits';
-        securiteOutput.style.color = result.color;
+        securityOutput.textContent = result.security + ', ' + result.bits + ' bits';
+        securityOutput.style.color = result.color;
         securityInput.value = result.bits;
     } else {
-        securiteOutput.value = "";
+        securityOutput.value = "";
     }
 });
 
@@ -69,25 +68,20 @@ securityInput.addEventListener('change', () => {
 
 // Définit la fonction à exécuter
 function update_security(bits) {
-    console.log("Sécurité : " + bits);
 
     const resultSecurity = get_security(bits);
     const secure = resultSecurity.secure;
-    console.log(resultSecurity);
     const color = resultSecurity.color;
 
      if (secure == null) {
-        securiteOutput.value = "";
+        securityOutput.value = "";
     }
     else {
-        securiteOutput.textContent = secure + ', ' + bits + ' bits';
-        console.log(color);
-        securiteOutput.style.color = color;
+        securityOutput.textContent = secure + ', ' + bits + ' bits';
+        securityOutput.style.color = color;
         securityInput.value = bits;
     }
 
-    console.log("bits: ")
-    console.log(bits);
     const resultState = changeSecureRange(bits);
     longueurInput.value = resultState.longueur;
     minusculesInput.checked = resultState.minState;
