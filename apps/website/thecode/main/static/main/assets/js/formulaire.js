@@ -12,10 +12,37 @@ const chiffresInput = document.querySelector('#id_chiffres');
 
 const longueurInput = document.querySelector('#id_longueur');
 const longueurValueOutput = document.querySelector('#longueur-value');
-const securiteInput = document.querySelector('#securite');
+const securityInput = document.querySelector('#security');
 
 const mdpOutput = document.querySelector('#mdp');
 securiteOutput = document.querySelector('#couleur');
+
+function chargerScript(url, callback) {
+  const script = document.createElement('script');
+  script.src = url;
+  script.onload = callback;
+  document.head.appendChild(script);
+}
+
+function coder(site, clef, longueur, minState, majState, symState, chiState) {
+    let result;
+    chargerScript('static/main/assets/js/thecode.js', function() {
+      // Vous pouvez maintenant utiliser les fonctions du fichier 'autreFichier.js'
+       result = coder(site, clef, longueur, minState, majState, symState, chiState);
+    });
+    return result;
+}
+
+
+
+function get_security(bits) {
+    let result;
+    chargerScript('static/main/assets/js/thecode.js', function() {
+      // Vous pouvez maintenant utiliser les fonctions du fichier 'autreFichier.js'
+       result = get_security(bits);
+    });
+    return result;
+}
 
 // Ajoute un écouteur d'événements "change" à l'élément de formulaire
 formulaireInput.addEventListener('change', () => {
@@ -23,162 +50,31 @@ formulaireInput.addEventListener('change', () => {
 
     const result = coder(siteInput.value, clefInput.value, longueurInput.value, minusculesInput.checked, majusculesInput.checked, symbolesInput.checked, chiffresInput.checked);
 
-    mdpOutput.value = result.mdp;
-    console.log(result.securite);
-
-    if (result.securite == "") {
-        securiteOutput.value = "";
-    }
-    else {
+    if (result !== undefined) {
+        mdpOutput.value = result.mdp;
+        console.log(result.securite);
         securiteOutput.textContent = result.securite + ', ' + result.bits + ' bits';
         securiteOutput.style.color = result.color;
-        securiteInput.value = result.bits;
+        securityInput.value = result.bits;
+    } else {
+        securiteOutput.value = "";
     }
 });
-
-// Définit la fonction à exécuter
-function coder(site, clef, longueur, minState, majState, symState, chiState) {
-
-    console.log(site, clef, longueur, minState, majState, symState, chiState);
-
-    const base = get_base(minState, majState, symState, chiState);
-    if (base == "") {
-        return {
-        mdp: null,
-        securite: "Aucune",
-        bits: 0,
-        color: "#FE0101"}
-    }
-    const bits = get_bits(base, longueur);
-    const securite = get_securite(bits);
-    let mdp = "";
-    if (site != "" && clef != "") {
-        mdp = code(site, clef, base, longueur);
-        console.log(mdp);
-    }
-
-    return {
-        mdp: mdp,
-        securite: securite.secure,
-        bits: bits,
-        color: securite.color};
-}
-
-function dec2base(x, base) {
-    const b = BigInt(base.length);
-    let result = base[x % b];
-    const un = BigInt(1);
-    const deux = BigInt(2);
-    x = (x / b) - un;
-
-    while (x + deux !== un) {
-        const inter = Number(x % b);
-        result = base.charAt(inter) + result;
-        x = (x / b) - un;
-    }
-
-    return result;
-}
-
-function sha256(message) {
-
-    const myBitArray = sjcl.hash.sha256.hash(message)
-    const myHash = sjcl.codec.hex.fromBits(myBitArray)
-
-    return myHash;
-}
-
-function code(site, clef, base, longueur) {
-    const hexHash = sha256(site + clef);
-    const resultint = BigInt("0x" + hexHash);
-    const pass = dec2base(resultint, base);
-    if (longueur == 15) {
-        return pass.slice(0, 14);
-    }
-    return pass.slice(0, longueur);
-}
-
-function get_bits(base, longueur) {
-    nb_carac = base.length;
-    if (nb_carac == 0) {
-        return 0;
-    }
-    else {
-        if (longueur == 15) {
-            return Math.round(Math.log(Math.pow(nb_carac, 14)) / Math.log(2));
-        }
-        else {
-            return Math.round(Math.log(Math.pow(nb_carac, longueur)) / Math.log(2));
-        }
-    }
-
-}
-
-function get_securite(bits) {
-
-    let color = "";
-    let secure = "";
-
-    if (bits == 0) {
-        secure = "Aucune";
-        couleur = "#FE0101";
-    }
-    else if (bits < 64) {
-        secure = "Très Faible";
-        couleur = "#FE0101";
-    }
-    else if (bits < 80) {
-        secure = "Faible";
-        couleur = "#FE4501";
-    }
-    else if (bits < 100) {
-        secure = "Moyenne";
-        couleur = "#FE7601";
-    }
-    else if (bits < 126) {
-        secure = "Forte";
-        couleur = "#53FE38";
-    }
-    else {
-        secure = "Très Forte";
-        couleur = "#1CD001";
-    }
-
-    return {"secure": secure, "color": couleur}
-}
-
-function get_base(minState, majState, symState, chiState) {
-
-    let base = "";
-    if (minState) {
-        base += "portezcviuxwhskyajgblndqfm";
-    }
-    if (majState) {
-        base += "THEQUICKBROWNFXJMPSVLAZYDG";
-    }
-    if (symState) {
-        base += "@#&!)-%;<:*$+=/?>(";
-    }
-    if (chiState) {
-        base += "567438921";
-    }
-    return base;
-}
 
 // Ajoute un écouteur d'événements "change" à l'élément de formulaire
-securite.addEventListener('change', () => {
+securityInput.addEventListener('change', () => {
     // Code à exécuter lorsque la bar de sécurité est modifiée
-    update_securite(securite.value);
+    update_security(securityInput.value);
 });
 
 // Définit la fonction à exécuter
-function update_securite(bits) {
+function update_security(bits) {
     console.log("Sécurité : " + bits);
 
-    const resultSecurite = get_securite(bits);
-    const secure = resultSecurite.secure;
-    console.log(resultSecurite);
-    const color = resultSecurite.color;
+    const resultSecurity = get_security(bits);
+    const secure = resultSecurity.secure;
+    console.log(resultSecurity);
+    const color = resultSecurity.color;
 
      if (secure == null) {
         securiteOutput.value = "";
@@ -187,7 +83,7 @@ function update_securite(bits) {
         securiteOutput.textContent = secure + ', ' + bits + ' bits';
         console.log(color);
         securiteOutput.style.color = color;
-        securiteInput.value = bits;
+        securityInput.value = bits;
     }
 
     console.log("bits: ")
@@ -207,11 +103,11 @@ function update_securite(bits) {
 }
 
 function changeSecureRange(bits) {
-    let longueur = 0;
-    let minState = false;
-    let majState = false;
-    let symState = false;
-    let chiState = false;
+    let longueur;
+    let minState;
+    let majState;
+    let symState;
+    let chiState;
 
     if (bits < 42) {
         longueur = 10
@@ -386,7 +282,7 @@ function changeSecureRange(bits) {
 }
 
 function changeLongueurLabel() {
-    if (longueurInput.value == 15) {
+    if (longueurInput.value === 15) {
         longueurValueOutput.value = 14;
     }
     else {

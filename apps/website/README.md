@@ -18,6 +18,7 @@ You have secured & different passwords for all your accounts by remembering only
 - [App Structure](#app-structure)
 - [Installation](#installation)
 - [Deploy](#deploy)
+- [Tests](#tests)
 - [Authors](#authors)
 
 ## Information
@@ -64,7 +65,7 @@ With the hex data generate by the hash, it converts it in a new base with the ch
 
     ```bash
     cd thecode
-    ./manage.py runserver 
+    ./manage.py runserver
     ```
 6. To leave the virtual environment
     ```bash
@@ -129,6 +130,19 @@ sudo service apache2 restart
 ```
 
 > To unload a configuration: `sudo a2dissite myconfig.conf`
+
+## Tests
+
+To run the tests, you need to [install Node](https://nodejs.org/fr). Then:
+
+```bash
+cd static/main/assets/js 
+npm init -y
+npm install sjcl
+npx jest
+```
+
+The file [test.js](thecode/main/static/main/assets/js/test.js) just test the function coder for 2 different site and key.
 
 ## Authors
 
