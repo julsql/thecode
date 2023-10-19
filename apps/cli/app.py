@@ -53,7 +53,7 @@ def generate(*args):
         code, safety_txt, couleur, bits = thecode.code(site, clef, min_state, maj_state, sym_state, chi_state, longueur)
         mdp_entry.insert(0, code)
     else:
-        safety_txt, couleur, bits = thecode.get_safety(min_state, maj_state, sym_state, chi_state, longueur)
+        safety_txt, couleur, bits = thecode.get_safety(thecode.get_bits(min_state, maj_state, sym_state, chi_state, longueur))
         mdp_entry.insert(0, "Il manque des valeurs")
 
     # Affiche la sécurité du mot de passe

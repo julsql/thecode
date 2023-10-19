@@ -7,16 +7,34 @@ from math import log
 import hashlib
 
 
-# Fonctions
-def get_safety(min_state, maj_state, sym_state, chi_state, longueur):
-    """Donne la sécurité suivant le nombre de bits"""
-    base = get_base(min_state, maj_state, sym_state, chi_state)
+def get_base(min_state, maj_state, sym_state, chi_state):
+    """Modifie la base en fonction des caractères sélectionnés"""
 
+    base = ""
+    if min_state:
+        base += "portezcviuxwhskyajgblndqfm"
+    if maj_state:
+        base += "THEQUICKBROWNFXJMPSVLAZYDG"
+    if sym_state:
+        base += "@#&!)-%;<:*$+=/?>("
+    if chi_state:
+        base += "567438921"
+    return base
+
+
+def get_bits(min_state, maj_state, sym_state, chi_state, longueur):
+    base = get_base(min_state, maj_state, sym_state, chi_state)
     nb_char = len(base)
     if nb_char == 0:
         bits = 0
     else:
         bits = int(round(log(nb_char ** longueur) / log(2)))
+    return bits
+
+
+# Fonctions
+def get_safety(bits):
+    """Donne la sécurité suivant le nombre de bits"""
 
     if bits == 0:
         secure = " Aucune "
@@ -55,21 +73,6 @@ def dec2base(x, base):
     return result
 
 
-def get_base(min_state, maj_state, sym_state, chi_state):
-    """Modifie la base en fonction des caractères sélectionnés"""
-
-    base = ""
-    if min_state:
-        base += "portezcviuxwhskyajgblndqfm"
-    if maj_state:
-        base += "THEQUICKBROWNFXJMPSVLAZYDG"
-    if sym_state:
-        base += "@#&!)-%;<:*$+=/?>("
-    if chi_state:
-        base += "567438921"
-    return base
-
-
 def code(site, clef, min_state, maj_state, sym_state, chi_state, longueur):
     """Renvoie le mot de passe issu du hachage du site salé avec la clef"""
 
@@ -81,7 +84,8 @@ def code(site, clef, min_state, maj_state, sym_state, chi_state, longueur):
     result_int = int(hashlib.sha256((site + clef).encode()).hexdigest(), 16)
 
     code2 = dec2base(result_int, base)[:longueur]
-    safety, couleur, bits = get_safety(min_state, maj_state, sym_state, chi_state, longueur)
+    bits = get_bits(min_state, maj_state, sym_state, chi_state, longueur)
+    safety, couleur, bits = get_safety(bits)
 
     return code2, safety, couleur, bits
 
