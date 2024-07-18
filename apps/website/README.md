@@ -99,24 +99,24 @@ sudo nano /etc/apache2/sites-available/myconfig.conf
 ```
 <VirtualHost *:80>
     ServerName thecode.h.minet.net
-    ServerAdmin contact@thecode.julsql.fr
+    ServerAdmin admin@email.fr
 
     AddDefaultCharset UTF-8
 
-    Alias /static /home/julsql/thecode_website/thecode/main/static/
-    <Directory /home/julsql/thecode_website/thecode/main/static/>
+    Alias /static /home/username/thecode_website/thecode/main/static/
+    <Directory /home/username/thecode_website/thecode/main/static/>
         Require all granted
     </Directory>
 
-    <Directory /home/julsql/thecode_website/thecode/thecode/>
+    <Directory /home/username/thecode_website/thecode/thecode/>
         <Files wsgi.py>
             Require all granted
         </Files>
     </Directory>
 
-    WSGIDaemonProcess thecode_process python-home=/home/julsql/thecode_website/env python-path=/home/julsql/thecode_website/thecode
+    WSGIDaemonProcess thecode_process python-home=/home/username/thecode_website/env python-path=/home/username/thecode_website/thecode
     WSGIProcessGroup thecode_process
-    WSGIScriptAlias / /home/julsql/thecode_website/thecode/thecode/wsgi.py process-group=thecode_process
+    WSGIScriptAlias / /home/username/thecode_website/thecode/thecode/wsgi.py process-group=thecode_process
 
     ErrorLog ${APACHE_LOG_DIR}/error.log
     CustomLog ${APACHE_LOG_DIR}/access.log combined
