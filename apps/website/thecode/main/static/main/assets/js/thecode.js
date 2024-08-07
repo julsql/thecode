@@ -108,13 +108,13 @@ function sha256(message) {
 }
 
 function dec2base(x, base) {
+    x = BigInt(x);
     const b = BigInt(base.length);
     let result = base[x % b];
     const un = BigInt(1);
-    const deux = BigInt(2);
     x = (x / b) - un;
 
-    while (x + deux !== un) {
+    while (x > 0) {
         const inter = Number(x % b);
         result = base.charAt(inter) + result;
         x = (x / b) - un;
