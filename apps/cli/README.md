@@ -10,7 +10,7 @@ In short, you need to remember a simple key and by using the same simple key in 
 
 You have secured & different passwords for all your accounts by remembering only one key.
 
-> A website is available at address: [thecode.h.minet.net](http://thecode.h.minet.net)
+> A website is available at address: [thecode.julsql.fr](http://thecode.julsql.fr)
 > 
 > A mobile app is at: [play.google.com/store/apps/details?id=fr.juliette.thecode](https://play.google.com/store/apps/details?id=fr.juliette.thecode)
 
