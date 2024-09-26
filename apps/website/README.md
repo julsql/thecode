@@ -98,7 +98,7 @@ sudo nano /etc/apache2/sites-available/myconfig.conf
 
 ```
 <VirtualHost *:80>
-    ServerName thecode.julsql.fr
+    ServerName thecode.h.minet.net
     ServerAdmin admin@email.fr
 
     AddDefaultCharset UTF-8
