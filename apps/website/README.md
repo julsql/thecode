@@ -10,7 +10,7 @@ In short, you need to remember a simple key and by using the same simple key in 
 
 You have secured & different passwords for all your accounts by remembering only one key.
 
-> Website available at address: [thecode.h.minet.net](http://thecode.h.minet.net)
+> Website available at address: [thecode.julsql.fr](http://thecode.julsql.fr)
 
 ## Table of Contents
 
@@ -98,7 +98,7 @@ sudo nano /etc/apache2/sites-available/myconfig.conf
 
 ```
 <VirtualHost *:80>
-    ServerName thecode.h.minet.net
+    ServerName thecode.julsql.fr
     ServerAdmin admin@email.fr
 
     AddDefaultCharset UTF-8
