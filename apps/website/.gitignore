@@ -5,7 +5,6 @@ __pycache__/
 
 # Config files
 *DS_Store
-*settings.py
 
 # C extensions
 *.so
