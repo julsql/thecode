@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  django:
+    build:
+      context: . # Emplacement du Dockerfile
+    container_name: thecode
+    ports:
+      - "8000:8000" # Expose le port 8000
+    environment:
+      - DEBUG=False
+    working_dir: /app/thecode
+    command: gunicorn thecode.wsgi:application --bind 0.0.0.0:8000
