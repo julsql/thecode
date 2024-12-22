@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  django:
+    build:
+      context: .
+    container_name: bd
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./bd/media:/app/bd/media
+    environment:
+      - DEBUG=False
+    working_dir: /app/bd
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000
