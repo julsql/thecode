@@ -3,10 +3,10 @@ version: '3.8'
 services:
   django:
     build:
-      context: . # Emplacement du Dockerfile
+      context: .
     container_name: thecode
     ports:
-      - "8001:8000" # Expose le port 8000
+      - "8002:8000"
     environment:
       - DEBUG=False
     working_dir: /app/thecode
