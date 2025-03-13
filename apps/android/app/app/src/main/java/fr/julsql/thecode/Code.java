@@ -1,4 +1,4 @@
-package fr.juliette.thecode;
+package fr.julsql.thecode;
 
 import android.graphics.Color;
 

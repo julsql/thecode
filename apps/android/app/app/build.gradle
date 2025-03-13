@@ -1,16 +1,19 @@
-apply plugin: 'com.android.application'
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android' version '1.8.0'
+}
 
 android {
-    compileSdk 33
+    compileSdk 35
 
     defaultConfig {
-        applicationId "fr.juliette.thecode"
-        minSdkVersion 18
-        targetSdkVersion 33
-        versionCode 8
-        versionName "1.6"
+        applicationId "fr.julsql.thecode"
+        minSdkVersion 21
+        targetSdk 35
+        versionCode 1
+        versionName "1.0"
 
-        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -19,17 +22,18 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
-    namespace 'fr.juliette.thecode'
+    namespace 'fr.julsql.thecode'
 
 }
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
 
-    //noinspection GradleCompatible
-    implementation 'com.android.support:appcompat-v7:28.0.0'
-    implementation 'com.android.support.constraint:constraint-layout:2.0.4'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.2.1'
+
+    // Dépendances test
     testImplementation 'junit:junit:4.13.2'
-    androidTestImplementation 'com.android.support.test:runner:1.0.2'
-    androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.4'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.0'
 }

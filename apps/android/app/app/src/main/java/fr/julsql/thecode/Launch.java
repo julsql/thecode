@@ -1,17 +1,14 @@
-package fr.juliette.thecode;
+package fr.julsql.thecode;
 
 import android.content.Intent;
-import android.os.Build;
 import android.os.Handler;
-import android.support.annotation.RequiresApi;
-import android.support.v7.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.Window;
 import android.view.WindowManager;
 
 public class Launch extends AppCompatActivity {
 
-    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

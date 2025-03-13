@@ -1,4 +1,4 @@
-package fr.juliette.thecode;
+package fr.julsql.thecode;
 
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
@@ -7,8 +7,10 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.app.AppCompatDelegate;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
+import androidx.appcompat.widget.SwitchCompat;
+
 import android.text.Editable;
 import android.text.SpannableString;
 import android.text.TextWatcher;
@@ -20,7 +22,6 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.SeekBar;
-import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -38,10 +39,10 @@ public class MainActivity extends AppCompatActivity {
     Button questionButton;
     Button copierButton;
 
-    Switch minSwitch;
-    Switch majSwitch;
-    Switch symSwitch;
-    Switch chiSwitch;
+    SwitchCompat minSwitch;
+    SwitchCompat majSwitch;
+    SwitchCompat symSwitch;
+    SwitchCompat chiSwitch;
 
     SeekBar longueurSeekBar;
     SeekBar securiteSeekBar;
@@ -139,7 +140,7 @@ public class MainActivity extends AppCompatActivity {
         // Génère le mot de passe
         motPasseEditText.setText("Il manque des valeurs");
 
-        if (clefEditText.getText().toString().length() == 0 || siteEditText.getText().toString().length() == 0) {
+        if (clefEditText.getText().toString().isEmpty() || siteEditText.getText().toString().isEmpty()) {
             // Rien dans site ou dans clef
         } else if (!(minSwitch.isChecked() || majSwitch.isChecked() || chiSwitch.isChecked() || symSwitch.isChecked())) {
             // Aucun checkbuttons cliqués : Toast pour prévenir
@@ -245,7 +246,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void copierChange(View view) {
         java.lang.String code = motPasseEditText.getText().toString();
-        if (!(code.length() == 0) && !(code.equals("Il manque des valeurs"))) {
+        if (!(code.isEmpty()) && !(code.equals("Il manque des valeurs"))) {
             copier(code);
             Toast.makeText(MainActivity.this, "Mot de passe copié dans le presse-papier", Toast.LENGTH_LONG).show();
         } else {
@@ -377,7 +378,7 @@ public class MainActivity extends AppCompatActivity {
                 // Partage le mot de passe lorsque shareButton est pressé
                 java.lang.String code = motPasseEditText.getText().toString();
 
-                if (!(code.length() == 0) && !(code.equals("Il manque des valeurs"))) {
+                if (!(code.isEmpty()) && !(code.equals("Il manque des valeurs"))) {
                     java.lang.String site = siteEditText.getText().toString();
                     Intent share = new Intent(android.content.Intent.ACTION_SEND);
                     share.setType("text/plain");

@@ -202,7 +202,7 @@
             android:gravity="center"
             android:orientation="horizontal">
 
-            <Switch
+            <androidx.appcompat.widget.SwitchCompat
                 android:id="@+id/minSwitch"
                 android:layout_width="140dp"
                 android:layout_weight="1"
@@ -214,7 +214,7 @@
                 android:textSize="16sp"
                 android:onClick="checkChange"/>
 
-            <Switch
+            <androidx.appcompat.widget.SwitchCompat
                 android:id="@+id/majSwitch"
                 android:layout_width="140dp"
                 android:layout_weight="1"
@@ -240,7 +240,7 @@
             android:gravity="center"
             android:orientation="horizontal">
 
-            <Switch
+            <androidx.appcompat.widget.SwitchCompat
                 android:id="@+id/symSwitch"
                 android:layout_width="140dp"
                 android:layout_weight="1"
@@ -252,7 +252,7 @@
                 android:textSize="16sp"
                 android:onClick="checkChange"/>
 
-            <Switch
+            <androidx.appcompat.widget.SwitchCompat
                 android:id="@+id/chiSwitch"
                 android:layout_width="140dp"
                 android:layout_weight="1"

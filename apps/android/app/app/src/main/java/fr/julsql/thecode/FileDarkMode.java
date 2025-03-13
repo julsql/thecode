@@ -1,9 +1,8 @@
-package fr.juliette.thecode;
+package fr.julsql.thecode;
 
 import android.content.Context;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.IOException;
 
 public class FileDarkMode {
 
@@ -21,7 +20,7 @@ public class FileDarkMode {
             FileOutputStream fos = this.context.openFileOutput(this.fileName, Context.MODE_PRIVATE);
             fos.write(text.getBytes());
             fos.close();
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -36,7 +35,7 @@ public class FileDarkMode {
                 stringBuilder.append((char) content);
             }
             fis.close();
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
         return stringBuilder.toString();
