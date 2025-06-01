@@ -2,7 +2,9 @@
 {% load static %}
 {% block nav %}
     <ul>
-        <li><a href="{% url 'home' %}" class="active">Générateur</a></li>
+        <li><a href="{% url 'home' %}">Générateur</a></li>
+        <li><a href="{% url 'app' %}" class="active">Application</a></li>
+        <li><a href="{% url 'privacy' %}">Règles de confidentialités</a></li>
     </ul>
 {% endblock %}
 

@@ -4,7 +4,7 @@ from main.forms import CodeForm
 
 # Create your views here.
 
-def checkState(check):
+def check_state(check):
     return bool(check)
 
 
@@ -17,3 +17,6 @@ def home(request):
 
 def app(request):
     return render(request, 'main/app.html', {'truc': None})
+
+def privacy(request):
+    return render(request, 'main/privacy.html')

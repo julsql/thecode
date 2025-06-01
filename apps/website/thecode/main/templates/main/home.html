@@ -6,7 +6,7 @@
         <li><a href="#intro" class="active">Générateur</a></li>
         <li><a href="#first">Exemple</a></li>
         <li><a href="#second">Informations</a></li>
-        <li><a href="#cta">Application</a></li>
+        <li><a href="{% url 'app' %}">Application</a></li>
     </ul>
 {% endblock %}
 
@@ -127,19 +127,6 @@
         <footer class="major">
             <ul class="actions special">
                 <li><a href="https://www.ssi.gouv.fr/administration/precautions-elementaires/calculer-la-force-dun-mot-de-passe/" title="Site gouvernement ANSSI"class="button">En savoir plus</a></li>
-            </ul>
-        </footer>
-    </section>
-
-<!-- Get Started -->
-    <section id="cta" class="main special">
-        <header class="major">
-            <h2>Application</h2>
-            <p>Vous souhaitez utiliser TheCode hors ligne ? C'est possible avec les applications pour ordinateurs ou mobiles !</p>
-        </header>
-        <footer class="major">
-            <ul class="actions special">
-                <li><a href="{% url 'app'%}" class="button primary" title="Page application">Application</a></li>
             </ul>
         </footer>
     </section>
