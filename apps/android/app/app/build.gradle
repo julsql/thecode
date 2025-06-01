@@ -7,7 +7,7 @@ android {
     compileSdk 35
 
     defaultConfig {
-        applicationId "fr.julsql.thecode"
+        applicationId "fr.juliette.thecode"
         minSdkVersion 21
         targetSdk 35
         versionCode 1
@@ -22,7 +22,7 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
-    namespace 'fr.julsql.thecode'
+    namespace 'fr.juliette.thecode'
 
 }
 

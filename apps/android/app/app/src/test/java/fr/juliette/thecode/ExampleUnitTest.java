@@ -1,4 +1,4 @@
-package fr.julsql.thecode;
+package fr.juliette.thecode;
 
 import static org.junit.Assert.assertEquals;
 import org.junit.Test;

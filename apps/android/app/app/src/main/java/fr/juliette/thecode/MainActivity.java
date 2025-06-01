@@ -1,4 +1,4 @@
-package fr.julsql.thecode;
+package fr.juliette.thecode;
 
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;

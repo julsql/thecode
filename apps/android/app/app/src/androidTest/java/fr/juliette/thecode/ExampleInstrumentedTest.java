@@ -1,4 +1,4 @@
-package fr.julsql.thecode;
+package fr.juliette.thecode;
 
 
 import static org.junit.Assert.assertEquals;
@@ -23,6 +23,6 @@ public class ExampleInstrumentedTest {
         // Context of the app under test.
         Context appContext = InstrumentationRegistry.getInstrumentation().getTargetContext();
 
-        assertEquals("fr.julsql.thecode", appContext.getPackageName());
+        assertEquals("fr.juliette.thecode", appContext.getPackageName());
     }
 }
