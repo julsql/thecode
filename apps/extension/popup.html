@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="popup.css">
+    <script type="module" src="popup.js"></script>
+    <title>TheCode - Clef de session</title>
+</head>
+
+<body>
+    <h3>TheCode</h3>
+
+    <!-- Clé de session -->
+    <div>
+        <label for="passphrase">Clé de session :</label>
+        <input type="password" id="passphrase" />
+        <button id="setKey">Définir</button>
+        <button id="clearKey">Effacer</button>
+        <p id="status"></p>
+    </div>
+
+    <hr>
+
+    <!-- Paramètres avancés -->
+    <div class="advanced-wrapper">
+        <h3>Paramètres avancés</h3>
+        <label>
+            Longueur :
+            <input type="number" id="length" min="4" max="64" value="20" />
+        </label>
+        <div class="checkbox-group">
+            <label><input type="checkbox" id="lowercase" checked> Minuscules</label>
+            <label><input type="checkbox" id="uppercase" checked> Majuscules</label>
+            <label><input type="checkbox" id="numbers" checked> Chiffres</label>
+            <label><input type="checkbox" id="symbols" checked> Symboles</label>
+        </div>
+    </div>
+
+    <hr>
+
+    <!-- Bouton de génération -->
+    <button id="generatePassword">Générer mot de passe</button>
+
+    <p id="siteContainer">Site : <span id="site"></span></p>
+    <p id="passwordResultContainer">Mot de passe : <span id="passwordResult"></span>
+        <button id="copyPasswordBtn" title="Copier">
+            <svg id="copyIcon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px"
+                fill="#e3e3e3">
+                <path
+                    d="M360-240q-33 0-56.5-23.5T280-320v-480q0-33 23.5-56.5T360-880h360q33 0 56.5 23.5T800-800v480q0 33-23.5 56.5T720-240H360Zm0-80h360v-480H360v480ZM200-80q-33 0-56.5-23.5T120-160v-560h80v560h440v80H200Zm160-240v-480 480Z" />
+            </svg>
+        </button>
+    </p>
+    <p id="passwordSecurityContainer">Sécurité : <span id="passwordSecurity"></span></p>
+    <p id="errorContainer">Erreur : <span id="error"></span></p>
+
+    <script src="popup.js"></script>
+</body>
+
+</html>

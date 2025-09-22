@@ -1,0 +1,10 @@
+{
+    "extension_name": {
+        "message": "TheCode",
+        "description": "The display name for the extension."
+    },
+    "extension_description": {
+        "message": "Detects password fields and suggests a password derived from the key + site (does not store the password).",
+        "description": "Description of what the extension does."
+    }
+}

@@ -1,0 +1,10 @@
+{
+    "extension_name": {
+        "message": "TheCode",
+        "description": "The display name for the extension."
+    },
+    "extension_description": {
+        "message": "Détecte les champs mot de passe, propose un mot de passe d\u00e9riv\u00e9 de la cl\u00e9 + site (ne stocke pas le mot de passe).",
+        "description": "Description of what the extension does."
+    }
+}

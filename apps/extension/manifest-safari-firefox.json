@@ -1,0 +1,65 @@
+{
+  "manifest_version": 3,
+  "default_locale": "fr",
+  "name": "__MSG_extension_name__",
+  "description": "__MSG_extension_description__",
+  "version": "1.0.0",
+  "license": "Apache-2.0",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "thecode@monnom.com",
+      "strict_min_version": "109.0"
+    }
+  },
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "icons": {
+    "48": "images/48.png",
+    "96": "images/96.png",
+    "128": "images/128.png",
+    "256": "images/256.png",
+    "512": "images/512.png"
+  },
+  "host_permissions": [
+    "<all_urls>",
+    "https://*/*",
+    "http://*/*"
+  ],
+  "background": {
+    "scripts": [
+      "background.js"
+    ],
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "images/toolbar-icon-black.svg",
+      "32": "images/toolbar-icon-black.svg",
+      "48": "images/toolbar-icon-black.svg"
+    },
+  "theme_icons": [{
+    "light": "images/toolbar-icon-white.svg",
+    "dark": "images/toolbar-icon-black.svg",
+    "size": 16
+  }, {
+    "light": "images/toolbar-icon-white.svg",
+    "dark": "images/toolbar-icon-black.svg",
+    "size": 32
+  }]
+  }
+}
