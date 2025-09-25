@@ -167,3 +167,7 @@ function dec2base(x, base) {
     }
     return result;
 }
+
+if (typeof module !== "undefined") {
+    module.exports = { coder, get_base, get_bits, get_security, code, sha256, dec2base };
+}
