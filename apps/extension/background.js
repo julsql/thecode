@@ -2,23 +2,41 @@ if (typeof browser === "undefined" && typeof chrome !== "undefined") {
     var browser = chrome;
 }
 
+let data = {
+    encodingKey: null,
+    lenghtNumber: 20,
+    minState: true,
+    majState: true,
+    symState: true,
+    chiState: true,
+};
+
 browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
     (async () => {
-        if (request.action === 'checkSessionKey') {
-            sendResponse({ hasSessionKey: !!sessionKey });
-        }
-        if (request.action === 'getSessionKey') {
-            sendResponse({ sessionKey: sessionKey });
-        }
-        if (request.action === 'setSessionKey') {
+        if (request.action === 'checkEncodingKey') {
+            sendResponse({ hasEncodingKey: !!data.encodingKey });
+        } else if (request.action === 'getEncodingKey') {
+            sendResponse({ encodingKey: data.encodingKey });
+        } else if (request.action === 'setEncodingKey') {
             try {
-                sessionKey = request.passphrase;
+                data.encodingKey = request.encodingKey;
                 sendResponse({ ok: true });
             } catch (e) {
                 sendResponse({ ok: false, error: e.message });
             }
-        } else if (request.action === 'clearSessionKey') {
-            sessionKey = null;
+        } else if (request.action === 'setParams') {
+            try {
+                data.lenghtNumber = request.data.lenghtNumber;
+                data.minState = request.data.minState;
+                data.majState = request.data.majState;
+                data.symState = request.data.symState;
+                data.chiState = request.data.chiState;
+                sendResponse({ ok: true });
+            } catch (e) {
+                sendResponse({ ok: false, error: e.message });
+            }
+        } else if (request.action === 'clearEncodingKey') {
+            data.encodingKey = null;
             sendResponse({ ok: true });
         } else if (request.action === 'generatePassword') {
             const { options } = request;
@@ -33,18 +51,24 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 // Code
 
-let sessionKey = null;
-
 async function generatePasswordForUrl(url, options = {}) {
-    if (!sessionKey) {
-        return { error: "Aucune clé de session définie. Ouvre l'extension TheCode et entre ta clé." };
+    if (!data.encodingKey) {
+        return { error: "Aucune clé n'est définie. Ouvre l'extension TheCode et entre ta clé." };
+    }
+    if (data.lenghtNumber < 4) {
+        return { error: "La longueur doit être supérieur à 4" };
+    }
+    if (data.lenghtNumber > 40) {
+        return { error: "La longueur doit être inférieure à 40" };
+    }
+    if (!data.minState && !data.majState && !data.symState && !data.chiState) {
+        return { error: "Il faut choisir des caractères" };
     }
     try {
         const u = new URL(url);
         const hostname = u.hostname;
 
-        const { length = 20, minState = true, majState = true, symState = true, chiState = true } = options;
-        const { mdp, security, bits, color } = await generatePassword(hostname, sessionKey, length, minState, majState, symState, chiState);
+        const { mdp, security, bits, color } = await generatePassword(hostname, data.encodingKey, data.lenghtNumber, data.minState, data.majState, data.symState, data.chiState);
 
         return { password: mdp, site: hostname, security, bits, color };
     } catch (err) {
@@ -61,13 +85,17 @@ async function generatePassword(site, key, length, useLower, useUpper, useSymbol
     if (charsetGroups.length === 0 || (!site && !key)) {
         return buildPasswordResult(null, "Aucune", 0, "#FE0101");
     }
+    let newLength = length;
+    if (newLength > 40) {
+        newLength = 40;
+    }
 
-    const entropyBits = calculateEntropyBits(charsetGroups, length);
+    const entropyBits = calculateEntropyBits(charsetGroups, newLength);
     const securityInfo = getSecurityLevel(entropyBits);
 
     const passwordSeed = await hashToBigInt(site + key);
     const rawPassword = convertToBase(passwordSeed, charsetGroups);
-    const finalPassword = applyCharsetReplacement(passwordSeed, rawPassword.slice(0, length), charsetGroups);
+    const finalPassword = applyCharsetReplacement(passwordSeed, rawPassword.slice(0, newLength), charsetGroups);
 
     return buildPasswordResult(finalPassword, securityInfo.security, entropyBits, securityInfo.color);
 }

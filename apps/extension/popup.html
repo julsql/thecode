@@ -5,15 +5,15 @@
     <meta charset="UTF-8">
     <link rel="stylesheet" href="popup.css">
     <script type="module" src="popup.js"></script>
-    <title>TheCode - Clef de session</title>
+    <title>TheCode - Clef</title>
 </head>
 
 <body>
     <h3>TheCode</h3>
 
-    <!-- Clé de session -->
+    <!-- Clef -->
     <div>
-        <label for="passphrase">Clé de session :</label>
+        <label for="passphrase">Clef :</label>
         <input type="password" id="passphrase" />
         <button id="setKey">Définir</button>
         <button id="clearKey">Effacer</button>
@@ -27,7 +27,7 @@
         <h3>Paramètres avancés</h3>
         <label>
             Longueur :
-            <input type="number" id="length" min="4" max="64" value="20" />
+            <input type="number" id="length" min="4" max="40" value="20" />
         </label>
         <div class="checkbox-group">
             <label><input type="checkbox" id="lowercase" checked> Minuscules</label>

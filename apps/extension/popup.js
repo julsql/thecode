@@ -13,6 +13,12 @@ const passwordResultContainer = document.getElementById('passwordResultContainer
 const passwordSecurityContainer = document.getElementById('passwordSecurityContainer');
 const errorContainer = document.getElementById('errorContainer');
 
+const lengthInput = document.getElementById('length');
+const minInput = document.getElementById('lowercase');
+const majInput = document.getElementById('uppercase');
+const symInput = document.getElementById('numbers');
+const chiInput = document.getElementById('symbols');
+
 if (typeof browser === "undefined") {
     var browser = chrome;
 }
@@ -21,12 +27,12 @@ if (typeof browser === "undefined") {
 window.addEventListener('DOMContentLoaded', () => {
     hideResult();
     hideError();
-    browser.runtime.sendMessage({ action: 'checkSessionKey' }, (resp) => {
-        if (resp && resp.hasSessionKey) {
+    browser.runtime.sendMessage({ action: 'checkEncodingKey' }, (resp) => {
+        if (resp && resp.hasEncodingKey) {
             statusDiv.style.color = 'green';
-            statusDiv.textContent = 'Clé de session définie.';
-            browser.runtime.sendMessage({ action: 'getSessionKey' }, (resp) => {
-                passInput.value = resp.sessionKey;
+            statusDiv.textContent = 'Clef définie.';
+            browser.runtime.sendMessage({ action: 'getEncodingKey' }, (resp) => {
+                passInput.value = resp.encodingKey;
             })
         }
     });
@@ -37,20 +43,58 @@ window.addEventListener('DOMContentLoaded', () => {
             const defaultOptions = { length: 20, minState: true, majState: true, chiState: true, symState: true };
             const options = { ...defaultOptions, ...data };
 
-            document.getElementById('length').value = options.length;
-            document.getElementById('lowercase').checked = options.minState;
-            document.getElementById('uppercase').checked = options.majState;
-            document.getElementById('numbers').checked = options.chiState;
-            document.getElementById('symbols').checked = options.symState;
+            lengthInput.value = options.length;
+            minInput.checked = options.minState;
+            majInput.checked = options.majState;
+            symInput.checked = options.symState;
+            chiInput.checked = options.chiState;
+            
+            updateParams(options)
         }
     );
+    
 });
 
 
-// Définir la clé de session
+function updateParams(options) {
+    browser.runtime.sendMessage({ action: 'setParams', data: {
+        lenghtNumber: options.length,
+        minState: options.minState,
+        majState: options.majState,
+        symState: options.symState,
+        chiState: options.chiState,
+    } }, (resp) => {
+        if (!resp | !resp.ok) {
+            statusDiv.style.color = 'red';
+            statusDiv.textContent = 'Erreur: ' + (resp && resp.error || 'n/a');
+        } else {
+            if (passInput.value) {
+                generatePassword();
+            }
+        }
+    });
+}
+
+function getParams() {
+    return {
+        length: lengthInput.value,
+        minState: minInput.checked,
+        majState: majInput.checked,
+        symState: symInput.checked,
+        chiState: chiInput.checked,
+    };
+}
+
+
+[lengthInput, minInput, majInput, symInput, chiInput].forEach(input => {
+    input.addEventListener('change', () => updateParams(getParams()));
+});
+
+// Définir la clef
 setBtn.addEventListener('click', () => {
     setPassword();
 });
+
 
 // Déclenche setPassword() si on appuie sur "Entrée" dans passInput
 passInput.addEventListener('keydown', (e) => {
@@ -66,20 +110,20 @@ function setPassword() {
         return;
     }
 
-    browser.runtime.sendMessage({ action: 'getSessionKey' }, (resp) => {
-        if (pass === resp.sessionKey) {
-            passInput.value = resp.sessionKey;
+    browser.runtime.sendMessage({ action: 'getSharedValues' }, (resp) => {
+        if (pass === resp.encodingKey) {
+            passInput.value = resp.encodingKey;
             return;
         }
     })
 
     statusDiv.style.color = 'black';
     statusDiv.textContent = 'Dérivation en cours...';
-
-    browser.runtime.sendMessage({ action: 'setSessionKey', passphrase: pass }, (resp) => {
+    
+    browser.runtime.sendMessage({ action: 'setEncodingKey', encodingKey: pass }, (resp) => {
         if (resp && resp.ok) {
             statusDiv.style.color = 'green';
-            statusDiv.textContent = 'Clé de session définie.';
+            statusDiv.textContent = 'Clef définie.';
             generatePassword();
         } else {
             statusDiv.style.color = 'red';
@@ -88,12 +132,12 @@ function setPassword() {
     });
 }
 
-// Effacer la clé de session
+// Effacer la clef
 clearBtn.addEventListener('click', () => {
-    browser.runtime.sendMessage({ action: 'clearSessionKey' }, (resp) => {
+    browser.runtime.sendMessage({ action: 'clearEncodingKey' }, (resp) => {
         if (resp && resp.ok) {
             statusDiv.style.color = 'black';
-            statusDiv.textContent = 'Clé de session effacée.';
+            statusDiv.textContent = 'Clef effacée.';
             passInput.value = '';
             hideResult();
             hideError();
