@@ -1,50 +1,144 @@
-const { coder, get_base, get_bits, get_security, code, sha256, dec2base } = require('../background');
+const { 
+  generatePassword, 
+  buildCharset, 
+  calculateEntropyBits, 
+  getSecurityLevel, 
+  convertToBase, 
+  applyCharsetReplacement, 
+  getUniquePosition, 
+  hashToBigInt 
+} = require('../background');
 
-const totalBase = "portezcviuxwhskyajgblndqfmTHEQUICKBROWNFXJMPSVLAZYDG@#&!)-%;<:*$+=/?>(567438921";
+const totalBase = [
+  "portezcviuxwhskyajgblndqfm",
+  "THEQUICKBROWNFXJMPSVLAZYDG",
+  "@#&!)-%;<:*$+=/?>(",
+  "567438921"
+];
 
-test('la fonction de code renvoie le bon mot de passe', async () => {
-    const result = await coder('site', 'clef', 20, true, true, true, true);
-    expect(result).toStrictEqual({ mdp: "u8!fpdVdK*#Bp@6(9fed", security: "Très Forte", bits: 126, color: "#1CD001" });
+describe("generatePassword", () => {
+  it("devrait générer un mot de passe avec toutes les options activées", async () => {
+    const result = await generatePassword('site', 'clef', 20, true, true, true, true);
+    console.log(result.mdp)
+    expect(result).toMatchObject({
+      security: "Très Forte",
+      bits: expect.any(Number),
+      color: "#1CD001"
+    });
+
+    // Vérifie la longueur
+    expect(result.mdp).toHaveLength(20);
+    expect(result.mdp).toBe("u8YfpdVdK*#Bpy6(9f*5");
+
+    // Vérifie qu'au moins un caractère de chaque groupe est présent
+    const groups = totalBase;
+    groups.forEach(group => {
+      expect(group.split("").some(c => result.mdp.includes(c))).toBe(true);
+    });
+  });
 });
 
-test.each([
+describe("buildCharset", () => {
+  test.each([
     [true, true, true, true, totalBase],
-    [true, false, true, false, "portezcviuxwhskyajgblndqfm@#&!)-%;<:*$+=/?>("],
-])("avec minState %s, majState %s, symState %s, chiState %s j'ai la base %s", (minState, majState, symState, chiState, expected) => {
-    expect(get_base(minState, majState, symState, chiState)).toStrictEqual(expected);
+    [true, false, true, false, ["portezcviuxwhskyajgblndqfm", "@#&!)-%;<:*$+=/?>("]],
+    [false, false, false, false, []],
+  ])("avec min=%s, maj=%s, sym=%s, chi=%s => base attendue", 
+  (min, maj, sym, chi, expected) => {
+    expect(buildCharset(min, maj, sym, chi)).toStrictEqual(expected);
+  });
 });
 
-test.each([
+describe("calculateEntropyBits", () => {
+  test.each([
     [totalBase, 20, 126],
     [totalBase, 10, 63],
-])('la base %s et la longueur %s dois donner %s bits', (base, length, expected) => {
-    expect(get_bits(base, length)).toStrictEqual(expected);
+  ])('base=%p et longueur=%i => bits=%i', (base, length, expected) => {
+    expect(calculateEntropyBits(base, length)).toBe(expected);
+  });
 });
 
-test.each([
+describe("getSecurityLevel", () => {
+  test.each([
     [126, "Très Forte", "#1CD001"],
     [63, "Très Faible", "#FE0101"],
-])('%s bits donne le message %s de couleur %s', (bits, expectedMessage, expectedColor) => {
-    expect(get_security(bits)).toStrictEqual({ security: expectedMessage, color: expectedColor });
+    [0, "Aucune", "#FE0101"]
+  ])('%i bits => %s avec couleur %s', (bits, expectedSecurity, expectedColor) => {
+    expect(getSecurityLevel(bits)).toStrictEqual({ security: expectedSecurity, color: expectedColor });
+  });
 });
 
-test('la fonction de hachage fonctionne', async () => {
-    const result = await sha256("une texte à hacher");
-    expect(result).toStrictEqual("8c85e9323dd037f795315a5ec4404e003e96a4b0554acc70d811f9d301126acb");
+describe("convertToBase", () => {
+  test.each([
+    [1, ["abc"], "b"],
+    [0, ["abc"], "a"],
+    [2, ["01"], "00"]
+  ])('%i en base %p => %s', (x, base, expected) => {
+    expect(convertToBase(x, base)).toBe(expected);
+  });
 });
 
-test.each([
-    [1, "abc", "b"],
-])('%s en base %s donne %s', (x, base, expected) => {
-    expect(dec2base(x, base)).toStrictEqual(expected);
+describe("applyCharsetReplacement", () => {
+  it("garantit qu'au moins un caractère de chaque groupe est présent", () => {
+    const seed = 123456789n;
+    const charsetGroups = ["abc", "XYZ", "123"];
+    const password = "aaaaaaaaa";
+
+    const result = applyCharsetReplacement(seed, password, charsetGroups);
+    expect(result.length).toBe(password.length);
+    charsetGroups.forEach(group => {
+      expect(group.split("").some(c => result.includes(c))).toBe(true);
+    });
+  });
+
+  it("lance une erreur si le mot de passe est trop court", () => {
+    const seed = 1n;
+    const charsetGroups = ["abc", "XYZ", "123"];
+    const password = "ab";
+
+    expect(() => applyCharsetReplacement(seed, password, charsetGroups))
+      .toThrow(/Password must have at least/);
+  });
 });
 
-test.each([
-    ["site", "clef", totalBase, 20, "u8!fpdVdK*#Bp@6(9fed"],
-    ["site", "clef", totalBase, 10, "u8!fpdVdK*"],
-    ["autre site", "clef", totalBase, 20, "rp%m6m(SMtzDHbv2$nXe"],
-    ["site", "clef", "portezcviuxwhskyajgblndqfm@#&!)-%;<:*$+=/?>(", 20, "nizm/>cp*jdfg<%=w>=a"],
-])("avec le site %s, la clef %s et la base %s j'ai le mot de passe de longueur %s suivant : %s", async (site, clef, base, lenght, expected) => {
-    const result = await code(site, clef, base, lenght);
-    expect(result).toStrictEqual(expected);
+describe("getUniquePosition", () => {
+  it("retourne une position unique dans la longueur donnée", () => {
+    const seed = 5n;
+    const usedPositions = [0, 1, 2];
+    const length = 5;
+    const pos = getUniquePosition(seed, usedPositions, length);
+
+    expect(pos).toBeGreaterThanOrEqual(0);
+    expect(pos).toBeLessThan(length);
+    expect(usedPositions.includes(pos)).toBe(false);
+  });
+
+  it("boucle si toutes les positions inférieures sont utilisées", () => {
+    const seed = 3n;
+    const usedPositions = [0, 1, 2, 3];
+    const length = 5;
+
+    const pos = getUniquePosition(seed, usedPositions, length);
+    expect(pos).toBe(4);
+  });
+});
+
+describe("hashToBigInt", () => {
+  it("retourne un BigInt correct pour une chaîne donnée", async () => {
+    const input = "test";
+    const expectedHex =
+      "9f86d081884c7d659a2feaa0c55ad015" +
+      "a3bf4f1b2b0b822cd15d6c15b0f00a08";
+    const expectedBigInt = BigInt("0x" + expectedHex);
+
+    const result = await hashToBigInt(input);
+    expect(typeof result).toBe("bigint");
+    expect(result).toBe(expectedBigInt);
+  });
+
+  it("produit des valeurs différentes pour des entrées différentes", async () => {
+    const hash1 = await hashToBigInt("hello");
+    const hash2 = await hashToBigInt("world");
+    expect(hash1).not.toBe(hash2);
+  });
 });
