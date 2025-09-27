@@ -15,6 +15,8 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.urls import path
+from django.views.generic import TemplateView
+
 from main import views
 from main.api import code
 
@@ -23,4 +25,5 @@ urlpatterns = [
     path('app/', views.app, name='app'),
     path('code/', code.code, name='code'),
     path('privacy/', views.privacy, name='privacy'),
+    path('google8031792c6641dc1d.html', TemplateView.as_view(template_name='main/google8031792c6641dc1d.html'), name='google_verification'),
 ]
