@@ -165,8 +165,7 @@ public class MainActivity extends AppCompatActivity {
         code.setSymState(symSwitch.isChecked());
         code.setChiState(chiSwitch.isChecked());
         code.setLength(longueurSeekBar.getProgress());
-        code.setColor();
-        code.setSafety();
+        code.updateSafetyAndColor();
     }
 
     private void updateValue() {
@@ -191,15 +190,14 @@ public class MainActivity extends AppCompatActivity {
         modifySecurity(bits);
     }
 
-    @SuppressLint("SetTextI18n")
+    @SuppressLint({"SetTextI18n", "DefaultLocale"})
     private void modifySecurity(int bits) {
         // Modifie la sécurité en fonction des paramètres cochés
         longueurTextView.setText("Longueur : " + code.getBigLength());
 
-        securiteTextView.setText(code.getSafety() + bits + " bits");
+        securiteTextView.setText(code.getSafety().trim());
         securiteTextView.setTextColor(code.getColor());
     }
-
 
     // MARK : Actions
 
@@ -318,6 +316,7 @@ public class MainActivity extends AppCompatActivity {
 
             int bits = securiteSeekBar.getProgress() + 32;
             code.setBits(bits);
+            code.updateSafetyAndColor();
             updateValue();
             generate();
         }
