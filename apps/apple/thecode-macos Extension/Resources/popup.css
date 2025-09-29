@@ -1,0 +1,92 @@
+:root {
+    color-scheme: light dark;
+}
+
+body {
+    font-family: system-ui;
+    padding: 0 12px;
+    width: 320px;
+    text-align: center;
+}
+
+h3 {
+    display: block;
+    font-size: 14px;
+}
+
+p,
+label {
+    display: block;
+    font-size: 13px;
+}
+
+label {
+    display: block;
+}
+
+input[type="password"],
+input[type="number"] {
+    width: calc(100% - 20px);
+    padding: 8px;
+    margin: 8px 0;
+}
+
+.advanced-wrapper {
+  text-align: center; /* centre le groupe */
+}
+
+.checkbox-group {
+  display: inline-block; /* ne prend que la largeur du contenu */
+  text-align: left; /* garde les labels alignés à gauche */
+}
+
+.checkbox-group label {
+  display: block; /* chaque checkbox sur une ligne */
+  margin: 4px 0; /* un peu d'espacement entre les lignes */
+}
+
+button {
+    margin-top: 10px;
+    padding: 8px 12px;
+    cursor: pointer;
+}
+
+#status {
+    margin-top: 10px;
+    color: green;
+}
+
+#generatePassword {
+    margin-bottom: 8px;
+}
+
+#passwordContainer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#passwordResult {
+    font-weight: bold;
+    word-break: break-all;
+    flex: 1;
+}
+
+#copyPasswordBtn {
+    padding: 4px;
+    margin: 0 4px;
+}
+
+#copyIcon {
+    height: 12px;
+    width: 12px;
+}
+
+#warning {
+    color: #b33;
+    margin-top: 8px;
+}
+
+@media (prefers-color-scheme: dark) {
+    /* Dark Mode styles go here. */
+}
