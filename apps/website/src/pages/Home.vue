@@ -7,7 +7,8 @@
         <h1 class="fadeIn delay-1">Une solution&nbsp: TheCode.</h1>
         <p class="subtitle fadeIn delay-2">Parce que la sécurité informatique est la plus importante.</p>
         <div class="buttons fadeIn delay-3">
-          <a class="btn chrome" href="https://chrome.google.com/webstore" target="_blank">Chrome<span class="soon">Bientôt disponible</span></a>
+          <a class="btn no-soon chrome"
+             href="https://chromewebstore.google.com/detail/thecode/jeknefpalcipdlnbeboefonmnlejepen" target="_blank">Chrome</a>
           <a class="btn no-soon firefox" href="https://addons.mozilla.org/fr/firefox/addon/thecode/" target="_blank">Firefox</a>
           <a class="btn safari" href="https://apps.apple.com/" target="_blank">Safari<span class="soon">Bientôt disponible</span></a>
           <a class="btn iphone" href="https://apps.apple.com/" target="_blank">iPhone<span class="soon">Bientôt disponible</span></a>
