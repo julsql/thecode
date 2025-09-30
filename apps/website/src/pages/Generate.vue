@@ -239,6 +239,10 @@ input[type="range"] {
   cursor: pointer;
 }
 
+input[type="range"]:disabled {
+  cursor: default;
+}
+
 .range-group input[type="range"] {
   width: calc(100% - 124px);
   height: 9px;
@@ -355,6 +359,11 @@ button:hover {
 
   .generator-container {
     padding: 0;
+  }
+
+  h1 {
+    font-size: 1.8rem;
+    margin-bottom: 30px;
   }
 }
 </style>

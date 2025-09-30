@@ -28,15 +28,14 @@
 
     <!-- FOOTER -->
     <footer class="site-footer">
-      <p>© {{ year }} TheCode — Sécurité et fiabilité</p>
-      <p>Icons by Icons8</p>
+      <p>© {{ year }} TheCode — Sécurité et fiabilité - Icons by Icons8</p>
     </footer>
   </div>
 </template>
 
 <script lang="ts">
 import {defineComponent, ref} from 'vue';
-import Logo from '@/assets/logo.png';
+import Logo from '@/assets/logo.svg';
 
 export default defineComponent({
   name: 'App',
@@ -77,12 +76,14 @@ export default defineComponent({
 }
 
 .site-header {
-  background: white;
-  padding: 10px 0;
+  background: rgba(245, 245, 247, .8);
+  padding: 20px 0;
   position: sticky;
   top: 0;
   z-index: 100;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
 }
 
 .container {
@@ -102,23 +103,22 @@ export default defineComponent({
   align-items: center;
   gap: 10px;
   cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.brand:hover {
+  transform: scale(1.05);
 }
 
 .brand a {
   display: flex;
-  color: var(--c4);
+  color: black;
   text-decoration: none;
 }
 
 .brand-logo {
-  height: 45px;
-  border-radius: 12px;
-  transition: box-shadow 0.3s ease, transform 0.2s ease;
-}
-
-.brand-logo:hover {
-  box-shadow: 0 0 20px rgba(166, 77, 121, 0.7);
-  transform: scale(1.05);
+  height: 25px;
+  width: 25px;
 }
 
 .brand-title {
@@ -133,10 +133,11 @@ export default defineComponent({
   font-weight: 500;
   transition: color 0.2s, border-bottom 0.2s;
   padding-bottom: 4px;
+  color: black;
 }
 
 .nav a:hover {
-  color: var(--c4);
+  color: #6A1E55;
 }
 
 .nav .router-link-exact-active {
