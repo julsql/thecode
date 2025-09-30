@@ -8,7 +8,7 @@
         <p class="subtitle fadeIn delay-2">Parce que la sécurité informatique est la plus importante.</p>
         <div class="buttons fadeIn delay-3">
           <a class="btn chrome" href="https://chrome.google.com/webstore" target="_blank">Chrome<span class="soon">Bientôt disponible</span></a>
-          <a class="btn firefox" href="https://addons.mozilla.org/" target="_blank">Firefox<span class="soon">Bientôt disponible</span></a>
+          <a class="btn no-soon firefox" href="https://addons.mozilla.org/fr/firefox/addon/thecode/" target="_blank">Firefox</a>
           <a class="btn safari" href="https://apps.apple.com/" target="_blank">Safari<span class="soon">Bientôt disponible</span></a>
           <a class="btn iphone" href="https://apps.apple.com/" target="_blank">iPhone<span class="soon">Bientôt disponible</span></a>
           <a class="btn no-soon android" href="https://play.google.com/store/apps/details?id=fr.juliette.thecode&hl=fr"
