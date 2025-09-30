@@ -11,12 +11,24 @@
         </div>
 
         <div class="hamburger-menu">
-          <button class="hamburger">&#9776;</button>
-          <nav class="nav">
-            <router-link to="/" exact>Accueil</router-link>
-            <router-link to="/generate">Générateur</router-link>
-            <router-link to="/privacy">Confidentialité</router-link>
-          </nav>
+          <button class="hamburger" @click="toggleMenu">&#9776;</button>
+          <transition name="menu-fade">
+            <div v-if="isOpen" class="mobile-nav">
+              <button class="hamburger close-btn" @click="closeMenu">✕</button>
+              <nav aria-label="Phone Navigation">
+                <router-link to="/" exact @click="closeMenu">Accueil</router-link>
+                <router-link to="/generate" @click="closeMenu">Générateur</router-link>
+                <router-link to="/privacy" @click="closeMenu">Confidentialité</router-link>
+              </nav>
+            </div>
+          </transition>
+          <div class="nav">
+            <nav aria-label="Big Navigation">
+              <router-link to="/" exact @click="closeMenu">Accueil</router-link>
+              <router-link to="/generate" @click="closeMenu">Générateur</router-link>
+              <router-link to="/privacy" @click="closeMenu">Confidentialité</router-link>
+            </nav>
+          </div>
         </div>
       </div>
     </header>
@@ -131,7 +143,6 @@ export default defineComponent({
   margin-left: 25px;
   text-decoration: none;
   font-weight: 500;
-  transition: color 0.2s, border-bottom 0.2s;
   padding-bottom: 4px;
   color: black;
 }
@@ -163,6 +174,65 @@ export default defineComponent({
   display: none;
 }
 
+.mobile-nav {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(245, 245, 247, 1);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 30px;
+  z-index: 2000;
+  transform: translateY(0);
+}
+
+.mobile-nav nav {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  padding: 20px;
+}
+
+.mobile-nav a {
+  color: var(--text);
+  font-size: 1.5rem;
+  text-decoration: none;
+  margin: 20px;
+  font-weight: 400;
+  transition: color 0.2s, font-weight 0.4s;
+}
+
+.mobile-nav a:hover {
+  color: #6A1E55;
+  font-weight: 700;
+}
+
+.close-btn {
+  position: absolute;
+  top: 20px;
+  right: 25px;
+  background: none;
+  border: none;
+  font-size: 2rem;
+  color: var(--text);
+  cursor: pointer;
+}
+
+/* TRANSITION ANIMATION */
+.menu-fade-enter-active,
+.menu-fade-leave-active {
+  transition: opacity 0.4s ease;
+}
+.menu-fade-enter-from,
+.menu-fade-leave-to {
+  opacity: 0;
+}
+
 @media (max-width: 550px) {
   .hamburger-menu {
     position: relative;
@@ -179,29 +249,11 @@ export default defineComponent({
   }
 
   .nav {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    flex-direction: column;
-    background: white;
-    padding: 10px;
-    border-radius: 8px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-    z-index: 999;
-    width: 130px;
-  }
-
-  .hamburger-menu .nav {
     display: none;
   }
 
-  .hamburger-menu:hover .nav {
+  .mobile-nav {
     display: flex;
-  }
-
-  .nav a {
-    margin: 5px 0;
-    text-align: end;
   }
 }
 </style>
