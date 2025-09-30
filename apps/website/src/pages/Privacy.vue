@@ -131,5 +131,10 @@ section {
     margin: auto;
     padding: 10px;
   }
+
+  h1 {
+    font-size: 1.8rem;
+    margin-bottom: 30px;
+  }
 }
 </style>

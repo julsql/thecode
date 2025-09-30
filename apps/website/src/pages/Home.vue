@@ -82,8 +82,6 @@ export default defineComponent({
   background: linear-gradient(135deg, #6a11cb, #3B1C32);
   color: #fff;
   padding: 80px 80px;
-  border-bottom-left-radius: 50px;
-  border-bottom-right-radius: 50px;
   grid-column-gap: 80px;
 }
 
@@ -103,15 +101,15 @@ export default defineComponent({
 }
 
 .hero-illustration img {
-  width: 300px;
-  border-radius: 65px;
+  width: 80vw;
+  max-width: 300px;
   animation: float 3s ease-in-out infinite;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform 0.2s, filter 0.2s;
 }
 
 .hero-illustration img:hover {
   transform: translateY(-5px);
-  box-shadow: 0 0 50px rgba(0, 0, 0, 0.3);
+  filter: drop-shadow(0 0 50px rgba(0, 0, 0, 0.3));
 }
 
 .buttons {
@@ -169,7 +167,7 @@ export default defineComponent({
   background: #f0f4ff;
   padding: 30px;
   border-radius: 20px;
-  width: 250px;
+  max-width: 250px;
   transition: transform 0.3s, box-shadow 0.3s;
 }
 
