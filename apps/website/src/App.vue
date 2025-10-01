@@ -1,37 +1,37 @@
 <template>
   <div class="app">
     <!-- HEADER -->
-    <header class="site-header">
+    <transition name="menu-fade">
+    <header class="site-header" :class="{ 'is-open': isOpen }">
       <div class="container header-inner">
-        <div class="brand">
+        <div class="brand" :class="{ 'is-open': isOpen }">
           <a href="/">
             <img :src="Logo" alt="Logo" class="brand-logo"/>
             <span class="brand-title">TheCode</span>
           </a>
         </div>
 
-        <div class="hamburger-menu">
-          <button class="hamburger" @click="toggleMenu">&#9776;</button>
-          <transition name="menu-fade">
-            <div v-if="isOpen" class="mobile-nav">
-              <button class="hamburger close-btn" @click="closeMenu">✕</button>
-              <nav aria-label="Phone Navigation">
+        <nav aria-label="large nav" class="large_nav">
+          <router-link to="/" exact @click="closeMenu">Accueil</router-link>
+          <router-link to="/generate" @click="closeMenu">Générateur</router-link>
+          <router-link to="/privacy" @click="closeMenu">Confidentialité</router-link>
+        </nav>
+
+
+          <div class="hamburger-menu">
+            <div v-if="isOpen">
+              <nav aria-label="small nav" class="small_nav">
                 <router-link to="/" exact @click="closeMenu">Accueil</router-link>
                 <router-link to="/generate" @click="closeMenu">Générateur</router-link>
                 <router-link to="/privacy" @click="closeMenu">Confidentialité</router-link>
               </nav>
             </div>
-          </transition>
-          <div class="nav">
-            <nav aria-label="Big Navigation">
-              <router-link to="/" exact @click="closeMenu">Accueil</router-link>
-              <router-link to="/generate" @click="closeMenu">Générateur</router-link>
-              <router-link to="/privacy" @click="closeMenu">Confidentialité</router-link>
-            </nav>
+            <button v-if="!isOpen" id="open-btn" @click="toggleMenu">&#9776;</button>
+            <button v-if="isOpen" id="close-btn" @click="closeMenu">✕</button>
           </div>
-        </div>
       </div>
     </header>
+    </transition>
 
     <!-- MAIN CONTENT -->
     <main class="main">
@@ -96,6 +96,10 @@ export default defineComponent({
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
+  transition: max-height 0.4s ease, opacity 0.4s ease;
+  max-height: 25px;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .container {
@@ -139,7 +143,7 @@ export default defineComponent({
   margin: auto auto auto 20px;
 }
 
-.nav a {
+.large_nav a {
   margin-left: 25px;
   text-decoration: none;
   font-weight: 500;
@@ -147,12 +151,38 @@ export default defineComponent({
   color: black;
 }
 
-.nav a:hover {
+.large_nav a:hover, .small_nav a:hover {
   color: #6A1E55;
 }
 
-.nav .router-link-exact-active {
+.large_nav .router-link-exact-active, .small_nav .router-link-exact-active {
   font-weight: bold;
+}
+
+.small_nav {
+  position: absolute;
+  display: grid;
+  left: 0;
+  top: 50px;
+  width: 100vw;
+}
+
+.small_nav nav {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  padding: 20px;
+}
+
+.small_nav a {
+  margin: 20px;
+  padding: 10px 0;
+  color: var(--text);
+  font-size: 1.5rem;
+  text-decoration: none;
+  font-weight: 400;
+  transition: color 0.4s;
 }
 
 .main {
@@ -170,57 +200,20 @@ export default defineComponent({
   border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.hamburger {
-  display: none;
-}
-
-.mobile-nav {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(245, 245, 247, 1);
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 30px;
-  z-index: 2000;
-  transform: translateY(0);
-}
-
-.mobile-nav nav {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  width: 100%;
-  padding: 20px;
-}
-
-.mobile-nav a {
-  color: var(--text);
-  font-size: 1.5rem;
-  text-decoration: none;
-  margin: 20px;
-  font-weight: 400;
-  transition: color 0.2s, font-weight 0.4s;
-}
-
-.mobile-nav a:hover {
-  color: #6A1E55;
-  font-weight: 700;
-}
-
-.close-btn {
+button {
   position: absolute;
-  top: 20px;
+  top: 10px;
   right: 25px;
   background: none;
   border: none;
   font-size: 2rem;
   color: var(--text);
   cursor: pointer;
+  display: none;
+}
+
+.hamburger-menu {
+  display: none;
 }
 
 /* TRANSITION ANIMATION */
@@ -228,32 +221,33 @@ export default defineComponent({
 .menu-fade-leave-active {
   transition: opacity 0.4s ease;
 }
+
 .menu-fade-enter-from,
 .menu-fade-leave-to {
   opacity: 0;
 }
 
 @media (max-width: 550px) {
-  .hamburger-menu {
-    position: relative;
-    display: inline-block;
+  .site-header.is-open {
+    position: fixed;
+    max-height: 100vh;
+    width: 100vw;
   }
 
-  .hamburger {
-    font-size: 2rem;
-    background: none;
-    border: none;
-    color: var(--c3);
-    cursor: pointer;
-    display: block;
-  }
-
-  .nav {
+  .large_nav {
     display: none;
   }
 
-  .mobile-nav {
+  .hamburger-menu {
     display: flex;
+  }
+
+  button {
+    display: block;
+  }
+
+  .brand:is(.is-open) {
+    display: none;
   }
 }
 </style>
