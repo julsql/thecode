@@ -7,12 +7,12 @@
         <h1 class="fadeIn delay-1">Une solution&nbsp: TheCode.</h1>
         <p class="subtitle fadeIn delay-2">Parce que la sécurité informatique est la plus importante.</p>
         <div class="buttons fadeIn delay-3">
-          <a class="btn no-soon chrome"
+          <a class="btn chrome"
              href="https://chromewebstore.google.com/detail/thecode/jeknefpalcipdlnbeboefonmnlejepen" target="_blank">Chrome</a>
-          <a class="btn no-soon firefox" href="https://addons.mozilla.org/fr/firefox/addon/thecode/" target="_blank">Firefox</a>
-          <a class="btn safari" href="https://apps.apple.com/" target="_blank">Safari<span class="soon">Bientôt disponible</span></a>
-          <a class="btn iphone" href="https://apps.apple.com/" target="_blank">iPhone<span class="soon">Bientôt disponible</span></a>
-          <a class="btn no-soon android" href="https://play.google.com/store/apps/details?id=fr.juliette.thecode&hl=fr"
+          <a class="btn firefox" href="https://addons.mozilla.org/fr/firefox/addon/thecode/" target="_blank">Firefox</a>
+          <a class="btn safari" href="https://apps.apple.com/app/thecode-password-manager/id6753169043" target="_blank">Safari</a>
+          <a class="btn iphone" href="https://apps.apple.com/app/thecode-password-manager/id6753169043" target="_blank">iPhone</a>
+          <a class="btn android" href="https://play.google.com/store/apps/details?id=fr.juliette.thecode&hl=fr"
              target="_blank">Android</a>
         </div>
       </div>
@@ -133,16 +133,6 @@ export default defineComponent({
 .btn:hover {
   transform: translateY(-5px);
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-}
-
-.btn .soon {
-  display: flex;
-  font-size: 10px;
-}
-
-.no-soon {
-  padding-top: 21px;
-  height: 25px;
 }
 
 .features {
