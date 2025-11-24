@@ -3,7 +3,7 @@
     "default_locale": "fr",
   "name": "__MSG_extension_name__",
   "description": "__MSG_extension_description__",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "license": "Apache-2.0",
   "permissions": [
     "storage",
@@ -18,6 +18,12 @@
   },
   "host_permissions": [
     "<all_urls>"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["images/128.png", "images/copy.svg"],
+      "matches": ["<all_urls>"]
+    }
   ],
   "background": {
     "service_worker": "background.js"
