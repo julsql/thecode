@@ -3,7 +3,7 @@
 
     <header class="hero">
       <div class="hero-content">
-        <p class="subtitle fadeIn">Vous oubliez régulièrement vos mots de passe ou vous avez toujours le même ?</p>
+        <p class="subtitle fadeIn">Vous oubliez régulièrement vos mots de passe ou vous avez toujours le même&nbsp?</p>
         <h1 class="fadeIn delay-1">Une solution&nbsp: TheCode.</h1>
         <p class="subtitle fadeIn delay-2">Parce que la sécurité informatique est la plus importante.</p>
         <div class="buttons fadeIn delay-3">
@@ -23,7 +23,7 @@
 
     <!-- Features Section -->
     <section class="features">
-      <h2>Pourquoi choisir notre extension ?</h2>
+      <h2>Pourquoi choisir notre extension&nbsp?</h2>
       <div class="feature-list">
         <div class="feature fadeIn">
           <img src="https://img.icons8.com/?size=500&id=13534&format=png&color=000000" alt="Sécurisé"/>

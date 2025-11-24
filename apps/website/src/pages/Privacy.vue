@@ -3,7 +3,7 @@
     <h1>
       <img class="icon" src="https://img.icons8.com/?size=100&id=12324&format=png&color=000000" alt="Sécurisé"/>
       Politique de confidentialité</h1>
-    <h2><i>Dernière mise à jour : 28/09/2025</i></h2>
+    <h2><i>Dernière mise à jour&nbsp: 25/11/2025</i></h2>
 
     <p>Merci d’utiliser <b>TheCode</b>.</p>
 
@@ -39,13 +39,13 @@
     <section>
       <h2>Services tiers</h2>
       <p>L’application n’utilise aucun service tiers susceptible de collecter des données
-        (par exemple : Google Analytics, Firebase, etc.).</p>
+        (par exemple&nbsp: Google Analytics, Firebase, etc.).</p>
     </section>
 
     <section>
       <h2>Contact</h2>
       <p>
-        Si vous avez des questions concernant cette politique de confidentialité, vous pouvez nous contacter à :
+        Si vous avez des questions concernant cette politique de confidentialité, vous pouvez nous contacter à&nbsp:
         <br/>
         <a class="contact-link" href="mailto:contact@thecode.julsql.fr">
           📧 contact@thecode.julsql.fr
