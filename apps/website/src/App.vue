@@ -41,6 +41,7 @@
     <!-- FOOTER -->
     <footer class="site-footer">
       <p>© {{ year }} TheCode — Sécurité et fiabilité - Icons by Icons8</p>
+      <p>TheCode GitHub organization: <a href="https://github.com/TheCodeDevLab">TheCodeDevLab</a>. Source code: <a href="https://github.com/TheCodeDevLab/thecode-website">thecode-website</a></p>
     </footer>
   </div>
 </template>
@@ -198,6 +199,10 @@ export default defineComponent({
   font-size: 0.85rem;
   color: #ddd;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.site-footer p a {
+  color: #ddd;
 }
 
 button {
