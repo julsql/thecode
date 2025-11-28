@@ -1,35 +1,91 @@
+# TheCode Apple App (iOS & macOS)
 
-TheCode - Extension iOS
-=======================================
+## 🍏 Native iOS and macOS applications for TheCode
+Includes the Safari browser extension on both platforms
 
-TheCode est un générateur de mot de passe qui se base sur le site web et une clef pour générer un mot de passe.
+## ✨ Overview
+This repository contains the official **TheCode applications for iOS and macOS**, including their integrated **Safari extensions**.
 
-Aucun besoin de stocker ou se souvenir du mot de passe ;
-il suffi de retourner sur le site et donner la même clef pour retrouver le mot de passe.
+They allow users to generate secure, deterministic passwords based on:
+- the **website domain**, and
+- a **secret key** chosen by the user
 
-Ainsi, il ne faut se souvenir que d'une clef unique pour avoir des mots de passe sécurisés,
-différents sur chaque site et stockés nul part.
+The Apple app ecosystem provides:
+- a **macOS desktop application**
+- a **Safari extension for macOS**
+- an **iOS application** to generate passwords manually
+- a **Safari extension for iOS** that uses the same secret key
 
-Objectif
----------
-- Détecter les champs mot de passe sur une page et proposer un mot de passe généré.
-- **Ne jamais stocker les mots de passe générés.**
-- La clé maîtresse est fournie par l'utilisateur via la popup et **gardée en mémoire** (session) dans le background service worker.
-- Un 'salt' non-secret issu du site web est stocké localement pour permettre la même dérivation si l'utilisateur souhaite réinitialiser la clé avec la même passphrase across restarts. (Optionnel)
+## 🖥️ macOS Application & Safari Extension
+The macOS app includes:
 
-Installation (Safari)
------------------------------------
-1. Ouvrez l'application dans Xcode
-2. Branchez votre iPhone à votre Mac
-3. Lancez l'application depuis Xcode
-4. Il faudra peut être accepter les applications non signées `Général > VPN et gestion de l'appareil` et autoriser les applications de ce développeur
+### macOS App (soon)
+- Full password generator (offline, deterministic)
+- No storage of generated passwords
+- Quick access to the algorithm and settings
 
-Sécurité & comportement
------------------------
-- **La clé maître n'est PAS persistée en clair.** Elle est dérivée et gardée en mémoire tant que le service worker est actif.
-- **Les mots de passe générés ne sont jamais stockés.** Ils sont retournés au content script pour insertion dans le champ courant.
+### Safari Extension (macOS)
+- Detects password fields on websites
+- Generates deterministic passwords using your secret key
+- Fills them automatically
+- Uses the **same logic** as the cross-browser thecode-extension
 
-Remarques
----------
-- MV3 service workers peuvent être démarrés/stoppés par le navigateur; si le worker se termine, la clé en mémoire sera perdue et vous devrez la réinitialiser via la popup.
-- L'algorithme qui génère les mots de passe est unitairement testé.
+### Security on macOS
+- Your secret key is **never sent**
+- When the worker stops (normal MV3 behavior), the key is erased and must be entered again
+<!-- - It is **derived** and kept **in memory only** while the Safari extension’s service worker is active-->
+
+## 📱 iOS Application & Safari Extension
+The iOS ecosystem includes:
+
+### iOS App
+- Standalone password generator (manual generation)
+- Easy way to enter your secret key and generate passwords on the go
+- Manages the key for the Safari extension
+
+### Safari Extension (iOS)
+- Works directly inside Safari on iPhone/iPad
+- Suggests deterministic passwords based on the same key
+- Has a popup UI, but it is informational only (settings are managed through the app)
+
+### Key Sharing on iOS
+- The secret key is securely stored using iOS storage mechanisms
+- It is **shared between the app and the Safari extension**
+- This allows the extension to generate passwords without asking for the key every time
+- The key is never transmitted externally
+
+## 🔐 Security Summary
+
+### macOS
+Secret key is not persisted and never stored unencrypted
+Key is kept only in memory while the extension's service worker is alive
+
+### iOS
+Secret key is stored securely (Keychain / App Group)
+Shared between the app and the Safari extension to ensure smooth UX
+Never stored or transmitted outside the device
+
+### Both platforms
+Passwords are never stored
+All calculations are done locally on the device
+Generated passwords depend only on domain + key, making them deterministic
+
+## 📦 Installation
+
+### macOS & iOS
+Open the project on XCode and run it
+
+### 📱 App Store:
+https://apps.apple.com/app/thecode-password-manager/id6753169043
+
+## 🛠 Development
+Coming soon… (or add your build instructions here)
+
+## 🤝 Contributing
+Contributions are welcome!
+You can help improve UI, security handling, or Safari extension behavior.
+
+Feel free to open **issues** or submit **pull requests**.
+
+## 📄 License
+Distributed under the Apache License.
