@@ -1,55 +1,102 @@
+# TheCode Browser Extension
 
-TheCode - Extension
-=======================================
+## 🧩 Generate secure, deterministic passwords directly inside your browser
+Works on Chrome, Edge, Brave, Firefox, and Safari
 
-TheCode est un générateur de mot de passe qui se base sur le site web et une clef pour générer un mot de passe.
+## ✨ Overview
+The TheCode Browser Extension automatically generates secure, unique passwords for every website using:
+- the website domain, and
+- your secret key (session key)
 
-Aucun besoin de stocker ou se souvenir du mot de passe ;
-il suffi de retourner sur le site et donner la même clef pour retrouver le mot de passe.
+With TheCode, you never store passwords and never need to remember them.
 
-Ainsi, il ne faut se souvenir que d'une clef unique pour avoir des mots de passe sécurisés,
-différents sur chaque site et stockés nul part.
+Just enter the same secret key again, and the extension will regenerate the exact same password for each website.
 
-Objectif
----------
-- Détecter les champs mot de passe sur une page et proposer un mot de passe généré.
-- **Ne jamais stocker les mots de passe générés.**
-- La clé maîtresse est fournie par l'utilisateur via la popup et **gardée en mémoire** (session) dans le background service worker.
-- Un 'salt' non-secret issu du site web est stocké localement pour permettre la même dérivation si l'utilisateur souhaite réinitialiser la clé avec la même passphrase across restarts. (Optionnel)
+➡️ One key to unlock secure passwords everywhere.\
+➡️ No storage, no sync, no risk.
 
-Installation (Chrome / Edge / Brave)
------------------------------------
-1. Téléchargez et dézippez l'archive.
-2. Ouvrez `chrome://extensions` (ou `edge://extensions`) et activez le Mode développeur.
-3. Cliquez sur "Charger l'extension non empaquetée" et sélectionnez le dossier `password-suggester`.
-4. Ouvrez l'extension (icône) et entrez votre clé de session. Tant que l'extension est active, la clé sera utilisée pour générer des mots de passe dérivés par site.
+## 🔧 Features
+- 🔍 Detects password fields on any website
+- ⚡ Suggests a deterministic password generated from your session key + domain
+- 🔒 Never stores generated passwords
+- 💾 Your session key is kept only in memory while the service worker is active
+- 🌍 Works across Chrome, Edge, Brave, Firefox, and Safari
+- 🧪 Password generation algorithm is fully unit-tested
+- 🧂 Optional local storage of a non-secret salt per site to allow consistent derivations after browser restarts
 
-Installation (Firefox)
------------------------------------
-1. Téléchargez et dézippez l'archive.
-2. Ouvrez `about:debugging#/runtime/this-firefox`.
-3. Cliquez sur "Charger un module complémentaire temporaire" et sélectionnez le fichier `thecode-extension/manifest.json`.
-4. Ouvrez l'extension (icône) et entrez votre clé de session. Tant que l'extension est active, la clé sera utilisée pour générer des mots de passe dérivés par site.
+Your session key is neither transmitted nor persisted.
+All generation is performed locally within the browser.
 
-Installation (Safari)
------------------------------------
-1. Téléchargez et dézippez l'archive.
-2. Activez le mode développeur
-3. Allez dans `Safari > Réglage > Développeur` et cliquez sur "Ajouter une extension temporaire..." et et sélectionnez le fichier `thecode-extension`
-4. Ouvrez l'extension (icône) et entrez votre clé de session. Tant que l'extension est active, la clé sera utilisée pour générer des mots de passe dérivés par site.
+## 🔐 How It Works
+1. You open the extension popup
+2. You enter your session key
+3. The background service worker holds the derived key in memory only
+4. When you visit a site, the extension:
+- detects password fields
+- identifies the domain
+- generates a deterministic password
+- injects it into the form field
 
-Sécurité & comportement
------------------------
-- **La clé maître n'est PAS persistée en clair.** Elle est dérivée et gardée en mémoire tant que le service worker est actif.
-- **Les mots de passe générés ne sont jamais stockés.** Ils sont retournés au content script pour insertion dans le champ courant.
+If the service worker is restarted (MV3 behavior), the session key is lost and must be re-entered.
 
-Adaptation / publication
-------------------------
-- Cette base fonctionne sur Chrome/Edge/Brave.
-- Firefox supporte aussi WebExtensions; utilisez le manifest safari-firefox
-- Pour Safari, utilisez le manifest safari-firefox puis empaquetez via Xcode.
+## Installation
+You can download TheCode from the official browser extension stores:
+- [Chrome](https://chromewebstore.google.com/detail/thecode/jeknefpalcipdlnbeboefonmnlejepen)
+- [Edge](https://chromewebstore.google.com/detail/thecode/jeknefpalcipdlnbeboefonmnlejepen)
+- [Firefox](https://addons.mozilla.org/fr/firefox/addon/thecode/)
+- [Safari](https://apps.apple.com/app/thecode-password-manager/id6753169043)
+- [Brave](https://chromewebstore.google.com/detail/thecode/jeknefpalcipdlnbeboefonmnlejepen)
+- and other Chromium-based browsers (see Chrome link)
 
-Remarques
----------
-- MV3 service workers peuvent être démarrés/stoppés par le navigateur; si le worker se termine, la clé en mémoire sera perdue et vous devrez la réinitialiser via la popup.
-- L'algorithme qui génère les mots de passe est unitairement testé.
+## 📦 Installation for developpment
+Download the extension archive from the [Releases page](https://github.com/TheCodeDevLab/thecode-extension/releases/).
+
+### Chrome / Edge / Brave
+1. Download and unzip the extension archive
+2. Open:
+- `chrome://extensions`
+- or `edge://extensions`
+3. Enable Developer mode
+4. Click Load unpacked
+5. Select the extension folder (thecode-extension)
+6. Open the extension icon and enter your session key
+
+### Firefox
+1. Download and unzip the extension archive
+2. Copy the `safari-firefox` manifest into the `manifest.json`
+3. Open: `about:debugging#/runtime/this-firefox`
+4. Click Load Temporary Add-on
+5. Select `manifest.json`
+6. Open the extension icon and enter your session key
+
+### Safari
+1. Download and unzip the extension archive
+2. Copy the `safari-firefox` manifest into the `manifest.json`
+3. Enable Developer Mode in Safari
+4. Go to: `Safari > Settings > Developer`
+5. Click Add Extension…
+6. Select the extension folder
+7. Open the extension and enter your session key
+
+## 🔒 Security & Behavior
+- Your session key is not stored, not logged, and not synced
+- A derived version of the key is kept only in memory by the MV3 service worker
+- Generated passwords are never saved — only inserted into the active field
+- If the service worker shuts down (normal MV3 behavior), the key must be re-entered
+
+## 🧪 Testing
+The password generation algorithm and supporting logic are covered by unit tests to ensure deterministic, correct behavior.
+
+## 🛠 Development Notes
+- Chrome/Edge/Brave use the default manifest (or `chrome-brave-edge`)
+- Firefox & Safari require the `safari-firefox` manifest
+- Safari builds must be packaged through Xcode
+- MV3 service workers may stop/restart at any moment — session key persistence is intentionally avoided for security
+
+## 🤝 Contributing
+Contributions are welcome!
+Bug fixes, browser improvements, UI changes, and manifest updates are all appreciated.
+Please open an issue or submit a pull request.
+
+## 📄 License
+Distributed under the Apache License.
