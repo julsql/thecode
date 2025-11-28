@@ -1,31 +1,83 @@
-# TheCode
+# TheCode Website
+## 🌐 Official landing page, documentation hub, and online password generator for TheCode
+Live website: https://thecode.julsql.fr
 
-This is the repo of TheCode project!
+## ✨ Overview
+This repository contains the full website for TheCode, serving as both:
+- a **public landing page** introducing the project
+- a **documentation and support hub** (installation guides, privacy policy…)
+- an **online deterministic password generator** that runs entirely in the browser
 
-It's a Vue website for the TheCode project.
+The website explains how TheCode works, provides download links for all official apps (Android, iOS, macOS, browser extension), and allows users to generate their passwords directly online with no signup, no database, and no tracking.
 
-TheCode, it's a personal project to generate passwords with a secret key & the website name.
+## 🔐 TheCode in a Nutshell
+TheCode generates secure, unique passwords for each website using:
+- the **website** or **service name**
+- a **secret key** chosen by the user
 
-In short, you need to remember a simple key and by using the same simple key in addition to the website name you have a very secured password.
+The algorithm combines these values, hashes them using **SHA-256**, and converts the hash into a password according to a customizable character set.
 
-You have secured & different passwords for all your accounts by remembering only one key.
+➡️ **Same key + same website = same secure password**\
+➡️ **Different websites = different passwords**
 
-> Website available at address: [thecode.julsql.fr](http://thecode.julsql.fr)
-> 
-## Information
+Your secret key is **neither transmitted nor stored** — all generation happens locally in the browser, in the mobile apps, and in the extensions.
 
-TheCode uses the secret key + the website name and hash it with sha256.\
-With the hex data generate by the hash, it converts it in a new base with the characters selected (lower alphabet, UPPER alphabet, numbers…)
+## 🌟 Website Features
+The website provides:
 
-## Installation
+### 🔧 Online Password Generator
+A fully client-side generator that mirrors all features of the app.
 
+### 📘 Documentation & Help
+- How the algorithm works
+- How to install and use the apps
+- Tips for choosing a secret key
+- Frequently asked questions
+
+### 📱 Download Links
+Direct links to:
+- TheCode Android app
+- TheCode iOS/macOS app
+- TheCode browser extension
+
+### 🔒 Privacy Policy
+A clear explanation of how no data is collected, stored, or transmitted.
+
+### 🎨 Project Presentation
+An introduction to the philosophy of TheCode, its open ecosystem, and available tools.
+
+## 🛠️ Tech Stack
+The website is built with:
+- **Vue 3**
+- **Vite**
+- **TypeScript**
+
+## 📦 Installation
+Clone the repository and install dependencies:
 ```shell
 npm install
+```
+Start the development server:
+```shell
 npm run dev
 ```
-
-## Test
-
+Build for production:
 ```shell
-npm test
+npm run build
 ```
+Preview the production build:
+```shell
+npm run preview
+```
+
+## 🧪 Tests
+Run tests with:
+npm test
+
+## 🤝 Contributing
+Contributions are welcome!
+Feel free to open **issues** or submit **pull requests** to improve the website, UI, translations, accessibility, or performance.
+
+## 📄 License
+This project is released under the Apache License.
+See the LICENSE file for details.
