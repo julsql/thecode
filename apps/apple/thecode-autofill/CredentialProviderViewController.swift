@@ -37,7 +37,7 @@ class CredentialProviderViewController: ASCredentialProviderViewController {
             }
     }
 
-    private func providePassword(siteName: String) {
+    private func providePassword(domainName: String) {
         let password = generatePassword(domainName: domainName)
 
         let credential = ASPasswordCredential(

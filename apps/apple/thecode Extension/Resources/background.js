@@ -1,3 +1,13 @@
+let psl = [];
+
+fetch(browser.runtime.getURL("data/public_suffix_list.dat"))
+  .then(r => r.text())
+  .then(t => {
+    psl = t.split('\n')
+      .map(l => l.trim())
+      .filter(l => l && !l.startsWith('//'));
+  });
+
 let data = {
     encodingKey: null,
     lenghtNumber: 20,
@@ -6,7 +16,6 @@ let data = {
     symState: true,
     chiState: true,
 };
-
 
 browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
     (async () => {
@@ -44,9 +53,10 @@ function generatePasswordForUrl(url, options = {}) {
             try {
                 const u = new URL(url);
                 const hostname = u.hostname;
-                
+                const domain = getRegistrableDomain(hostname)
+
                 const { mdp, security, bits, color } = await generatePassword(
-                                                                              hostname,
+                                                                              domain,
                                                                               response.encodingKey,
                                                                               response.lenghtNumber,
                                                                               response.minState,
@@ -54,8 +64,8 @@ function generatePasswordForUrl(url, options = {}) {
                                                                               response.symState,
                                                                               response.chiState
                                                                               );
-                
-                resolve({ password: mdp, site: hostname, security, bits, color });
+
+                resolve({ password: mdp, site: domain, security, bits, color });
                 
             } catch (err) {
                 resolve({ error: err.message });
@@ -64,6 +74,17 @@ function generatePasswordForUrl(url, options = {}) {
     });
 }
 
+function getRegistrableDomain(hostname) {
+  const p = hostname.split('.');
+
+  for (let i = 0; i < p.length; i++) {
+    const candidate = p.slice(i).join('.');
+    if (psl.includes(candidate)) {
+      return p.slice(i - 1).join('.');
+    }
+  }
+  return hostname;
+}
 
 
 /**
@@ -75,14 +96,18 @@ async function generatePassword(site, key, length, useLower, useUpper, useSymbol
     if (charsetGroups.length === 0 || (!site && !key)) {
         return buildPasswordResult(null, "Aucune", 0, "#FE0101");
     }
-    
-    const entropyBits = calculateEntropyBits(charsetGroups, length);
+    let newLength = length;
+    if (newLength > 40) {
+        newLength = 40;
+    }
+
+    const entropyBits = calculateEntropyBits(charsetGroups, newLength);
     const securityInfo = getSecurityLevel(entropyBits);
-    
+
     const passwordSeed = await hashToBigInt(site + key);
     const rawPassword = convertToBase(passwordSeed, charsetGroups);
-    const finalPassword = applyCharsetReplacement(passwordSeed, rawPassword.slice(0, length), charsetGroups);
-    
+    const finalPassword = applyCharsetReplacement(passwordSeed, rawPassword.slice(0, newLength), charsetGroups);
+
     return buildPasswordResult(finalPassword, securityInfo.security, entropyBits, securityInfo.color);
 }
 
@@ -105,7 +130,7 @@ function buildCharset(useLower, useUpper, useSymbols, useNumbers) {
     const upper = "THEQUICKBROWNFXJMPSVLAZYDG";
     const symbols = "@#&!)-%;<:*$+=/?>(";
     const numbers = "567438921";
-    
+
     return [
         useLower ? lower : "",
         useUpper ? upper : "",
@@ -120,7 +145,7 @@ function buildCharset(useLower, useUpper, useSymbols, useNumbers) {
 function calculateEntropyBits(charsetGroups, length) {
     const totalChars = charsetGroups.reduce((sum, group) => sum + group.length, 0);
     if (totalChars === 0) return 0;
-    
+
     return Math.round(length * Math.log2(totalChars));
 }
 
@@ -142,7 +167,7 @@ function getSecurityLevel(bits) {
 function convertToBase(x, charsetGroups) {
     const charset = charsetGroups.join("");
     const base = BigInt(charset.length);
-    
+
     let value = BigInt(x);
     let result = "";
     while (value >= 0) {
@@ -163,17 +188,17 @@ function applyCharsetReplacement(seed, password, charsetGroups) {
     if (length < charsetGroups.length) {
         throw new Error(`Password must have at least ${charsetGroups.length} characters`);
     }
-    
+
     let temp = seed;
     const positions = [];
-    
+
     // Sélection des positions uniques
     for (let i = 0; i < charsetGroups.length; i++) {
         const pos = getUniquePosition(temp, positions, length);
         positions.push(pos);
         temp /= BigInt(length);
     }
-    
+
     // Remplacement des caractères
     let result = password;
     temp = seed;
@@ -183,7 +208,7 @@ function applyCharsetReplacement(seed, password, charsetGroups) {
         result = result.slice(0, pos) + group[index] + result.slice(pos + 1);
         temp /= BigInt(group.length);
     });
-    
+
     return result;
 }
 
@@ -205,8 +230,8 @@ async function hashToBigInt(input) {
     const data = new TextEncoder().encode(input);
     const hashBuffer = await crypto.subtle.digest("SHA-256", data);
     const hex = Array.from(new Uint8Array(hashBuffer))
-    .map(b => b.toString(16).padStart(2, "0"))
-    .join("");
+        .map(b => b.toString(16).padStart(2, "0"))
+        .join("");
     return BigInt("0x" + hex);
 }
 
