@@ -86,7 +86,6 @@ if (typeof browser === "undefined") {
 
             container.addEventListener('click', (e) => {
                 e.stopPropagation();
-                console.log("coucou");
                 input.value = response.password;
                 input.dispatchEvent(new Event('input', { bubbles: true }));
                 input.dispatchEvent(new Event('change', { bubbles: true }));
@@ -140,7 +139,7 @@ if (typeof browser === "undefined") {
                 // Fade out + suppression après 1s
                 setTimeout(() => {
                     setTimeout(() => popup.remove(), 1500);
-                }, 50);
+                }, 150);
             }
 
             copyBtn.addEventListener('mouseover', () => {

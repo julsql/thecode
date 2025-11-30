@@ -86,7 +86,6 @@ if (typeof browser === "undefined") {
 
             container.addEventListener('click', (e) => {
                 e.stopPropagation();
-                console.log("coucou");
                 input.value = response.password;
                 input.dispatchEvent(new Event('input', { bubbles: true }));
                 input.dispatchEvent(new Event('change', { bubbles: true }));
@@ -164,7 +163,7 @@ if (typeof browser === "undefined") {
             
             // Disparition quand input perd le focus
             input.addEventListener('blur', () => {
-                setTimeout(() => removeMenu(input), 50);
+                setTimeout(() => removeMenu(input), 150);
             }, { once: true });
         });
     }
