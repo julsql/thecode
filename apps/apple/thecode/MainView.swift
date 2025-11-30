@@ -132,7 +132,7 @@ struct MainView: View {
             return;
         }
         
-        var utils = PasswordUtils()
+        let utils = PasswordUtils()
         utils.minState = minState
         utils.majState = majState
         utils.symState = symState
