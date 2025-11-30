@@ -14,17 +14,12 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
             respond(context: context, payload: ["error": "Message vide ou non décodable"])
             return
         }
-
-        // Pour debug : affiche tout le message
-        print("📩 Message brut reçu :", message)
         
         // Récupère l'action envoyée
         guard let action = message["action"] as? String else {
             respond(context: context, payload: ["error": "Clé 'message' absente ou mal typée"])
             return
         }
-
-        print("📩 Action reçue :", action)
 
         switch action {
         case "getSharedValues":
