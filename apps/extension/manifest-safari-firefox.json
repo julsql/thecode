@@ -29,7 +29,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["images/128.png", "images/copy.svg"],
+      "resources": ["images/128.png", "images/copy.svg", "data/public_suffix_list.dat"],
       "matches": ["<all_urls>"]
     }
   ],

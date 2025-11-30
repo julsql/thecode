@@ -2,6 +2,16 @@ if (typeof browser === "undefined" && typeof chrome !== "undefined") {
     var browser = chrome;
 }
 
+let psl = [];
+
+fetch(browser.runtime.getURL("data/public_suffix_list.dat"))
+  .then(r => r.text())
+  .then(t => {
+    psl = t.split('\n')
+      .map(l => l.trim())
+      .filter(l => l && !l.startsWith('//'));
+  });
+
 let data = {
     encodingKey: null,
     lenghtNumber: 20,
@@ -67,14 +77,28 @@ async function generatePasswordForUrl(url, options = {}) {
     try {
         const u = new URL(url);
         const hostname = u.hostname;
+        const domain = getRegistrableDomain(hostname)
 
-        const { mdp, security, bits, color } = await generatePassword(hostname, data.encodingKey, data.lenghtNumber, data.minState, data.majState, data.symState, data.chiState);
+        const { mdp, security, bits, color } = await generatePassword(domain, data.encodingKey, data.lenghtNumber, data.minState, data.majState, data.symState, data.chiState);
 
-        return { password: mdp, site: hostname, security, bits, color };
+        return { password: mdp, site: domain, security, bits, color };
     } catch (err) {
         return { error: err.message };
     }
 }
+
+function getRegistrableDomain(hostname) {
+  const p = hostname.split('.');
+
+  for (let i = 0; i < p.length; i++) {
+    const candidate = p.slice(i).join('.');
+    if (psl.includes(candidate)) {
+      return p.slice(i - 1).join('.');
+    }
+  }
+  return hostname;
+}
+
 
 /**
  * Génère un mot de passe déterministe basé sur site + clef
