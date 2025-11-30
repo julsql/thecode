@@ -30,13 +30,12 @@ struct MainView: View {
     @Environment(\.scenePhase) private var scenePhase
     
     var utils: PasswordUtils {
-        var u = PasswordUtils()
-        u.minState = minState
-        u.majState = majState
-        u.symState = symState
-        u.chiState = chiState
-        u.longueur = lengthNumber
-        u.modifBase() // construit la base dynamique selon les options
+        let u = PasswordUtils()
+        u.minState = true
+        u.majState = true
+        u.symState = true
+        u.chiState = true
+        u.longueur = 20
         return u
     }
     
@@ -139,9 +138,8 @@ struct MainView: View {
         utils.symState = symState
         utils.chiState = chiState
         utils.longueur = lengthNumber
-        utils.modifBase()
         
-        let result = utils.modification(siteName + encodingKey)
+        let result = utils.generatePassword(input: siteName + encodingKey)
         generatedValue = result.code
         securityLabel = result.label
         securityColor = result.color

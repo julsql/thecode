@@ -16,15 +16,15 @@ class CredentialProviderViewController: ASCredentialProviderViewController {
         for serviceIdentifiers: [ASCredentialServiceIdentifier]
     ) {
         let domain = serviceIdentifiers.first?.identifier ?? "default"
-        providePasswordIfAuthentificate(siteName: domain)
+        providePasswordIfAuthentificate(domainName: domain)
     }
 
     override func provideCredentialWithoutUserInteraction(for credentialIdentity: ASPasswordCredentialIdentity) {
         let domain = credentialIdentity.serviceIdentifier.identifier
-        providePasswordIfAuthentificate(siteName: domain)
+        providePasswordIfAuthentificate(domainName: domain)
     }
     
-    private func providePasswordIfAuthentificate(siteName: String) {
+    private func providePasswordIfAuthentificate(domainName: String) {
         authenticateUser { [weak self] success in
                 guard success else {
                     // L'utilisateur n'a pas été authentifié
@@ -33,12 +33,12 @@ class CredentialProviderViewController: ASCredentialProviderViewController {
                     return
                 }
                 // Auth réussi : générer et remplir le mot de passe
-            self?.providePassword(siteName: siteName)
+            self?.providePassword(domainName: domainName)
             }
     }
 
     private func providePassword(siteName: String) {
-        let password = generatePassword(siteName: siteName)
+        let password = generatePassword(domainName: domainName)
 
         let credential = ASPasswordCredential(
             user: "",
@@ -51,7 +51,7 @@ class CredentialProviderViewController: ASCredentialProviderViewController {
         )
     }
     
-    private func generatePassword(siteName: String) -> String {
+    private func generatePassword(domainName: String) -> String {
         let defaults = UserDefaults(suiteName: appGroupID)
         let minState = defaults?.bool(forKey: "minState") ?? true
         let majState = defaults?.bool(forKey: "majState") ?? true
@@ -60,20 +60,19 @@ class CredentialProviderViewController: ASCredentialProviderViewController {
         let lengthNumber = defaults?.integer(forKey: "lengthNumber") ?? 20
         let encodingKey = defaults?.string(forKey: "encodingKey") ?? "Aucune valeur"
         
-        if (siteName == "" || encodingKey == "" || (!minState && !majState && !symState && !chiState)) {
+        if (domainName == "" || encodingKey == "" || (!minState && !majState && !symState && !chiState)) {
             return "";
         }
         
-        var utils = PasswordUtils()
+        let utils = PasswordUtils()
         utils.minState = minState
         utils.majState = majState
         utils.symState = symState
         utils.chiState = chiState
         utils.longueur = lengthNumber
-        utils.modifBase()
         
-        let result = utils.modification(siteName + encodingKey)
-        return siteName
+        let result = utils.generatePassword(input: domainName + encodingKey)
+        return result.code
     }
 
     override func prepareInterfaceToProvideCredential(for credentialIdentity: ASPasswordCredentialIdentity) {

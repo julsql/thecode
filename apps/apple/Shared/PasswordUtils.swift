@@ -8,97 +8,146 @@
 import Foundation
 import SwiftUI
 import CryptoKit
+import Foundation
+import CryptoKit
 
-struct PasswordUtils {
+struct PasswordResult {
+    let code: String
+    let label: String
+    let bits: Int
+    let color: Color
+}
+
+enum PasswordError: Error, Equatable {
+    case passwordTooShort(min: Int)
+}
+
+class PasswordUtils {
     
-    // MARK: - Base et paramètres
-    var base: String = ""
+    // MARK: - Public options
     var minState: Bool = true
     var majState: Bool = true
     var symState: Bool = true
     var chiState: Bool = true
     var longueur: Int = 20
     
-    // MARK: - Modifier la base selon les options
-    mutating func modifBase() {
-        base = ""
-        if minState { base += "portezcviuxwhskyajgblndqfm" }
-        if majState { base += "THEQUICKBROWNFXJMPSVLAZYDG" }
-        if symState { base += "@#&!)-%;<:*$+=/?>(" }
-        if chiState { base += "567438921" }
-    }
+    private let lower = "portezcviuxwhskyajgblndqfm"
+    private let upper = "THEQUICKBROWNFXJMPSVLAZYDG"
+    private let symbols = "@#&!)-%;<:*$+=/?>("
+    private let numbers = "567438921"
     
-    // MARK: - Convert hex string to BInt
-    func hex2dec(_ hex: String) -> BInt {
-        let baseHex = "0123456789ABCDEF"
-        var result = BInt(0)
-        for (i, char) in hex.uppercased().enumerated() {
-            guard let idx = baseHex.firstIndex(of: char) else { continue }
-            let c = BInt(baseHex.distance(from: baseHex.startIndex, to: idx))
-            let powValue = power(a: BInt(16), b: hex.count - i - 1)
-            result += c * powValue
+    // MARK: - Génération principale
+    func generatePassword(input: String) -> PasswordResult {
+        if (input == "") {
+            return PasswordResult(code: "", label: "Aucune clé n'est définie.", bits: 0, color: .red)
         }
-        return result
-    }
-    
-    // MARK: - Convert BInt to string in custom base
-    func dec2base(_ x: BInt, base: String) -> String {
-        let b = BInt(base.count)
+        // Vérifs équivalentes JavaScript
+        if longueur < 4 {
+            return PasswordResult(code: "", label: "La longueur doit être supérieur à 4", bits: 0, color: .red)
+        }
+        if longueur > 40 {
+            return PasswordResult(code: "", label: "La longueur doit être inférieure à 40", bits: 0, color: .red)
+        }
+        if !minState && !majState && !symState && !chiState {
+            return PasswordResult(code: "", label: "Il faut choisir des caractères", bits: 0, color: .red)
+        }
         
-        // fonction pour accéder à un caractère par indice Int
-        func charAt(_ s: String, _ i: Int) -> String {
-            let index = s.index(s.startIndex, offsetBy: i)
-            return String(s[index])
+        let groups = buildCharset()
+        if groups.isEmpty {
+            return PasswordResult(code: "", label: "Il faut choisir des caractères", bits: 0, color: .red)
         }
-
-        var result = charAt(base, Int(x % b))
-        var inter = (x / b) - 1
-
-        while inter != -1 {
-            result = charAt(base, Int(inter % b)) + result
-            inter = (inter / b) - 1
+        
+        let seedString = input
+        let seed = hashToBInt(seedString)
+        
+        let totalBase = groups.joined()
+        var rawPassword = convertToBase(seed: seed, charset: totalBase)
+        
+        if rawPassword.count > longueur {
+            rawPassword = String(rawPassword.prefix(longueur))
         }
-        return result
-    }
-
+        
+        do {
+            let final = try applyCharsetReplacement(
+                seed: seed,
+                password: rawPassword,
+                charsetGroups: groups
+            )
+            let bits = calculateEntropyBits(groups: groups, length: longueur)
+            let (label, color) = getSecurityLevel(bits: bits)
+            
+            return PasswordResult(code: final, label: label, bits: bits, color: color)
+       
+        } catch PasswordError.passwordTooShort(let min) {
+            print("Erreur PasswordError.passwordTooShort avec min = \(min)")
+            return PasswordResult(code: "", label: "Erreur", bits: 0, color: .red)
+        } catch {
+            return PasswordResult(code: "", label: "Erreur", bits: 0, color: .red)
+        }
     
-    // MARK: - Calcul de puissance (BInt)
-    func power(a: BInt, b: Int) -> BInt {
-        var result = BInt(1)
-        for _ in 0..<b {
-            result *= a
-        }
-        return result
+         }
+    
+    // MARK: - Charset
+    func buildCharset() -> [String] {
+        [
+            minState ? lower : "",
+            majState ? upper : "",
+            symState ? symbols : "",
+            chiState ? numbers : ""
+        ].filter { !$0.isEmpty }
     }
     
-    // MARK: - Calcul sécurité en bits
-    func securite(bits: Int) -> (label: String, color: Color) {
+    // MARK: - Entropie
+    func calculateEntropyBits(groups: [String], length: Int) -> Int {
+        let totalChars = groups.map(\.count).reduce(0, +)
+        if totalChars == 0 { return 0 }
+        return Int(Double(length) * log2(Double(totalChars)))
+    }
+    
+    // MARK: - Niveau de sécurité
+    func getSecurityLevel(bits: Int) -> (String, Color) {
         switch bits {
         case 0:
             return ("Aucune", .red)
-        case 1..<64:
+        case ..<64:
             return ("Très Faible", .red)
-        case 64..<80:
+        case ..<80:
             return ("Faible", .red)
-        case 80..<100:
+        case ..<100:
             return ("Moyenne", .orange)
-        case 100..<128:
+        case ..<126:
             return ("Forte", .green)
         default:
             return ("Très Forte", .green)
         }
     }
     
-    // MARK: Remplace certains caractères du mot de passe pour garantir qu'au moins un caractère de chaque groupe est présent.
-    func applyCharsetReplacement(seed: BInt, password: String, charsetGroups: [String]) -> String {
+    // MARK: - Conversion base personnalisée
+    func convertToBase(seed: BInt, charset: String) -> String {
+        let base = BInt(charset.count)
+        var value = seed
+        var result = ""
+        
+        while value >= 0 {
+            let index = Int(value % base)
+            let c = charset[charset.index(charset.startIndex, offsetBy: index)]
+            result = String(c) + result
+            value = (value / base) - 1
+            if value < 0 { break }
+        }
+        return result
+    }
+    
+    // MARK: - Remplacement obligatoire (garantir 1 char de chaque groupe)
+    func applyCharsetReplacement(seed: BInt, password: String, charsetGroups: [String]) throws -> String {
         let length = password.count
         guard length >= charsetGroups.count else {
-            fatalError("Password must have at least \(charsetGroups.count) characters")
+            throw PasswordError.passwordTooShort(min: charsetGroups.count)
         }
-
+        
         var temp = seed
         var positions: [Int] = []
-
+        
         // Sélection des positions uniques
         func getUniquePosition(_ temp: BInt, _ existing: [Int], _ maxLength: Int) -> Int {
             var pos = Int(temp % BInt(maxLength))
@@ -107,13 +156,13 @@ struct PasswordUtils {
             }
             return pos
         }
-
-        for i in 0..<charsetGroups.count {
+        
+        for _ in 0..<charsetGroups.count {
             let pos = getUniquePosition(temp, positions, length)
             positions.append(pos)
             temp /= BInt(length)
         }
-
+        
         // Remplacement des caractères
         var result = password
         temp = seed
@@ -128,41 +177,23 @@ struct PasswordUtils {
             
             temp /= BInt(group.count)
         }
-
+        
         return result
     }
-
     
-    // MARK: - Complexifier un mot de passe
-    func modification(_ mot: String) -> (code: String, label: String, bits: Int, color: Color) {
-        guard let data = mot.data(using: .utf8) else {
-            return ("", "Erreur", 0, .red)
+    func getUniquePosition(seed: BInt, used: [Int], length: Int) -> Int {
+        var pos = Int(seed % BInt(length))
+        while used.contains(pos) {
+            pos = (pos + 1) % length
         }
-        
-        if (mot == "" || (!minState && !majState && !symState && !chiState)) {
-            return ("", "Erreur", 0, .red)
-        }
-        
-        let digest = SHA256.hash(data: data)
-        let hexDigest = digest.compactMap { String(format: "%02x", $0) }.joined()
-        let chiffre = hex2dec(hexDigest)
-        var code2 = String(dec2base(chiffre, base: base).prefix(longueur))
-        
-        // Appliquer charset replacement pour garantir un caractère de chaque groupe
-        var charsetGroups: [String] = []
-        if minState { charsetGroups.append("portezcviuxwhskyajgblndqfm") }
-        if majState { charsetGroups.append("THEQUICKBROWNFXJMPSVLAZYDG") }
-        if symState { charsetGroups.append("@#&!)-%;<:*$+=/?>(") }
-        if chiState { charsetGroups.append("567438921") }
-
-        if !charsetGroups.isEmpty {
-            code2 = applyCharsetReplacement(seed: chiffre, password: code2, charsetGroups: charsetGroups)
-        }
-        
-        let nb_carac = base.count + 1
-        let bits = Int(round(log(pow(Double(nb_carac), Double(longueur))) / log(2.0)))
-        let sec = securite(bits: bits)
-        
-        return (code2, sec.label, bits, sec.color)
+        return pos
+    }
+    
+    // MARK: - SHA-256 → BInt
+    func hashToBInt(_ s: String) -> BInt {
+        let data = Data(s.utf8)
+        let hash = SHA256.hash(data: data)
+        let hex = hash.compactMap { String(format: "%02x", $0) }.joined()
+        return BInt(hex, radix: 16) ?? 0
     }
 }
