@@ -19,7 +19,6 @@ const totalBase = [
 describe("generatePassword", () => {
   it("devrait générer un mot de passe avec toutes les options activées", async () => {
     const result = await generatePassword('site', 'clef', 20, true, true, true, true);
-    console.log(result.mdp)
     expect(result).toMatchObject({
       security: "Très Forte",
       bits: expect.any(Number),
