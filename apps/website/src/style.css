@@ -1,3 +1,41 @@
-body {
+:root {
+    --c1: #1A1D1C;
+    --c2: #3B1C32;
+    --c3: #6A1E55;
+    --c4: #A64D79;
+    --text: #f8f8f8;
+    --text-muted: rgba(248, 248, 248, 0.72);
+    --surface: #14181d;
+    --surface-elevated: rgba(255, 255, 255, 0.04);
+    --border-soft: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.16);
+    --accent-gradient: linear-gradient(135deg, #6a11cb 0%, #6A1E55 50%, #3B1C32 100%);
+    --hero-gradient: radial-gradient(1200px 600px at 80% -10%, rgba(166, 77, 121, 0.35), transparent 60%),
+                     radial-gradient(900px 500px at -10% 110%, rgba(106, 17, 203, 0.35), transparent 60%),
+                     linear-gradient(160deg, #2a0f24 0%, #1A1D1C 60%);
+    --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.35);
+    --shadow-strong: 0 20px 50px rgba(0, 0, 0, 0.45);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html, body {
     margin: 0;
+    padding: 0;
+    background: var(--c1);
+    color: var(--text);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+    color: inherit;
+}
+
+::selection {
+    background: var(--c4);
+    color: #fff;
 }
