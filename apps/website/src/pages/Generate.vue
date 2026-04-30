@@ -1,94 +1,116 @@
 <template>
-  <div class="generator-container fadeIn">
-    <div class="generator-card">
-      <h1>
-        <img class="icon" src="https://img.icons8.com/?size=100&id=scais6KfLeli&format=png&color=000000"
-             alt="Sécurisé"/>
-        Générateur de mot de passe</h1>
+  <div class="page-wrapper">
+    <header class="page-hero">
+      <div class="page-hero-inner">
+        <div class="page-hero-icon">
+          <img src="https://img.icons8.com/?size=200&id=scais6KfLeli&format=png&color=ffffff" alt=""/>
+        </div>
+        <h1>{{ t('gen_title') }}</h1>
+        <p class="page-hero-sub">{{ t('gen_subtitle') }}</p>
+      </div>
+    </header>
 
-      <!-- Clé + Site -->
-      <fieldset>
-        <h2>Données</h2>
+    <div class="generator-container fadeIn">
+      <div class="generator-card">
 
-        <div class="form-group">
-          <label for="id_clef">Clef :</label>
-          <div class="input-with-button">
+        <!-- Données -->
+        <fieldset>
+          <h2>{{ t('gen_section_data') }}</h2>
+
+          <div class="form-group">
+            <label for="id_clef">{{ t('gen_label_key') }}</label>
+            <div class="input-with-button">
+              <input
+                  :type="showPassword ? 'text' : 'password'"
+                  v-model="clef"
+                  :placeholder="t('gen_placeholder_key')"
+                  id="id_clef"
+                  required
+              />
+              <button type="button" class="ghost-btn" @click="togglePassword">
+                {{ showPassword ? t('gen_hide') : t('gen_show') }}
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="id_site">{{ t('gen_label_site') }}</label>
             <input
-                :type="showPassword ? 'text' : 'password'"
-                v-model="clef"
-                placeholder="Entrez votre clef"
-                id="id_clef"
+                type="text"
+                v-model="site"
+                :placeholder="t('gen_placeholder_site')"
+                id="id_site"
                 required
             />
-            <button type="button" @click="togglePassword">
-              {{ showPassword ? "Masquer" : "Afficher" }}
-            </button>
           </div>
+        </fieldset>
+
+        <!-- Paramètres -->
+        <fieldset>
+          <h2>{{ t('gen_section_settings') }}</h2>
+
+          <div class="form-group range-group">
+            <span>
+              <label for="id_longueur" class="no-margin-bottom">{{ t('gen_label_length') }}</label>
+              <output>{{ longueur }}</output>
+            </span>
+            <input
+                type="range"
+                v-model="longueur"
+                min="4"
+                max="40"
+                step="1"
+                id="id_longueur"
+            />
+          </div>
+
+          <div class="checkbox-group">
+            <label class="check-pill">
+              <input type="checkbox" v-model="minuscules"/>
+              <span>{{ t('gen_lowercase') }}</span>
+            </label>
+            <label class="check-pill">
+              <input type="checkbox" v-model="majuscules"/>
+              <span>{{ t('gen_uppercase') }}</span>
+            </label>
+            <label class="check-pill">
+              <input type="checkbox" v-model="symboles"/>
+              <span>{{ t('gen_symbols') }}</span>
+            </label>
+            <label class="check-pill">
+              <input type="checkbox" v-model="chiffres"/>
+              <span>{{ t('gen_numbers') }}</span>
+            </label>
+          </div>
+        </fieldset>
+
+        <!-- Résultat -->
+        <div class="result">
+          <h2>{{ t('gen_section_result') }}</h2>
+          <input type="text" id="password" v-model="motDePasse" readonly
+                 :placeholder="t('gen_placeholder_result')"/>
+          <p class="security-line">
+            {{ t('gen_security_label') }} :
+            <span :style="{ color: couleurSecurite }">{{ niveauSecurite }}</span>
+          </p>
+          <input type="range" :value="scoreSecurite" min="0" max="252" disabled/>
         </div>
-
-        <div class="form-group">
-          <label for="id_site">Site :</label>
-          <input
-              type="text"
-              v-model="site"
-              placeholder="nom du site"
-              id="id_site"
-              required
-          />
-        </div>
-      </fieldset>
-
-      <!-- Paramètres -->
-      <fieldset>
-        <h2>Paramètres du mot de passe</h2>
-
-        <div class="form-group range-group">
-                    <span>
-                    <label for="id_longueur" class="no-margin-bottom">Longueur :</label>
-                    <output>{{ longueur }}</output>
-                        </span>
-          <input
-              type="range"
-              v-model="longueur"
-              min="4"
-              max="40"
-              step="1"
-              id="id_longueur"
-          />
-        </div>
-
-        <div class="checkbox-group">
-          <input type="checkbox" id="id_minuscules" v-model="minuscules"/>
-          <label for="id_minuscules"><span>Minuscules</span></label>
-          <input type="checkbox" id="id_majuscules" v-model="majuscules"/>
-          <label for="id_majuscules"><span>Majuscules</span></label>
-          <input type="checkbox" id="id_symboles" v-model="symboles"/>
-          <label for="id_symboles"><span>Symboles</span></label>
-          <input type="checkbox" id="id_chiffres" v-model="chiffres"/>
-          <label for="id_chiffres"><span>Chiffres</span></label>
-        </div>
-      </fieldset>
-
-      <!-- Résultat -->
-      <div class="result">
-        <h2>Mot de passe généré</h2>
-        <input type="text" id="password" v-model="motDePasse" readonly
-               placeholder="Remplissez les champs pour générer un mot de passe"/>
-        <p>Sécurité : <span :style="{ color: couleurSecurite }">{{ niveauSecurite }}</span></p>
-        <input type="range" :value="scoreSecurite" min="0" max="252" disabled/>
-
       </div>
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import {defineComponent, ref, watch} from "vue";
+import {defineComponent, ref, watch, computed} from "vue";
 import {generatePassword, calculateEntropyBits, getSecurityLevel} from "@/utils";
+import {useI18n} from "@/i18n";
+import type {TranslationKey} from "@/i18n";
 
 export default defineComponent({
   name: "Generator",
   setup() {
+    const {t} = useI18n();
+
     const clef = ref("");
     const site = ref("");
     const longueur = ref(20);
@@ -101,31 +123,41 @@ export default defineComponent({
 
     const scoreSecurite = ref(0);
     const couleurSecurite = ref("");
-    const niveauSecurite = ref("");
+    const securityKey = ref<TranslationKey>("sec_none");
+    const niveauSecurite = computed(() => t(securityKey.value));
 
     const togglePassword = () => {
       showPassword.value = !showPassword.value;
     };
 
+    const securityKeyFromBits = (bits: number): TranslationKey => {
+      if (bits === 0) return "sec_none";
+      if (bits < 64) return "sec_veryweak";
+      if (bits < 80) return "sec_weak";
+      if (bits < 100) return "sec_medium";
+      if (bits < 126) return "sec_strong";
+      return "sec_verystrong";
+    };
+
     const genererMotDePasse = async () => {
       const bits = calculateEntropyBits(longueur.value, minuscules.value, majuscules.value, symboles.value, chiffres.value);
-      const {security, color} = getSecurityLevel(bits);
-      niveauSecurite.value = security;
+      const {color} = getSecurityLevel(bits);
       couleurSecurite.value = color;
       scoreSecurite.value = bits;
+      securityKey.value = securityKeyFromBits(bits);
 
       const mdp = await generatePassword(site.value, clef.value, longueur.value, minuscules.value, majuscules.value, symboles.value, chiffres.value);
-      if (mdp) {
-        motDePasse.value = mdp;
-      }
+      motDePasse.value = mdp ?? "";
     };
+
     watch(
         [clef, site, longueur, minuscules, majuscules, symboles, chiffres],
         genererMotDePasse,
-        {immediate: true} // génère dès l'initialisation
+        {immediate: true}
     );
 
     return {
+      t,
       clef,
       site,
       longueur,
@@ -136,7 +168,6 @@ export default defineComponent({
       showPassword,
       motDePasse,
       togglePassword,
-      genererMotDePasse,
       scoreSecurite,
       couleurSecurite,
       niveauSecurite,
@@ -146,71 +177,143 @@ export default defineComponent({
 </script>
 
 <style scoped>
+.page-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.page-hero {
+  position: relative;
+  background: var(--hero-gradient);
+  padding: 70px 24px 90px;
+  text-align: center;
+  overflow: hidden;
+}
+
+.page-hero::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 -1px 0;
+  height: 80px;
+  background: linear-gradient(to bottom, transparent, var(--c1));
+  pointer-events: none;
+}
+
+.page-hero-inner {
+  position: relative;
+  z-index: 1;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.page-hero-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(166, 77, 121, 0.35), rgba(106, 17, 203, 0.35));
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  margin-bottom: 18px;
+}
+
+.page-hero-icon img {
+  width: 40px;
+  height: 40px;
+}
+
+.page-hero h1 {
+  font-size: clamp(2rem, 4vw, 2.8rem);
+  margin: 0 0 12px;
+  letter-spacing: -0.5px;
+  color: #fff;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+}
+
+.page-hero-sub {
+  margin: 0;
+  font-size: clamp(1rem, 1.3vw, 1.15rem);
+  color: rgba(255, 255, 255, 0.78);
+}
+
 .generator-container {
   display: flex;
   justify-content: center;
-  align-items: center;
-  padding: 40px;
+  padding: 0 24px 80px;
+  margin-top: -50px;
+  position: relative;
+  z-index: 2;
 }
 
 .generator-card {
-  color: #1a1d1c;
-  padding: 30px;
-  border-radius: 16px;
-  max-width: 800px;
   width: 100%;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
-}
-
-.icon {
-  width: 42px;
-  height: 42px;
-  margin: auto 0;
-}
-
-h1 {
-  font-size: 2.2rem;
-  color: #1A1D1C;
-  text-align: center;
-  margin-bottom: 50px;
-  display: flex;
-  gap: 20px;
-  justify-content: center;
+  max-width: 760px;
+  padding: 36px;
+  border-radius: 22px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-strong);
+  color: var(--text);
+  backdrop-filter: blur(10px);
 }
 
 h2 {
-  color: #6A1E55;
-  margin-bottom: 10px;
+  color: var(--c4);
+  font-size: 1.05rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin: 0 0 14px;
 }
 
 fieldset {
   border: none;
-  margin-bottom: 20px;
+  margin: 0 0 28px;
+  padding: 0;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  margin-bottom: 15px;
+  margin-bottom: 16px;
 }
 
 label {
-  font-weight: bold;
-  margin-bottom: 5px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-bottom: 8px;
 }
 
-input[type="text"], input[type="password"] {
-  padding: 10px;
-  border-radius: 8px;
-  border: none;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
-  outline: none;
-  background: white;
-  color: #2c2f2e;
-}
-
-#id_clef {
+input[type="text"],
+input[type="password"] {
   width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border-soft);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text);
+  font-size: 1rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+input[type="text"]::placeholder,
+input[type="password"]::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus {
+  outline: none;
+  border-color: var(--c4);
+  box-shadow: 0 0 0 4px rgba(166, 77, 121, 0.18);
+  background: rgba(0, 0, 0, 0.35);
+}
+
+input[type="text"]:read-only {
+  background: rgba(0, 0, 0, 0.35);
+  font-family: 'JetBrains Mono', 'Menlo', 'Consolas', monospace;
+  letter-spacing: 0.5px;
 }
 
 .input-with-button {
@@ -218,24 +321,74 @@ input[type="text"], input[type="password"] {
   gap: 10px;
 }
 
+.input-with-button input {
+  flex: 1;
+}
+
+.ghost-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-soft);
+  color: var(--text);
+  padding: 0 18px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.ghost-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--c4);
+}
+
 .range-group {
   display: block;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
 }
 
 .range-group span {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 5px;
-  white-space: nowrap;
-  width: 120px;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.range-group output {
+  font-family: 'JetBrains Mono', 'Menlo', 'Consolas', monospace;
+  font-weight: 700;
+  color: var(--c4);
+  font-size: 1.1rem;
 }
 
 input[type="range"] {
-  flex: 1;
-  accent-color: #a64d79;
+  width: 100%;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  outline: none;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--c4), var(--c3));
+  border: 2px solid #fff;
+  box-shadow: 0 4px 10px rgba(166, 77, 121, 0.4);
+  cursor: pointer;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--c4), var(--c3));
+  border: 2px solid #fff;
   cursor: pointer;
 }
 
@@ -243,127 +396,127 @@ input[type="range"]:disabled {
   cursor: default;
 }
 
-.range-group input[type="range"] {
-  width: calc(100% - 124px);
-  height: 9px;
-}
-
 .no-margin-bottom {
-  margin-bottom: unset;
+  margin-bottom: 0;
 }
 
 .checkbox-group {
   display: flex;
-  flex-direction: column;
-  gap: 5px;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
-.checkbox-group input[type="checkbox"] {
-  -moz-appearance: none;
-  -webkit-appearance: none;
-  -ms-appearance: none;
-  appearance: none;
-  display: block;
-  float: left;
-  margin-right: -2em;
-  opacity: 0;
-  width: 1em;
-  z-index: -1;
-}
-
-input[type="checkbox"] + label {
-  text-decoration: none;
+.check-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-soft);
+  background: rgba(255, 255, 255, 0.04);
   cursor: pointer;
-  display: inline-block;
-  font-size: 1em;
-  font-weight: 300;
-  padding-left: 2.4em;
-  padding-right: 0.75em;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  margin: 0;
+}
+
+.check-pill:hover {
+  border-color: rgba(166, 77, 121, 0.45);
+  color: var(--text);
+}
+
+.check-pill input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1.5px solid var(--border-strong);
+  background: transparent;
+  cursor: pointer;
   position: relative;
-  color: #636363;
+  transition: background 0.2s ease, border-color 0.2s ease;
 }
 
-input[type="checkbox"] + label:before {
-  content: '';
-  display: inline-block;
-  font-size: 0.8em;
-  height: 2.0625em;
-  left: 0;
-  line-height: 2em;
+.check-pill input[type="checkbox"]:checked {
+  background: linear-gradient(135deg, var(--c4), var(--c3));
+  border-color: transparent;
+}
+
+.check-pill input[type="checkbox"]:checked::after {
+  content: "";
   position: absolute;
-  text-align: center;
+  left: 4px;
   top: 0;
-  width: 2.0625em;
-  color: #ffffff;
-  font-family: 'Font Awesome 5 Free', sans-serif;
-  border-radius: 8px;
-  border: solid 1px;
-  background: rgba(222, 222, 222, 0.25);
-  border-color: #dddddd;
+  width: 4px;
+  height: 9px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
 }
 
-input[type="checkbox"]:checked + label:before {
-  content: '\f00c';
-  border-color: #6a1e55;
-  background-color: #6a1e55;
-}
-
-label span {
-  display: flex;
-  margin-top: 4px;
+.check-pill:has(input:checked) {
+  background: rgba(166, 77, 121, 0.15);
+  border-color: rgba(166, 77, 121, 0.5);
+  color: var(--text);
 }
 
 .result {
+  margin-top: 8px;
   text-align: center;
-  margin-top: 20px;
+}
+
+.result h2 {
+  text-align: left;
 }
 
 #password {
-  width: 300px;
+  text-align: center;
+  font-size: 1.05rem;
 }
 
-button {
-  background: #6a1e55;
-  border: none;
-  cursor: pointer;
-  padding: 15px 30px;
-  border-radius: 30px;
-  font-weight: bold;
-  color: #fff;
-  text-decoration: none;
-  transition: transform 0.2s, box-shadow 0.2s, transform 0.2s, color 0.2s;
+.security-line {
+  margin: 16px 0 8px;
+  font-size: 0.95rem;
+  color: var(--text-muted);
 }
 
-button:hover {
-  background: #3B1C32;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+.security-line span {
+  font-weight: 700;
 }
 
 .fadeIn {
   opacity: 0;
-  transform: translateY(15px);
   animation: fadeIn 0.6s ease-out forwards;
 }
 
 @keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
-@media (max-width: 550px) {
+@media (max-width: 600px) {
   .generator-card {
-    box-shadow: none;
+    padding: 24px 18px;
+    border-radius: 18px;
   }
 
-  .generator-container {
-    padding: 0;
+  .input-with-button {
+    flex-direction: column;
   }
 
-  h1 {
-    font-size: 1.8rem;
-    margin-bottom: 30px;
+  .ghost-btn {
+    padding: 10px;
+  }
+
+  .page-hero {
+    padding: 50px 20px 70px;
   }
 }
 </style>
