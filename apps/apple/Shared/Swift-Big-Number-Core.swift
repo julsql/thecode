@@ -2937,10 +2937,9 @@ public struct BDouble:
 		
 		if (lhs == rhs) { // shortcut, handles infinities
 			return true;
-		} else if diff <= epsilon {
-			return true // shortcut
-		} else if (lhs == 0 || rhs == 0 || diff < Double.leastNormalMagnitude) {
-			// lhs or rhs is zero or both are extremely close to it
+        } else if diff <= epsilon {
+            return true // shortcut
+        } else if (lhs.isZero() || rhs.isZero() || diff < Double.leastNormalMagnitude) {			// lhs or rhs is zero or both are extremely close to it
 			// relative error is less meaningful here
 			return diff < (epsilon * Double.leastNormalMagnitude);
 		} else { // use relative error

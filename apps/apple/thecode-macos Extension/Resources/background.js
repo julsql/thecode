@@ -1,11 +1,17 @@
 let psl = [];
 
-fetch(browser.runtime.getURL("data/public_suffix_list.dat"))
+// Promise réutilisable : on attendra son résolution avant d'utiliser `psl`,
+// pour qu'un appel à getRegistrableDomain pendant le chargement ne tombe
+// jamais sur une liste vide.
+const pslReady = fetch(browser.runtime.getURL("data/public_suffix_list.dat"))
   .then(r => r.text())
   .then(t => {
     psl = t.split('\n')
       .map(l => l.trim())
       .filter(l => l && !l.startsWith('//'));
+  })
+  .catch(err => {
+    console.error("TheCode: échec du chargement de la PSL", err);
   });
 
 let data = {
@@ -71,6 +77,7 @@ async function generatePasswordForUrl(url, options = {}) {
         return { error: "Il faut choisir des caractères" };
     }
     try {
+        await pslReady;
         const u = new URL(url);
         const hostname = u.hostname;
         const domain = getRegistrableDomain(hostname)

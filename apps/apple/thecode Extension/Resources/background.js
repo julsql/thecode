@@ -1,11 +1,44 @@
-let psl = [];
+// Filet de sécurité : si Xcode 16 (synchronized groups) n'embarque pas le
+// .dat dans le bundle iOS, fetch() renverra 404 et `psl` resterait vide,
+// laissant passer www.instagram.com sans normalisation. On démarre donc
+// avec une liste minimale de suffixes ICANN courants ; la PSL complète,
+// quand elle se charge, l'écrase.
+const FALLBACK_PSL = [
+  "com","net","org","edu","gov","mil","int","info","biz",
+  "name","pro","aero","coop","museum","asia","jobs","mobi",
+  "post","tel","travel","xxx",
+  "fr","com.fr","asso.fr",
+  "de","uk","co.uk","ac.uk","gov.uk","org.uk",
+  "us","ca","mx","br","com.br","ar","com.ar","cl",
+  "es","it","pt","be","nl","lu","ch","at","li",
+  "se","no","fi","dk","is","ie","pl","cz","sk","hu",
+  "ro","bg","gr","tr","ru","ua","by",
+  "cn","com.cn","jp","co.jp","kr","co.kr","tw","com.tw",
+  "hk","sg","in","co.in","au","com.au","nz","co.nz",
+  "za","co.za",
+  "io","co","me","tv","cc","ai","app","dev","xyz","site",
+  "online","store","tech","blog","cloud","design","page"
+];
 
-fetch(browser.runtime.getURL("data/public_suffix_list.dat"))
-  .then(r => r.text())
+let psl = FALLBACK_PSL.slice();
+
+// Promise réutilisable : on attendra sa résolution avant d'utiliser `psl`
+// pour bénéficier de la liste complète quand elle est disponible. En cas
+// d'échec on garde la liste de fallback : `getRegistrableDomain` reste
+// fonctionnel pour les TLDs courants.
+const pslReady = fetch(browser.runtime.getURL("data/public_suffix_list.dat"))
+  .then(r => {
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return r.text();
+  })
   .then(t => {
-    psl = t.split('\n')
+    const parsed = t.split('\n')
       .map(l => l.trim())
       .filter(l => l && !l.startsWith('//'));
+    if (parsed.length > 0) psl = parsed;
+  })
+  .catch(err => {
+    console.error("TheCode: PSL indisponible, fallback embarqué", err);
   });
 
 let data = {
@@ -51,6 +84,7 @@ function generatePasswordForUrl(url, options = {}) {
             }
             
             try {
+                await pslReady;
                 const u = new URL(url);
                 const hostname = u.hostname;
                 const domain = getRegistrableDomain(hostname)
