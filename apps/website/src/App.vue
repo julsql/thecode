@@ -12,11 +12,17 @@
           <router-link :to="localePath('')" class="nav-link" exact-active-class="is-active" @click="closeMenu">
             {{ t('nav_home') }}
           </router-link>
+          <router-link :to="localePath('about')" class="nav-link" active-class="is-active" @click="closeMenu">
+            {{ t('nav_about') }}
+          </router-link>
           <router-link :to="localePath('generate')" class="nav-link" active-class="is-active" @click="closeMenu">
             {{ t('nav_generator') }}
           </router-link>
-          <router-link :to="localePath('privacy')" class="nav-link" active-class="is-active" @click="closeMenu">
-            {{ t('nav_privacy') }}
+          <router-link :to="localePath('tutorial')" class="nav-link" active-class="is-active" @click="closeMenu">
+            {{ t('nav_tutorial') }}
+          </router-link>
+          <router-link :to="localePath('contact')" class="nav-link" active-class="is-active" @click="closeMenu">
+            {{ t('nav_contact') }}
           </router-link>
         </nav>
 
@@ -61,11 +67,17 @@
           <router-link :to="localePath('')" class="mobile-link" exact-active-class="is-active" @click="closeMenu">
             {{ t('nav_home') }}
           </router-link>
+          <router-link :to="localePath('about')" class="mobile-link" active-class="is-active" @click="closeMenu">
+            {{ t('nav_about') }}
+          </router-link>
           <router-link :to="localePath('generate')" class="mobile-link" active-class="is-active" @click="closeMenu">
             {{ t('nav_generator') }}
           </router-link>
-          <router-link :to="localePath('privacy')" class="mobile-link" active-class="is-active" @click="closeMenu">
-            {{ t('nav_privacy') }}
+          <router-link :to="localePath('tutorial')" class="mobile-link" active-class="is-active" @click="closeMenu">
+            {{ t('nav_tutorial') }}
+          </router-link>
+          <router-link :to="localePath('contact')" class="mobile-link" active-class="is-active" @click="closeMenu">
+            {{ t('nav_contact') }}
           </router-link>
         </nav>
       </transition>
@@ -79,13 +91,39 @@
     <!-- FOOTER -->
     <footer class="site-footer">
       <div class="footer-inner container">
-        <p>© {{ year }} TheCode — {{ t('footer_tagline') }} · {{ t('footer_icons') }}</p>
-        <p>
-          {{ t('footer_org') }}
-          <a href="https://github.com/TheCodeDevLab" target="_blank" rel="noopener">TheCodeDevLab</a>
-          · {{ t('footer_src') }}
-          <a href="https://github.com/TheCodeDevLab/thecode-website" target="_blank" rel="noopener">thecode-website</a>
-        </p>
+        <div class="footer-grid">
+          <div class="footer-col footer-brand-col">
+            <router-link :to="localePath('')" class="footer-brand">
+              <img :src="Logo" alt="TheCode" class="footer-logo"/>
+              <span>TheCode</span>
+            </router-link>
+            <p class="footer-tag">{{ t('footer_tagline') }}</p>
+          </div>
+
+          <div class="footer-col">
+            <h4>{{ t('footer_links_product') }}</h4>
+            <router-link :to="localePath('')">{{ t('nav_home') }}</router-link>
+            <router-link :to="localePath('about')">{{ t('nav_about') }}</router-link>
+            <router-link :to="localePath('generate')">{{ t('nav_generator') }}</router-link>
+          </div>
+
+          <div class="footer-col">
+            <h4>{{ t('footer_links_resources') }}</h4>
+            <router-link :to="localePath('tutorial')">{{ t('nav_tutorial') }}</router-link>
+            <router-link :to="localePath('contact')">{{ t('nav_contact') }}</router-link>
+            <a href="https://github.com/TheCodeDevLab" target="_blank" rel="noopener">GitHub</a>
+          </div>
+
+          <div class="footer-col">
+            <h4>{{ t('footer_links_legal') }}</h4>
+            <router-link :to="localePath('privacy')">{{ t('nav_privacy') }}</router-link>
+            <a href="https://github.com/TheCodeDevLab/thecode-website" target="_blank" rel="noopener">{{ t('footer_src') }}</a>
+          </div>
+        </div>
+
+        <div class="footer-bottom">
+          <p>© {{ year }} TheCode · {{ t('footer_icons') }}</p>
+        </div>
       </div>
     </footer>
   </div>
@@ -324,27 +362,96 @@ export default defineComponent({
 
 .site-footer {
   background: var(--c2);
-  padding: 22px 0;
-  font-size: 0.85rem;
-  color: #ddd;
+  padding: 48px 0 22px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
   border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .footer-inner {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 28px;
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr 1fr;
+  gap: 32px;
+  align-items: start;
+}
+
+.footer-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.footer-brand-col {
+  gap: 12px;
+}
+
+.footer-brand {
+  display: inline-flex;
   align-items: center;
-  text-align: center;
-}
-
-.site-footer a {
-  color: var(--c4);
+  gap: 10px;
   text-decoration: none;
+  color: var(--text);
+  font-weight: 700;
+  font-size: 1.05rem;
 }
 
-.site-footer a:hover {
-  text-decoration: underline;
+.footer-logo {
+  width: 26px;
+  height: 26px;
+}
+
+.footer-tag {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  max-width: 260px;
+}
+
+.footer-col h4 {
+  margin: 0 0 4px;
+  font-size: 0.8rem;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--c4);
+  font-weight: 700;
+}
+
+.footer-col a {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.92rem;
+  transition: color 0.2s ease;
+}
+
+.footer-col a:hover {
+  color: var(--text);
+}
+
+.footer-bottom {
+  display: flex;
+  justify-content: center;
+  text-align: center;
+  border-top: 1px solid var(--border-soft);
+  padding-top: 18px;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.footer-bottom p {
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .footer-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
 }
 
 @media (max-width: 760px) {
@@ -362,6 +469,12 @@ export default defineComponent({
 
   .brand-title {
     font-size: 1rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .footer-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>
