@@ -1,14 +1,23 @@
 //
 //  PasswordUtils.swift
-//  thecode-extension-ios
+//  thecode (Shared)
 //
-//  Created by Juliette Debono on 27/09/2025.
+//  Port direct de l'algorithme JavaScript de l'extension Safari
+//  (`thecode Extension/Resources/background.js`). Toute modification ici
+//  doit être faite en parallèle dans le JS pour conserver la propriété :
+//  même clé + même site = même mot de passe, peu importe le client.
+//
+//  Étapes :
+//    1. SHA-256(input) → BInt
+//    2. convertToBase(seed, charsetGroups.join("")) → chaîne brute
+//    3. troncature à `longueur`
+//    4. applyCharsetReplacement → garantit qu'au moins un caractère de
+//       chaque groupe (minuscules, majuscules, symboles, chiffres) est
+//       présent à des positions déterministes dérivées du seed.
 //
 
 import Foundation
 import SwiftUI
-import CryptoKit
-import Foundation
 import CryptoKit
 
 struct PasswordResult {
@@ -23,164 +32,147 @@ enum PasswordError: Error, Equatable {
 }
 
 class PasswordUtils {
-    
-    // MARK: - Public options
+
+    // MARK: - Options publiques
     var minState: Bool = true
     var majState: Bool = true
     var symState: Bool = true
     var chiState: Bool = true
     var longueur: Int = 20
-    
-    private let lower = "portezcviuxwhskyajgblndqfm"
-    private let upper = "THEQUICKBROWNFXJMPSVLAZYDG"
+
+    // Mêmes alphabets et même ordre que le JS de l'extension.
+    private let lower   = "portezcviuxwhskyajgblndqfm"
+    private let upper   = "THEQUICKBROWNFXJMPSVLAZYDG"
     private let symbols = "@#&!)-%;<:*$+=/?>("
     private let numbers = "567438921"
-    
-    // MARK: - Génération principale
+
+    // MARK: - Génération principale (miroir de generatePassword)
     func generatePassword(input: String) -> PasswordResult {
-        if (input == "") {
-            return PasswordResult(code: "", label: "Aucune clé n'est définie.", bits: 0, color: .red)
+        let charsetGroups = buildCharset()
+        if charsetGroups.isEmpty || input.isEmpty {
+            return PasswordResult(code: "", label: "Aucune", bits: 0,
+                                  color: Color(hex: "#FE0101"))
         }
-        // Vérifs équivalentes JavaScript
-        if longueur < 4 {
-            return PasswordResult(code: "", label: "La longueur doit être supérieur à 4", bits: 0, color: .red)
-        }
-        if longueur > 40 {
-            return PasswordResult(code: "", label: "La longueur doit être inférieure à 40", bits: 0, color: .red)
-        }
-        if !minState && !majState && !symState && !chiState {
-            return PasswordResult(code: "", label: "Il faut choisir des caractères", bits: 0, color: .red)
-        }
-        
-        let groups = buildCharset()
-        if groups.isEmpty {
-            return PasswordResult(code: "", label: "Il faut choisir des caractères", bits: 0, color: .red)
-        }
-        
-        let seedString = input
-        let seed = hashToBInt(seedString)
-        
-        let totalBase = groups.joined()
-        var rawPassword = convertToBase(seed: seed, charset: totalBase)
-        
-        if rawPassword.count > longueur {
-            rawPassword = String(rawPassword.prefix(longueur))
-        }
-        
+
+        // Bornes : on suit la borne haute du JS ; la borne basse n'est pas
+        // appliquée silencieusement par le JS, on la respecte ici aussi.
+        var newLength = longueur
+        if newLength > 40 { newLength = 40 }
+
+        let entropyBits = calculateEntropyBits(charsetGroups: charsetGroups,
+                                               length: newLength)
+        let security = getSecurityLevel(bits: entropyBits)
+
+        let passwordSeed = hashToBInt(input)
+        let rawPassword  = convertToBase(passwordSeed,
+                                         charsetGroups: charsetGroups)
+
+        let prefix = String(rawPassword.prefix(newLength))
+
         do {
-            let final = try applyCharsetReplacement(
-                seed: seed,
-                password: rawPassword,
-                charsetGroups: groups
+            let finalPassword = try applyCharsetReplacement(
+                seed: passwordSeed,
+                password: prefix,
+                charsetGroups: charsetGroups
             )
-            let bits = calculateEntropyBits(groups: groups, length: longueur)
-            let (label, color) = getSecurityLevel(bits: bits)
-            
-            return PasswordResult(code: final, label: label, bits: bits, color: color)
-       
+            return PasswordResult(code: finalPassword,
+                                  label: security.label,
+                                  bits: entropyBits,
+                                  color: security.color)
         } catch PasswordError.passwordTooShort(let min) {
             print("Erreur PasswordError.passwordTooShort avec min = \(min)")
-            return PasswordResult(code: "", label: "Erreur", bits: 0, color: .red)
+            return PasswordResult(code: "", label: "Erreur", bits: 0,
+                                  color: Color(hex: "#FE0101"))
         } catch {
-            return PasswordResult(code: "", label: "Erreur", bits: 0, color: .red)
+            return PasswordResult(code: "", label: "Erreur", bits: 0,
+                                  color: Color(hex: "#FE0101"))
         }
-    
-         }
-    
-    // MARK: - Charset
+    }
+
+    // MARK: - Charset (miroir de buildCharset)
     func buildCharset() -> [String] {
-        [
-            minState ? lower : "",
-            majState ? upper : "",
+        return [
+            minState ? lower   : "",
+            majState ? upper   : "",
             symState ? symbols : "",
             chiState ? numbers : ""
         ].filter { !$0.isEmpty }
     }
-    
-    // MARK: - Entropie
-    func calculateEntropyBits(groups: [String], length: Int) -> Int {
-        let totalChars = groups.map(\.count).reduce(0, +)
+
+    // MARK: - Entropie (miroir de calculateEntropyBits)
+    func calculateEntropyBits(charsetGroups: [String], length: Int) -> Int {
+        let totalChars = charsetGroups.reduce(0) { $0 + $1.count }
         if totalChars == 0 { return 0 }
-        return Int(Double(length) * log2(Double(totalChars)))
+        return Int((Double(length) * log2(Double(totalChars))).rounded())
     }
-    
-    // MARK: - Niveau de sécurité
-    func getSecurityLevel(bits: Int) -> (String, Color) {
-        switch bits {
-        case 0:
-            return ("Aucune", .red)
-        case ..<64:
-            return ("Très Faible", .red)
-        case ..<80:
-            return ("Faible", .red)
-        case ..<100:
-            return ("Moyenne", .orange)
-        case ..<126:
-            return ("Forte", .green)
-        default:
-            return ("Très Forte", .green)
-        }
+
+    // MARK: - Niveau de sécurité (miroir de getSecurityLevel)
+    func getSecurityLevel(bits: Int) -> (label: String, color: Color) {
+        if bits == 0    { return ("Aucune",      Color(hex: "#FE0101")) }
+        if bits < 64    { return ("Très Faible", Color(hex: "#FE0101")) }
+        if bits < 80    { return ("Faible",      Color(hex: "#FE4501")) }
+        if bits < 100   { return ("Moyenne",     Color(hex: "#FE7601")) }
+        if bits < 126   { return ("Forte",       Color(hex: "#53FE38")) }
+        return                ("Très Forte", Color(hex: "#1CD001"))
     }
-    
-    // MARK: - Conversion base personnalisée
-    func convertToBase(seed: BInt, charset: String) -> String {
-        let base = BInt(charset.count)
-        var value = seed
+
+    // MARK: - Conversion en base personnalisée (miroir de convertToBase)
+    /// Joint les groupes en une seule alphabet (comme le JS), convertit le
+    /// `seed` dans cette base et préfixe les chiffres au résultat.
+    func convertToBase(_ x: BInt, charsetGroups: [String]) -> String {
+        let charset = charsetGroups.joined()
+        let chars = Array(charset)
+        let base = BInt(chars.count)
+
+        var value = x
         var result = ""
-        
         while value >= 0 {
             let index = Int(value % base)
-            let c = charset[charset.index(charset.startIndex, offsetBy: index)]
-            result = String(c) + result
+            result = String(chars[index]) + result
             value = (value / base) - 1
             if value < 0 { break }
         }
         return result
     }
-    
-    // MARK: - Remplacement obligatoire (garantir 1 char de chaque groupe)
-    func applyCharsetReplacement(seed: BInt, password: String, charsetGroups: [String]) throws -> String {
+
+    // MARK: - Garantie d'au moins un caractère de chaque groupe
+    /// Miroir exact de `applyCharsetReplacement` du JS : on choisit N
+    /// positions uniques dérivées du seed (N = nombre de groupes), puis on
+    /// y écrit un caractère dérivé du même seed pour chaque groupe.
+    func applyCharsetReplacement(
+        seed: BInt,
+        password: String,
+        charsetGroups: [String]
+    ) throws -> String {
         let length = password.count
         guard length >= charsetGroups.count else {
             throw PasswordError.passwordTooShort(min: charsetGroups.count)
         }
-        
+
+        // 1) Sélection des positions uniques
         var temp = seed
         var positions: [Int] = []
-        
-        // Sélection des positions uniques
-        func getUniquePosition(_ temp: BInt, _ existing: [Int], _ maxLength: Int) -> Int {
-            var pos = Int(temp % BInt(maxLength))
-            while existing.contains(pos) {
-                pos = (pos + 1) % maxLength
-            }
-            return pos
-        }
-        
         for _ in 0..<charsetGroups.count {
-            let pos = getUniquePosition(temp, positions, length)
+            let pos = getUniquePosition(seed: temp,
+                                        used: positions,
+                                        length: length)
             positions.append(pos)
-            temp /= BInt(length)
+            temp = temp / BInt(length)
         }
-        
-        // Remplacement des caractères
-        var result = password
+
+        // 2) Remplacement des caractères
+        var chars = Array(password)
         temp = seed
         for (i, pos) in positions.enumerated() {
-            let group = charsetGroups[i]
-            let idx = Int(temp % BInt(group.count))
-            let charIndex = group.index(group.startIndex, offsetBy: idx)
-            let replacementChar = group[charIndex]
-            
-            let strIndex = result.index(result.startIndex, offsetBy: pos)
-            result.replaceSubrange(strIndex...strIndex, with: String(replacementChar))
-            
-            temp /= BInt(group.count)
+            let groupChars = Array(charsetGroups[i])
+            let index = Int(temp % BInt(groupChars.count))
+            chars[pos] = groupChars[index]
+            temp = temp / BInt(groupChars.count)
         }
-        
-        return result
+        return String(chars)
     }
-    
+
+    // MARK: - Position unique (miroir de getUniquePosition)
     func getUniquePosition(seed: BInt, used: [Int], length: Int) -> Int {
         var pos = Int(seed % BInt(length))
         while used.contains(pos) {
@@ -188,12 +180,28 @@ class PasswordUtils {
         }
         return pos
     }
-    
-    // MARK: - SHA-256 → BInt
+
+    // MARK: - SHA-256 → BInt (miroir de hashToBigInt)
     func hashToBInt(_ s: String) -> BInt {
         let data = Data(s.utf8)
         let hash = SHA256.hash(data: data)
-        let hex = hash.compactMap { String(format: "%02x", $0) }.joined()
+        let hex = hash.map { String(format: "%02x", $0) }.joined()
         return BInt(hex, radix: 16) ?? 0
+    }
+}
+
+// MARK: - Color hex helper
+private extension Color {
+    init(hex: String) {
+        var s = hex
+        if s.hasPrefix("#") { s.removeFirst() }
+        guard s.count == 6, let v = UInt32(s, radix: 16) else {
+            self = .red
+            return
+        }
+        let r = Double((v >> 16) & 0xFF) / 255.0
+        let g = Double((v >>  8) & 0xFF) / 255.0
+        let b = Double( v        & 0xFF) / 255.0
+        self = Color(red: r, green: g, blue: b)
     }
 }

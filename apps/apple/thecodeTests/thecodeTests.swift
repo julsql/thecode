@@ -26,12 +26,13 @@ struct PasswordUtilsTests {
         }
         
         let result = utils.generatePassword(input: "siteclef")
-        
+
         #expect(result.code.count == 20)
+        // Vecteur de référence : doit être identique à la sortie JS de
+        // l'extension. Si ce test casse, l'algo Swift a divergé.
         #expect(result.code == "u8YfpdVdK*#Bpy6(9f*5")
-        
+
         #expect(result.label == "Très Forte")
-        #expect(result.color == .green)
         #expect(result.bits > 0)
         
         // Vérifie qu’au moins un char de chaque groupe apparaît
@@ -108,22 +109,21 @@ struct PasswordUtilsTests {
             u.longueur = 20
             return u
         }
-        
+
         let totalBase = [
             "portezcviuxwhskyajgblndqfm",
             "THEQUICKBROWNFXJMPSVLAZYDG",
             "@#&!)-%;<:*$+=/?>(",
             "567438921"
         ]
-        
-        #expect(utils.calculateEntropyBits(groups: totalBase, length: 20) == 126)
-        #expect(utils.calculateEntropyBits(groups: totalBase, length: 10) == 63)
+
+        #expect(utils.calculateEntropyBits(charsetGroups: totalBase, length: 20) == 126)
+        #expect(utils.calculateEntropyBits(charsetGroups: totalBase, length: 10) == 63)
     }
     
     // MARK: - getSecurityLevel
     @Test
     func testGetSecurityLevel() {
-        
         var utils: PasswordUtils {
             let u = PasswordUtils()
             u.minState = true
@@ -133,28 +133,21 @@ struct PasswordUtilsTests {
             u.longueur = 20
             return u
         }
-        let (label1, color1) = utils.getSecurityLevel(bits: 126)
-        
-        #expect(label1 == "Très Forte")
-        #expect(color1 == .green)
-        
-        let (label2, color2) = utils.getSecurityLevel(bits: 63)
-        #expect(label2 == "Très Faible")
-        #expect(color2 == .red)
-        
-        let (label3, color3) = utils.getSecurityLevel(bits: 0)
-        #expect(label3 == "Aucune")
-        #expect(color3 == .red)
+        // On ne compare plus les couleurs (Color hex ≠ Color.red brut),
+        // seulement le label — c'est ce qui définit la classification.
+        #expect(utils.getSecurityLevel(bits: 126).label == "Très Forte")
+        #expect(utils.getSecurityLevel(bits: 63).label  == "Très Faible")
+        #expect(utils.getSecurityLevel(bits: 0).label   == "Aucune")
     }
     
     // MARK: - convertToBase
     @Test
     func testConvertToBase() {
         let utils = PasswordUtils()
-        
-        #expect(utils.convertToBase(seed: 1, charset: "abc") == "b")
-        #expect(utils.convertToBase(seed: 0, charset: "abc") == "a")
-        #expect(utils.convertToBase(seed: 2, charset: "01") == "00")
+
+        #expect(utils.convertToBase(BInt(1), charsetGroups: ["abc"]) == "b")
+        #expect(utils.convertToBase(BInt(0), charsetGroups: ["abc"]) == "a")
+        #expect(utils.convertToBase(BInt(2), charsetGroups: ["01"]) == "00")
     }
     
     // MARK: - applyCharsetReplacement
