@@ -6,20 +6,42 @@
         <p class="subtitle fadeIn">{{ t('hero_question') }}</p>
         <h1 class="fadeIn delay-1">{{ t('hero_solution') }}</h1>
         <p class="subtitle fadeIn delay-2">{{ t('hero_subtitle') }}</p>
-        <div class="buttons fadeIn delay-3">
-          <a class="btn"
-             href="https://chromewebstore.google.com/detail/thecode/jeknefpalcipdlnbeboefonmnlejepen"
-             target="_blank" rel="noopener">{{ t('btn_chrome') }}</a>
-          <a class="btn" href="https://addons.mozilla.org/fr/firefox/addon/thecode/" target="_blank" rel="noopener">{{
-              t('btn_firefox')
-            }}</a>
-          <a class="btn" href="https://apps.apple.com/app/thecode-password-manager/id6753169043" target="_blank"
-             rel="noopener">{{ t('btn_safari') }}</a>
-          <a class="btn" href="https://apps.apple.com/app/thecode-password-manager/id6753169043" target="_blank"
-             rel="noopener">{{ t('btn_iphone') }}</a>
-          <a class="btn"
-             href="https://play.google.com/store/apps/details?id=fr.juliette.thecode&hl=fr"
-             target="_blank" rel="noopener">{{ t('btn_android') }}</a>
+
+        <div class="install fadeIn delay-3">
+          <a class="btn-install" :href="current.url" target="_blank" rel="noopener">
+            <span class="btn-install-icon" aria-hidden="true">
+              <img :src="current.icon" :alt="''"/>
+            </span>
+            <span class="btn-install-text">
+              <span class="btn-install-label">{{ t('home_install_for') }}</span>
+              <span class="btn-install-browser">{{ current.label }}</span>
+            </span>
+          </a>
+
+          <p class="other-platforms-label">{{ t('home_other_platforms') }}</p>
+          <div class="other-platforms">
+            <a
+                v-for="p in others"
+                :key="p.id"
+                class="platform-pill"
+                :href="p.url"
+                target="_blank"
+                rel="noopener"
+            >
+              <img :src="p.icon" alt="" class="platform-icon"/>
+              <span>{{ p.label }}</span>
+            </a>
+          </div>
+
+          <div class="hero-meta">
+            <router-link :to="localePath('tutorial')" class="meta-link">
+              {{ t('home_tutorial_link') }}
+            </router-link>
+            <a class="meta-link" href="https://github.com/TheCodeDevLab" target="_blank" rel="noopener">
+              <img :src="GithubIcon" alt="" class="meta-icon"/>
+              {{ t('home_source_code') }}
+            </a>
+          </div>
         </div>
       </div>
       <div class="hero-illustration">
@@ -60,15 +82,119 @@
 </template>
 
 <script lang="ts">
-import {defineComponent} from 'vue';
+import {computed, defineComponent} from 'vue';
 import Logo from '@/assets/logo.png';
+import ChromeIcon from '@/assets/chrome.png';
+import FirefoxIcon from '@/assets/firefox.png';
+import AppStoreIcon from '@/assets/app_store.png';
+import GooglePlayIcon from '@/assets/google_play.png';
+import GithubIcon from '@/assets/github.png';
 import {useI18n} from '@/i18n';
+import type {TranslationKey} from '@/i18n';
+
+type PlatformId = 'chrome' | 'firefox' | 'safari' | 'edge' | 'opera' | 'ios' | 'android';
+
+interface Platform {
+  id: PlatformId;
+  labelKey: TranslationKey;
+  url: string;
+  icon: string;
+}
+
+const CHROME_STORE = 'https://chromewebstore.google.com/detail/thecode/jeknefpalcipdlnbeboefonmnlejepen';
+const FIREFOX_STORE = 'https://addons.mozilla.org/fr/firefox/addon/thecode/';
+const APP_STORE = 'https://apps.apple.com/app/thecode-password-manager/id6753169043';
+const PLAY_STORE = 'https://play.google.com/store/apps/details?id=fr.juliette.thecode&hl=fr';
+
+const PLATFORMS: Record<PlatformId, Platform> = {
+  chrome: {
+    id: 'chrome',
+    labelKey: 'browser_chrome',
+    url: CHROME_STORE,
+    icon: ChromeIcon,
+  },
+  firefox: {
+    id: 'firefox',
+    labelKey: 'browser_firefox',
+    url: FIREFOX_STORE,
+    icon: FirefoxIcon,
+  },
+  safari: {
+    id: 'safari',
+    labelKey: 'browser_safari',
+    url: APP_STORE,
+    icon: AppStoreIcon,
+  },
+  edge: {
+    id: 'edge',
+    labelKey: 'browser_edge',
+    url: CHROME_STORE,
+    icon: 'https://img.icons8.com/?size=200&id=KS4dCmukKW8c&format=png',
+  },
+  opera: {
+    id: 'opera',
+    labelKey: 'browser_opera',
+    url: CHROME_STORE,
+    icon: 'https://img.icons8.com/?size=200&id=22994&format=png',
+  },
+  ios: {
+    id: 'ios',
+    labelKey: 'browser_ios',
+    url: APP_STORE,
+    icon: AppStoreIcon,
+  },
+  android: {
+    id: 'android',
+    labelKey: 'browser_android',
+    url: PLAY_STORE,
+    icon: GooglePlayIcon,
+  },
+};
+
+function detectPlatform(): PlatformId {
+  if (typeof navigator === 'undefined') return 'chrome';
+  const ua = navigator.userAgent || '';
+  if (/iPad|iPhone|iPod/.test(ua)) return 'ios';
+  if (/Android/.test(ua)) return 'android';
+  if (/Edg\//.test(ua)) return 'edge';
+  if (/OPR\/|Opera/.test(ua)) return 'opera';
+  if (/Firefox\//.test(ua)) return 'firefox';
+  if (/Safari/.test(ua) && !/Chrome|Chromium/.test(ua)) return 'safari';
+  if (/Chrome\/|Chromium/.test(ua)) return 'chrome';
+  return 'chrome';
+}
 
 export default defineComponent({
   name: 'Home',
   setup() {
-    const {t} = useI18n();
-    return {Logo, t};
+    const {t, localePath} = useI18n();
+    const detected = detectPlatform();
+
+    const current = computed(() => {
+      const p = PLATFORMS[detected];
+      return {url: p.url, icon: p.icon, label: t(p.labelKey)};
+    });
+
+    const others = computed(() => {
+      const order: PlatformId[] = ['chrome', 'firefox', 'safari', 'edge', 'opera', 'ios', 'android'];
+      const seenUrls = new Set<string>([PLATFORMS[detected].url]);
+      return order
+          .filter((id) => id !== detected)
+          .filter((id) => {
+            const url = PLATFORMS[id].url;
+            if (seenUrls.has(url)) return false;
+            seenUrls.add(url);
+            return true;
+          })
+          .map((id) => ({
+            id,
+            url: PLATFORMS[id].url,
+            icon: PLATFORMS[id].icon,
+            label: t(PLATFORMS[id].labelKey),
+          }));
+    });
+
+    return {Logo, GithubIcon, t, localePath, current, others};
   },
 });
 </script>
@@ -142,32 +268,143 @@ export default defineComponent({
   filter: drop-shadow(0 18px 40px rgba(166, 77, 121, 0.4));
 }
 
-.buttons {
+.install {
+  margin-top: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+.btn-install {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 32px;
+  border-radius: 999px;
+  text-decoration: none;
+  color: #fff;
+  background: linear-gradient(135deg, var(--c4), var(--c3));
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 14px 40px rgba(166, 77, 121, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  font-weight: 700;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+.btn-install:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 22px 55px rgba(166, 77, 121, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  filter: brightness(1.05);
+}
+
+.btn-install-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.btn-install-icon img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.btn-install-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.1;
+  text-align: left;
+}
+
+.btn-install-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.btn-install-browser {
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+}
+
+.other-platforms-label {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+  letter-spacing: 0.3px;
+}
+
+.other-platforms {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 12px;
-  margin-top: 26px;
+  gap: 10px;
 }
 
-.btn {
-  padding: 12px 22px;
+.platform-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
   border-radius: 999px;
+  font-size: 0.9rem;
   font-weight: 600;
-  font-size: 0.95rem;
   color: #fff;
   text-decoration: none;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.07);
   border: 1px solid rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(10px);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+  transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
 }
 
-.btn:hover {
-  transform: translateY(-3px);
-  background: rgba(255, 255, 255, 0.14);
+.platform-pill:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.13);
   border-color: rgba(255, 255, 255, 0.3);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+.platform-icon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 18px;
+  margin-top: 6px;
+}
+
+.meta-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(255, 255, 255, 0.85);
+  text-decoration: none;
+  font-size: 0.92rem;
+  font-weight: 500;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.25);
+  padding-bottom: 2px;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.meta-link:hover {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.7);
+}
+
+.meta-icon {
+  width: 16px;
+  height: 16px;
 }
 
 .features {
