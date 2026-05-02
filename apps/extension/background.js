@@ -4,12 +4,18 @@ if (typeof browser === "undefined" && typeof chrome !== "undefined") {
 
 let psl = [];
 
-fetch(browser.runtime.getURL("data/public_suffix_list.dat"))
+// Promise réutilisable : on attendra son résolution avant d'utiliser `psl`,
+// pour qu'un appel à getRegistrableDomain pendant le chargement ne tombe
+// jamais sur une liste vide.
+const pslReady = fetch(browser.runtime.getURL("data/public_suffix_list.dat"))
   .then(r => r.text())
   .then(t => {
     psl = t.split('\n')
       .map(l => l.trim())
       .filter(l => l && !l.startsWith('//'));
+  })
+  .catch(err => {
+    console.error("TheCode: échec du chargement de la PSL", err);
   });
 
 let data = {
@@ -52,6 +58,23 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
             const { options } = request;
             const res = await generatePasswordForUrl(request.url || '', options);
             sendResponse(res);
+        } else if (request.action === 'openPopup') {
+            try {
+                if (browser.action && typeof browser.action.openPopup === 'function') {
+                    await browser.action.openPopup();
+                    sendResponse({ ok: true });
+                } else {
+                    await browser.tabs.create({ url: browser.runtime.getURL('popup.html') });
+                    sendResponse({ ok: true, fallback: 'tab' });
+                }
+            } catch (e) {
+                try {
+                    await browser.tabs.create({ url: browser.runtime.getURL('popup.html') });
+                    sendResponse({ ok: true, fallback: 'tab' });
+                } catch (err) {
+                    sendResponse({ ok: false, error: err.message });
+                }
+            }
         } else {
             sendResponse({ error: 'action inconnue' });
         }
@@ -75,6 +98,7 @@ async function generatePasswordForUrl(url, options = {}) {
         return { error: "Il faut choisir des caractères" };
     }
     try {
+        await pslReady;
         const u = new URL(url);
         const hostname = u.hostname;
         const domain = getRegistrableDomain(hostname)

@@ -2,6 +2,7 @@
 const passInput = document.getElementById('passphrase');
 const setBtn = document.getElementById('setKey');
 const clearBtn = document.getElementById('clearKey');
+const toggleBtn = document.getElementById('toggleKey');
 const statusDiv = document.getElementById('status');
 const generateBtn = document.getElementById('generatePassword');
 const site = document.getElementById('site');
@@ -88,6 +89,14 @@ function getParams() {
 
 [lengthInput, minInput, majInput, symInput, chiInput].forEach(input => {
     input.addEventListener('change', () => updateParams(getParams()));
+});
+
+// Afficher / masquer la clef
+toggleBtn.addEventListener('click', () => {
+    const isHidden = passInput.type === 'password';
+    passInput.type = isHidden ? 'text' : 'password';
+    toggleBtn.textContent = isHidden ? 'Cacher' : 'Voir';
+    toggleBtn.setAttribute('aria-pressed', String(isHidden));
 });
 
 // Définir la clef

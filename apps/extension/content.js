@@ -55,19 +55,35 @@ if (typeof browser === "undefined") {
             // ➤  AUCUNE CLEF DISPONIBLE
             if (!response || response.error) {
                 const noKey = document.createElement('div');
-                noKey.innerText = "Aucune clef n'est renseignée";
+                noKey.innerText = "Aucune clef n'est renseignée. Cliquer pour rentrer une clef";
                 noKey.style.color = '#eaeaeaff';
-                noKey.style.cursor = 'default';
+                noKey.style.cursor = 'pointer';
                 noKey.style.fontFamily = 'font-family';
                 noKey.style.fontSize = '14px';
                 noKey.style.margin = "auto";
+                container.style.cursor = 'pointer';
                 container.appendChild(logo);
                 container.appendChild(noKey);
                 menu.appendChild(container);
-                
+
+                container.addEventListener('mouseover', () => {
+                    container.style.background = '#427ee7';
+                });
+                container.addEventListener('mouseout', () => {
+                    container.style.background = 'unset';
+                });
+                container.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                });
+                container.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    browser.runtime.sendMessage({ action: 'openPopup' });
+                    removeMenu(input);
+                });
+
                 // Disparition quand input perd le focus
                 input.addEventListener('blur', () => {
-                    removeMenu(input);
+                    setTimeout(() => removeMenu(input), 150);
                 }, { once: true });
                 return;
             }
