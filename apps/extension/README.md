@@ -1,7 +1,7 @@
 # TheCode Browser Extension
 
 ## 🧩 Generate secure, deterministic passwords directly inside your browser
-Works on Chrome, Edge, Brave, Firefox, and Safari
+Works on Chrome, Edge, Brave, Firefox (desktop & Android), and Safari
 
 ## ✨ Overview
 The TheCode Browser Extension automatically generates secure, unique passwords for every website using:
@@ -20,7 +20,7 @@ Just enter the same secret key again, and the extension will regenerate the exac
 - ⚡ Suggests a deterministic password generated from your session key + domain
 - 🔒 Never stores generated passwords
 - 💾 Your session key is kept only in memory while the service worker is active
-- 🌍 Works across Chrome, Edge, Brave, Firefox, and Safari
+- 🌍 Works across Chrome, Edge, Brave, Firefox (desktop & Android), and Safari
 - 🧪 Password generation algorithm is fully unit-tested
 - 🧂 Optional local storage of a non-secret salt per site to allow consistent derivations after browser restarts
 
@@ -69,6 +69,23 @@ Download the extension archive from the [Releases page](https://github.com/TheCo
 5. Select `manifest.json`
 6. Open the extension icon and enter your session key
 
+### Firefox for Android
+Firefox for Android only installs extensions that are signed by Mozilla
+(distributed through addons.mozilla.org) or loaded via Firefox Nightly's
+custom collection feature.
+
+To test the build locally with Firefox Nightly:
+1. Download and unzip the extension archive
+2. Copy the `firefox-android` manifest into the `manifest.json`
+3. In Firefox Nightly on Android, enable: Settings > About Firefox Nightly
+   (tap the logo 5 times) > Custom Add-on collection
+4. Provide your AMO collection containing the signed XPI of TheCode
+5. Open Settings > Add-ons, install TheCode, then open it from the menu and
+   enter your session key
+
+Production install: use the AMO listing once published
+([Firefox add-on page](https://addons.mozilla.org/fr/firefox/addon/thecode/)).
+
 ### Safari
 1. Download and unzip the extension archive
 2. Copy the `safari-firefox` manifest into the `manifest.json`
@@ -89,7 +106,9 @@ The password generation algorithm and supporting logic are covered by unit tests
 
 ## 🛠 Development Notes
 - Chrome/Edge/Brave use the default manifest (or `chrome-brave-edge`)
-- Firefox & Safari require the `safari-firefox` manifest
+- Firefox desktop & Safari require the `safari-firefox` manifest
+- Firefox for Android requires the `firefox-android` manifest (adds the
+  `gecko_android` block, drops `theme_icons`, uses PNG toolbar icons)
 - Safari builds must be packaged through Xcode
 - MV3 service workers may stop/restart at any moment — session key persistence is intentionally avoided for security
 

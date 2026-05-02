@@ -6,7 +6,27 @@ body {
     font-family: system-ui;
     padding: 0 12px;
     width: 320px;
+    max-width: 100%;
+    box-sizing: border-box;
     text-align: center;
+}
+
+@media (max-width: 480px) {
+    body {
+        width: 100%;
+        font-size: 16px;
+    }
+
+    input[type="password"],
+    input[type="number"] {
+        font-size: 16px;
+        padding: 10px;
+    }
+
+    button {
+        padding: 10px 14px;
+        font-size: 15px;
+    }
 }
 
 h3 {
