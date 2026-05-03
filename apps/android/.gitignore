@@ -1,0 +1,60 @@
+# --- Gradle ---
+.gradle/
+build/
+out/
+release/
+bin/
+gen/
+
+# --- Build outputs ---
+*.apk
+*.aab
+*.aar
+*.ap_
+*.dex
+*.class
+
+# --- Local SDK / signing config ---
+# Contient sdk.dir et autres chemins absolus à la machine.
+local.properties
+keystore.properties
+signing.properties
+
+# --- Keystores ---
+*.jks
+*.keystore
+*.p12
+*.pem
+
+# --- Android Studio / IntelliJ ---
+# Tout .idea/ est spécifique à la machine (chemins, runners, caches) :
+# on l'ignore en bloc plutôt que de jouer au chat et à la souris.
+.idea/
+*.iml
+.navigation/
+captures/
+
+# --- Outils Android ---
+proguard/
+.cxx/
+.externalNativeBuild/
+
+# --- Tests / couverture ---
+*.exec
+jacoco.exec
+test-results/
+reports/
+
+# --- Logs ---
+*.log
+hs_err_pid*
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# --- Outils annexes ---
+# Préférences locales Claude Code propres à l'utilisateur.
+.claude/
