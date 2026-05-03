@@ -6,52 +6,35 @@
 //
 
 import Cocoa
-import SafariServices
-import WebKit
+import SwiftUI
 
-let extensionBundleIdentifier = "fr.julsql.thecode.Extension"
-
-class ViewController: NSViewController, WKNavigationDelegate, WKScriptMessageHandler {
-
-    @IBOutlet var webView: WKWebView!
+class ViewController: NSViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        self.webView.navigationDelegate = self
+        initializeSharedDefaults()
 
-        self.webView.configuration.userContentController.add(self, name: "controller")
+        let hostingView = NSHostingView(rootView: MainView())
+        hostingView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(hostingView)
 
-        self.webView.loadFileURL(Bundle.main.url(forResource: "Main", withExtension: "html")!, allowingReadAccessTo: Bundle.main.resourceURL!)
+        NSLayoutConstraint.activate([
+            hostingView.topAnchor.constraint(equalTo: view.topAnchor),
+            hostingView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            hostingView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            hostingView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+        ])
     }
 
-    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        SFSafariExtensionManager.getStateOfSafariExtension(withIdentifier: extensionBundleIdentifier) { (state, error) in
-            guard let state = state, error == nil else {
-                // Insert code to inform the user that something went wrong.
-                return
-            }
+    private func initializeSharedDefaults() {
+        guard let defaults = UserDefaults(suiteName: appGroupID) else { return }
 
-            DispatchQueue.main.async {
-                if #available(macOS 13, *) {
-                    webView.evaluateJavaScript("show(\(state.isEnabled), true)")
-                } else {
-                    webView.evaluateJavaScript("show(\(state.isEnabled), false)")
-                }
-            }
-        }
+        if defaults.string(forKey: "encodingKey") == nil { defaults.set("", forKey: "encodingKey") }
+        if defaults.object(forKey: "lengthNumber") == nil { defaults.set(20, forKey: "lengthNumber") }
+        if defaults.object(forKey: "minState") == nil { defaults.set(true, forKey: "minState") }
+        if defaults.object(forKey: "majState") == nil { defaults.set(true, forKey: "majState") }
+        if defaults.object(forKey: "symState") == nil { defaults.set(true, forKey: "symState") }
+        if defaults.object(forKey: "chiState") == nil { defaults.set(true, forKey: "chiState") }
     }
-
-    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-        if (message.body as! String != "open-preferences") {
-            return;
-        }
-
-        SFSafariApplication.showPreferencesForExtension(withIdentifier: extensionBundleIdentifier) { error in
-            DispatchQueue.main.async {
-                NSApplication.shared.terminate(nil)
-            }
-        }
-    }
-
 }

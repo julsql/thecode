@@ -490,6 +490,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				6D0D4A7E2E8AC547003ABC8F /* thecode-macos */,
+				6D47B0322EDC849700AF712A /* Shared */,
 			);
 			name = "TheCode for Mac";
 			packageProductDependencies = (
@@ -950,7 +951,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = TheCode.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = F6YQ7T44NH;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = thecode/Info.plist;
@@ -966,7 +967,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 2.1;
 				OTHER_LDFLAGS = (
 					"-framework",
 					SafariServices,
@@ -992,7 +993,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = TheCode.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = F6YQ7T44NH;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = thecode/Info.plist;
@@ -1008,7 +1009,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 2.1;
 				OTHER_LDFLAGS = (
 					"-framework",
 					SafariServices,
@@ -1318,7 +1319,7 @@
 				CODE_SIGN_ENTITLEMENTS = "thecode-macos/TheCode for Mac.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 5;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = F6YQ7T44NH;
 				ENABLE_APP_SANDBOX = YES;
@@ -1336,7 +1337,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.6;
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 2.1;
 				OTHER_LDFLAGS = (
 					"-framework",
 					SafariServices,
@@ -1364,7 +1365,7 @@
 				CODE_SIGN_ENTITLEMENTS = "thecode-macos/TheCode for Mac.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 5;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = F6YQ7T44NH;
 				ENABLE_APP_SANDBOX = YES;
@@ -1382,7 +1383,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.6;
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 2.1;
 				OTHER_LDFLAGS = (
 					"-framework",
 					SafariServices,

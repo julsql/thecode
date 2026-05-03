@@ -12,13 +12,24 @@ let appGroupID = "group.fr.julsql.thecode.params"
 
 @main
 struct TheCodeApp: App {
+    @AppStorage("darkMode", store: UserDefaults(suiteName: appGroupID)) var darkMode: String = "SYSTEM"
+
     init() {
         initializeSharedDefaults()
     }
-    
+
     var body: some Scene {
         WindowGroup {
             MainView()
+                .preferredColorScheme(preferredScheme)
+        }
+    }
+
+    private var preferredScheme: ColorScheme? {
+        switch darkMode {
+        case "DARK":  return .dark
+        case "LIGHT": return .light
+        default:      return nil
         }
     }
 }
