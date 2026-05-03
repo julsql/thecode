@@ -45,6 +45,11 @@ struct MainView: View {
     
     // key editing / visibility
     @State private var showRealKey: Bool = false
+    // Auth biométrique valide pour la session : autorise l'édition de la
+    // clé (en mode masqué ou révélé) ET la génération de mots de passe.
+    // Persiste tant que le process est vivant ; reset implicite si l'app
+    // est tuée (le @State part avec elle).
+    @State private var unlocked: Bool = false
 
     // Statut du remplissage automatique
     @State private var autofillEnabled: Bool = false
@@ -74,7 +79,9 @@ struct MainView: View {
                 // Paramètres globaux existants
                 Section(header: Text(L10n.t("Paramètres de l'application", "App settings"))) {
                     
-                    KeyFieldView(encodingKey: $encodingKey, showRealKey: $showRealKey)
+                    KeyFieldView(encodingKey: $encodingKey,
+                                 showRealKey: $showRealKey,
+                                 unlocked: $unlocked)
                     
                     VStack(alignment: .leading, spacing: 8) {
                         Text(L10n.t("Longueur du mot de passe", "Password length"))
@@ -130,29 +137,39 @@ struct MainView: View {
                 }
 
                 Section(header: Text(L10n.t("Générer un mot de passe pour un site", "Generate a password for a website"))) {
-                    TextField(L10n.t("Nom du site", "Website name"), text: $siteName)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                    
-                    if !generatedValue.isEmpty {
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack {
-                                TextField(L10n.t("Valeur générée", "Generated value"), text: $generatedValue)
-                                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                                    .disabled(true)
-                                
-                                Button(action: {
-                                    UIPasteboard.general.string = generatedValue
-                                }) {
-                                    Image(systemName: "doc.on.doc") // icône “copier”
+                    if unlocked {
+                        TextField(L10n.t("Nom du site", "Website name"), text: $siteName)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+
+                        if !generatedValue.isEmpty {
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack {
+                                    TextField(L10n.t("Valeur générée", "Generated value"), text: $generatedValue)
+                                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                                        .disabled(true)
+
+                                    Button(action: {
+                                        UIPasteboard.general.string = generatedValue
+                                    }) {
+                                        Image(systemName: "doc.on.doc") // icône “copier”
+                                    }
+                                    .buttonStyle(BorderlessButtonStyle())
+                                    .padding(.leading, 8)
                                 }
-                                .buttonStyle(BorderlessButtonStyle())
-                                .padding(.leading, 8)
+                                Text(L10n.t("Sécurité : ", "Security: ") + localizedSecurityLabel(securityLabel))
+                                    .foregroundColor(securityColor)
+                                    .foregroundColor(.secondary)
                             }
-                            Text(L10n.t("Sécurité : ", "Security: ") + localizedSecurityLabel(securityLabel))
-                                .foregroundColor(securityColor)
-                                .foregroundColor(.secondary)
+                            .padding(.top, 4)
                         }
-                        .padding(.top, 4)
+                    } else {
+                        Button(action: authenticateForGeneration) {
+                            HStack {
+                                Image(systemName: "lock.fill")
+                                Text(L10n.t("Authentifiez-vous pour générer un mot de passe",
+                                            "Authenticate to generate a password"))
+                            }
+                        }
                     }
                 }
             }
@@ -180,8 +197,14 @@ struct MainView: View {
                 if newPhase == .active {
                     refreshAutofillStatus()
                 } else {
-                    // L'utilisateur a quitté l'app
+                    // L'utilisateur a quitté l'app (ou a juste ouvert le
+                    // sélecteur d'apps). On verrouille tout : masquage de
+                    // la clé pour que le snapshot ne la capture pas,
+                    // révocation de la session d'auth (pour forcer une
+                    // ré-authentification au retour), et nettoyage des
+                    // champs sensibles.
                     showRealKey = false
+                    unlocked = false
                     siteName = ""
                     generatedValue = ""
                 }
@@ -279,7 +302,29 @@ struct MainView: View {
         }
     }
 
+    private func authenticateForGeneration() {
+        let context = LAContext()
+        var error: NSError?
+        guard context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics,
+                                        error: &error) else {
+            return
+        }
+        let reason = L10n.t("Authentifiez-vous pour générer un mot de passe",
+                            "Authenticate to generate a password")
+        context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics,
+                               localizedReason: reason) { success, _ in
+            DispatchQueue.main.async {
+                if success { unlocked = true }
+            }
+        }
+    }
+
     private func generatePassword() {
+        // Verrou d'autorisation : pas de génération sans auth de session.
+        // Les bindings @AppStorage continuent de notifier les onChange,
+        // mais on s'arrête ici tant que l'utilisateur ne s'est pas
+        // authentifié.
+        guard unlocked else { return }
         if (siteName == "" || encodingKey == "" || (!minState && !majState && !symState && !chiState)) {
             return;
         }
