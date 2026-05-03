@@ -37,7 +37,8 @@ final class AutofillModel: ObservableObject {
     func startBiometric() {
         guard !busy else { return }
         guard !domain.isEmpty else {
-            errorMessage = "Aucun domaine détecté pour cette requête."
+            errorMessage = L10n.t("Aucun domaine détecté pour cette requête.",
+                                  "No domain detected for this request.")
             return
         }
 
@@ -50,13 +51,15 @@ final class AutofillModel: ObservableObject {
         // déverrouillage en fallback : équivalent UX au Face ID seul.
         guard ctx.canEvaluatePolicy(.deviceOwnerAuthentication, error: &nsError) else {
             busy = false
-            errorMessage = "Aucune méthode d'authentification n'est configurée sur l'appareil."
+            errorMessage = L10n.t("Aucune méthode d'authentification n'est configurée sur l'appareil.",
+                                  "No authentication method is set up on this device.")
             return
         }
 
         ctx.evaluatePolicy(
             .deviceOwnerAuthentication,
-            localizedReason: "Confirmez pour autoriser TheCode à utiliser votre clé"
+            localizedReason: L10n.t("Confirmez pour autoriser TheCode à utiliser votre clé",
+                                    "Confirm to allow TheCode to use your key")
         ) { [weak self] success, evalError in
             DispatchQueue.main.async {
                 guard let self else { return }
@@ -67,7 +70,7 @@ final class AutofillModel: ObservableObject {
                     self.controller?.completeFill(domain: self.domain)
                 } else {
                     self.errorMessage = evalError?.localizedDescription
-                        ?? "Authentification annulée."
+                        ?? L10n.t("Authentification annulée.", "Authentication cancelled.")
                 }
             }
         }

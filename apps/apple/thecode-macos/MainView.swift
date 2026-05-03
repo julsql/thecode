@@ -1,22 +1,19 @@
 //
 //  MainView.swift
-//  thecode-extension-ios
-//
-//  Created by Juliette Debono on 27/09/2025.
+//  thecode-macos
 //
 
 import SwiftUI
 import LocalAuthentication
-import AuthenticationServices
+import SafariServices
+import AppKit
 
-// MARK: - Localisation (FR si appareil en français, EN sinon par défaut)
+let appGroupID = "group.fr.julsql.thecode.params"
+private let safariExtensionBundleID = "fr.julsql.thecode.Extension"
+
+// MARK: - Localisation (FR si système en français, EN sinon)
 
 enum L10n {
-    // On lit `Locale.preferredLanguages` (la liste des langues choisies par
-    // l'utilisateur dans Réglages → Général → Langue) plutôt que `Locale.current`,
-    // qui est résolue contre les localizations déclarées par l'app : sans bundle
-    // .lproj/CFBundleLocalizations, iOS retomberait toujours sur la langue de
-    // développement (en) — d'où l'app en anglais sur un téléphone français.
     static let isFrench: Bool = {
         guard let primary = Locale.preferredLanguages.first else { return false }
         return primary.lowercased().hasPrefix("fr")
@@ -35,96 +32,113 @@ struct MainView: View {
     @AppStorage("majState", store: UserDefaults(suiteName: appGroupID)) var majState: Bool = true
     @AppStorage("symState", store: UserDefaults(suiteName: appGroupID)) var symState: Bool = true
     @AppStorage("chiState", store: UserDefaults(suiteName: appGroupID)) var chiState: Bool = true
-    
-    // UI state
+    @AppStorage("darkMode", store: UserDefaults(suiteName: appGroupID)) var darkMode: String = "SYSTEM"
+
     @State private var siteName: String = ""
     @State private var generatedValue: String = ""
     @State private var securityLabel: String = ""
-    @State private var securityColor: Color = .black
-    @State private var lengthText: String = "20"
-    
-    // key editing / visibility
+    @State private var securityColor: Color = .primary
     @State private var showRealKey: Bool = false
 
-    // Statut du remplissage automatique
-    @State private var autofillEnabled: Bool = false
+    // Statut de l'extension Safari
+    @State private var safariExtensionEnabled: Bool = false
+    @State private var safariStatusKnown: Bool = false
 
-    // Réglages (thème, partage, information)
-    @AppStorage("darkMode", store: UserDefaults(suiteName: appGroupID)) var darkMode: String = "SYSTEM"
-    @State private var showShareSheet: Bool = false
+    // UI
     @State private var showInfoSheet: Bool = false
     @State private var showNoPasswordAlert: Bool = false
 
-    @Environment(\.scenePhase) private var scenePhase
     @Environment(\.colorScheme) private var colorScheme
-    
-    var utils: PasswordUtils {
-        let u = PasswordUtils()
-        u.minState = true
-        u.majState = true
-        u.symState = true
-        u.chiState = true
-        u.longueur = 20
-        return u
-    }
-    
+
     var body: some View {
-        NavigationView {
+        VStack(spacing: 0) {
+            // Barre supérieure (titre + actions)
+            HStack(spacing: 12) {
+                Text("TheCode")
+                    .font(.title2.bold())
+
+                Spacer()
+
+                Button(action: toggleTheme) {
+                    Image(systemName: themeIconName)
+                }
+                .buttonStyle(.borderless)
+                .help(L10n.t("Thème", "Theme"))
+
+                Button(action: tapShare) {
+                    Image(systemName: "square.and.arrow.up")
+                }
+                .buttonStyle(.borderless)
+                .help(L10n.t("Partager", "Share"))
+
+                Button(action: { showInfoSheet = true }) {
+                    Image(systemName: "info.circle")
+                }
+                .buttonStyle(.borderless)
+                .help(L10n.t("Information", "Information"))
+            }
+            .font(.title3)
+            .padding(.horizontal)
+            .padding(.vertical, 10)
+            .background(.bar)
+
+            Divider()
+
+            // Contenu principal
             Form {
-                // Paramètres globaux existants
                 Section(header: Text(L10n.t("Paramètres de l'application", "App settings"))) {
-                    
                     KeyFieldView(encodingKey: $encodingKey, showRealKey: $showRealKey)
-                    
+
                     VStack(alignment: .leading, spacing: 8) {
                         Text(L10n.t("Longueur du mot de passe", "Password length"))
-                            .font(.headline)
-                        
                         HStack {
                             Slider(value: Binding(
                                 get: { Double(lengthNumber) },
-                                set: { newVal in
-                                    lengthNumber = Int(newVal)
-                                    lengthText = String(lengthNumber)
-                                }
+                                set: { lengthNumber = Int($0) }
                             ), in: 4...40, step: 1)
-                            
-                            TextField("",
-                                      text: Binding(
-                                        get: { String(lengthNumber) },
-                                        set: { newVal in
-                                            if let val = Int(newVal), (4...40).contains(val) {
-                                                lengthNumber = val
-                                            }
-                                        }
-                                      ))
+
+                            TextField("", text: Binding(
+                                get: { String(lengthNumber) },
+                                set: { newVal in
+                                    if let val = Int(newVal), (4...40).contains(val) {
+                                        lengthNumber = val
+                                    }
+                                }
+                            ))
                             .frame(width: 50)
                             .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .keyboardType(.numberPad)
                         }
                     }
-                    
+
                     Toggle(L10n.t("Minuscules", "Lowercase"), isOn: $minState)
                     Toggle(L10n.t("Majuscules", "Uppercase"), isOn: $majState)
                     Toggle(L10n.t("Symboles", "Symbols"), isOn: $symState)
                     Toggle(L10n.t("Chiffres", "Digits"), isOn: $chiState)
                 }
 
-                Section(header: Text(L10n.t("Remplissage automatique", "Autofill"))) {
+                Section(header: Text(L10n.t("Extension Safari", "Safari extension"))) {
                     HStack(spacing: 10) {
                         Circle()
-                            .fill(autofillStatusColor)
+                            .fill(safariStatusColor)
                             .frame(width: 10, height: 10)
-                        Text(autofillStatusText)
+                        Text(safariStatusText)
                             .foregroundColor(.primary)
+
+                        Spacer()
+
+                        Button(action: refreshSafariStatus) {
+                            Image(systemName: "arrow.clockwise")
+                        }
+                        .buttonStyle(.borderless)
+                        .help(L10n.t("Rafraîchir", "Refresh"))
                     }
 
-                    Button(action: openAutofillSettings) {
+                    Button(action: openSafariSettings) {
                         HStack {
-                            Image(systemName: "key.fill")
-                            Text(autofillEnabled
-                                 ? L10n.t("Ouvrir les paramètres", "Open settings")
-                                 : L10n.t("Activer le remplissage automatique", "Enable autofill"))
+                            Image(systemName: "safari")
+                            Text(safariExtensionEnabled
+                                 ? L10n.t("Ouvrir les paramètres de Safari", "Open Safari settings")
+                                 : L10n.t("Activer l'extension Safari", "Enable Safari extension"))
                         }
                     }
                 }
@@ -132,70 +146,42 @@ struct MainView: View {
                 Section(header: Text(L10n.t("Générer un mot de passe pour un site", "Generate a password for a website"))) {
                     TextField(L10n.t("Nom du site", "Website name"), text: $siteName)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
-                    
+
                     if !generatedValue.isEmpty {
                         VStack(alignment: .leading, spacing: 4) {
                             HStack {
                                 TextField(L10n.t("Valeur générée", "Generated value"), text: $generatedValue)
                                     .textFieldStyle(RoundedBorderTextFieldStyle())
                                     .disabled(true)
-                                
-                                Button(action: {
-                                    UIPasteboard.general.string = generatedValue
-                                }) {
-                                    Image(systemName: "doc.on.doc") // icône “copier”
+
+                                Button(action: copyGeneratedValue) {
+                                    Image(systemName: "doc.on.doc")
                                 }
                                 .buttonStyle(BorderlessButtonStyle())
                                 .padding(.leading, 8)
                             }
                             Text(L10n.t("Sécurité : ", "Security: ") + localizedSecurityLabel(securityLabel))
                                 .foregroundColor(securityColor)
-                                .foregroundColor(.secondary)
                         }
                         .padding(.top, 4)
                     }
                 }
             }
-            .navigationTitle("TheCode")
-            .toolbar {
-                ToolbarItemGroup(placement: .navigationBarTrailing) {
-                    Button(action: toggleTheme) {
-                        Image(systemName: themeIconName)
-                    }
-                    .accessibilityLabel(L10n.t("Thème", "Theme"))
-
-                    Button(action: tapShare) {
-                        Image(systemName: "square.and.arrow.up")
-                    }
-                    .accessibilityLabel(L10n.t("Partager", "Share"))
-
-                    Button(action: { showInfoSheet = true }) {
-                        Image(systemName: "info.circle")
-                    }
-                    .accessibilityLabel(L10n.t("Information", "Information"))
-                }
-            }
-            .onAppear { refreshAutofillStatus() }
-            .onChange(of: scenePhase) { newPhase in
-                if newPhase == .active {
-                    refreshAutofillStatus()
-                } else {
-                    // L'utilisateur a quitté l'app
-                    showRealKey = false
-                    siteName = ""
-                    generatedValue = ""
-                }
-            }
-            .sheet(isPresented: $showShareSheet) {
-                ActivityView(activityItems: [shareText])
-            }
-            .sheet(isPresented: $showInfoSheet) {
-                InfoSheet(isPresented: $showInfoSheet)
-            }
-            .alert(L10n.t("Aucun mot de passe à partager", "No password to share"), isPresented: $showNoPasswordAlert) {
-                Button("OK", role: .cancel) { }
-            }
+            .formStyle(.grouped)
         }
+        .frame(minWidth: 520, minHeight: 600)
+        .preferredColorScheme(preferredScheme)
+        .onAppear {
+            applyAppAppearance()
+            refreshSafariStatus()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            refreshSafariStatus()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didResignActiveNotification)) { _ in
+            showRealKey = false
+        }
+        .onChange(of: darkMode) { _ in applyAppAppearance() }
         .onChange(of: encodingKey) { _ in generatePassword() }
         .onChange(of: lengthNumber) { _ in generatePassword() }
         .onChange(of: minState) { _ in generatePassword() }
@@ -203,13 +189,102 @@ struct MainView: View {
         .onChange(of: symState) { _ in generatePassword() }
         .onChange(of: chiState) { _ in generatePassword() }
         .onChange(of: siteName) { _ in generatePassword() }
+        .sheet(isPresented: $showInfoSheet) {
+            InfoSheet(isPresented: $showInfoSheet)
+        }
+        .alert(L10n.t("Aucun mot de passe à partager", "No password to share"), isPresented: $showNoPasswordAlert) {
+            Button("OK", role: .cancel) { }
+        }
     }
-    
-    private var autofillStatusText: String {
-        autofillEnabled
-            ? L10n.t("Activé pour cet appareil", "Active on this device")
-            : L10n.t("Désactivé — touchez pour configurer", "Disabled — tap to set up")
+
+    // MARK: - Statut Safari
+
+    private var safariStatusText: String {
+        if !safariStatusKnown {
+            return L10n.t("Vérification…", "Checking…")
+        }
+        return safariExtensionEnabled
+            ? L10n.t("Activée dans Safari", "Active in Safari")
+            : L10n.t("Désactivée — cliquez pour configurer", "Disabled — click to set up")
     }
+
+    private var safariStatusColor: Color {
+        guard safariStatusKnown else { return .secondary }
+        return safariExtensionEnabled ? .green : .red
+    }
+
+    private func refreshSafariStatus() {
+        SFSafariExtensionManager.getStateOfSafariExtension(withIdentifier: safariExtensionBundleID) { state, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    NSLog("[TheCode] getStateOfSafariExtension error: \(error.localizedDescription)")
+                }
+                self.safariStatusKnown = true
+                self.safariExtensionEnabled = state?.isEnabled ?? false
+            }
+        }
+    }
+
+    private func openSafariSettings() {
+        SFSafariApplication.showPreferencesForExtension(withIdentifier: safariExtensionBundleID) { _ in }
+    }
+
+    // MARK: - Thème
+
+    private var preferredScheme: ColorScheme? {
+        switch darkMode {
+        case "DARK":  return .dark
+        case "LIGHT": return .light
+        default:      return nil
+        }
+    }
+
+    private var themeIconName: String {
+        switch darkMode {
+        case "DARK":  return "moon.fill"
+        case "LIGHT": return "sun.max.fill"
+        default:      return "circle.lefthalf.filled"
+        }
+    }
+
+    private func toggleTheme() {
+        // Cycle SYSTEM → DARK → LIGHT → SYSTEM
+        switch darkMode {
+        case "SYSTEM": darkMode = "DARK"
+        case "DARK":   darkMode = "LIGHT"
+        default:       darkMode = "SYSTEM"
+        }
+    }
+
+    private func applyAppAppearance() {
+        // Applique l'apparence au chrome de la fenêtre (titre, contrôles).
+        switch darkMode {
+        case "DARK":  NSApp.appearance = NSAppearance(named: .darkAqua)
+        case "LIGHT": NSApp.appearance = NSAppearance(named: .aqua)
+        default:      NSApp.appearance = nil
+        }
+    }
+
+    // MARK: - Partage
+
+    private var shareText: String {
+        String(format: L10n.t("Mon mot de passe pour %@ est :\n%@",
+                              "My password for %@ is:\n%@"),
+               siteName, generatedValue)
+    }
+
+    private func tapShare() {
+        if generatedValue.isEmpty {
+            showNoPasswordAlert = true
+            return
+        }
+        let picker = NSSharingServicePicker(items: [shareText])
+        if let contentView = NSApp.keyWindow?.contentView {
+            picker.show(relativeTo: .zero, of: contentView, preferredEdge: .minY)
+        }
+    }
+
+    // MARK: - Sécurité
 
     private func localizedSecurityLabel(_ frenchLabel: String) -> String {
         guard !L10n.isFrench else { return frenchLabel }
@@ -225,90 +300,33 @@ struct MainView: View {
         }
     }
 
-    private var autofillStatusColor: Color {
-        autofillEnabled ? .green : .red
+    // MARK: - Copie
+
+    private func copyGeneratedValue() {
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setString(generatedValue, forType: .string)
     }
 
-    private func refreshAutofillStatus() {
-        ASCredentialIdentityStore.shared.getState { state in
-            DispatchQueue.main.async {
-                self.autofillEnabled = state.isEnabled
-            }
-        }
-    }
-
-    // MARK: - Réglages (thème / partage / information)
-
-    private var themeIconName: String {
-        switch darkMode {
-        case "DARK":  return "moon.fill"
-        case "LIGHT": return "sun.max.fill"
-        default:      return "circle.lefthalf.filled"
-        }
-    }
-
-    private func toggleTheme() {
-        // Cycle : SYSTEM → DARK → LIGHT → SYSTEM. On garde SYSTEM atteignable
-        // pour permettre de revenir au mode par défaut (suivre le système).
-        switch darkMode {
-        case "SYSTEM": darkMode = "DARK"
-        case "DARK":   darkMode = "LIGHT"
-        default:       darkMode = "SYSTEM"
-        }
-    }
-
-    private var shareText: String {
-        String(format: L10n.t("Mon mot de passe pour %@ est :\n%@",
-                              "My password for %@ is:\n%@"),
-               siteName, generatedValue)
-    }
-
-    private func tapShare() {
-        if generatedValue.isEmpty {
-            showNoPasswordAlert = true
-        } else {
-            showShareSheet = true
-        }
-    }
-
-    private func openAutofillSettings() {
-        if #available(iOS 17.0, *) {
-            Task { try? await ASSettingsHelper.openCredentialProviderAppSettings() }
-        } else if let url = URL(string: UIApplication.openSettingsURLString) {
-            UIApplication.shared.open(url)
-        }
-    }
+    // MARK: - Génération
 
     private func generatePassword() {
-        if (siteName == "" || encodingKey == "" || (!minState && !majState && !symState && !chiState)) {
-            return;
+        if siteName.isEmpty || encodingKey.isEmpty || (!minState && !majState && !symState && !chiState) {
+            return
         }
-        
+
         let utils = PasswordUtils()
         utils.minState = minState
         utils.majState = majState
         utils.symState = symState
         utils.chiState = chiState
         utils.longueur = lengthNumber
-        
+
         let result = utils.generatePassword(input: siteName + encodingKey)
         generatedValue = result.code
         securityLabel = result.label
         securityColor = result.color
     }
-
-}
-
-// MARK: - Share sheet (UIActivityViewController bridge pour iOS 15+)
-
-private struct ActivityView: UIViewControllerRepresentable {
-    let activityItems: [Any]
-
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
-    }
-
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) { }
 }
 
 // MARK: - Information sheet
@@ -341,20 +359,24 @@ TheCode follows you everywhere: browser extensions (Chrome, Firefox, Safari, Edg
 """
 
     var body: some View {
-        NavigationView {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(L10n.t("Information", "Information"))
+                .font(.title2.bold())
+
             ScrollView {
                 Text(L10n.t(Self.infoFR, Self.infoEN))
                     .font(.body)
-                    .padding()
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .textSelection(.enabled)
             }
-            .navigationTitle(L10n.t("Information", "Information"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("OK") { isPresented = false }
-                }
+
+            HStack {
+                Spacer()
+                Button("OK") { isPresented = false }
+                    .keyboardShortcut(.defaultAction)
             }
         }
+        .padding()
+        .frame(minWidth: 520, minHeight: 480)
     }
 }

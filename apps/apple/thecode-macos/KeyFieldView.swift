@@ -1,8 +1,6 @@
 //
-//  KeyField.swift
-//  thecode-extension-ios
-//
-//  Created by Juliette Debono on 28/09/2025.
+//  KeyFieldView.swift
+//  thecode-macos
 //
 
 import SwiftUI
@@ -15,7 +13,7 @@ struct KeyFieldView: View {
     @State private var editingBuffer: String = ""
     @State private var authError: String? = nil
     @FocusState private var focused: Bool
-    
+
     var body: some View {
         HStack {
             Text(L10n.t("Clé", "Key")).font(.headline)
@@ -23,7 +21,7 @@ struct KeyFieldView: View {
             HStack {
                 if isEditing {
                     if showRealKey {
-                        TextField(L10n.t("Entrez la clé", "Enter the key"), text: $encodingKey, onCommit: endEditiing)
+                        TextField(L10n.t("Entrez la clé", "Enter the key"), text: $encodingKey, onCommit: endEditing)
                             .textFieldStyle(RoundedBorderTextFieldStyle())
                             .focused($focused)
                             .onAppear { focused = true }
@@ -53,6 +51,7 @@ struct KeyFieldView: View {
                     authError = nil
                 }
             }
+
             HStack {
                 if isEditing {
                     Button("OK") { commitEdit() }
@@ -66,43 +65,42 @@ struct KeyFieldView: View {
                 }
             }
             .frame(width: 30, height: 30)
-            
         }
     }
-    
+
     private func commitEdit() {
         encodingKey = editingBuffer
         isEditing = false
         showRealKey = false
     }
-    
-    private func endEditiing() {
+
+    private func endEditing() {
         isEditing = false
     }
-    
+
     private func authenticateThenReveal() {
         let context = LAContext()
         var error: NSError?
         if showRealKey {
             showRealKey = false
-        } else {
-            if context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) {
-                let reason = L10n.t("Authentifiez-vous pour afficher la clé",
-                                    "Authenticate to reveal the key")
-                context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: reason) { success, evalError in
-                    DispatchQueue.main.async {
-                        if success {
-                            showRealKey = true
-                            authError = nil
-                        } else {
-                            authError = L10n.t("Authentification échouée", "Authentication failed")
-                            showRealKey = false
-                        }
+            return
+        }
+        if context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) {
+            let reason = L10n.t("Authentifiez-vous pour afficher la clé",
+                                "Authenticate to reveal the key")
+            context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: reason) { success, _ in
+                DispatchQueue.main.async {
+                    if success {
+                        showRealKey = true
+                        authError = nil
+                    } else {
+                        authError = L10n.t("Authentification échouée", "Authentication failed")
+                        showRealKey = false
                     }
                 }
-            } else {
-                authError = L10n.t("Biométrie non disponible", "Biometrics not available")
             }
+        } else {
+            authError = L10n.t("Biométrie non disponible", "Biometrics not available")
         }
     }
 }
