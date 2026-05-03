@@ -24,6 +24,13 @@ public class Code {
     public static final int MAX_LENGTH = 40;
     public static final int DEFAULT_LENGTH = 20;
 
+    /**
+     * Niveaux de sécurité indépendants de la langue. La traduction du libellé
+     * est faite côté UI (via les ressources string), et la couleur côté UI ou
+     * directement ici via {@link #getColor()} pour le code historique.
+     */
+    public enum SafetyLevel { NONE, VERY_WEAK, WEAK, MEDIUM, STRONG, VERY_STRONG }
+
     private boolean minState = true;
     private boolean majState = true;
     private boolean symState = true;
@@ -31,7 +38,7 @@ public class Code {
 
     private int length = DEFAULT_LENGTH;
 
-    private String safety = "Très Forte";
+    private SafetyLevel safetyLevel = SafetyLevel.VERY_STRONG;
     private int color = Color.parseColor("#1CD001");
 
     public Code() {}
@@ -55,7 +62,7 @@ public class Code {
     public int getLength() { return length; }
     public void setLength(int length) { this.length = length; }
 
-    public String getSafety() { return safety; }
+    public SafetyLevel getSafetyLevel() { return safetyLevel; }
     public int getColor() { return color; }
 
     /**
@@ -86,22 +93,22 @@ public class Code {
     public void updateSafetyAndColor() {
         int bits = getBits();
         if (bits == 0) {
-            safety = "Aucune";
+            safetyLevel = SafetyLevel.NONE;
             color = Color.parseColor("#FE0101");
         } else if (bits < 64) {
-            safety = "Très Faible";
+            safetyLevel = SafetyLevel.VERY_WEAK;
             color = Color.parseColor("#FE0101");
         } else if (bits < 80) {
-            safety = "Faible";
+            safetyLevel = SafetyLevel.WEAK;
             color = Color.parseColor("#FE4501");
         } else if (bits < 100) {
-            safety = "Moyenne";
+            safetyLevel = SafetyLevel.MEDIUM;
             color = Color.parseColor("#FE7601");
         } else if (bits < 126) {
-            safety = "Forte";
+            safetyLevel = SafetyLevel.STRONG;
             color = Color.parseColor("#53FE38");
         } else {
-            safety = "Très Forte";
+            safetyLevel = SafetyLevel.VERY_STRONG;
             color = Color.parseColor("#1CD001");
         }
     }

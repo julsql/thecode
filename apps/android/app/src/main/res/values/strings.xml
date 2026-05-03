@@ -3,60 +3,67 @@
     <string name="app_name">TheCode</string>
 
     <!-- Sections -->
-    <string name="settings_section">Paramètres de l\'application</string>
-    <string name="generate_section">Générer un mot de passe pour un site</string>
+    <string name="settings_section">App settings</string>
+    <string name="generate_section">Generate a password for a website</string>
 
-    <!-- Champs -->
-    <string name="key_label">Clé</string>
-    <string name="key_hint">Entrez la clé</string>
-    <string name="length_label">Longueur du mot de passe</string>
-    <string name="characters_label">Caractères autorisés</string>
-    <string name="lowercase">Minuscules</string>
-    <string name="uppercase">Majuscules</string>
-    <string name="symbols">Symboles</string>
-    <string name="digits">Chiffres</string>
-    <string name="site_hint">Nom du site</string>
-    <string name="generated_password_hint">Mot de passe généré</string>
-    <string name="copy">Copier</string>
+    <!-- Fields -->
+    <string name="key_label">Key</string>
+    <string name="key_hint">Enter your key</string>
+    <string name="length_label">Password length</string>
+    <string name="characters_label">Allowed characters</string>
+    <string name="lowercase">Lowercase</string>
+    <string name="uppercase">Uppercase</string>
+    <string name="symbols">Symbols</string>
+    <string name="digits">Digits</string>
+    <string name="site_hint">Website name</string>
+    <string name="generated_password_hint">Generated password</string>
+    <string name="copy">Copy</string>
+    <string name="clipboard_label">Password</string>
 
-    <!-- Sécurité -->
-    <string name="security_with_value">Sécurité : %1$s</string>
+    <!-- Security -->
+    <string name="security_with_value">Security: %1$s</string>
+    <string name="safety_none">None</string>
+    <string name="safety_very_weak">Very weak</string>
+    <string name="safety_weak">Weak</string>
+    <string name="safety_medium">Medium</string>
+    <string name="safety_strong">Strong</string>
+    <string name="safety_very_strong">Very strong</string>
 
     <!-- Messages -->
-    <string name="password_copied">Mot de passe copié dans le presse-papier</string>
-    <string name="no_password_to_copy">Aucun mot de passe à copier</string>
-    <string name="no_password_to_share">Aucun mot de passe à partager</string>
-    <string name="share_text">Mon mot de passe pour %1$s est :\n%2$s</string>
-    <string name="share_title">Partager le mot de passe</string>
+    <string name="password_copied">Password copied to clipboard</string>
+    <string name="no_password_to_copy">No password to copy</string>
+    <string name="no_password_to_share">No password to share</string>
+    <string name="share_text">My password for %1$s is:\n%2$s</string>
+    <string name="share_title">Share password</string>
 
     <!-- Menu -->
-    <string name="menu_dark_mode">Thème</string>
-    <string name="menu_help">Aide</string>
-    <string name="menu_share">Partager</string>
+    <string name="menu_dark_mode">Theme</string>
+    <string name="menu_help">Help</string>
+    <string name="menu_share">Share</string>
 
     <!-- Autofill -->
-    <string name="autofill_section">Remplissage automatique</string>
-    <string name="autofill_card_description">Activez TheCode comme service de remplissage automatique pour générer un mot de passe directement dans n\'importe quelle app ou site.</string>
-    <string name="autofill_status_active">Activé pour cet appareil</string>
-    <string name="autofill_status_inactive">Désactivé — touchez pour configurer</string>
-    <string name="autofill_status_unsupported">Non disponible sur cet appareil</string>
-    <string name="autofill_enable">Activer le remplissage automatique</string>
-    <string name="autofill_open_settings">Ouvrir les paramètres</string>
-    <string name="autofill_for_domain">Pour %1$s</string>
-    <string name="autofill_auth_title">Authentification requise</string>
-    <string name="autofill_no_key_warning">Définissez d\'abord une clé pour utiliser le remplissage automatique.</string>
+    <string name="autofill_section">Autofill</string>
+    <string name="autofill_card_description">Enable TheCode as your autofill service to generate a password directly inside any app or website.</string>
+    <string name="autofill_status_active">Active on this device</string>
+    <string name="autofill_status_inactive">Disabled — tap to set up</string>
+    <string name="autofill_status_unsupported">Not available on this device</string>
+    <string name="autofill_enable">Enable autofill</string>
+    <string name="autofill_open_settings">Open settings</string>
+    <string name="autofill_for_domain">For %1$s</string>
+    <string name="autofill_auth_title">Authentication required</string>
+    <string name="autofill_no_key_warning">Set a key first to use autofill.</string>
 
-    <!-- Affichage de la clé -->
-    <string name="show_key">Afficher la clé</string>
-    <string name="hide_key">Masquer la clé</string>
-    <string name="key_reveal_auth_title">Authentification requise</string>
-    <string name="key_reveal_auth_subtitle">Affichez votre clé après authentification</string>
+    <!-- Key visibility -->
+    <string name="show_key">Show key</string>
+    <string name="hide_key">Hide key</string>
+    <string name="key_reveal_auth_title">Authentication required</string>
+    <string name="key_reveal_auth_subtitle">Reveal your key after authentication</string>
 
-    <!-- Génération protégée -->
-    <string name="generate_auth_title">Authentification requise</string>
-    <string name="generate_auth_subtitle">Confirmez pour générer votre mot de passe</string>
+    <!-- Protected generation -->
+    <string name="generate_auth_title">Authentication required</string>
+    <string name="generate_auth_subtitle">Confirm to generate your password</string>
 
-    <!-- Aide -->
+    <!-- Help -->
     <string name="help_title">Information</string>
-    <string name="info_app">"      TheCode est un gestionnaire de mots de passe libre et open-source qui ne stocke aucun mot de passe : il les régénère à la volée à partir d\'une seule clé secrète que vous mémorisez.\n\n      Choisissez votre clé, entrez le nom du site (par exemple « google.com » pour votre compte Google), ajustez la longueur et les options (minuscules, majuscules, chiffres, symboles), et le mot de passe est généré. Pour le retrouver, il vous suffit de revenir avec la même clé et le même nom de site.\n\n      En interne, TheCode combine votre clé avec le nom du site et applique une fonction cryptographique (SHA-256). Le résultat est converti en un mot de passe robuste qui respecte vos critères. Même clé + même site = même mot de passe, à chaque fois, de manière déterministe.\n\n      Aucun mot de passe n\'est jamais sauvegardé ni transmis : tous les calculs ont lieu localement, sans connexion internet, sans compte, sans pistage.\n\n      TheCode vous suit partout : extensions navigateur (Chrome, Firefox, Safari, Edge, Opera) et applications natives iOS et Android. Avec la même clé, vous retrouvez les mêmes mots de passe sur toutes vos plateformes.</string>
+    <string name="info_app">"      TheCode is a free and open-source password manager that stores no passwords: it regenerates them on the fly from a single secret key that you remember.\n\n      Choose your key, enter the website name (for example « google.com » for your Google account), tweak the length and the options (lowercase, uppercase, digits, symbols), and the password is generated. To find it again, just come back with the same key and the same website name.\n\n      Internally, TheCode combines your key with the website name and applies a cryptographic function (SHA-256). The result is converted into a strong password that matches your criteria. Same key + same website = same password, every time, deterministically.\n\n      No password is ever saved or transmitted: every computation happens locally, with no internet connection, no account, no tracking.\n\n      TheCode follows you everywhere: browser extensions (Chrome, Firefox, Safari, Edge, Opera) and native iOS and Android apps. With the same key, you find the same passwords across all your platforms.</string>
 </resources>

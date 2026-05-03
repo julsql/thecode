@@ -92,7 +92,7 @@ public class CodeUnitTest {
         code.setSymState(false);
         code.setChiState(false);
         code.updateSafetyAndColor();
-        assertEquals("Aucune", code.getSafety());
+        assertEquals(Code.SafetyLevel.NONE, code.getSafetyLevel());
 
         code.setMinState(true);
         code.setMajState(true);
@@ -100,7 +100,7 @@ public class CodeUnitTest {
         code.setChiState(true);
         code.setLength(20);
         code.updateSafetyAndColor();
-        assertEquals("Très Forte", code.getSafety());
+        assertEquals(Code.SafetyLevel.VERY_STRONG, code.getSafetyLevel());
     }
 
     @Test

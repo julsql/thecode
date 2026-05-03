@@ -363,9 +363,22 @@ public class MainActivity extends AppCompatActivity {
 
         String result = code.getCode(key, site);
         passwordEditText.setText(result);
-        securityLabelTextView.setText(getString(R.string.security_with_value, code.getSafety()));
+        securityLabelTextView.setText(getString(R.string.security_with_value,
+                getString(safetyLabelRes(code.getSafetyLevel()))));
         securityLabelTextView.setTextColor(code.getColor());
         resultCard.setVisibility(View.VISIBLE);
+    }
+
+    private static int safetyLabelRes(Code.SafetyLevel level) {
+        switch (level) {
+            case NONE:        return R.string.safety_none;
+            case VERY_WEAK:   return R.string.safety_very_weak;
+            case WEAK:        return R.string.safety_weak;
+            case MEDIUM:      return R.string.safety_medium;
+            case STRONG:      return R.string.safety_strong;
+            case VERY_STRONG:
+            default:          return R.string.safety_very_strong;
+        }
     }
 
     private void copyPassword() {
@@ -375,7 +388,7 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-        cm.setPrimaryClip(ClipData.newPlainText("Mot de passe", password));
+        cm.setPrimaryClip(ClipData.newPlainText(getString(R.string.clipboard_label), password));
         Snackbar.make(resultCard, R.string.password_copied, Snackbar.LENGTH_SHORT).show();
     }
 
