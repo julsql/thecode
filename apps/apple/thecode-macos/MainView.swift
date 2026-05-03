@@ -39,6 +39,11 @@ struct MainView: View {
     @State private var securityLabel: String = ""
     @State private var securityColor: Color = .primary
     @State private var showRealKey: Bool = false
+    // Auth biométrique valide pour la session : autorise l'édition de la
+    // clé (en mode masqué ou révélé) ET la génération de mots de passe.
+    // Persiste tant que le process est vivant ; reset implicite si l'app
+    // est tuée (le @State part avec elle).
+    @State private var unlocked: Bool = false
 
     // Statut de l'extension Safari
     @State private var safariExtensionEnabled: Bool = false
@@ -87,7 +92,9 @@ struct MainView: View {
             // Contenu principal
             Form {
                 Section(header: Text(L10n.t("Paramètres de l'application", "App settings"))) {
-                    KeyFieldView(encodingKey: $encodingKey, showRealKey: $showRealKey)
+                    KeyFieldView(encodingKey: $encodingKey,
+                                 showRealKey: $showRealKey,
+                                 unlocked: $unlocked)
 
                     VStack(alignment: .leading, spacing: 8) {
                         Text(L10n.t("Longueur du mot de passe", "Password length"))
@@ -144,26 +151,36 @@ struct MainView: View {
                 }
 
                 Section(header: Text(L10n.t("Générer un mot de passe pour un site", "Generate a password for a website"))) {
-                    TextField(L10n.t("Nom du site", "Website name"), text: $siteName)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                    if unlocked {
+                        TextField(L10n.t("Nom du site", "Website name"), text: $siteName)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
 
-                    if !generatedValue.isEmpty {
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack {
-                                TextField(L10n.t("Valeur générée", "Generated value"), text: $generatedValue)
-                                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                                    .disabled(true)
+                        if !generatedValue.isEmpty {
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack {
+                                    TextField(L10n.t("Valeur générée", "Generated value"), text: $generatedValue)
+                                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                                        .disabled(true)
 
-                                Button(action: copyGeneratedValue) {
-                                    Image(systemName: "doc.on.doc")
+                                    Button(action: copyGeneratedValue) {
+                                        Image(systemName: "doc.on.doc")
+                                    }
+                                    .buttonStyle(BorderlessButtonStyle())
+                                    .padding(.leading, 8)
                                 }
-                                .buttonStyle(BorderlessButtonStyle())
-                                .padding(.leading, 8)
+                                Text(L10n.t("Sécurité : ", "Security: ") + localizedSecurityLabel(securityLabel))
+                                    .foregroundColor(securityColor)
                             }
-                            Text(L10n.t("Sécurité : ", "Security: ") + localizedSecurityLabel(securityLabel))
-                                .foregroundColor(securityColor)
+                            .padding(.top, 4)
                         }
-                        .padding(.top, 4)
+                    } else {
+                        Button(action: authenticateForGeneration) {
+                            HStack {
+                                Image(systemName: "lock.fill")
+                                Text(L10n.t("Authentifiez-vous pour générer un mot de passe",
+                                            "Authenticate to generate a password"))
+                            }
+                        }
                     }
                 }
             }
@@ -179,7 +196,16 @@ struct MainView: View {
             refreshSafariStatus()
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didResignActiveNotification)) { _ in
+            // Dès qu'on bascule sur une autre app, on verrouille tout :
+            // re-masquage de la clé pour qu'elle ne reste pas en clair
+            // dans une fenêtre visible en arrière-plan, révocation de la
+            // session d'auth pour forcer une ré-auth au retour, et
+            // nettoyage du nom de site et du mot de passe généré pour
+            // ne pas réafficher de données obsolètes après ré-auth.
             showRealKey = false
+            unlocked = false
+            siteName = ""
+            generatedValue = ""
         }
         .onChange(of: darkMode) { _ in applyAppAppearance() }
         .onChange(of: encodingKey) { _ in generatePassword() }
@@ -226,7 +252,23 @@ struct MainView: View {
     }
 
     private func openSafariSettings() {
-        SFSafariApplication.showPreferencesForExtension(withIdentifier: safariExtensionBundleID) { _ in }
+        SFSafariApplication.showPreferencesForExtension(withIdentifier: safariExtensionBundleID) { error in
+            guard let error = error else { return }
+            // SFErrorNoExtensionFound (code 1) : Safari n'a pas (encore)
+            // indexé l'extension. Ça arrive surtout en dev quand l'app
+            // tourne depuis DerivedData ; quitter et relancer Safari (ou
+            // déplacer l'app dans /Applications) règle le souci, mais en
+            // attendant on a au moins un fallback : on ouvre Safari pour
+            // que l'utilisateur puisse naviguer manuellement vers
+            // Réglages → Extensions.
+            NSLog("[TheCode] showPreferencesForExtension error: \(error.localizedDescription)")
+            DispatchQueue.main.async {
+                if let safariURL = NSWorkspace.shared.urlForApplication(
+                    withBundleIdentifier: "com.apple.Safari") {
+                    NSWorkspace.shared.open(safariURL)
+                }
+            }
+        }
     }
 
     // MARK: - Thème
@@ -310,7 +352,26 @@ struct MainView: View {
 
     // MARK: - Génération
 
+    private func authenticateForGeneration() {
+        let context = LAContext()
+        var error: NSError?
+        guard context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics,
+                                        error: &error) else {
+            return
+        }
+        let reason = L10n.t("Authentifiez-vous pour générer un mot de passe",
+                            "Authenticate to generate a password")
+        context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics,
+                               localizedReason: reason) { success, _ in
+            DispatchQueue.main.async {
+                if success { unlocked = true }
+            }
+        }
+    }
+
     private func generatePassword() {
+        // Verrou d'autorisation : pas de génération sans auth de session.
+        guard unlocked else { return }
         if siteName.isEmpty || encodingKey.isEmpty || (!minState && !majState && !symState && !chiState) {
             return
         }
