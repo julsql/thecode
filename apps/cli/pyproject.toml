@@ -9,6 +9,7 @@ description = "Génération déterministe de mots de passe à partir d'un site e
 requires-python = ">=3.9"
 authors = [{ name = "Juliette Debono" }]
 license = { text = "MIT" }
+dependencies = ["pyperclip>=1.8"]
 
 [project.optional-dependencies]
 test = ["pytest>=7"]
