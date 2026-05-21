@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
 
+# Le job ne fait que checkout + tests : lecture seule du contenu suffit.
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest

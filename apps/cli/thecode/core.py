@@ -24,6 +24,11 @@ def build_charset(use_lower: bool, use_upper: bool, use_symbols: bool, use_numbe
 
 
 def hash_to_int(input_str: str) -> int:
+    # SHA-256 est volontaire : c'est le cœur de l'algorithme déterministe, qui DOIT
+    # rester identique au site (`crypto.subtle.digest("SHA-256")`) et à l'extension.
+    # Il ne s'agit pas de stockage de mot de passe (pas de hash en base), donc un KDF
+    # lent (PBKDF2/scrypt) n'est pas applicable et casserait tous les secrets existants.
+    # codeql[py/weak-sensitive-data-hashing]
     digest = hashlib.sha256(input_str.encode("utf-8")).hexdigest()
     return int(digest, 16)
 

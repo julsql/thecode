@@ -20,7 +20,26 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--no-upper", action="store_true", help="Désactive les majuscules")
     parser.add_argument("--no-symbols", action="store_true", help="Désactive les symboles")
     parser.add_argument("--no-numbers", action="store_true", help="Désactive les chiffres")
+    parser.add_argument(
+        "-s",
+        "--show",
+        action="store_true",
+        help="Affiche le mot de passe sur stdout au lieu de le copier dans le presse-papiers",
+    )
     return parser
+
+
+def _copy_to_clipboard(value: str) -> bool:
+    """Copie `value` dans le presse-papiers. Retourne False si indisponible."""
+    try:
+        import pyperclip  # import local : dépendance optionnelle à l'exécution
+    except ImportError:
+        return False
+    try:
+        pyperclip.copy(value)
+        return True
+    except pyperclip.PyperclipException:
+        return False
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -40,8 +59,22 @@ def main(argv: list[str] | None = None) -> int:
         print("Erreur : aucune base de caractères sélectionnée ou entrées vides.", file=sys.stderr)
         return 1
 
-    print(pwd)
-    return 0
+    if args.show:
+        # Sortie explicitement demandée par l'utilisateur (ex: pipe). Le secret
+        # ne transite vers stdout que sur opt-in volontaire via --show.
+        # codeql[py/clear-text-logging-sensitive-data]
+        print(pwd)
+        return 0
+
+    if _copy_to_clipboard(pwd):
+        print("✓ Mot de passe copié dans le presse-papiers.", file=sys.stderr)
+        return 0
+
+    print(
+        "Presse-papiers indisponible. Relance avec --show pour afficher le mot de passe.",
+        file=sys.stderr,
+    )
+    return 2
 
 
 if __name__ == "__main__":
