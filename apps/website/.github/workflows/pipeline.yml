@@ -5,6 +5,10 @@ on:
     branches:
       - main
 
+# Permissions minimales (lecture seule du contenu)
+permissions:
+  contents: read
+
 # Définir les jobs
 jobs:
   deploy:
