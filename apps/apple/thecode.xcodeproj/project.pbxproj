@@ -12,10 +12,8 @@
 		35851FAD8C1F458ED7B63B6B /* PasswordUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD6AAF5E425C082A00D6DD0B /* PasswordUtils.swift */; };
 		40CDF0416C3D59696C73705C /* CredentialProviderViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 165004A8F0E412CE5515FAD9 /* CredentialProviderViewController.swift */; };
 		6D0D49742E8AC37A003ABC8F /* thecode-ios Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 6D0D49732E8AC37A003ABC8F /* thecode-ios Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		6D0D4AAD2E8AC548003ABC8F /* thecode-macos Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 6D0D4AAC2E8AC548003ABC8F /* thecode-macos Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		6D47B00C2EDC7C4A00AF712A /* AuthenticationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6D47AFF62EDC7B9300AF712A /* AuthenticationServices.framework */; };
 		6D47B0172EDC7C4A00AF712A /* thecode-autofill.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 6D47B00B2EDC7C4A00AF712A /* thecode-autofill.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		6D9D12F22EE0CB0300D2181E /* AuthenticationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6D47AFF62EDC7B9300AF712A /* AuthenticationServices.framework */; };
 		8082053F89E82DB40A9C1DDD /* Swift-Big-Number-Core.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6563939875087D60FD6A6802 /* Swift-Big-Number-Core.swift */; };
 		A7AB93E0E9CA2FF7C2528A32 /* thecode-macos-autofill.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 603E8E144104C1AF9FC9FA7E /* thecode-macos-autofill.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		BBA429162865F67794BE1E57 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 369242748686486E14A8FDEA /* Cocoa.framework */; };
@@ -60,13 +58,6 @@
 			remoteGlobalIDString = 6D0D4A7C2E8AC547003ABC8F;
 			remoteInfo = "thecode-macos";
 		};
-		6D0D4AAE2E8AC548003ABC8F /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 6D0D49382E8AC379003ABC8F /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 6D0D4AAB2E8AC548003ABC8F;
-			remoteInfo = "thecode-macos Extension";
-		};
 		6D47B0152EDC7C4A00AF712A /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 6D0D49382E8AC379003ABC8F /* Project object */;
@@ -102,7 +93,6 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				6D0D4AAD2E8AC548003ABC8F /* thecode-macos Extension.appex in Embed Foundation Extensions */,
 				A7AB93E0E9CA2FF7C2528A32 /* thecode-macos-autofill.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
@@ -123,7 +113,6 @@
 		6D0D4A7D2E8AC547003ABC8F /* TheCode for Mac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "TheCode for Mac.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		6D0D4A962E8AC548003ABC8F /* thecode-macosTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "thecode-macosTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		6D0D4AA02E8AC548003ABC8F /* thecode-macosUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "thecode-macosUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
-		6D0D4AAC2E8AC548003ABC8F /* thecode-macos Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "thecode-macos Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
 		6D47AFF62EDC7B9300AF712A /* AuthenticationServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AuthenticationServices.framework; path = System/Library/Frameworks/AuthenticationServices.framework; sourceTree = SDKROOT; };
 		6D47B00B2EDC7C4A00AF712A /* thecode-autofill.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "thecode-autofill.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
 		7B47A588570C392E2CFDD3F7 /* ContentView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -150,17 +139,6 @@
 				"Resources/js-test/package.json",
 			);
 			target = 6D0D49722E8AC37A003ABC8F /* thecode-ios Extension */;
-		};
-		6D0D4AC52E8AC548003ABC8F /* Exceptions for "thecode-macos Extension" folder in "thecode-macos Extension" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-				"Resources/js-test/.gitignore",
-				"Resources/js-test/background.spec.js",
-				"Resources/js-test/package-lock.json",
-				"Resources/js-test/package.json",
-			);
-			target = 6D0D4AAB2E8AC548003ABC8F /* thecode-macos Extension */;
 		};
 		6D47B01B2EDC7C4A00AF712A /* Exceptions for "thecode-autofill" folder in "thecode-autofill" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
@@ -227,19 +205,6 @@
 			exceptions = (
 			);
 			path = "thecode-macosUITests";
-			sourceTree = "<group>";
-		};
-		6D0D4AB02E8AC548003ABC8F /* thecode-macos Extension */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				6D0D4AC52E8AC548003ABC8F /* Exceptions for "thecode-macos Extension" folder in "thecode-macos Extension" target */,
-			);
-			explicitFolders = (
-				Resources/_locales,
-				Resources/data,
-				Resources/images,
-			);
-			path = "thecode-macos Extension";
 			sourceTree = "<group>";
 		};
 		6D47B00D2EDC7C4A00AF712A /* thecode-autofill */ = {
@@ -321,13 +286,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		6D0D4AA92E8AC548003ABC8F /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		6D47B0082EDC7C4A00AF712A /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -351,7 +309,6 @@
 				6D0D4A7E2E8AC547003ABC8F /* thecode-macos */,
 				6D0D4A992E8AC548003ABC8F /* thecode-macosTests */,
 				6D0D4AA32E8AC548003ABC8F /* thecode-macosUITests */,
-				6D0D4AB02E8AC548003ABC8F /* thecode-macos Extension */,
 				6D47AFF52EDC7B9300AF712A /* Frameworks */,
 				6D0D49412E8AC379003ABC8F /* Products */,
 				ACCD8F8CE80DA758D46BC637 /* thecode-macos-autofill */,
@@ -369,7 +326,6 @@
 				6D0D4A7D2E8AC547003ABC8F /* TheCode for Mac.app */,
 				6D0D4A962E8AC548003ABC8F /* thecode-macosTests.xctest */,
 				6D0D4AA02E8AC548003ABC8F /* thecode-macosUITests.xctest */,
-				6D0D4AAC2E8AC548003ABC8F /* thecode-macos Extension.appex */,
 				6D47B00B2EDC7C4A00AF712A /* thecode-autofill.appex */,
 				603E8E144104C1AF9FC9FA7E /* thecode-macos-autofill.appex */,
 			);
@@ -519,7 +475,6 @@
 			buildRules = (
 			);
 			dependencies = (
-				6D0D4AAF2E8AC548003ABC8F /* PBXTargetDependency */,
 				9BCBEBC9582FF508255A111A /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
@@ -572,26 +527,6 @@
 			productName = "thecode-macosUITests";
 			productReference = 6D0D4AA02E8AC548003ABC8F /* thecode-macosUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
-		};
-		6D0D4AAB2E8AC548003ABC8F /* thecode-macos Extension */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 6D0D4AC62E8AC548003ABC8F /* Build configuration list for PBXNativeTarget "thecode-macos Extension" */;
-			buildPhases = (
-				6D0D4AA82E8AC548003ABC8F /* Sources */,
-				6D0D4AA92E8AC548003ABC8F /* Frameworks */,
-				6D0D4AAA2E8AC548003ABC8F /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				6D0D4AB02E8AC548003ABC8F /* thecode-macos Extension */,
-			);
-			name = "thecode-macos Extension";
-			productName = "thecode-macos Extension";
-			productReference = 6D0D4AAC2E8AC548003ABC8F /* thecode-macos Extension.appex */;
-			productType = "com.apple.product-type.app-extension";
 		};
 		6D47B00A2EDC7C4A00AF712A /* thecode-autofill */ = {
 			isa = PBXNativeTarget;
@@ -666,9 +601,6 @@
 						CreatedOnToolsVersion = 26.0.1;
 						TestTargetID = 6D0D4A7C2E8AC547003ABC8F;
 					};
-					6D0D4AAB2E8AC548003ABC8F = {
-						CreatedOnToolsVersion = 26.0.1;
-					};
 					6D47B00A2EDC7C4A00AF712A = {
 						CreatedOnToolsVersion = 26.1.1;
 					};
@@ -696,7 +628,6 @@
 				6D0D4A7C2E8AC547003ABC8F /* TheCode for Mac */,
 				6D0D4A952E8AC548003ABC8F /* thecode-macosTests */,
 				6D0D4A9F2E8AC548003ABC8F /* thecode-macosUITests */,
-				6D0D4AAB2E8AC548003ABC8F /* thecode-macos Extension */,
 				A9286D44E0F246123E386E7B /* thecode-macos-autofill */,
 			);
 		};
@@ -746,13 +677,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		6D0D4A9E2E8AC548003ABC8F /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		6D0D4AAA2E8AC548003ABC8F /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -826,13 +750,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		6D0D4AA82E8AC548003ABC8F /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		6D47B0072EDC7C4A00AF712A /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -880,11 +797,6 @@
 			isa = PBXTargetDependency;
 			target = 6D0D4A7C2E8AC547003ABC8F /* TheCode for Mac */;
 			targetProxy = 6D0D4AA12E8AC548003ABC8F /* PBXContainerItemProxy */;
-		};
-		6D0D4AAF2E8AC548003ABC8F /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 6D0D4AAB2E8AC548003ABC8F /* thecode-macos Extension */;
-			targetProxy = 6D0D4AAE2E8AC548003ABC8F /* PBXContainerItemProxy */;
 		};
 		6D47B0162EDC7C4A00AF712A /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -1288,82 +1200,6 @@
 			};
 			name = Release;
 		};
-		6D0D4AC72E8AC548003ABC8F /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
-				DEAD_CODE_STRIPPING = YES;
-				DEVELOPMENT_TEAM = F6YQ7T44NH;
-				ENABLE_APP_SANDBOX = YES;
-				ENABLE_HARDENED_RUNTIME = YES;
-				ENABLE_USER_SELECTED_FILES = readonly;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "thecode-macos Extension/Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "thecode-macos Extension";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-					"@executable_path/../../../../Frameworks",
-				);
-				MACOSX_DEPLOYMENT_TARGET = 14.6;
-				MARKETING_VERSION = 1.1;
-				OTHER_LDFLAGS = (
-					"-framework",
-					SafariServices,
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = fr.julsql.thecode.Extension;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-			};
-			name = Debug;
-		};
-		6D0D4AC82E8AC548003ABC8F /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
-				DEAD_CODE_STRIPPING = YES;
-				DEVELOPMENT_TEAM = F6YQ7T44NH;
-				ENABLE_APP_SANDBOX = YES;
-				ENABLE_HARDENED_RUNTIME = YES;
-				ENABLE_USER_SELECTED_FILES = readonly;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "thecode-macos Extension/Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "thecode-macos Extension";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-					"@executable_path/../../../../Frameworks",
-				);
-				MACOSX_DEPLOYMENT_TARGET = 14.6;
-				MARKETING_VERSION = 1.1;
-				OTHER_LDFLAGS = (
-					"-framework",
-					SafariServices,
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = fr.julsql.thecode.Extension;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-			};
-			name = Release;
-		};
 		6D0D4ACB2E8AC548003ABC8F /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1679,15 +1515,6 @@
 			buildConfigurations = (
 				6D0D499C2E8AC37A003ABC8F /* Debug */,
 				6D0D499D2E8AC37A003ABC8F /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		6D0D4AC62E8AC548003ABC8F /* Build configuration list for PBXNativeTarget "thecode-macos Extension" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				6D0D4AC72E8AC548003ABC8F /* Debug */,
-				6D0D4AC82E8AC548003ABC8F /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
