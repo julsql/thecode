@@ -4,6 +4,17 @@
 <dict>
 	<key>NSExtension</key>
 	<dict>
+		<key>NSExtensionAttributes</key>
+		<dict>
+			<!-- Requis sur macOS 15+/iOS 17+ pour que le système liste le
+			     provider dans « Remplissage auto. ». On ne fournit que des
+			     mots de passe (générés de façon déterministe). -->
+			<key>ASCredentialProviderExtensionCapabilities</key>
+			<dict>
+				<key>ProvidesPasswords</key>
+				<true/>
+			</dict>
+		</dict>
 		<key>NSExtensionPrincipalClass</key>
 		<string>$(PRODUCT_MODULE_NAME).CredentialProviderViewController</string>
 		<key>NSExtensionPointIdentifier</key>
