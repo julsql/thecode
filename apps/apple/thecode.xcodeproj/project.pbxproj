@@ -16,7 +16,6 @@
 		6D47B00C2EDC7C4A00AF712A /* AuthenticationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6D47AFF62EDC7B9300AF712A /* AuthenticationServices.framework */; };
 		6D47B0172EDC7C4A00AF712A /* thecode-autofill.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 6D47B00B2EDC7C4A00AF712A /* thecode-autofill.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		6D9D12F22EE0CB0300D2181E /* AuthenticationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6D47AFF62EDC7B9300AF712A /* AuthenticationServices.framework */; };
-		6D9D12FD2EE0CB0300D2181E /* test.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 6D9D12F12EE0CB0300D2181E /* test.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		8082053F89E82DB40A9C1DDD /* Swift-Big-Number-Core.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6563939875087D60FD6A6802 /* Swift-Big-Number-Core.swift */; };
 		A7AB93E0E9CA2FF7C2528A32 /* thecode-macos-autofill.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 603E8E144104C1AF9FC9FA7E /* thecode-macos-autofill.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		BBA429162865F67794BE1E57 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 369242748686486E14A8FDEA /* Cocoa.framework */; };
@@ -75,13 +74,6 @@
 			remoteGlobalIDString = 6D47B00A2EDC7C4A00AF712A;
 			remoteInfo = "thecode-autofill";
 		};
-		6D9D12FB2EE0CB0300D2181E /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 6D0D49382E8AC379003ABC8F /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 6D9D12F02EE0CB0300D2181E;
-			remoteInfo = test;
-		};
 		DDDFFBE2B913BC8E93AF0861 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 6D0D49382E8AC379003ABC8F /* Project object */;
@@ -98,7 +90,6 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				6D9D12FD2EE0CB0300D2181E /* test.appex in Embed Foundation Extensions */,
 				6D0D49742E8AC37A003ABC8F /* thecode-ios Extension.appex in Embed Foundation Extensions */,
 				6D47B0172EDC7C4A00AF712A /* thecode-autofill.appex in Embed Foundation Extensions */,
 			);
@@ -135,7 +126,6 @@
 		6D0D4AAC2E8AC548003ABC8F /* thecode-macos Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "thecode-macos Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
 		6D47AFF62EDC7B9300AF712A /* AuthenticationServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AuthenticationServices.framework; path = System/Library/Frameworks/AuthenticationServices.framework; sourceTree = SDKROOT; };
 		6D47B00B2EDC7C4A00AF712A /* thecode-autofill.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "thecode-autofill.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
-		6D9D12F12EE0CB0300D2181E /* test.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = test.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		7B47A588570C392E2CFDD3F7 /* ContentView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		926462236D22378C079D4A45 /* DomainNormalizer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DomainNormalizer.swift; sourceTree = "<group>"; };
 		A431C23B9087903EAC8625D1 /* AuthenticationServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AuthenticationServices.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/AuthenticationServices.framework; sourceTree = DEVELOPER_DIR; };
@@ -179,20 +169,6 @@
 				Info.plist,
 			);
 			target = 6D47B00A2EDC7C4A00AF712A /* thecode-autofill */;
-		};
-		6D9D13012EE0CB0300D2181E /* Exceptions for "test" folder in "test" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = 6D9D12F02EE0CB0300D2181E /* test */;
-		};
-		6D9D13022EE0CB1000D2181E /* Exceptions for "thecode-autofill" folder in "test" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				"/Localized: MainInterface.storyboard",
-			);
-			target = 6D9D12F02EE0CB0300D2181E /* test */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -270,7 +246,6 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				6D47B01B2EDC7C4A00AF712A /* Exceptions for "thecode-autofill" folder in "thecode-autofill" target */,
-				6D9D13022EE0CB1000D2181E /* Exceptions for "thecode-autofill" folder in "test" target */,
 			);
 			explicitFolders = (
 				Resources/data,
@@ -283,14 +258,6 @@
 			exceptions = (
 			);
 			path = Shared;
-			sourceTree = "<group>";
-		};
-		6D9D12F32EE0CB0300D2181E /* test */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				6D9D13012EE0CB0300D2181E /* Exceptions for "test" folder in "test" target */,
-			);
-			path = test;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -369,14 +336,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		6D9D12EE2EE0CB0300D2181E /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				6D9D12F22EE0CB0300D2181E /* AuthenticationServices.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -393,7 +352,6 @@
 				6D0D4A992E8AC548003ABC8F /* thecode-macosTests */,
 				6D0D4AA32E8AC548003ABC8F /* thecode-macosUITests */,
 				6D0D4AB02E8AC548003ABC8F /* thecode-macos Extension */,
-				6D9D12F32EE0CB0300D2181E /* test */,
 				6D47AFF52EDC7B9300AF712A /* Frameworks */,
 				6D0D49412E8AC379003ABC8F /* Products */,
 				ACCD8F8CE80DA758D46BC637 /* thecode-macos-autofill */,
@@ -413,7 +371,6 @@
 				6D0D4AA02E8AC548003ABC8F /* thecode-macosUITests.xctest */,
 				6D0D4AAC2E8AC548003ABC8F /* thecode-macos Extension.appex */,
 				6D47B00B2EDC7C4A00AF712A /* thecode-autofill.appex */,
-				6D9D12F12EE0CB0300D2181E /* test.appex */,
 				603E8E144104C1AF9FC9FA7E /* thecode-macos-autofill.appex */,
 			);
 			name = Products;
@@ -477,7 +434,6 @@
 			dependencies = (
 				6D0D49762E8AC37A003ABC8F /* PBXTargetDependency */,
 				6D47B0162EDC7C4A00AF712A /* PBXTargetDependency */,
-				6D9D12FC2EE0CB0300D2181E /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				6D0D49422E8AC379003ABC8F /* thecode */,
@@ -658,26 +614,6 @@
 			productReference = 6D47B00B2EDC7C4A00AF712A /* thecode-autofill.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
-		6D9D12F02EE0CB0300D2181E /* test */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 6D9D12FE2EE0CB0300D2181E /* Build configuration list for PBXNativeTarget "test" */;
-			buildPhases = (
-				6D9D12ED2EE0CB0300D2181E /* Sources */,
-				6D9D12EE2EE0CB0300D2181E /* Frameworks */,
-				6D9D12EF2EE0CB0300D2181E /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				6D9D12F32EE0CB0300D2181E /* test */,
-			);
-			name = test;
-			productName = test;
-			productReference = 6D9D12F12EE0CB0300D2181E /* test.appex */;
-			productType = "com.apple.product-type.app-extension";
-		};
 		A9286D44E0F246123E386E7B /* thecode-macos-autofill */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = B56AF13244F8291A63578FB7 /* Build configuration list for PBXNativeTarget "thecode-macos-autofill" */;
@@ -736,9 +672,6 @@
 					6D47B00A2EDC7C4A00AF712A = {
 						CreatedOnToolsVersion = 26.1.1;
 					};
-					6D9D12F02EE0CB0300D2181E = {
-						CreatedOnToolsVersion = 26.1.1;
-					};
 				};
 			};
 			buildConfigurationList = 6D0D493B2E8AC379003ABC8F /* Build configuration list for PBXProject "thecode" */;
@@ -764,7 +697,6 @@
 				6D0D4A952E8AC548003ABC8F /* thecode-macosTests */,
 				6D0D4A9F2E8AC548003ABC8F /* thecode-macosUITests */,
 				6D0D4AAB2E8AC548003ABC8F /* thecode-macos Extension */,
-				6D9D12F02EE0CB0300D2181E /* test */,
 				A9286D44E0F246123E386E7B /* thecode-macos-autofill */,
 			);
 		};
@@ -828,13 +760,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		6D47B0092EDC7C4A00AF712A /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		6D9D12EF2EE0CB0300D2181E /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -915,13 +840,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		6D9D12ED2EE0CB0300D2181E /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		FFBD5FC9489EB99D8DB8E7FF /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -972,11 +890,6 @@
 			isa = PBXTargetDependency;
 			target = 6D47B00A2EDC7C4A00AF712A /* thecode-autofill */;
 			targetProxy = 6D47B0152EDC7C4A00AF712A /* PBXContainerItemProxy */;
-		};
-		6D9D12FC2EE0CB0300D2181E /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 6D9D12F02EE0CB0300D2181E /* test */;
-			targetProxy = 6D9D12FB2EE0CB0300D2181E /* PBXContainerItemProxy */;
 		};
 		9BCBEBC9582FF508255A111A /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -1693,66 +1606,6 @@
 			};
 			name = Release;
 		};
-		6D9D12FF2EE0CB0300D2181E /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = test/test.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = F6YQ7T44NH;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = test/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = test;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = fr.julsql.thecode.test;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Debug;
-		};
-		6D9D13002EE0CB0300D2181E /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = test/test.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = F6YQ7T44NH;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = test/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = test;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = fr.julsql.thecode.test;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Release;
-		};
 		8487F661DAA0C9A6FDF17553 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1871,15 +1724,6 @@
 			buildConfigurations = (
 				6D47B0192EDC7C4A00AF712A /* Debug */,
 				6D47B01A2EDC7C4A00AF712A /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		6D9D12FE2EE0CB0300D2181E /* Build configuration list for PBXNativeTarget "test" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				6D9D12FF2EE0CB0300D2181E /* Debug */,
-				6D9D13002EE0CB0300D2181E /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
