@@ -6,7 +6,7 @@
 //
 
 import Testing
-@testable import thecode_macos
+@testable import TheCode_for_Mac
 
 struct thecode_macosTests {
 
