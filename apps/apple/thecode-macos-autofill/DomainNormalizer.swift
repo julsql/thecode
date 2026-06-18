@@ -1,16 +1,21 @@
 //
 //  DomainNormalizer.swift
-//  thecode-autofill
+//  thecode-macos-autofill
 //
 //  Aligné sur la fonction `getRegistrableDomain` des extensions Safari :
 //  on charge la même Public Suffix List depuis le bundle de l'extension
-//  et on l'applique au serviceIdentifier reçu d'iOS, qu'il soit URL
+//  et on l'applique au serviceIdentifier reçu de macOS, qu'il soit URL
 //  ou domaine, pour qu'instagram.com et www.instagram.com produisent
 //  le même mot de passe.
 //
 
 import Foundation
 import AuthenticationServices
+
+/// Marqueur servant à localiser le bundle de l'extension sans dépendre d'une
+/// classe métier (`DomainNormalizer` est un enum, or `Bundle(for:)` exige une
+/// classe). Rend la normalisation testable en isolation.
+private final class BundleToken {}
 
 enum DomainNormalizer {
 
@@ -26,7 +31,7 @@ enum DomainNormalizer {
     /// retombe sur une liste embarquée minimale (cf. `embeddedFallback`).
     private static func loadPublicSuffixes() -> Set<String> {
         let main = Bundle.main
-        let own  = Bundle(for: CredentialProviderViewController.self)
+        let own  = Bundle(for: BundleToken.self)
 
         let candidates: [URL?] = [
             main.url(forResource: "public_suffix_list",
