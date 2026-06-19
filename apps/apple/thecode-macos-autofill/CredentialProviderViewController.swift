@@ -6,11 +6,13 @@
 //  Cycle de vie :
 //    1. macOS instancie ce NSViewController et appelle prepareCredentialList(...)
 //       ou prepareInterfaceToProvideCredential(...) avec le domaine cible.
-//    2. La vue SwiftUI montre « mot de passe disponible pour {domaine} » —
-//       JAMAIS le mot de passe ni la clé. Si aucune clé n'est définie dans
-//       l'app, elle affiche un message invitant à la définir.
-//    3. AutofillModel déclenche Touch ID. Le mot de passe n'est calculé puis
-//       transmis à macOS qu'après authentification réussie.
+//    2. Si une clé est définie : AutofillModel déclenche Touch ID, puis le mot
+//       de passe est calculé et transmis à macOS après authentification.
+//    3. Si aucune clé n'est définie : contrairement à iOS, macOS ne présente
+//       pas l'UI custom de l'extension dans le flux Safari (la requête resterait
+//       sans réponse et figerait le navigateur). On annule donc la requête
+//       (pour libérer le navigateur) et on ouvre l'app principale pour que
+//       l'utilisateur y définisse sa clé.
 //
 
 import AuthenticationServices
@@ -56,8 +58,12 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
     override func prepareCredentialList(
         for serviceIdentifiers: [ASCredentialServiceIdentifier]
     ) {
-        guard let first = serviceIdentifiers.first else { return }
-        let domain = DomainNormalizer.normalize(first)
+        let domain: String
+        if let first = serviceIdentifiers.first {
+            domain = DomainNormalizer.normalize(first)
+        } else {
+            domain = ""
+        }
         Task { @MainActor in self.present(domain: domain) }
     }
 
@@ -68,17 +74,25 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
         Task { @MainActor in self.present(domain: domain) }
     }
 
-    /// Décide quoi afficher selon que la clé est définie ou non. Si elle l'est,
-    /// on lance directement Touch ID pour éviter une étape inutile ; sinon on
-    /// montre un message plutôt que d'enchaîner sur une auth qui ne pourrait
-    /// rien remplir.
+    /// Si la clé est définie, on lance directement Touch ID. Sinon, on annule la
+    /// requête (pour libérer le navigateur) puis on ouvre l'app.
     @MainActor
     private func present(domain: String) {
         model.domain = domain
         if isKeyDefined() {
             model.startBiometricIfNeeded()
         } else {
-            model.keyMissing = true
+            openHostAppForKeySetup()
+        }
+    }
+
+    /// Annule d'abord la requête — pour ne JAMAIS laisser le navigateur en
+    /// attente, quelle que soit la suite — puis ouvre l'app (best-effort) afin
+    /// que l'utilisateur définisse sa clé.
+    private func openHostAppForKeySetup() {
+        cancel()
+        if let url = URL(string: "thecode://set-key") {
+            NSWorkspace.shared.open(url)
         }
     }
 
