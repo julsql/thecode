@@ -19,10 +19,6 @@ final class AutofillModel: ObservableObject {
     @Published var busy: Bool = false
     @Published var errorMessage: String? = nil
 
-    /// Vrai quand aucune clé n'a été définie dans l'app : la vue affiche alors
-    /// un message d'invite au lieu du bouton d'authentification.
-    @Published var keyMissing: Bool = false
-
     /// Le ViewController s'enregistre ici pour recevoir les ordres d'achever
     /// ou d'annuler la requête.
     weak var controller: CredentialProviderViewController?

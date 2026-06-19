@@ -35,7 +35,7 @@ struct ContentView: View {
         VStack(spacing: 24) {
             Spacer()
 
-            Image(systemName: model.keyMissing ? "key.slash.fill" : "lock.shield.fill")
+            Image(systemName: "lock.shield.fill")
                 .font(.system(size: 64, weight: .regular))
                 .foregroundColor(.accentColor)
 
@@ -44,15 +44,7 @@ struct ContentView: View {
                     .font(.largeTitle)
                     .fontWeight(.bold)
 
-                if model.keyMissing {
-                    Text(L10n.t("Aucune clé définie", "No key defined"))
-                        .foregroundColor(.secondary)
-                    Text(L10n.t("Ouvrez TheCode et définissez votre clé pour pouvoir remplir les mots de passe.",
-                                "Open TheCode and set your key to be able to fill passwords."))
-                        .multilineTextAlignment(.center)
-                        .foregroundColor(.secondary)
-                        .padding(.horizontal, 24)
-                } else if model.domain.isEmpty {
+                if model.domain.isEmpty {
                     Text(L10n.t("Aucun domaine détecté", "No domain detected"))
                         .foregroundColor(.secondary)
                 } else {
@@ -76,25 +68,23 @@ struct ContentView: View {
 
             Spacer()
 
-            if !model.keyMissing {
-                Button {
-                    model.startBiometric()
-                } label: {
-                    HStack {
-                        Image(systemName: "touchid")
-                        Text(model.busy
-                             ? L10n.t("Authentification…", "Authenticating…")
-                             : L10n.t("Authentifier pour remplir", "Authenticate to fill"))
-                            .fontWeight(.semibold)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 6)
+            Button {
+                model.startBiometric()
+            } label: {
+                HStack {
+                    Image(systemName: "touchid")
+                    Text(model.busy
+                         ? L10n.t("Authentification…", "Authenticating…")
+                         : L10n.t("Authentifier pour remplir", "Authenticate to fill"))
+                        .fontWeight(.semibold)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .disabled(model.busy || model.domain.isEmpty)
-                .padding(.horizontal, 24)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 6)
             }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .disabled(model.busy || model.domain.isEmpty)
+            .padding(.horizontal, 24)
 
             Button(L10n.t("Annuler", "Cancel"), role: .cancel) {
                 model.cancel()

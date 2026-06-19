@@ -106,7 +106,7 @@
 		369242748686486E14A8FDEA /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
 		603E8E144104C1AF9FC9FA7E /* thecode-macos-autofill.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "thecode-macos-autofill.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
 		6563939875087D60FD6A6802 /* Swift-Big-Number-Core.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "Swift-Big-Number-Core.swift"; sourceTree = "<group>"; };
-		6B04E7345B746A236B70E825 /* public_suffix_list.dat */ = {isa = PBXFileReference; includeInIndex = 1; name = public_suffix_list.dat; path = Resources/data/public_suffix_list.dat; sourceTree = "<group>"; };
+		6B04E7345B746A236B70E825 /* public_suffix_list.dat */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; name = public_suffix_list.dat; path = Resources/data/public_suffix_list.dat; sourceTree = "<group>"; };
 		6D0D49402E8AC379003ABC8F /* TheCode.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TheCode.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6D0D495D2E8AC37A003ABC8F /* thecode-iosTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "thecode-iosTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		6D0D49672E8AC37A003ABC8F /* thecode-iosUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "thecode-iosUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -371,7 +371,6 @@
 				926462236D22378C079D4A45 /* DomainNormalizer.swift */,
 				6B04E7345B746A236B70E825 /* public_suffix_list.dat */,
 			);
-			name = "thecode-macos-autofill";
 			path = "thecode-macos-autofill";
 			sourceTree = "<group>";
 		};
@@ -1233,6 +1232,7 @@
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "thecode-macos/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = TheCode;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -1280,6 +1280,7 @@
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "thecode-macos/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = TheCode;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
