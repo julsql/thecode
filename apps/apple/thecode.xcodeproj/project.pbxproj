@@ -163,15 +163,11 @@
 		};
 		6D0D49602E8AC37A003ABC8F /* thecodeTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = thecodeTests;
 			sourceTree = "<group>";
 		};
 		6D0D496A2E8AC37A003ABC8F /* thecodeUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = thecodeUITests;
 			sourceTree = "<group>";
 		};
@@ -190,22 +186,16 @@
 		};
 		6D0D4A7E2E8AC547003ABC8F /* thecode-macos */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = "thecode-macos";
 			sourceTree = "<group>";
 		};
 		6D0D4A992E8AC548003ABC8F /* thecode-macosTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = "thecode-macosTests";
 			sourceTree = "<group>";
 		};
 		6D0D4AA32E8AC548003ABC8F /* thecode-macosUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = "thecode-macosUITests";
 			sourceTree = "<group>";
 		};
@@ -222,8 +212,6 @@
 		};
 		6D47B0322EDC849700AF712A /* Shared */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = Shared;
 			sourceTree = "<group>";
 		};
@@ -830,7 +818,7 @@
 				CODE_SIGN_ENTITLEMENTS = "thecode-macos-autofill/thecode_macos_autofill.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = F6YQ7T44NH;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_DEBUG_DYLIB = NO;
@@ -845,7 +833,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.6;
-				MARKETING_VERSION = 2.2;
+				MARKETING_VERSION = 2.3;
 				PRODUCT_BUNDLE_IDENTIFIER = "fr.julsql.thecode.macos-autofill";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
@@ -1222,7 +1210,7 @@
 				CODE_SIGN_ENTITLEMENTS = "thecode-macos/TheCode for Mac.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = F6YQ7T44NH;
 				ENABLE_APP_SANDBOX = YES;
@@ -1243,7 +1231,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.6;
-				MARKETING_VERSION = 2.2;
+				MARKETING_VERSION = 2.3;
 				OTHER_LDFLAGS = (
 					"-framework",
 					SafariServices,
@@ -1271,7 +1259,7 @@
 				CODE_SIGN_ENTITLEMENTS = "thecode-macos/TheCode for Mac.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = F6YQ7T44NH;
 				ENABLE_APP_SANDBOX = YES;
@@ -1291,7 +1279,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.6;
-				MARKETING_VERSION = 2.2;
+				MARKETING_VERSION = 2.3;
 				OTHER_LDFLAGS = (
 					"-framework",
 					SafariServices,
@@ -1467,7 +1455,7 @@
 				CODE_SIGN_ENTITLEMENTS = "thecode-macos-autofill/thecode_macos_autofill.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = F6YQ7T44NH;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_DEBUG_DYLIB = NO;
@@ -1482,7 +1470,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.6;
-				MARKETING_VERSION = 2.2;
+				MARKETING_VERSION = 2.3;
 				PRODUCT_BUNDLE_IDENTIFIER = "fr.julsql.thecode.macos-autofill";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
