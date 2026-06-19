@@ -264,7 +264,7 @@
 				6D47B00D2EDC7C4A00AF712A /* thecode-autofill */,
 				6D0D49602E8AC37A003ABC8F /* thecodeTests */,
 				6D0D496A2E8AC37A003ABC8F /* thecodeUITests */,
-					6D0D4A7E2E8AC547003ABC8F /* thecode-macos */,
+				6D0D4A7E2E8AC547003ABC8F /* thecode-macos */,
 				6D0D4A992E8AC548003ABC8F /* thecode-macosTests */,
 				6D0D4AA32E8AC548003ABC8F /* thecode-macosUITests */,
 				6D47AFF52EDC7B9300AF712A /* Frameworks */,
@@ -281,7 +281,7 @@
 				6D0D49402E8AC379003ABC8F /* TheCode.app */,
 				6D0D495D2E8AC37A003ABC8F /* thecode-iosTests.xctest */,
 				6D0D49672E8AC37A003ABC8F /* thecode-iosUITests.xctest */,
-					6D0D4A7D2E8AC547003ABC8F /* TheCode for Mac.app */,
+				6D0D4A7D2E8AC547003ABC8F /* TheCode for Mac.app */,
 				6D0D4A962E8AC548003ABC8F /* thecode-macosTests.xctest */,
 				6D0D4AA02E8AC548003ABC8F /* thecode-macosUITests.xctest */,
 				6D47B00B2EDC7C4A00AF712A /* thecode-autofill.appex */,
@@ -764,7 +764,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = TheCode.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = F6YQ7T44NH;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = thecode/Info.plist;
@@ -780,7 +780,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.2;
+				MARKETING_VERSION = 2.3;
 				PRODUCT_BUNDLE_IDENTIFIER = fr.julsql.thecode;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -800,7 +800,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = TheCode.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = F6YQ7T44NH;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = thecode/Info.plist;
@@ -816,7 +816,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.2;
+				MARKETING_VERSION = 2.3;
 				PRODUCT_BUNDLE_IDENTIFIER = fr.julsql.thecode;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -1228,7 +1228,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "thecode-autofill/thecode_autofill.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = F6YQ7T44NH;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "thecode-autofill/Info.plist";
@@ -1240,7 +1240,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 2.3;
 				PRODUCT_BUNDLE_IDENTIFIER = "fr.julsql.thecode.thecode-autofill";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -1258,7 +1258,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "thecode-autofill/thecode_autofill.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = F6YQ7T44NH;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "thecode-autofill/Info.plist";
@@ -1270,7 +1270,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 2.3;
 				PRODUCT_BUNDLE_IDENTIFIER = "fr.julsql.thecode.thecode-autofill";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
