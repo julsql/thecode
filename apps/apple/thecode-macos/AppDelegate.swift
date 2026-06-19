@@ -14,6 +14,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Override point for customization after application launch.
     }
 
+    /// Ouverture via le schéma `thecode://` (depuis l'extension AutoFill quand
+    /// aucune clé n'est définie) : on amène simplement l'app au premier plan
+    /// pour que l'utilisateur renseigne sa clé dans la vue principale.
+    func application(_ application: NSApplication, open urls: [URL]) {
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         return true
     }

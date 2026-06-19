@@ -5,11 +5,9 @@
 
 import SwiftUI
 import LocalAuthentication
-import SafariServices
 import AppKit
 
 let appGroupID = "group.fr.julsql.thecode.params"
-private let safariExtensionBundleID = "fr.julsql.thecode.Extension"
 
 // MARK: - Localisation (FR si système en français, EN sinon)
 
@@ -44,10 +42,6 @@ struct MainView: View {
     // Persiste tant que le process est vivant ; reset implicite si l'app
     // est tuée (le @State part avec elle).
     @State private var unlocked: Bool = false
-
-    // Statut de l'extension Safari
-    @State private var safariExtensionEnabled: Bool = false
-    @State private var safariStatusKnown: Bool = false
 
     // UI
     @State private var showInfoSheet: Bool = false
@@ -123,29 +117,18 @@ struct MainView: View {
                     Toggle(L10n.t("Chiffres", "Digits"), isOn: $chiState)
                 }
 
-                Section(header: Text(L10n.t("Extension Safari", "Safari extension"))) {
-                    HStack(spacing: 10) {
-                        Circle()
-                            .fill(safariStatusColor)
-                            .frame(width: 10, height: 10)
-                        Text(safariStatusText)
-                            .foregroundColor(.primary)
+                Section(header: Text(L10n.t("Remplissage automatique", "AutoFill"))) {
+                    Text(L10n.t(
+                        "TheCode peut remplir vos mots de passe dans Safari et les apps. Activez-le dans Réglages Système → Mots de passe → Options, puis cochez TheCode.",
+                        "TheCode can fill your passwords in Safari and apps. Enable it in System Settings → Passwords → Options, then tick TheCode."))
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
 
-                        Spacer()
-
-                        Button(action: refreshSafariStatus) {
-                            Image(systemName: "arrow.clockwise")
-                        }
-                        .buttonStyle(.borderless)
-                        .help(L10n.t("Rafraîchir", "Refresh"))
-                    }
-
-                    Button(action: openSafariSettings) {
+                    Button(action: openAutoFillSettings) {
                         HStack {
-                            Image(systemName: "safari")
-                            Text(safariExtensionEnabled
-                                 ? L10n.t("Ouvrir les paramètres de Safari", "Open Safari settings")
-                                 : L10n.t("Activer l'extension Safari", "Enable Safari extension"))
+                            Image(systemName: "key.fill")
+                            Text(L10n.t("Ouvrir les réglages de mots de passe",
+                                        "Open password settings"))
                         }
                     }
                 }
@@ -190,10 +173,6 @@ struct MainView: View {
         .preferredColorScheme(preferredScheme)
         .onAppear {
             applyAppAppearance()
-            refreshSafariStatus()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-            refreshSafariStatus()
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didResignActiveNotification)) { _ in
             // Dès qu'on bascule sur une autre app, on verrouille tout :
@@ -223,51 +202,25 @@ struct MainView: View {
         }
     }
 
-    // MARK: - Statut Safari
+    // MARK: - Réglages AutoFill
 
-    private var safariStatusText: String {
-        if !safariStatusKnown {
-            return L10n.t("Vérification…", "Checking…")
-        }
-        return safariExtensionEnabled
-            ? L10n.t("Activée dans Safari", "Active in Safari")
-            : L10n.t("Désactivée — cliquez pour configurer", "Disabled — click to set up")
-    }
-
-    private var safariStatusColor: Color {
-        guard safariStatusKnown else { return .secondary }
-        return safariExtensionEnabled ? .green : .red
-    }
-
-    private func refreshSafariStatus() {
-        SFSafariExtensionManager.getStateOfSafariExtension(withIdentifier: safariExtensionBundleID) { state, error in
-            DispatchQueue.main.async {
-                if let error = error {
-                    NSLog("[TheCode] getStateOfSafariExtension error: \(error.localizedDescription)")
-                }
-                self.safariStatusKnown = true
-                self.safariExtensionEnabled = state?.isEnabled ?? false
+    /// Ouvre le volet Mots de passe des Réglages Système (où l'utilisateur
+    /// active TheCode comme source de remplissage). Le deep-link direct n'est
+    /// pas garanti selon les versions de macOS : on retombe sinon sur
+    /// l'ouverture des Réglages Système.
+    private func openAutoFillSettings() {
+        let candidates = [
+            "x-apple.systempreferences:com.apple.Passwords-Settings.extension",
+            "x-apple.systempreferences:com.apple.preferences.password",
+        ]
+        for string in candidates {
+            if let url = URL(string: string), NSWorkspace.shared.open(url) {
+                return
             }
         }
-    }
-
-    private func openSafariSettings() {
-        SFSafariApplication.showPreferencesForExtension(withIdentifier: safariExtensionBundleID) { error in
-            guard let error = error else { return }
-            // SFErrorNoExtensionFound (code 1) : Safari n'a pas (encore)
-            // indexé l'extension. Ça arrive surtout en dev quand l'app
-            // tourne depuis DerivedData ; quitter et relancer Safari (ou
-            // déplacer l'app dans /Applications) règle le souci, mais en
-            // attendant on a au moins un fallback : on ouvre Safari pour
-            // que l'utilisateur puisse naviguer manuellement vers
-            // Réglages → Extensions.
-            NSLog("[TheCode] showPreferencesForExtension error: \(error.localizedDescription)")
-            DispatchQueue.main.async {
-                if let safariURL = NSWorkspace.shared.urlForApplication(
-                    withBundleIdentifier: "com.apple.Safari") {
-                    NSWorkspace.shared.open(safariURL)
-                }
-            }
+        if let settings = NSWorkspace.shared.urlForApplication(
+            withBundleIdentifier: "com.apple.systempreferences") {
+            NSWorkspace.shared.open(settings)
         }
     }
 
