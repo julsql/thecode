@@ -3,9 +3,12 @@
 //  thecode-macos-autofill
 //
 //  État partagé entre la vue SwiftUI et le NSViewController. La clé n'est
-//  jamais exposée à l'UI : la vue demande au modèle de déclencher l'auth
-//  Touch ID, et le modèle prévient le ViewController d'aller chercher la clé
-//  puis de remplir le credential.
+//  jamais exposée à l'UI : le modèle déclenche l'auth Touch ID, puis prévient
+//  le ViewController d'aller chercher la clé et de remplir le credential.
+//
+//  Règle clé : toute voie qui ne mène pas à `completeFill` doit annuler la
+//  requête (`controller?.cancel()`). Sinon l'extension ne répond jamais et le
+//  navigateur reste figé — notamment si l'utilisateur annule le prompt Touch ID.
 //
 
 import Foundation
@@ -17,7 +20,6 @@ final class AutofillModel: ObservableObject {
 
     @Published var domain: String = ""
     @Published var busy: Bool = false
-    @Published var errorMessage: String? = nil
 
     /// Le ViewController s'enregistre ici pour recevoir les ordres d'achever
     /// ou d'annuler la requête.
@@ -37,13 +39,11 @@ final class AutofillModel: ObservableObject {
     func startBiometric() {
         guard !busy else { return }
         guard !domain.isEmpty else {
-            errorMessage = L10n.t("Aucun domaine détecté pour cette requête.",
-                                  "No domain detected for this request.")
+            controller?.cancel()
             return
         }
 
         busy = true
-        errorMessage = nil
 
         let ctx = LAContext()
         var nsError: NSError?
@@ -51,8 +51,7 @@ final class AutofillModel: ObservableObject {
         // session en fallback.
         guard ctx.canEvaluatePolicy(.deviceOwnerAuthentication, error: &nsError) else {
             busy = false
-            errorMessage = L10n.t("Aucune méthode d'authentification n'est configurée sur l'appareil.",
-                                  "No authentication method is set up on this device.")
+            controller?.cancel()
             return
         }
 
@@ -60,7 +59,7 @@ final class AutofillModel: ObservableObject {
             .deviceOwnerAuthentication,
             localizedReason: L10n.t("Confirmez pour autoriser TheCode à utiliser votre clé",
                                     "Confirm to allow TheCode to use your key")
-        ) { [weak self] success, evalError in
+        ) { [weak self] success, _ in
             DispatchQueue.main.async {
                 guard let self else { return }
                 self.busy = false
@@ -69,8 +68,9 @@ final class AutofillModel: ObservableObject {
                     // completeFill, dans l'extension, après auth.
                     self.controller?.completeFill(domain: self.domain)
                 } else {
-                    self.errorMessage = evalError?.localizedDescription
-                        ?? L10n.t("Authentification annulée.", "Authentication cancelled.")
+                    // Annulation / échec de l'auth : on annule la requête pour
+                    // ne pas laisser le navigateur en attente.
+                    self.controller?.cancel()
                 }
             }
         }
