@@ -17,8 +17,8 @@ const errorContainer = document.getElementById('errorContainer');
 const lengthInput = document.getElementById('length');
 const minInput = document.getElementById('lowercase');
 const majInput = document.getElementById('uppercase');
-const symInput = document.getElementById('numbers');
-const chiInput = document.getElementById('symbols');
+const symInput = document.getElementById('symbols');
+const chiInput = document.getElementById('numbers');
 
 if (typeof browser === "undefined") {
     var browser = chrome;

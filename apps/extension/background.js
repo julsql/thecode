@@ -274,5 +274,5 @@ async function hashToBigInt(input) {
 
 
 if (typeof module !== "undefined") {
-    module.exports = { generatePassword, buildPasswordResult, buildCharset, calculateEntropyBits, getSecurityLevel, convertToBase, applyCharsetReplacement, getUniquePosition, hashToBigInt };
+    module.exports = { generatePassword, buildCharset, calculateEntropyBits, getSecurityLevel, convertToBase, applyCharsetReplacement, getUniquePosition, hashToBigInt };
 }
