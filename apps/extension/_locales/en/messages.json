@@ -4,7 +4,7 @@
         "description": "The display name for the extension."
     },
     "extension_description": {
-        "message": "Detects password fields and suggests a password derived from the key + site (does not store the password).",
+        "message": "Generate secure, unique passwords for every site from a single secret key. No storage, no risk.",
         "description": "Description of what the extension does."
     }
 }

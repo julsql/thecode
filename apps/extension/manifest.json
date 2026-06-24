@@ -3,7 +3,7 @@
   "default_locale": "fr",
   "name": "__MSG_extension_name__",
   "description": "__MSG_extension_description__",
-  "version": "2.0",
+  "version": "2.2.1",
   "license": "Apache-2.0",
   "permissions": [
     "storage",
@@ -50,6 +50,6 @@
       "128": "images/128.png",
       "256": "images/256.png",
       "512": "images/512.png"
-  }
+    }
   }
 }
