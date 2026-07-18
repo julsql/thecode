@@ -5,6 +5,5 @@ services:
     build: .
     image: thecode:latest
     container_name: thecode
-    restart: unless-stopped
     ports:
-      - "127.0.0.1:8002:80"  # hôte:container
+      - "8002:80"
