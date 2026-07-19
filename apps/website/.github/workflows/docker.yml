@@ -1,7 +1,7 @@
 name: Build & push image
 
 # Construit l'image du site et la pousse sur GHCR (ghcr.io).
-# Le deploiement k3s est fait separement (manuel pour l'instant, automatise en phase 4).
+# Le deploiement est declenche par la CI : notification a Keel (webhook) apres le push.
 
 on:
   push:
