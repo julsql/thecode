@@ -1,7 +1,6 @@
 # thecode (CLI)
 
-[![tests](https://github.com/TheCodeDevLab/thecode-cli/actions/workflows/tests.yml/badge.svg)](https://github.com/TheCodeDevLab/thecode-cli/actions/workflows/tests.yml)
-[![CodeQL](https://github.com/TheCodeDevLab/thecode-cli/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/TheCodeDevLab/thecode-cli/security/code-scanning)
+[![tests](https://github.com/julsql/thecode-cli/actions/workflows/tests.yml/badge.svg)](https://github.com/julsql/thecode-cli/actions/workflows/tests.yml)
 [![Python](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](https://opensource.org/licenses/MIT)
 
