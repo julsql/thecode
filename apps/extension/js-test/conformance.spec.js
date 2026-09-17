@@ -24,12 +24,7 @@ describe("conformance v1 (vecteurs partages, figes)", () => {
 
   it("utilise les memes alphabets que la specification partagee", () => {
     const { lower, upper, symbols, numbers } = vectors.v1.alphabets;
-    expect(buildCharset(true, true, true, true)).toStrictEqual([
-      lower,
-      upper,
-      symbols,
-      numbers,
-    ]);
+    expect(buildCharset(true, true, true, true)).toStrictEqual([lower, upper, symbols, numbers]);
   });
 
   describe.each(vectors.v1.cases.map((c) => [c.id, c]))("%s", (_id, c) => {
@@ -42,7 +37,7 @@ describe("conformance v1 (vecteurs partages, figes)", () => {
         lower,
         upper,
         symbols,
-        numbers
+        numbers,
       );
       expect(res.mdp).toBe(c.expected);
     });
@@ -56,7 +51,7 @@ describe("conformance v1 (vecteurs partages, figes)", () => {
         lower,
         upper,
         symbols,
-        numbers
+        numbers,
       );
       expect(res.bits).toBe(c.bits);
     });

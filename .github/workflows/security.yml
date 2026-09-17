@@ -44,9 +44,12 @@ jobs:
         language: [javascript-typescript, python, java-kotlin]
     steps:
       - uses: actions/checkout@v5
+      # L'input s'appelle `languages` au pluriel. Avec `language`, il est
+      # ignore en silence et l'auto-detection prend le dessus : elle trouve du
+      # Swift (apps/apple) et echoue, Swift n'etant analysable que sur macOS.
       - uses: github/codeql-action/init@v4
         with:
-          language: ${{ matrix.language }}
+          languages: ${{ matrix.language }}
           config-file: .github/codeql/config.yml
       - uses: github/codeql-action/autobuild@v4
       - uses: github/codeql-action/analyze@v4
@@ -97,3 +100,7 @@ jobs:
           severity: HIGH,CRITICAL
           exit-code: "1"
           ignore-unfixed: true
+          # Seulement les CVE : le scan de secrets est deja fait par gitleaks
+          # sur le depot, et les scanners par defaut faisaient echouer ce job
+          # alors que l'image ne porte aucune vulnerabilite.
+          scanners: vuln

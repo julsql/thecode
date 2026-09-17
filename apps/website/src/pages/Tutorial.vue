@@ -3,29 +3,31 @@
     <header class="page-hero">
       <div class="page-hero-inner">
         <div class="page-hero-icon">
-          <img src="https://img.icons8.com/?size=100&id=SRHPFGVQjytQ&format=png&color=000000" alt=""/>
+          <img
+            src="https://img.icons8.com/?size=100&id=SRHPFGVQjytQ&format=png&color=000000"
+            alt=""
+          />
         </div>
-        <h1>{{ t('tutorial_title') }}</h1>
-        <p class="page-hero-sub">{{ t('tutorial_subtitle') }}</p>
+        <h1>{{ t("tutorial_title") }}</h1>
+        <p class="page-hero-sub">{{ t("tutorial_subtitle") }}</p>
       </div>
     </header>
 
     <div class="content-container fadeIn">
       <div class="content-card">
-
-        <p class="intro">{{ t('tutorial_intro') }}</p>
+        <p class="intro">{{ t("tutorial_intro") }}</p>
 
         <div class="tabs" role="tablist">
           <button
-              v-for="p in platforms"
-              :key="p.id"
-              type="button"
-              class="tab"
-              :class="{ 'is-active': active === p.id }"
-              :aria-selected="active === p.id"
-              @click="active = p.id"
+            v-for="p in platforms"
+            :key="p.id"
+            type="button"
+            class="tab"
+            :class="{ 'is-active': active === p.id }"
+            :aria-selected="active === p.id"
+            @click="active = p.id"
           >
-            <img :src="p.icon" alt="" class="tab-icon"/>
+            <img :src="p.icon" alt="" class="tab-icon" />
             <span>{{ t(p.titleKey) }}</span>
           </button>
         </div>
@@ -45,10 +47,10 @@
         </article>
 
         <section class="help">
-          <h2>{{ t('tutorial_help_h') }}</h2>
-          <p>{{ t('tutorial_help_p') }}</p>
+          <h2>{{ t("tutorial_help_h") }}</h2>
+          <p>{{ t("tutorial_help_p") }}</p>
           <router-link :to="localePath('contact')" class="cta-link cta-link--alt">
-            {{ t('tutorial_help_cta') }}
+            {{ t("tutorial_help_cta") }}
           </router-link>
         </section>
       </div>
@@ -57,16 +59,16 @@
 </template>
 
 <script lang="ts">
-import {defineComponent, ref} from 'vue';
-import {useI18n} from '@/i18n';
-import type {TranslationKey} from '@/i18n';
-import ChromeIcon from '@/assets/chrome.png';
-import FirefoxIcon from '@/assets/firefox.png';
-import SafariIcon from '@/assets/safari.png';
-import AppleIcon from '@/assets/apple.png';
-import AndroidIcon from '@/assets/android.png';
+import { defineComponent, ref } from "vue";
+import { useI18n } from "@/i18n";
+import type { TranslationKey } from "@/i18n";
+import ChromeIcon from "@/assets/chrome.png";
+import FirefoxIcon from "@/assets/firefox.png";
+import SafariIcon from "@/assets/safari.png";
+import AppleIcon from "@/assets/apple.png";
+import AndroidIcon from "@/assets/android.png";
 
-type PlatformId = 'ios' | 'android' | 'chrome' | 'firefox' | 'safari';
+type PlatformId = "ios" | "android" | "chrome" | "firefox" | "safari";
 
 interface PlatformGuide {
   id: PlatformId;
@@ -80,71 +82,71 @@ interface PlatformGuide {
 
 const platforms: PlatformGuide[] = [
   {
-    id: 'ios',
-    titleKey: 'tutorial_ios_h',
-    introKey: 'tutorial_ios_intro',
+    id: "ios",
+    titleKey: "tutorial_ios_h",
+    introKey: "tutorial_ios_intro",
     steps: [
-      'tutorial_ios_s1',
-      'tutorial_ios_s2',
-      'tutorial_ios_s3',
-      'tutorial_ios_s4',
-      'tutorial_ios_s5',
-      'tutorial_ios_s6',
+      "tutorial_ios_s1",
+      "tutorial_ios_s2",
+      "tutorial_ios_s3",
+      "tutorial_ios_s4",
+      "tutorial_ios_s5",
+      "tutorial_ios_s6",
     ],
-    ctaKey: 'tutorial_ios_cta',
+    ctaKey: "tutorial_ios_cta",
     icon: AppleIcon,
-    url: 'https://apps.apple.com/app/thecode-password-manager/id6753169043',
+    url: "https://apps.apple.com/app/thecode-password-manager/id6753169043",
   },
   {
-    id: 'android',
-    titleKey: 'tutorial_android_h',
-    steps: ['tutorial_android_s1', 'tutorial_android_s2', 'tutorial_android_s3'],
-    ctaKey: 'tutorial_android_cta',
+    id: "android",
+    titleKey: "tutorial_android_h",
+    steps: ["tutorial_android_s1", "tutorial_android_s2", "tutorial_android_s3"],
+    ctaKey: "tutorial_android_cta",
     icon: AndroidIcon,
-    url: 'https://play.google.com/store/apps/details?id=fr.juliette.thecode&hl=fr',
+    url: "https://play.google.com/store/apps/details?id=fr.juliette.thecode&hl=fr",
   },
   {
-    id: 'chrome',
-    titleKey: 'tutorial_chrome_h',
-    steps: ['tutorial_chrome_s1', 'tutorial_chrome_s2', 'tutorial_chrome_s3', 'tutorial_chrome_s4'],
-    ctaKey: 'tutorial_chrome_cta',
+    id: "chrome",
+    titleKey: "tutorial_chrome_h",
+    steps: ["tutorial_chrome_s1", "tutorial_chrome_s2", "tutorial_chrome_s3", "tutorial_chrome_s4"],
+    ctaKey: "tutorial_chrome_cta",
     icon: ChromeIcon,
-    url: 'https://chromewebstore.google.com/detail/thecode/jeknefpalcipdlnbeboefonmnlejepen',
+    url: "https://chromewebstore.google.com/detail/thecode/jeknefpalcipdlnbeboefonmnlejepen",
   },
   {
-    id: 'firefox',
-    titleKey: 'tutorial_firefox_h',
-    steps: ['tutorial_firefox_s1', 'tutorial_firefox_s2', 'tutorial_firefox_s3'],
-    ctaKey: 'tutorial_firefox_cta',
+    id: "firefox",
+    titleKey: "tutorial_firefox_h",
+    steps: ["tutorial_firefox_s1", "tutorial_firefox_s2", "tutorial_firefox_s3"],
+    ctaKey: "tutorial_firefox_cta",
     icon: FirefoxIcon,
-    url: 'https://addons.mozilla.org/fr/firefox/addon/thecode/',
+    url: "https://addons.mozilla.org/fr/firefox/addon/thecode/",
   },
   {
-    id: 'safari',
-    titleKey: 'tutorial_safari_h',
-    steps: ['tutorial_safari_s1', 'tutorial_safari_s2', 'tutorial_safari_s3', 'tutorial_safari_s4'],
-    ctaKey: 'tutorial_safari_cta',
+    id: "safari",
+    titleKey: "tutorial_safari_h",
+    steps: ["tutorial_safari_s1", "tutorial_safari_s2", "tutorial_safari_s3", "tutorial_safari_s4"],
+    ctaKey: "tutorial_safari_cta",
     icon: SafariIcon,
-    url: 'https://apps.apple.com/app/thecode-password-manager/id6753169043',
+    url: "https://apps.apple.com/app/thecode-password-manager/id6753169043",
   },
 ];
 
 function detectPlatform(): PlatformId {
-  if (typeof navigator === 'undefined') return 'chrome';
-  const ua = navigator.userAgent || '';
-  if (/iPad|iPhone|iPod/.test(ua)) return 'ios';
-  if (/Android/.test(ua)) return 'android';
-  if (/Firefox\//.test(ua)) return 'firefox';
-  if (/Safari/.test(ua) && !/Chrome|Chromium/.test(ua)) return 'safari';
-  return 'chrome';
+  if (typeof navigator === "undefined") return "chrome";
+  const ua = navigator.userAgent || "";
+  if (/iPad|iPhone|iPod/.test(ua)) return "ios";
+  if (/Android/.test(ua)) return "android";
+  if (/Firefox\//.test(ua)) return "firefox";
+  if (/Safari/.test(ua) && !/Chrome|Chromium/.test(ua)) return "safari";
+  return "chrome";
 }
 
 export default defineComponent({
-  name: 'Tutorial',
+  name: "Tutorial",
   setup() {
-    const {t, localePath} = useI18n();
+    const { t, localePath } = useI18n();
     const active = ref<PlatformId>(detectPlatform());
-    return {t, localePath, platforms, active};
+    return { t, localePath, platforms, active };
   },
 });
 </script>
@@ -258,7 +260,11 @@ export default defineComponent({
   font-weight: 600;
   font-size: 0.92rem;
   cursor: pointer;
-  transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
 }
 
 .tab:hover {
@@ -354,7 +360,9 @@ h2 {
   border-radius: 999px;
   background: linear-gradient(135deg, rgba(166, 77, 121, 0.25), rgba(106, 30, 85, 0.25));
   border: 1px solid rgba(166, 77, 121, 0.4);
-  transition: transform 0.2s ease, background 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease;
 }
 
 .cta-link:hover {

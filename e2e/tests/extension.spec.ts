@@ -40,7 +40,8 @@ test("l'extension est chargee par le navigateur", async () => {
   // Le service worker MV3 est la preuve que le manifeste a ete accepte : une
   // erreur de manifeste empeche purement et simplement son enregistrement.
   const worker =
-    context.serviceWorkers()[0] ?? (await context.waitForEvent("serviceworker", { timeout: 10_000 }));
+    context.serviceWorkers()[0] ??
+    (await context.waitForEvent("serviceworker", { timeout: 10_000 }));
   expect(worker.url()).toContain("background.js");
 });
 

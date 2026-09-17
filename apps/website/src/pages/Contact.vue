@@ -3,58 +3,67 @@
     <header class="page-hero">
       <div class="page-hero-inner">
         <div class="page-hero-icon">
-          <img src="https://img.icons8.com/?size=100&id=69NT4MMdIuAw&format=png&color=000000" alt=""/>
+          <img
+            src="https://img.icons8.com/?size=100&id=69NT4MMdIuAw&format=png&color=000000"
+            alt=""
+          />
         </div>
-        <h1>{{ t('contact_title') }}</h1>
-        <p class="page-hero-sub">{{ t('contact_subtitle') }}</p>
+        <h1>{{ t("contact_title") }}</h1>
+        <p class="page-hero-sub">{{ t("contact_subtitle") }}</p>
       </div>
     </header>
 
     <div class="content-container fadeIn">
       <div class="cards">
-
         <a class="contact-card" href="mailto:contact@thecode.julsql.fr">
           <div class="contact-card-icon">
-            <img src="https://img.icons8.com/?size=100&id=LPcVDft9Isqt&format=png&color=000000" alt=""/>
+            <img
+              src="https://img.icons8.com/?size=100&id=LPcVDft9Isqt&format=png&color=000000"
+              alt=""
+            />
           </div>
-          <h2>{{ t('contact_email_h') }}</h2>
-          <p>{{ t('contact_email_p') }}</p>
+          <h2>{{ t("contact_email_h") }}</h2>
+          <p>{{ t("contact_email_p") }}</p>
           <span class="contact-card-link">contact@thecode.julsql.fr</span>
         </a>
 
-        <a class="contact-card" href="https://github.com/TheCodeDevLab" target="_blank" rel="noopener">
+        <a
+          class="contact-card"
+          href="https://github.com/TheCodeDevLab"
+          target="_blank"
+          rel="noopener"
+        >
           <div class="contact-card-icon">
-            <img :src="GithubIcon" alt=""/>
+            <img :src="GithubIcon" alt="" />
           </div>
-          <h2>{{ t('contact_github_h') }}</h2>
-          <p>{{ t('contact_github_p') }}</p>
-          <span class="contact-card-link">{{ t('contact_github_cta') }} →</span>
+          <h2>{{ t("contact_github_h") }}</h2>
+          <p>{{ t("contact_github_p") }}</p>
+          <span class="contact-card-link">{{ t("contact_github_cta") }} →</span>
         </a>
 
         <router-link class="contact-card contact-card--soft" :to="localePath('privacy')">
           <div class="contact-card-icon">
-            <img src="https://img.icons8.com/?size=200&id=12324&format=png&color=ffffff" alt=""/>
+            <img src="https://img.icons8.com/?size=200&id=12324&format=png&color=ffffff" alt="" />
           </div>
-          <h2>{{ t('contact_privacy_h') }}</h2>
-          <p>{{ t('contact_privacy_p') }}</p>
-          <span class="contact-card-link">{{ t('contact_privacy_cta') }} →</span>
+          <h2>{{ t("contact_privacy_h") }}</h2>
+          <p>{{ t("contact_privacy_p") }}</p>
+          <span class="contact-card-link">{{ t("contact_privacy_cta") }} →</span>
         </router-link>
-
       </div>
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import {defineComponent} from 'vue';
-import {useI18n} from '@/i18n';
-import GithubIcon from '@/assets/github.png';
+import { defineComponent } from "vue";
+import { useI18n } from "@/i18n";
+import GithubIcon from "@/assets/github.png";
 
 export default defineComponent({
-  name: 'Contact',
+  name: "Contact",
   setup() {
-    const {t, localePath} = useI18n();
-    return {t, localePath, GithubIcon};
+    const { t, localePath } = useI18n();
+    return { t, localePath, GithubIcon };
   },
 });
 </script>
@@ -149,7 +158,10 @@ export default defineComponent({
   color: var(--text);
   text-decoration: none;
   backdrop-filter: blur(10px);
-  transition: transform 0.25s ease, border-color 0.25s ease, background 0.25s ease;
+  transition:
+    transform 0.25s ease,
+    border-color 0.25s ease,
+    background 0.25s ease;
 }
 
 .contact-card:hover {

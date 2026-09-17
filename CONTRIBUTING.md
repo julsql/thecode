@@ -10,11 +10,11 @@ chaque pull request.
 
 ## `shared/` est la source de vérité
 
-| Fichier | Rôle |
-|---|---|
-| `test-vectors.json` | Vecteurs v1 **figés** — ces mots de passe sont en production |
-| `canonical-site-cases.json` | Canonicalisation des domaines et divergences connues |
-| `public_suffix_list.dat` | Liste des suffixes publics |
+| Fichier                     | Rôle                                                         |
+| --------------------------- | ------------------------------------------------------------ |
+| `test-vectors.json`         | Vecteurs v1 **figés** — ces mots de passe sont en production |
+| `canonical-site-cases.json` | Canonicalisation des domaines et divergences connues         |
+| `public_suffix_list.dat`    | Liste des suffixes publics                                   |
 
 Ces fichiers sont **copiés** vers chaque toolchain plutôt que référencés : Xcode
 et Gradle gèrent mal les références hors projet. Après toute modification :

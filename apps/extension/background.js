@@ -1,5 +1,5 @@
 if (typeof browser === "undefined" && typeof chrome !== "undefined") {
-    var browser = chrome;
+  var browser = chrome;
 }
 
 let psl = [];
@@ -12,13 +12,14 @@ let psl = [];
 // chargement du module, pour que les fonctions pures restent testables.
 const pslReady = browser?.runtime?.getURL
   ? fetch(browser.runtime.getURL("data/public_suffix_list.dat"))
-      .then(r => r.text())
-      .then(t => {
-        psl = t.split('\n')
-          .map(l => l.trim())
-          .filter(l => l && !l.startsWith('//'));
+      .then((r) => r.text())
+      .then((t) => {
+        psl = t
+          .split("\n")
+          .map((l) => l.trim())
+          .filter((l) => l && !l.startsWith("//"));
       })
-      .catch(err => {
+      .catch((err) => {
         console.error("TheCode: échec du chargement de la PSL", err);
       })
   : Promise.resolve();
@@ -28,11 +29,11 @@ const pslReady = browser?.runtime?.getURL
 const MIN_LENGTH = 4;
 const MAX_LENGTH = 40;
 const DEFAULT_PARAMS = {
-    lengthNumber: 20,
-    minState: true,
-    majState: true,
-    symState: true,
-    chiState: true,
+  lengthNumber: 20,
+  minState: true,
+  majState: true,
+  symState: true,
+  chiState: true,
 };
 
 // La clé reste volontairement en mémoire seule : elle disparaît avec le
@@ -48,67 +49,71 @@ let encodingKey = null;
 let params = { ...DEFAULT_PARAMS };
 
 function clampLength(value) {
-    const n = parseInt(value, 10);
-    if (Number.isNaN(n)) return DEFAULT_PARAMS.lengthNumber;
-    return Math.min(MAX_LENGTH, Math.max(MIN_LENGTH, n));
+  const n = parseInt(value, 10);
+  if (Number.isNaN(n)) return DEFAULT_PARAMS.lengthNumber;
+  return Math.min(MAX_LENGTH, Math.max(MIN_LENGTH, n));
 }
 
 /// Normalise ce qui sort du stockage : anciennes clés (`length`,
 /// `lenghtNumber`) incluses, pour ne pas perdre les réglages déjà enregistrés
 /// par une version précédente de l'extension.
 function normalizeParams(raw = {}) {
-    const rawLength = raw.lengthNumber ?? raw.lenghtNumber ?? raw.length;
-    return {
-        lengthNumber: rawLength === undefined
-            ? DEFAULT_PARAMS.lengthNumber
-            : clampLength(rawLength),
-        minState: raw.minState ?? DEFAULT_PARAMS.minState,
-        majState: raw.majState ?? DEFAULT_PARAMS.majState,
-        symState: raw.symState ?? DEFAULT_PARAMS.symState,
-        chiState: raw.chiState ?? DEFAULT_PARAMS.chiState,
-    };
+  const rawLength = raw.lengthNumber ?? raw.lenghtNumber ?? raw.length;
+  return {
+    lengthNumber: rawLength === undefined ? DEFAULT_PARAMS.lengthNumber : clampLength(rawLength),
+    minState: raw.minState ?? DEFAULT_PARAMS.minState,
+    majState: raw.majState ?? DEFAULT_PARAMS.majState,
+    symState: raw.symState ?? DEFAULT_PARAMS.symState,
+    chiState: raw.chiState ?? DEFAULT_PARAMS.chiState,
+  };
 }
 
 /// Relit les paramètres depuis le stockage. Appelé avant chaque génération :
 /// c'est ce qui garantit qu'un réglage modifié dans la popup s'applique
 /// immédiatement, y compris après un redémarrage du service worker.
 async function loadParams() {
-    const store = browser?.storage?.local;
-    if (!store) return params;
-    try {
-        const stored = await store.get([
-            'lengthNumber', 'lenghtNumber', 'length',
-            'minState', 'majState', 'symState', 'chiState',
-        ]);
-        params = normalizeParams(stored);
-    } catch (e) {
-        console.error("TheCode: échec de la lecture des paramètres", e);
-    }
-    return params;
+  const store = browser?.storage?.local;
+  if (!store) return params;
+  try {
+    const stored = await store.get([
+      "lengthNumber",
+      "lenghtNumber",
+      "length",
+      "minState",
+      "majState",
+      "symState",
+      "chiState",
+    ]);
+    params = normalizeParams(stored);
+  } catch (e) {
+    console.error("TheCode: échec de la lecture des paramètres", e);
+  }
+  return params;
 }
 
 async function saveParams(next) {
-    params = normalizeParams(next);
-    const store = browser?.storage?.local;
-    if (!store) return params;
-    try {
-        await store.set(params);
-        // Nettoie les clés héritées pour ne plus jamais les relire.
-        await store.remove(['lenghtNumber', 'length']);
-    } catch (e) {
-        console.error("TheCode: échec de l'écriture des paramètres", e);
-    }
-    return params;
+  params = normalizeParams(next);
+  const store = browser?.storage?.local;
+  if (!store) return params;
+  try {
+    await store.set(params);
+    // Nettoie les clés héritées pour ne plus jamais les relire.
+    await store.remove(["lenghtNumber", "length"]);
+  } catch (e) {
+    console.error("TheCode: échec de l'écriture des paramètres", e);
+  }
+  return params;
 }
 
 // Réhydratation au (re)démarrage du worker + suivi des changements, pour que
 // deux popups ou fenêtres ouvertes restent cohérentes.
 loadParams();
 browser?.storage?.onChanged?.addListener((changes, area) => {
-    if (area !== 'local') return;
-    const touched = Object.keys(changes).some(k => k in DEFAULT_PARAMS
-        || k === 'lenghtNumber' || k === 'length');
-    if (touched) loadParams();
+  if (area !== "local") return;
+  const touched = Object.keys(changes).some(
+    (k) => k in DEFAULT_PARAMS || k === "lenghtNumber" || k === "length",
+  );
+  if (touched) loadParams();
 });
 
 /**
@@ -123,97 +128,105 @@ browser?.storage?.onChanged?.addListener((changes, area) => {
  * legitime n'est bloque ici.
  */
 const PRIVILEGED_ACTIONS = new Set([
-    'getEncodingKey',
-    'setEncodingKey',
-    'clearEncodingKey',
-    'checkEncodingKey',
-    'setParams',
+  "getEncodingKey",
+  "setEncodingKey",
+  "clearEncodingKey",
+  "checkEncodingKey",
+  "setParams",
 ]);
 
 function isFromExtensionPage(sender) {
-    return !sender || sender.tab === undefined;
+  return !sender || sender.tab === undefined;
 }
 
 browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    (async () => {
-        if (PRIVILEGED_ACTIONS.has(request.action) && !isFromExtensionPage(sender)) {
-            sendResponse({ error: 'action reservee a l\'extension' });
-            return;
-        }
-        if (request.action === 'checkEncodingKey') {
-            sendResponse({ hasEncodingKey: !!encodingKey });
-        } else if (request.action === 'getEncodingKey') {
-            sendResponse({ encodingKey });
-        } else if (request.action === 'setEncodingKey') {
-            try {
-                encodingKey = request.encodingKey;
-                sendResponse({ ok: true });
-            } catch (e) {
-                sendResponse({ ok: false, error: e.message });
-            }
-        } else if (request.action === 'getParams') {
-            sendResponse({ ok: true, params: await loadParams() });
-        } else if (request.action === 'setParams') {
-            try {
-                sendResponse({ ok: true, params: await saveParams(request.data) });
-            } catch (e) {
-                sendResponse({ ok: false, error: e.message });
-            }
-        } else if (request.action === 'clearEncodingKey') {
-            encodingKey = null;
-            sendResponse({ ok: true });
-        } else if (request.action === 'generatePassword') {
-            const res = await generatePasswordForUrl(request.url || '');
-            sendResponse(res);
-        } else if (request.action === 'openPopup') {
-            try {
-                if (browser.action && typeof browser.action.openPopup === 'function') {
-                    await browser.action.openPopup();
-                    sendResponse({ ok: true });
-                } else {
-                    await browser.tabs.create({ url: browser.runtime.getURL('popup.html') });
-                    sendResponse({ ok: true, fallback: 'tab' });
-                }
-            } catch (e) {
-                try {
-                    await browser.tabs.create({ url: browser.runtime.getURL('popup.html') });
-                    sendResponse({ ok: true, fallback: 'tab' });
-                } catch (err) {
-                    sendResponse({ ok: false, error: err.message });
-                }
-            }
+  (async () => {
+    if (PRIVILEGED_ACTIONS.has(request.action) && !isFromExtensionPage(sender)) {
+      sendResponse({ error: "action reservee a l'extension" });
+      return;
+    }
+    if (request.action === "checkEncodingKey") {
+      sendResponse({ hasEncodingKey: !!encodingKey });
+    } else if (request.action === "getEncodingKey") {
+      sendResponse({ encodingKey });
+    } else if (request.action === "setEncodingKey") {
+      try {
+        encodingKey = request.encodingKey;
+        sendResponse({ ok: true });
+      } catch (e) {
+        sendResponse({ ok: false, error: e.message });
+      }
+    } else if (request.action === "getParams") {
+      sendResponse({ ok: true, params: await loadParams() });
+    } else if (request.action === "setParams") {
+      try {
+        sendResponse({ ok: true, params: await saveParams(request.data) });
+      } catch (e) {
+        sendResponse({ ok: false, error: e.message });
+      }
+    } else if (request.action === "clearEncodingKey") {
+      encodingKey = null;
+      sendResponse({ ok: true });
+    } else if (request.action === "generatePassword") {
+      const res = await generatePasswordForUrl(request.url || "");
+      sendResponse(res);
+    } else if (request.action === "openPopup") {
+      try {
+        if (browser.action && typeof browser.action.openPopup === "function") {
+          await browser.action.openPopup();
+          sendResponse({ ok: true });
         } else {
-            sendResponse({ error: 'action inconnue' });
+          await browser.tabs.create({ url: browser.runtime.getURL("popup.html") });
+          sendResponse({ ok: true, fallback: "tab" });
         }
-    })();
-    return true;
+      } catch (e) {
+        try {
+          await browser.tabs.create({ url: browser.runtime.getURL("popup.html") });
+          sendResponse({ ok: true, fallback: "tab" });
+        } catch (err) {
+          sendResponse({ ok: false, error: err.message });
+        }
+      }
+    } else {
+      sendResponse({ error: "action inconnue" });
+    }
+  })();
+  return true;
 });
 
 // Code
 
 async function generatePasswordForUrl(url) {
-    if (!encodingKey) {
-        return { error: "Aucune clé n'est définie. Ouvre l'extension TheCode et entre ta clé." };
-    }
-    // Relecture systématique : le service worker peut avoir été recyclé depuis
-    // le dernier réglage, et content.js n'envoie aucune option.
-    const { lengthNumber, minState, majState, symState, chiState } = await loadParams();
+  if (!encodingKey) {
+    return { error: "Aucune clé n'est définie. Ouvre l'extension TheCode et entre ta clé." };
+  }
+  // Relecture systématique : le service worker peut avoir été recyclé depuis
+  // le dernier réglage, et content.js n'envoie aucune option.
+  const { lengthNumber, minState, majState, symState, chiState } = await loadParams();
 
-    if (!minState && !majState && !symState && !chiState) {
-        return { error: "Il faut choisir des caractères" };
-    }
-    try {
-        await pslReady;
-        const u = new URL(url);
-        const hostname = u.hostname;
-        const domain = getRegistrableDomain(hostname)
+  if (!minState && !majState && !symState && !chiState) {
+    return { error: "Il faut choisir des caractères" };
+  }
+  try {
+    await pslReady;
+    const u = new URL(url);
+    const hostname = u.hostname;
+    const domain = getRegistrableDomain(hostname);
 
-        const { mdp, security, bits, color } = await generatePassword(domain, encodingKey, lengthNumber, minState, majState, symState, chiState);
+    const { mdp, security, bits, color } = await generatePassword(
+      domain,
+      encodingKey,
+      lengthNumber,
+      minState,
+      majState,
+      symState,
+      chiState,
+    );
 
-        return { password: mdp, site: domain, security, bits, color };
-    } catch (err) {
-        return { error: err.message };
-    }
+    return { password: mdp, site: domain, security, bits, color };
+  } catch (err) {
+    return { error: err.message };
+  }
 }
 
 /**
@@ -224,47 +237,50 @@ async function generatePasswordForUrl(url) {
  * liste du service worker.
  */
 function registrableDomain(hostname, suffixes) {
-  const p = String(hostname).toLowerCase().split('.');
+  const p = String(hostname).toLowerCase().split(".");
 
   for (let i = 0; i < p.length; i++) {
-    const candidate = p.slice(i).join('.');
+    const candidate = p.slice(i).join(".");
     if (suffixes.includes(candidate)) {
       // i === 0 : le hostname EST un suffixe public (github.io, co.uk). On ne
       // peut pas remonter d'un cran ; p.slice(-1) renvoyait le TLD seul ("io"),
       // ce qui divergeait d'Apple et d'Android. On rend le hostname tel quel.
-      if (i === 0) return p.join('.');
-      return p.slice(i - 1).join('.');
+      if (i === 0) return p.join(".");
+      return p.slice(i - 1).join(".");
     }
   }
-  return p.join('.');
+  return p.join(".");
 }
 
 function getRegistrableDomain(hostname) {
   return registrableDomain(hostname, psl);
 }
 
-
 /**
  * Génère un mot de passe déterministe basé sur site + clef
  * et renvoie des informations de sécurité.
  */
 async function generatePassword(site, key, length, useLower, useUpper, useSymbols, useNumbers) {
-    const charsetGroups = buildCharset(useLower, useUpper, useSymbols, useNumbers);
-    if (charsetGroups.length === 0 || (!site && !key)) {
-        return buildPasswordResult(null, "Aucune", 0, "#FE0101");
-    }
-    // Garde-fou : la longueur est bornée ici aussi, pour que la fonction reste
-    // sûre quel que soit son appelant (popup, content script, tests).
-    const newLength = Math.min(MAX_LENGTH, Math.max(MIN_LENGTH, parseInt(length, 10) || MIN_LENGTH));
+  const charsetGroups = buildCharset(useLower, useUpper, useSymbols, useNumbers);
+  if (charsetGroups.length === 0 || (!site && !key)) {
+    return buildPasswordResult(null, "Aucune", 0, "#FE0101");
+  }
+  // Garde-fou : la longueur est bornée ici aussi, pour que la fonction reste
+  // sûre quel que soit son appelant (popup, content script, tests).
+  const newLength = Math.min(MAX_LENGTH, Math.max(MIN_LENGTH, parseInt(length, 10) || MIN_LENGTH));
 
-    const entropyBits = calculateEntropyBits(charsetGroups, newLength);
-    const securityInfo = getSecurityLevel(entropyBits);
+  const entropyBits = calculateEntropyBits(charsetGroups, newLength);
+  const securityInfo = getSecurityLevel(entropyBits);
 
-    const passwordSeed = await hashToBigInt(site + key);
-    const rawPassword = convertToBase(passwordSeed, charsetGroups);
-    const finalPassword = applyCharsetReplacement(passwordSeed, rawPassword.slice(0, newLength), charsetGroups);
+  const passwordSeed = await hashToBigInt(site + key);
+  const rawPassword = convertToBase(passwordSeed, charsetGroups);
+  const finalPassword = applyCharsetReplacement(
+    passwordSeed,
+    rawPassword.slice(0, newLength),
+    charsetGroups,
+  );
 
-    return buildPasswordResult(finalPassword, securityInfo.security, entropyBits, securityInfo.color);
+  return buildPasswordResult(finalPassword, securityInfo.security, entropyBits, securityInfo.color);
 }
 
 /** ===================== */
@@ -275,64 +291,64 @@ async function generatePassword(site, key, length, useLower, useUpper, useSymbol
  * Construit le résultat final d'un mot de passe.
  */
 function buildPasswordResult(password, security, bits, color) {
-    return { mdp: password, security, bits, color };
+  return { mdp: password, security, bits, color };
 }
 
 /**
  * Construit la base de caractères en fonction des options.
  */
 function buildCharset(useLower, useUpper, useSymbols, useNumbers) {
-    const lower = "portezcviuxwhskyajgblndqfm";
-    const upper = "THEQUICKBROWNFXJMPSVLAZYDG";
-    const symbols = "@#&!)-%;<:*$+=/?>(";
-    const numbers = "567438921";
+  const lower = "portezcviuxwhskyajgblndqfm";
+  const upper = "THEQUICKBROWNFXJMPSVLAZYDG";
+  const symbols = "@#&!)-%;<:*$+=/?>(";
+  const numbers = "567438921";
 
-    return [
-        useLower ? lower : "",
-        useUpper ? upper : "",
-        useSymbols ? symbols : "",
-        useNumbers ? numbers : ""
-    ].filter(Boolean);
+  return [
+    useLower ? lower : "",
+    useUpper ? upper : "",
+    useSymbols ? symbols : "",
+    useNumbers ? numbers : "",
+  ].filter(Boolean);
 }
 
 /**
  * Calcule le nombre de bits d'entropie pour la longueur et la base données.
  */
 function calculateEntropyBits(charsetGroups, length) {
-    const totalChars = charsetGroups.reduce((sum, group) => sum + group.length, 0);
-    if (totalChars === 0) return 0;
+  const totalChars = charsetGroups.reduce((sum, group) => sum + group.length, 0);
+  if (totalChars === 0) return 0;
 
-    return Math.round(length * Math.log2(totalChars));
+  return Math.round(length * Math.log2(totalChars));
 }
 
 /**
  * Détermine le niveau de sécurité en fonction des bits d'entropie.
  */
 function getSecurityLevel(bits) {
-    if (bits === 0) return { security: "Aucune", color: "#FE0101" };
-    if (bits < 64) return { security: "Très Faible", color: "#FE0101" };
-    if (bits < 80) return { security: "Faible", color: "#FE4501" };
-    if (bits < 100) return { security: "Moyenne", color: "#FE7601" };
-    if (bits < 126) return { security: "Forte", color: "#53FE38" };
-    return { security: "Très Forte", color: "#1CD001" };
+  if (bits === 0) return { security: "Aucune", color: "#FE0101" };
+  if (bits < 64) return { security: "Très Faible", color: "#FE0101" };
+  if (bits < 80) return { security: "Faible", color: "#FE4501" };
+  if (bits < 100) return { security: "Moyenne", color: "#FE7601" };
+  if (bits < 126) return { security: "Forte", color: "#53FE38" };
+  return { security: "Très Forte", color: "#1CD001" };
 }
 
 /**
  * Transforme une valeur en BigInt en une chaîne dans la base construite.
  */
 function convertToBase(x, charsetGroups) {
-    const charset = charsetGroups.join("");
-    const base = BigInt(charset.length);
+  const charset = charsetGroups.join("");
+  const base = BigInt(charset.length);
 
-    let value = BigInt(x);
-    let result = "";
-    while (value >= 0) {
-        const index = Number(value % base);
-        result = charset.charAt(index) + result;
-        value = (value / base) - 1n;
-        if (value < 0) break;
-    }
-    return result;
+  let value = BigInt(x);
+  let result = "";
+  while (value >= 0) {
+    const index = Number(value % base);
+    result = charset.charAt(index) + result;
+    value = value / base - 1n;
+    if (value < 0) break;
+  }
+  return result;
 }
 
 /**
@@ -340,58 +356,75 @@ function convertToBase(x, charsetGroups) {
  * qu'au moins un caractère de chaque groupe est présent.
  */
 function applyCharsetReplacement(seed, password, charsetGroups) {
-    const length = password.length;
-    if (length < charsetGroups.length) {
-        throw new Error(`Password must have at least ${charsetGroups.length} characters`);
-    }
+  const length = password.length;
+  if (length < charsetGroups.length) {
+    throw new Error(`Password must have at least ${charsetGroups.length} characters`);
+  }
 
-    let temp = seed;
-    const positions = [];
+  let temp = seed;
+  const positions = [];
 
-    // Sélection des positions uniques
-    for (let i = 0; i < charsetGroups.length; i++) {
-        const pos = getUniquePosition(temp, positions, length);
-        positions.push(pos);
-        temp /= BigInt(length);
-    }
+  // Sélection des positions uniques
+  for (let i = 0; i < charsetGroups.length; i++) {
+    const pos = getUniquePosition(temp, positions, length);
+    positions.push(pos);
+    temp /= BigInt(length);
+  }
 
-    // Remplacement des caractères
-    let result = password;
-    temp = seed;
-    positions.forEach((pos, i) => {
-        const group = charsetGroups[i];
-        const index = Number(temp % BigInt(group.length));
-        result = result.slice(0, pos) + group[index] + result.slice(pos + 1);
-        temp /= BigInt(group.length);
-    });
+  // Remplacement des caractères
+  let result = password;
+  temp = seed;
+  positions.forEach((pos, i) => {
+    const group = charsetGroups[i];
+    const index = Number(temp % BigInt(group.length));
+    result = result.slice(0, pos) + group[index] + result.slice(pos + 1);
+    temp /= BigInt(group.length);
+  });
 
-    return result;
+  return result;
 }
 
 /**
  * Retourne une position unique non utilisée dans le tableau `usedPositions`.
  */
 function getUniquePosition(seed, usedPositions, length) {
-    let pos = Number(seed % BigInt(length));
-    while (usedPositions.includes(pos)) {
-        pos = (pos + 1) % length;
-    }
-    return pos;
+  let pos = Number(seed % BigInt(length));
+  while (usedPositions.includes(pos)) {
+    pos = (pos + 1) % length;
+  }
+  return pos;
 }
 
 /**
  * Renvoie le SHA-256 sous forme de BigInt.
  */
 async function hashToBigInt(input) {
-    const data = new TextEncoder().encode(input);
-    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-    const hex = Array.from(new Uint8Array(hashBuffer))
-        .map(b => b.toString(16).padStart(2, "0"))
-        .join("");
-    return BigInt("0x" + hex);
+  const data = new TextEncoder().encode(input);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hex = Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  return BigInt("0x" + hex);
 }
 
-
 if (typeof module !== "undefined") {
-    module.exports = { generatePassword, getRegistrableDomain, registrableDomain, PRIVILEGED_ACTIONS, isFromExtensionPage, buildCharset, calculateEntropyBits, getSecurityLevel, convertToBase, applyCharsetReplacement, getUniquePosition, hashToBigInt, normalizeParams, clampLength, MIN_LENGTH, MAX_LENGTH, DEFAULT_PARAMS };
+  module.exports = {
+    generatePassword,
+    getRegistrableDomain,
+    registrableDomain,
+    PRIVILEGED_ACTIONS,
+    isFromExtensionPage,
+    buildCharset,
+    calculateEntropyBits,
+    getSecurityLevel,
+    convertToBase,
+    applyCharsetReplacement,
+    getUniquePosition,
+    hashToBigInt,
+    normalizeParams,
+    clampLength,
+    MIN_LENGTH,
+    MAX_LENGTH,
+    DEFAULT_PARAMS,
+  };
 }

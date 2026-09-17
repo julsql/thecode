@@ -8,15 +8,15 @@ monorepo.
 
 ## Layout
 
-| Path | What it is |
-|---|---|
-| `shared/` | **Source of truth.** Test vectors, algorithm spec, public suffix list |
-| `apps/extension/` | Browser extension (Chrome, Edge, Brave, Firefox, Safari) |
-| `apps/website/` | Vue 3 + Vite web app — [thecode.julsql.fr](https://thecode.julsql.fr) |
-| `apps/android/` | Android app (Java) with Autofill service |
-| `apps/apple/` | iOS and macOS apps (Swift) with AutoFill extensions |
-| `apps/cli/` | Python CLI |
-| `scripts/` | Shared-file sync and conformance helpers |
+| Path              | What it is                                                            |
+| ----------------- | --------------------------------------------------------------------- |
+| `shared/`         | **Source of truth.** Test vectors, algorithm spec, public suffix list |
+| `apps/extension/` | Browser extension (Chrome, Edge, Brave, Firefox, Safari)              |
+| `apps/website/`   | Vue 3 + Vite web app — [thecode.julsql.fr](https://thecode.julsql.fr) |
+| `apps/android/`   | Android app (Java) with Autofill service                              |
+| `apps/apple/`     | iOS and macOS apps (Swift) with AutoFill extensions                   |
+| `apps/cli/`       | Python CLI                                                            |
+| `scripts/`        | Shared-file sync and conformance helpers                              |
 
 ## Why a monorepo
 
