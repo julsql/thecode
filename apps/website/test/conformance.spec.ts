@@ -37,7 +37,15 @@ describe("conformance v1 (vecteurs partagés, figés)", () => {
     "%s — reproduit le mot de passe attendu",
     async (_id: string, c: any) => {
       const { lower, upper, symbols, numbers } = c.charset;
-      const got = await generatePassword(c.site, c.master, c.length, lower, upper, symbols, numbers);
+      const got = await generatePassword(
+        c.site,
+        c.master,
+        c.length,
+        lower,
+        upper,
+        symbols,
+        numbers,
+      );
       expect(got).toBe(c.expected);
     },
   );

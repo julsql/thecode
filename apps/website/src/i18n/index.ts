@@ -1,7 +1,7 @@
-import { computed } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import { translations, DEFAULT_LANG, SUPPORTED_LANGS } from './translations';
-import type { Lang, TranslationKey } from './translations';
+import { computed } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { translations, DEFAULT_LANG, SUPPORTED_LANGS } from "./translations";
+import type { Lang, TranslationKey } from "./translations";
 
 export type { Lang, TranslationKey };
 export { DEFAULT_LANG, SUPPORTED_LANGS };
@@ -20,14 +20,14 @@ export function useI18n() {
     return translations[lang.value][key] ?? translations[DEFAULT_LANG][key];
   };
 
-  const localePath = (path: string = ''): string => {
-    const trimmed = path.replace(/^\/+/, '');
+  const localePath = (path: string = ""): string => {
+    const trimmed = path.replace(/^\/+/, "");
     return trimmed ? `/${lang.value}/${trimmed}` : `/${lang.value}`;
   };
 
   const switchLang = (target: Lang) => {
     if (target === lang.value) return;
-    const tail = route.path.replace(/^\/(en|fr)/, '');
+    const tail = route.path.replace(/^\/(en|fr)/, "");
     const newPath = `/${target}${tail}` || `/${target}`;
     router.push(newPath);
   };

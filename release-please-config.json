@@ -40,9 +40,7 @@
       "release-type": "simple",
       "package-name": "android",
       "component": "android",
-      "extra-files": [
-        "app/build.gradle"
-      ]
+      "extra-files": ["app/build.gradle"]
     },
     "apps/apple": {
       "release-type": "simple",

@@ -3,65 +3,69 @@
     <header class="page-hero">
       <div class="page-hero-inner">
         <div class="page-hero-icon">
-          <img src="https://img.icons8.com/?size=100&id=11808&format=png&color=000000" alt=""/>
+          <img src="https://img.icons8.com/?size=100&id=11808&format=png&color=000000" alt="" />
         </div>
-        <h1>{{ t('about_title') }}</h1>
-        <p class="page-hero-sub">{{ t('about_subtitle') }}</p>
+        <h1>{{ t("about_title") }}</h1>
+        <p class="page-hero-sub">{{ t("about_subtitle") }}</p>
       </div>
     </header>
 
     <div class="content-container fadeIn">
       <div class="content-card">
-
         <section>
-          <h2>{{ t('about_intro_h') }}</h2>
-          <p>{{ t('about_intro_p1') }}</p>
-          <p>{{ t('about_intro_p2') }}</p>
+          <h2>{{ t("about_intro_h") }}</h2>
+          <p>{{ t("about_intro_p1") }}</p>
+          <p>{{ t("about_intro_p2") }}</p>
         </section>
 
         <section>
-          <h2>{{ t('about_how_h') }}</h2>
-          <p>{{ t('about_how_p1') }}</p>
+          <h2>{{ t("about_how_h") }}</h2>
+          <p>{{ t("about_how_p1") }}</p>
           <div class="formula">
-            <span class="formula-part">{{ t('gen_label_key') }}</span>
+            <span class="formula-part">{{ t("gen_label_key") }}</span>
             <span class="formula-op">+</span>
-            <span class="formula-part">{{ t('gen_label_site') }}</span>
+            <span class="formula-part">{{ t("gen_label_site") }}</span>
             <span class="formula-op">→</span>
             <span class="formula-part formula-out">SHA-256</span>
             <span class="formula-op">→</span>
-            <span class="formula-part formula-result">{{ t('gen_section_result') }}</span>
+            <span class="formula-part formula-result">{{ t("gen_section_result") }}</span>
           </div>
-          <p>{{ t('about_how_p2') }}</p>
+          <p>{{ t("about_how_p2") }}</p>
         </section>
 
         <section>
-          <h2>{{ t('about_why_h') }}</h2>
+          <h2>{{ t("about_why_h") }}</h2>
           <div class="benefits">
             <div class="benefit">
-              <h3>{{ t('about_why_b1_t') }}</h3>
-              <p>{{ t('about_why_b1_p') }}</p>
+              <h3>{{ t("about_why_b1_t") }}</h3>
+              <p>{{ t("about_why_b1_p") }}</p>
             </div>
             <div class="benefit">
-              <h3>{{ t('about_why_b2_t') }}</h3>
-              <p>{{ t('about_why_b2_p') }}</p>
+              <h3>{{ t("about_why_b2_t") }}</h3>
+              <p>{{ t("about_why_b2_p") }}</p>
             </div>
             <div class="benefit">
-              <h3>{{ t('about_why_b3_t') }}</h3>
-              <p>{{ t('about_why_b3_p') }}</p>
+              <h3>{{ t("about_why_b3_t") }}</h3>
+              <p>{{ t("about_why_b3_p") }}</p>
             </div>
             <div class="benefit">
-              <h3>{{ t('about_why_b4_t') }}</h3>
-              <p>{{ t('about_why_b4_p') }}</p>
+              <h3>{{ t("about_why_b4_t") }}</h3>
+              <p>{{ t("about_why_b4_p") }}</p>
             </div>
           </div>
         </section>
 
         <section>
-          <h2>{{ t('about_oss_h') }}</h2>
-          <p>{{ t('about_oss_p') }}</p>
-          <a class="cta-link" href="https://github.com/TheCodeDevLab" target="_blank" rel="noopener">
-            <img :src="GithubIcon" alt="" class="cta-icon"/>
-            {{ t('about_oss_cta') }}
+          <h2>{{ t("about_oss_h") }}</h2>
+          <p>{{ t("about_oss_p") }}</p>
+          <a
+            class="cta-link"
+            href="https://github.com/TheCodeDevLab"
+            target="_blank"
+            rel="noopener"
+          >
+            <img :src="GithubIcon" alt="" class="cta-icon" />
+            {{ t("about_oss_cta") }}
           </a>
         </section>
       </div>
@@ -70,15 +74,15 @@
 </template>
 
 <script lang="ts">
-import {defineComponent} from 'vue';
-import {useI18n} from '@/i18n';
-import GithubIcon from '@/assets/github.png';
+import { defineComponent } from "vue";
+import { useI18n } from "@/i18n";
+import GithubIcon from "@/assets/github.png";
 
 export default defineComponent({
-  name: 'About',
+  name: "About",
   setup() {
-    const {t} = useI18n();
-    return {t, GithubIcon};
+    const { t } = useI18n();
+    return { t, GithubIcon };
   },
 });
 </script>
@@ -198,7 +202,7 @@ section:first-child {
   margin: 18px 0 22px;
   padding: 18px;
   border-radius: 14px;
-  background: linear-gradient(135deg, rgba(166, 77, 121, 0.14), rgba(106, 17, 203, 0.10));
+  background: linear-gradient(135deg, rgba(166, 77, 121, 0.14), rgba(106, 17, 203, 0.1));
   border: 1px solid rgba(166, 77, 121, 0.3);
 }
 
@@ -213,7 +217,7 @@ section:first-child {
 }
 
 .formula-out {
-  font-family: 'JetBrains Mono', 'Menlo', 'Consolas', monospace;
+  font-family: "JetBrains Mono", "Menlo", "Consolas", monospace;
   letter-spacing: 0.3px;
 }
 
@@ -242,7 +246,10 @@ section:first-child {
   border-radius: 14px;
   border: 1px solid var(--border-soft);
   background: rgba(255, 255, 255, 0.03);
-  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    transform 0.2s ease;
 }
 
 .benefit:hover {
@@ -276,7 +283,9 @@ section:first-child {
   border-radius: 999px;
   background: linear-gradient(135deg, rgba(166, 77, 121, 0.25), rgba(106, 30, 85, 0.25));
   border: 1px solid rgba(166, 77, 121, 0.4);
-  transition: transform 0.2s ease, background 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease;
 }
 
 .cta-link:hover {

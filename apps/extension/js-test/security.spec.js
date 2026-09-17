@@ -40,7 +40,7 @@ describe("la cle maitresse n'est pas persistee", () => {
   it("n'apparait dans aucune ecriture de storage du service worker", () => {
     const source = require("node:fs").readFileSync(
       require("node:path").join(__dirname, "..", "background.js"),
-      "utf8"
+      "utf8",
     );
     // Les seules ecritures autorisees portent sur les parametres de generation.
     const writes = source.match(/storage\.local\.set\([^)]*\)/g) || [];

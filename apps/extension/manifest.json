@@ -5,10 +5,7 @@
   "description": "__MSG_extension_description__",
   "version": "2.2.1",
   "license": "Apache-2.0",
-  "permissions": [
-    "storage",
-    "activeTab"
-  ],
+  "permissions": ["storage", "activeTab"],
   "icons": {
     "48": "images/48.png",
     "96": "images/96.png",
@@ -16,9 +13,7 @@
     "256": "images/256.png",
     "512": "images/512.png"
   },
-  "host_permissions": [
-    "<all_urls>"
-  ],
+  "host_permissions": ["<all_urls>"],
   "web_accessible_resources": [
     {
       "resources": ["images/128.png", "images/copy.svg", "data/public_suffix_list.dat"],
@@ -30,12 +25,8 @@
   },
   "content_scripts": [
     {
-      "matches": [
-        "<all_urls>"
-      ],
-      "js": [
-        "content.js"
-      ],
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
       "run_at": "document_idle",
       "all_frames": true
     }

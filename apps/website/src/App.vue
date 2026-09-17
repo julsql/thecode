@@ -4,55 +4,82 @@
     <header class="site-header" :class="{ 'is-open': isOpen }">
       <div class="container header-inner">
         <router-link :to="localePath('')" class="brand" @click="closeMenu">
-          <img :src="Logo" alt="TheCode" class="brand-logo"/>
+          <img :src="Logo" alt="TheCode" class="brand-logo" />
           <span class="brand-title">TheCode</span>
         </router-link>
 
         <nav aria-label="primary" class="primary-nav">
-          <router-link :to="localePath('')" class="nav-link" exact-active-class="is-active" @click="closeMenu">
-            {{ t('nav_home') }}
+          <router-link
+            :to="localePath('')"
+            class="nav-link"
+            exact-active-class="is-active"
+            @click="closeMenu"
+          >
+            {{ t("nav_home") }}
           </router-link>
-          <router-link :to="localePath('about')" class="nav-link" active-class="is-active" @click="closeMenu">
-            {{ t('nav_about') }}
+          <router-link
+            :to="localePath('about')"
+            class="nav-link"
+            active-class="is-active"
+            @click="closeMenu"
+          >
+            {{ t("nav_about") }}
           </router-link>
-          <router-link :to="localePath('generate')" class="nav-link" active-class="is-active" @click="closeMenu">
-            {{ t('nav_generator') }}
+          <router-link
+            :to="localePath('generate')"
+            class="nav-link"
+            active-class="is-active"
+            @click="closeMenu"
+          >
+            {{ t("nav_generator") }}
           </router-link>
-          <router-link :to="localePath('tutorial')" class="nav-link" active-class="is-active" @click="closeMenu">
-            {{ t('nav_tutorial') }}
+          <router-link
+            :to="localePath('tutorial')"
+            class="nav-link"
+            active-class="is-active"
+            @click="closeMenu"
+          >
+            {{ t("nav_tutorial") }}
           </router-link>
-          <router-link :to="localePath('contact')" class="nav-link" active-class="is-active" @click="closeMenu">
-            {{ t('nav_contact') }}
+          <router-link
+            :to="localePath('contact')"
+            class="nav-link"
+            active-class="is-active"
+            @click="closeMenu"
+          >
+            {{ t("nav_contact") }}
           </router-link>
         </nav>
 
         <div class="header-actions">
           <div class="lang-switch" role="group" :aria-label="t('lang_switch_label')">
             <button
-                type="button"
-                class="lang-btn"
-                :class="{ 'is-active': lang === 'en' }"
-                :aria-pressed="lang === 'en'"
-                @click="switchLang('en')"
-            >EN
+              type="button"
+              class="lang-btn"
+              :class="{ 'is-active': lang === 'en' }"
+              :aria-pressed="lang === 'en'"
+              @click="switchLang('en')"
+            >
+              EN
             </button>
             <button
-                type="button"
-                class="lang-btn"
-                :class="{ 'is-active': lang === 'fr' }"
-                :aria-pressed="lang === 'fr'"
-                @click="switchLang('fr')"
-            >FR
+              type="button"
+              class="lang-btn"
+              :class="{ 'is-active': lang === 'fr' }"
+              :aria-pressed="lang === 'fr'"
+              @click="switchLang('fr')"
+            >
+              FR
             </button>
           </div>
 
           <button
-              type="button"
-              class="hamburger"
-              :class="{ 'is-active': isOpen }"
-              :aria-label="isOpen ? 'Close menu' : 'Open menu'"
-              :aria-expanded="isOpen"
-              @click="toggleMenu"
+            type="button"
+            class="hamburger"
+            :class="{ 'is-active': isOpen }"
+            :aria-label="isOpen ? 'Close menu' : 'Open menu'"
+            :aria-expanded="isOpen"
+            @click="toggleMenu"
           >
             <span></span>
             <span></span>
@@ -64,20 +91,45 @@
       <!-- MOBILE PANEL -->
       <transition name="panel-fade">
         <nav v-if="isOpen" class="mobile-panel" aria-label="mobile">
-          <router-link :to="localePath('')" class="mobile-link" exact-active-class="is-active" @click="closeMenu">
-            {{ t('nav_home') }}
+          <router-link
+            :to="localePath('')"
+            class="mobile-link"
+            exact-active-class="is-active"
+            @click="closeMenu"
+          >
+            {{ t("nav_home") }}
           </router-link>
-          <router-link :to="localePath('about')" class="mobile-link" active-class="is-active" @click="closeMenu">
-            {{ t('nav_about') }}
+          <router-link
+            :to="localePath('about')"
+            class="mobile-link"
+            active-class="is-active"
+            @click="closeMenu"
+          >
+            {{ t("nav_about") }}
           </router-link>
-          <router-link :to="localePath('generate')" class="mobile-link" active-class="is-active" @click="closeMenu">
-            {{ t('nav_generator') }}
+          <router-link
+            :to="localePath('generate')"
+            class="mobile-link"
+            active-class="is-active"
+            @click="closeMenu"
+          >
+            {{ t("nav_generator") }}
           </router-link>
-          <router-link :to="localePath('tutorial')" class="mobile-link" active-class="is-active" @click="closeMenu">
-            {{ t('nav_tutorial') }}
+          <router-link
+            :to="localePath('tutorial')"
+            class="mobile-link"
+            active-class="is-active"
+            @click="closeMenu"
+          >
+            {{ t("nav_tutorial") }}
           </router-link>
-          <router-link :to="localePath('contact')" class="mobile-link" active-class="is-active" @click="closeMenu">
-            {{ t('nav_contact') }}
+          <router-link
+            :to="localePath('contact')"
+            class="mobile-link"
+            active-class="is-active"
+            @click="closeMenu"
+          >
+            {{ t("nav_contact") }}
           </router-link>
         </nav>
       </transition>
@@ -85,7 +137,7 @@
 
     <!-- MAIN CONTENT -->
     <main class="main">
-      <router-view/>
+      <router-view />
     </main>
 
     <!-- FOOTER -->
@@ -94,35 +146,40 @@
         <div class="footer-grid">
           <div class="footer-col footer-brand-col">
             <router-link :to="localePath('')" class="footer-brand">
-              <img :src="Logo" alt="TheCode" class="footer-logo"/>
+              <img :src="Logo" alt="TheCode" class="footer-logo" />
               <span>TheCode</span>
             </router-link>
-            <p class="footer-tag">{{ t('footer_tagline') }}</p>
+            <p class="footer-tag">{{ t("footer_tagline") }}</p>
           </div>
 
           <div class="footer-col">
-            <h4>{{ t('footer_links_product') }}</h4>
-            <router-link :to="localePath('')">{{ t('nav_home') }}</router-link>
-            <router-link :to="localePath('about')">{{ t('nav_about') }}</router-link>
-            <router-link :to="localePath('generate')">{{ t('nav_generator') }}</router-link>
+            <h4>{{ t("footer_links_product") }}</h4>
+            <router-link :to="localePath('')">{{ t("nav_home") }}</router-link>
+            <router-link :to="localePath('about')">{{ t("nav_about") }}</router-link>
+            <router-link :to="localePath('generate')">{{ t("nav_generator") }}</router-link>
           </div>
 
           <div class="footer-col">
-            <h4>{{ t('footer_links_resources') }}</h4>
-            <router-link :to="localePath('tutorial')">{{ t('nav_tutorial') }}</router-link>
-            <router-link :to="localePath('contact')">{{ t('nav_contact') }}</router-link>
+            <h4>{{ t("footer_links_resources") }}</h4>
+            <router-link :to="localePath('tutorial')">{{ t("nav_tutorial") }}</router-link>
+            <router-link :to="localePath('contact')">{{ t("nav_contact") }}</router-link>
             <a href="https://github.com/TheCodeDevLab" target="_blank" rel="noopener">GitHub</a>
           </div>
 
           <div class="footer-col">
-            <h4>{{ t('footer_links_legal') }}</h4>
-            <router-link :to="localePath('privacy')">{{ t('nav_privacy') }}</router-link>
-            <a href="https://github.com/TheCodeDevLab/thecode-website" target="_blank" rel="noopener">{{ t('footer_src') }}</a>
+            <h4>{{ t("footer_links_legal") }}</h4>
+            <router-link :to="localePath('privacy')">{{ t("nav_privacy") }}</router-link>
+            <a
+              href="https://github.com/TheCodeDevLab/thecode-website"
+              target="_blank"
+              rel="noopener"
+              >{{ t("footer_src") }}</a
+            >
           </div>
         </div>
 
         <div class="footer-bottom">
-          <p>© {{ year }} TheCode · {{ t('footer_icons') }}</p>
+          <p>© {{ year }} TheCode · {{ t("footer_icons") }}</p>
         </div>
       </div>
     </footer>
@@ -130,18 +187,18 @@
 </template>
 
 <script lang="ts">
-import {defineComponent, ref, watch} from 'vue';
-import {useRoute} from 'vue-router';
-import Logo from '@/assets/logo.svg';
-import {useI18n} from '@/i18n';
+import { defineComponent, ref, watch } from "vue";
+import { useRoute } from "vue-router";
+import Logo from "@/assets/logo.svg";
+import { useI18n } from "@/i18n";
 
 export default defineComponent({
-  name: 'App',
+  name: "App",
   setup() {
     const year = new Date().getFullYear();
     const isOpen = ref(false);
     const route = useRoute();
-    const {t, lang, switchLang, localePath} = useI18n();
+    const { t, lang, switchLang, localePath } = useI18n();
 
     const toggleMenu = () => {
       isOpen.value = !isOpen.value;
@@ -152,7 +209,7 @@ export default defineComponent({
 
     watch(() => route.fullPath, closeMenu);
 
-    return {Logo, year, isOpen, toggleMenu, closeMenu, t, lang, switchLang, localePath};
+    return { Logo, year, isOpen, toggleMenu, closeMenu, t, lang, switchLang, localePath };
   },
 });
 </script>
@@ -228,7 +285,9 @@ export default defineComponent({
   color: var(--text-muted);
   font-weight: 500;
   font-size: 0.95rem;
-  transition: color 0.2s ease, background 0.2s ease;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease;
 }
 
 .nav-link:hover {
@@ -267,7 +326,9 @@ export default defineComponent({
   border-radius: 999px;
   cursor: pointer;
   letter-spacing: 0.5px;
-  transition: color 0.2s ease, background 0.2s ease;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease;
 }
 
 .lang-btn:hover {
@@ -301,7 +362,9 @@ export default defineComponent({
   margin: 0 auto;
   background: var(--text);
   border-radius: 2px;
-  transition: transform 0.3s ease, opacity 0.2s ease;
+  transition:
+    transform 0.3s ease,
+    opacity 0.2s ease;
 }
 
 .hamburger.is-active span:nth-child(1) {
@@ -345,7 +408,9 @@ export default defineComponent({
 
 .panel-fade-enter-active,
 .panel-fade-leave-active {
-  transition: opacity 0.25s ease, transform 0.25s ease;
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
 }
 
 .panel-fade-enter-from,

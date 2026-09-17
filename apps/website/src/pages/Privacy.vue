@@ -3,50 +3,54 @@
     <header class="page-hero">
       <div class="page-hero-inner">
         <div class="page-hero-icon">
-          <img src="https://img.icons8.com/?size=200&id=12324&format=png&color=ffffff" alt=""/>
+          <img src="https://img.icons8.com/?size=200&id=12324&format=png&color=ffffff" alt="" />
         </div>
-        <h1>{{ t('privacy_title') }}</h1>
-        <p class="page-hero-sub"><i>{{ t('privacy_last_update') }}</i></p>
+        <h1>{{ t("privacy_title") }}</h1>
+        <p class="page-hero-sub">
+          <i>{{ t("privacy_last_update") }}</i>
+        </p>
       </div>
     </header>
 
     <div class="privacy-container fadeIn">
       <div class="privacy-card">
-        <p>{{ t('privacy_thanks_pre') }}<b>TheCode</b>{{ t('privacy_thanks_post') }}</p>
+        <p>{{ t("privacy_thanks_pre") }}<b>TheCode</b>{{ t("privacy_thanks_post") }}</p>
 
-        <p>{{ t('privacy_intro') }}</p>
+        <p>{{ t("privacy_intro") }}</p>
 
-        <p><b>{{ t('privacy_thats_why') }}</b></p>
+        <p>
+          <b>{{ t("privacy_thats_why") }}</b>
+        </p>
 
         <div class="highlight">
-          <p>{{ t('privacy_highlight_1') }}</p>
-          <p>{{ t('privacy_highlight_2') }}</p>
-          <p>{{ t('privacy_highlight_3') }}</p>
+          <p>{{ t("privacy_highlight_1") }}</p>
+          <p>{{ t("privacy_highlight_2") }}</p>
+          <p>{{ t("privacy_highlight_3") }}</p>
         </div>
 
         <section>
-          <h2>{{ t('privacy_section_data') }}</h2>
-          <p>{{ t('privacy_section_data_p') }}</p>
+          <h2>{{ t("privacy_section_data") }}</h2>
+          <p>{{ t("privacy_section_data_p") }}</p>
         </section>
 
         <section>
-          <h2>{{ t('privacy_section_share') }}</h2>
-          <p>{{ t('privacy_section_share_p') }}</p>
+          <h2>{{ t("privacy_section_share") }}</h2>
+          <p>{{ t("privacy_section_share_p") }}</p>
         </section>
 
         <section>
-          <h2>{{ t('privacy_section_cookies') }}</h2>
-          <p>{{ t('privacy_section_cookies_p') }}</p>
+          <h2>{{ t("privacy_section_cookies") }}</h2>
+          <p>{{ t("privacy_section_cookies_p") }}</p>
         </section>
 
         <section>
-          <h2>{{ t('privacy_section_third') }}</h2>
-          <p>{{ t('privacy_section_third_p') }}</p>
+          <h2>{{ t("privacy_section_third") }}</h2>
+          <p>{{ t("privacy_section_third_p") }}</p>
         </section>
 
         <section>
-          <h2>{{ t('privacy_section_contact') }}</h2>
-          <p>{{ t('privacy_section_contact_p') }}</p>
+          <h2>{{ t("privacy_section_contact") }}</h2>
+          <p>{{ t("privacy_section_contact_p") }}</p>
           <a class="contact-link" href="mailto:contact@thecode.julsql.fr">
             📧 contact@thecode.julsql.fr
           </a>
@@ -57,14 +61,14 @@
 </template>
 
 <script lang="ts">
-import {defineComponent} from 'vue';
-import {useI18n} from '@/i18n';
+import { defineComponent } from "vue";
+import { useI18n } from "@/i18n";
 
 export default defineComponent({
-  name: 'Privacy',
+  name: "Privacy",
   setup() {
-    const {t} = useI18n();
-    return {t};
+    const { t } = useI18n();
+    return { t };
   },
 });
 </script>
@@ -172,7 +176,7 @@ h2 {
 .highlight {
   margin: 18px 0 26px;
   padding: 20px 22px;
-  background: linear-gradient(135deg, rgba(166, 77, 121, 0.14), rgba(106, 17, 203, 0.10));
+  background: linear-gradient(135deg, rgba(166, 77, 121, 0.14), rgba(106, 17, 203, 0.1));
   border-left: 3px solid var(--c4);
   border-radius: 14px;
 }
@@ -201,7 +205,9 @@ section {
   border-radius: 999px;
   background: linear-gradient(135deg, rgba(166, 77, 121, 0.25), rgba(106, 30, 85, 0.25));
   border: 1px solid rgba(166, 77, 121, 0.4);
-  transition: transform 0.2s ease, background 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease;
 }
 
 .contact-link:hover {

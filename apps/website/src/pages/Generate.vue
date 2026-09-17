@@ -3,97 +3,97 @@
     <header class="page-hero">
       <div class="page-hero-inner">
         <div class="page-hero-icon">
-          <img src="https://img.icons8.com/?size=200&id=scais6KfLeli&format=png&color=ffffff" alt=""/>
+          <img
+            src="https://img.icons8.com/?size=200&id=scais6KfLeli&format=png&color=ffffff"
+            alt=""
+          />
         </div>
-        <h1>{{ t('gen_title') }}</h1>
-        <p class="page-hero-sub">{{ t('gen_subtitle') }}</p>
+        <h1>{{ t("gen_title") }}</h1>
+        <p class="page-hero-sub">{{ t("gen_subtitle") }}</p>
       </div>
     </header>
 
     <div class="generator-container fadeIn">
       <div class="generator-card">
-
         <!-- Données -->
         <fieldset>
-          <h2>{{ t('gen_section_data') }}</h2>
+          <h2>{{ t("gen_section_data") }}</h2>
 
           <div class="form-group">
-            <label for="id_clef">{{ t('gen_label_key') }}</label>
+            <label for="id_clef">{{ t("gen_label_key") }}</label>
             <div class="input-with-button">
               <input
-                  :type="showPassword ? 'text' : 'password'"
-                  v-model="clef"
-                  :placeholder="t('gen_placeholder_key')"
-                  id="id_clef"
-                  required
+                :type="showPassword ? 'text' : 'password'"
+                v-model="clef"
+                :placeholder="t('gen_placeholder_key')"
+                id="id_clef"
+                required
               />
               <button type="button" class="ghost-btn" @click="togglePassword">
-                {{ showPassword ? t('gen_hide') : t('gen_show') }}
+                {{ showPassword ? t("gen_hide") : t("gen_show") }}
               </button>
             </div>
           </div>
 
           <div class="form-group">
-            <label for="id_site">{{ t('gen_label_site') }}</label>
+            <label for="id_site">{{ t("gen_label_site") }}</label>
             <input
-                type="text"
-                v-model="site"
-                :placeholder="t('gen_placeholder_site')"
-                id="id_site"
-                required
+              type="text"
+              v-model="site"
+              :placeholder="t('gen_placeholder_site')"
+              id="id_site"
+              required
             />
           </div>
         </fieldset>
 
         <!-- Paramètres -->
         <fieldset>
-          <h2>{{ t('gen_section_settings') }}</h2>
+          <h2>{{ t("gen_section_settings") }}</h2>
 
           <div class="form-group range-group">
             <span>
-              <label for="id_longueur" class="no-margin-bottom">{{ t('gen_label_length') }}</label>
+              <label for="id_longueur" class="no-margin-bottom">{{ t("gen_label_length") }}</label>
               <output>{{ longueur }}</output>
             </span>
-            <input
-                type="range"
-                v-model="longueur"
-                min="4"
-                max="40"
-                step="1"
-                id="id_longueur"
-            />
+            <input type="range" v-model="longueur" min="4" max="40" step="1" id="id_longueur" />
           </div>
 
           <div class="checkbox-group">
             <label class="check-pill">
-              <input type="checkbox" v-model="minuscules"/>
-              <span>{{ t('gen_lowercase') }}</span>
+              <input type="checkbox" v-model="minuscules" />
+              <span>{{ t("gen_lowercase") }}</span>
             </label>
             <label class="check-pill">
-              <input type="checkbox" v-model="majuscules"/>
-              <span>{{ t('gen_uppercase') }}</span>
+              <input type="checkbox" v-model="majuscules" />
+              <span>{{ t("gen_uppercase") }}</span>
             </label>
             <label class="check-pill">
-              <input type="checkbox" v-model="symboles"/>
-              <span>{{ t('gen_symbols') }}</span>
+              <input type="checkbox" v-model="symboles" />
+              <span>{{ t("gen_symbols") }}</span>
             </label>
             <label class="check-pill">
-              <input type="checkbox" v-model="chiffres"/>
-              <span>{{ t('gen_numbers') }}</span>
+              <input type="checkbox" v-model="chiffres" />
+              <span>{{ t("gen_numbers") }}</span>
             </label>
           </div>
         </fieldset>
 
         <!-- Résultat -->
         <div class="result">
-          <h2>{{ t('gen_section_result') }}</h2>
-          <input type="text" id="password" v-model="motDePasse" readonly
-                 :placeholder="t('gen_placeholder_result')"/>
+          <h2>{{ t("gen_section_result") }}</h2>
+          <input
+            type="text"
+            id="password"
+            v-model="motDePasse"
+            readonly
+            :placeholder="t('gen_placeholder_result')"
+          />
           <p class="security-line">
-            {{ t('gen_security_label') }} :
+            {{ t("gen_security_label") }} :
             <span :style="{ color: couleurSecurite }">{{ niveauSecurite }}</span>
           </p>
-          <input type="range" :value="scoreSecurite" min="0" max="252" disabled/>
+          <input type="range" :value="scoreSecurite" min="0" max="252" disabled />
         </div>
       </div>
     </div>
@@ -101,15 +101,15 @@
 </template>
 
 <script lang="ts">
-import {defineComponent, ref, watch, computed} from "vue";
-import {generatePassword, calculateEntropyBits, getSecurityLevel} from "@/utils";
-import {useI18n} from "@/i18n";
-import type {TranslationKey} from "@/i18n";
+import { defineComponent, ref, watch, computed } from "vue";
+import { generatePassword, calculateEntropyBits, getSecurityLevel } from "@/utils";
+import { useI18n } from "@/i18n";
+import type { TranslationKey } from "@/i18n";
 
 export default defineComponent({
   name: "Generator",
   setup() {
-    const {t} = useI18n();
+    const { t } = useI18n();
 
     const clef = ref("");
     const site = ref("");
@@ -140,8 +140,14 @@ export default defineComponent({
     };
 
     const genererMotDePasse = async () => {
-      const bits = calculateEntropyBits(longueur.value, minuscules.value, majuscules.value, symboles.value, chiffres.value);
-      const {color} = getSecurityLevel(bits);
+      const bits = calculateEntropyBits(
+        longueur.value,
+        minuscules.value,
+        majuscules.value,
+        symboles.value,
+        chiffres.value,
+      );
+      const { color } = getSecurityLevel(bits);
       couleurSecurite.value = color;
       scoreSecurite.value = bits;
       securityKey.value = securityKeyFromBits(bits);
@@ -154,15 +160,21 @@ export default defineComponent({
         return;
       }
 
-      const mdp = await generatePassword(site.value, clef.value, longueur.value, minuscules.value, majuscules.value, symboles.value, chiffres.value);
+      const mdp = await generatePassword(
+        site.value,
+        clef.value,
+        longueur.value,
+        minuscules.value,
+        majuscules.value,
+        symboles.value,
+        chiffres.value,
+      );
       motDePasse.value = mdp ?? "";
     };
 
-    watch(
-        [clef, site, longueur, minuscules, majuscules, symboles, chiffres],
-        genererMotDePasse,
-        {immediate: true}
-    );
+    watch([clef, site, longueur, minuscules, majuscules, symboles, chiffres], genererMotDePasse, {
+      immediate: true,
+    });
 
     return {
       t,
@@ -302,7 +314,10 @@ input[type="password"] {
   background: rgba(0, 0, 0, 0.25);
   color: var(--text);
   font-size: 1rem;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
 }
 
 input[type="text"]::placeholder,
@@ -320,7 +335,7 @@ input[type="password"]:focus {
 
 input[type="text"]:read-only {
   background: rgba(0, 0, 0, 0.35);
-  font-family: 'JetBrains Mono', 'Menlo', 'Consolas', monospace;
+  font-family: "JetBrains Mono", "Menlo", "Consolas", monospace;
   letter-spacing: 0.5px;
 }
 
@@ -342,7 +357,9 @@ input[type="text"]:read-only {
   font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .ghost-btn:hover {
@@ -362,7 +379,7 @@ input[type="text"]:read-only {
 }
 
 .range-group output {
-  font-family: 'JetBrains Mono', 'Menlo', 'Consolas', monospace;
+  font-family: "JetBrains Mono", "Menlo", "Consolas", monospace;
   font-weight: 700;
   color: var(--c4);
   font-size: 1.1rem;
@@ -426,7 +443,10 @@ input[type="range"]:disabled {
   font-size: 0.9rem;
   color: var(--text-muted);
   font-weight: 500;
-  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
   margin: 0;
 }
 
@@ -445,7 +465,9 @@ input[type="range"]:disabled {
   background: transparent;
   cursor: pointer;
   position: relative;
-  transition: background 0.2s ease, border-color 0.2s ease;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .check-pill input[type="checkbox"]:checked {
