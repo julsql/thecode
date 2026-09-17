@@ -62,6 +62,7 @@
     <!-- Génération protégée -->
     <string name="generate_auth_title">Authentification requise</string>
     <string name="generate_auth_subtitle">Confirmez pour générer votre mot de passe</string>
+    <string name="generate_unlock_button">Authentifiez-vous pour générer un mot de passe</string>
 
     <!-- Aide -->
     <string name="help_title">Information</string>

@@ -18,6 +18,7 @@ public final class Preferences {
     public static final String KEY_SYM = "symState";
     public static final String KEY_CHI = "chiState";
     public static final String KEY_DARK_MODE = "darkMode";
+    public static final String KEY_LAST_UNLOCK_AT = "lastUnlockAt";
 
     private final SharedPreferences prefs;
 
@@ -46,4 +47,9 @@ public final class Preferences {
 
     public String getDarkMode() { return prefs.getString(KEY_DARK_MODE, "SYSTEM"); }
     public void setDarkMode(String v) { prefs.edit().putString(KEY_DARK_MODE, v).apply(); }
+
+    /** Horodatage (epoch ms) de la dernière session authentifiée. Cf. {@link SessionLock}. */
+    public long getLastUnlockAt() { return prefs.getLong(KEY_LAST_UNLOCK_AT, 0L); }
+    public void setLastUnlockAt(long v) { prefs.edit().putLong(KEY_LAST_UNLOCK_AT, v).apply(); }
+    public void clearLastUnlockAt() { prefs.edit().remove(KEY_LAST_UNLOCK_AT).apply(); }
 }
