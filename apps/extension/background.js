@@ -189,16 +189,31 @@ async function generatePasswordForUrl(url) {
     }
 }
 
-function getRegistrableDomain(hostname) {
-  const p = hostname.split('.');
+/**
+ * Domaine enregistrable d'un hostname, d'apres une liste de suffixes publics.
+ *
+ * Fonction pure : la liste est passee en argument, ce qui la rend testable sans
+ * dependre du chargement asynchrone de la PSL. Le wrapper ci-dessous utilise la
+ * liste du service worker.
+ */
+function registrableDomain(hostname, suffixes) {
+  const p = String(hostname).toLowerCase().split('.');
 
   for (let i = 0; i < p.length; i++) {
     const candidate = p.slice(i).join('.');
-    if (psl.includes(candidate)) {
+    if (suffixes.includes(candidate)) {
+      // i === 0 : le hostname EST un suffixe public (github.io, co.uk). On ne
+      // peut pas remonter d'un cran ; p.slice(-1) renvoyait le TLD seul ("io"),
+      // ce qui divergeait d'Apple et d'Android. On rend le hostname tel quel.
+      if (i === 0) return p.join('.');
       return p.slice(i - 1).join('.');
     }
   }
-  return hostname;
+  return p.join('.');
+}
+
+function getRegistrableDomain(hostname) {
+  return registrableDomain(hostname, psl);
 }
 
 
@@ -351,5 +366,5 @@ async function hashToBigInt(input) {
 
 
 if (typeof module !== "undefined") {
-    module.exports = { generatePassword, buildCharset, calculateEntropyBits, getSecurityLevel, convertToBase, applyCharsetReplacement, getUniquePosition, hashToBigInt, normalizeParams, clampLength, MIN_LENGTH, MAX_LENGTH, DEFAULT_PARAMS };
+    module.exports = { generatePassword, getRegistrableDomain, registrableDomain, buildCharset, calculateEntropyBits, getSecurityLevel, convertToBase, applyCharsetReplacement, getUniquePosition, hashToBigInt, normalizeParams, clampLength, MIN_LENGTH, MAX_LENGTH, DEFAULT_PARAMS };
 }

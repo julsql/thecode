@@ -38,7 +38,9 @@ test-conformance: check-shared require-setup  ## Vecteurs partages sur toutes le
 	@echo "── cli (pytest) ──"
 	@cd apps/cli && PYTHONPATH=. $(CLI_PY) -m pytest tests/test_conformance.py -q
 	@echo "── android (junit) ──"
-	@cd apps/android && ./gradlew :app:testDebugUnitTest --tests 'fr.juliette.thecode.CodeConformanceTest' --console=plain -q
+	@cd apps/android && ./gradlew :app:testDebugUnitTest \
+	  --tests 'fr.juliette.thecode.CodeConformanceTest' \
+	  --tests 'fr.juliette.thecode.autofill.DomainCanonicalTest' --console=plain -q
 
 test-conformance-apple: check-shared  ## Conformance Apple (cree un simulateur iOS temporaire)
 	@./scripts/test-apple-conformance.sh

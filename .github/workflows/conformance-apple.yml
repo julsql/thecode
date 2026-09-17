@@ -38,6 +38,15 @@ jobs:
             -only-testing:thecode-iosTests/ConformanceTests \
             | xcpretty && exit ${PIPESTATUS[0]}
 
+      - name: Canonicalisation (target macOS, pas de simulateur)
+        working-directory: apps/apple
+        run: |
+          xcodebuild test \
+            -scheme "TheCode for Mac" \
+            -destination "platform=macOS" \
+            -only-testing:thecode-macosTests/CanonicalSiteTests \
+            -quiet
+
       - name: Clean up simulator
         if: always()
         run: xcrun simctl delete "${{ steps.sim.outputs.id }}" || true
