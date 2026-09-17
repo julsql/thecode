@@ -1,5 +1,6 @@
 package fr.juliette.thecode.autofill;
 
+import android.annotation.SuppressLint;
 import android.app.PendingIntent;
 import android.app.assist.AssistStructure;
 import android.app.slice.Slice;
@@ -143,6 +144,10 @@ public class TheCodeAutofillService extends AutofillService {
      * clavier. Renvoie {@code null} si le clavier ne fournit aucun spec ou n'est
      * pas compatible avec le style inline v1 (auquel cas seul le dropdown s'affiche).
      */
+    // InlineSuggestionUi.Content.getSlice() est marquee @RestrictTo dans
+    // androidx.autofill alors que c'est le seul moyen documente d'obtenir le
+    // Slice attendu par InlinePresentation. Faux positif connu du lint.
+    @SuppressLint("RestrictedApi")
     @RequiresApi(Build.VERSION_CODES.R)
     @Nullable
     private InlinePresentation buildInlinePresentation(String domain,

@@ -429,6 +429,12 @@ public class MainActivity extends AppCompatActivity {
      * Settings.Secure (clé « autofill_service ») qui reflète le réglage réel.
      */
     private boolean isOurAutofillServiceEnabled(AutofillManager am) {
+        // Le framework Autofill n'existe qu'a partir d'Android 8 (API 26), alors
+        // que minSdk vaut 21 : appeler hasEnabledAutofillServices sans garde
+        // plante sur Android 5.0 a 7.1. openAutofillSettings() avait deja ce
+        // garde, pas celui-ci.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return false;
+
         if (am != null && am.hasEnabledAutofillServices()) return true;
 
         String setting = Settings.Secure.getString(

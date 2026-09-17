@@ -4,9 +4,9 @@ import pytest
 
 from thecode.core import (
     LOWER,
-    UPPER,
-    SYMBOLS,
     NUMBERS,
+    SYMBOLS,
+    UPPER,
     apply_charset_replacement,
     build_charset,
     convert_to_base,

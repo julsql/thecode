@@ -14,7 +14,9 @@
         <item name="colorOnSurfaceVariant">@color/on_surface_variant_light</item>
         <item name="colorOutline">@color/outline_light</item>
 
-        <item name="android:windowLightStatusBar">true</item>
+        <!-- API 23+ : un attribut de theme inconnu est ignore silencieusement par
+             les versions anterieures, contrairement a un appel de methode. -->
+        <item name="android:windowLightStatusBar" tools:targetApi="23">true</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@color/background_light</item>
 
@@ -23,7 +25,9 @@
 
     <style name="Theme.TheCode.Splash" parent="Theme.TheCode">
         <item name="android:windowBackground">@color/background_light</item>
-        <item name="android:windowLightStatusBar">true</item>
+        <!-- API 23+ : un attribut de theme inconnu est ignore silencieusement par
+             les versions anterieures, contrairement a un appel de methode. -->
+        <item name="android:windowLightStatusBar" tools:targetApi="23">true</item>
     </style>
 
     <style name="ThemeOverlay.TheCode.MaterialAlertDialog"

@@ -30,11 +30,37 @@ jobs:
       - run: npx jest --ci --coverage
         working-directory: apps/extension/js-test
 
-      # web-ext valide le manifeste et les permissions comme le feraient les
-      # stores, ce qui evite de decouvrir un refus au moment de publier.
-      - name: web-ext lint
+      # Les trois manifestes doivent rester coherents : c'est la source la plus
+      # courante de refus en boutique, et rien ne les reliait jusqu'ici.
+      - name: Manifestes valides et versions alignees
         working-directory: apps/extension
-        run: npx --yes web-ext lint --source-dir . --warnings-as-errors=false
+        run: |
+          python3 - <<'PY'
+          import json, sys
+          files = ["manifest.json",
+                   "manifest-chrome-brave-edge.json",
+                   "manifest-safari-firefox.json"]
+          versions = {}
+          for f in files:
+              with open(f) as fh:
+                  m = json.load(fh)
+              versions[f] = m["version"]
+              assert m["manifest_version"] == 3, f"{f}: manifest_version attendu 3"
+          if len(set(versions.values())) != 1:
+              print("Versions desynchronisees :", versions)
+              sys.exit(1)
+          print("3 manifestes valides, version", next(iter(versions.values())))
+          PY
+
+      # web-ext est l'outil de Mozilla : on le lance sur la variante Firefox.
+      # Le lancer sur le manifeste Chrome remonte BACKGROUND_SERVICE_WORKER_NOFALLBACK,
+      # un defaut de compatibilite Firefox sans objet pour un manifeste Chrome.
+      - name: web-ext lint (variante Firefox)
+        working-directory: apps/extension
+        run: |
+          mkdir -p /tmp/ff && cp -r . /tmp/ff/ && rm -rf /tmp/ff/js-test
+          cp /tmp/ff/manifest-safari-firefox.json /tmp/ff/manifest.json
+          npx --yes web-ext lint --source-dir /tmp/ff --warnings-as-errors=false
 
   package:
     runs-on: ubuntu-latest
