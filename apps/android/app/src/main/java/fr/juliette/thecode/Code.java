@@ -1,7 +1,5 @@
 package fr.juliette.thecode;
 
-import android.graphics.Color;
-
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -19,6 +17,19 @@ public class Code {
     private static final String UPPER = "THEQUICKBROWNFXJMPSVLAZYDG";
     private static final String SYMBOLS = "@#&!)-%;<:*$+=/?>(";
     private static final String DIGITS = "567438921";
+
+    /**
+     * Couleurs des niveaux de sécurité, en ARGB littéral. Volontairement pas de
+     * parsing via android.graphics.Color : cette classe reste ainsi du Java
+     * pur, testable en JVM sans mock (c'est ce qui faisait échouer
+     * CodeUnitTest, dont 10 cas sur 12 plantaient au chargement).
+     */
+    private static final int COLOR_NONE        = 0xFFFE0101;
+    private static final int COLOR_VERY_WEAK   = 0xFFFE0101;
+    private static final int COLOR_WEAK        = 0xFFFE4501;
+    private static final int COLOR_MEDIUM      = 0xFFFE7601;
+    private static final int COLOR_STRONG      = 0xFF53FE38;
+    private static final int COLOR_VERY_STRONG = 0xFF1CD001;
 
     public static final int MIN_LENGTH = 4;
     public static final int MAX_LENGTH = 40;
@@ -39,7 +50,7 @@ public class Code {
     private int length = DEFAULT_LENGTH;
 
     private SafetyLevel safetyLevel = SafetyLevel.VERY_STRONG;
-    private int color = Color.parseColor("#1CD001");
+    private int color = COLOR_VERY_STRONG;
 
     public Code() {}
 
@@ -94,22 +105,22 @@ public class Code {
         int bits = getBits();
         if (bits == 0) {
             safetyLevel = SafetyLevel.NONE;
-            color = Color.parseColor("#FE0101");
+            color = COLOR_NONE;
         } else if (bits < 64) {
             safetyLevel = SafetyLevel.VERY_WEAK;
-            color = Color.parseColor("#FE0101");
+            color = COLOR_VERY_WEAK;
         } else if (bits < 80) {
             safetyLevel = SafetyLevel.WEAK;
-            color = Color.parseColor("#FE4501");
+            color = COLOR_WEAK;
         } else if (bits < 100) {
             safetyLevel = SafetyLevel.MEDIUM;
-            color = Color.parseColor("#FE7601");
+            color = COLOR_MEDIUM;
         } else if (bits < 126) {
             safetyLevel = SafetyLevel.STRONG;
-            color = Color.parseColor("#53FE38");
+            color = COLOR_STRONG;
         } else {
             safetyLevel = SafetyLevel.VERY_STRONG;
-            color = Color.parseColor("#1CD001");
+            color = COLOR_VERY_STRONG;
         }
     }
 

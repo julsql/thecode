@@ -109,19 +109,28 @@
                             android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
                             android:textColor="?attr/colorOnSurface" />
 
-                        <TextView
-                            android:id="@+id/lengthValueTextView"
+                        <!-- Saisissable au clavier : le slider seul ne permettait
+                             pas de viser une longueur précise. -->
+                        <EditText
+                            android:id="@+id/lengthEditText"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:minWidth="40dp"
+                            android:minWidth="56dp"
                             android:gravity="center"
                             android:paddingHorizontal="12dp"
                             android:paddingVertical="6dp"
                             android:background="@drawable/bg_value_chip"
                             android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
                             android:textColor="?attr/colorOnSurface"
+                            android:inputType="number"
+                            android:imeOptions="actionDone"
+                            android:maxLength="2"
+                            android:selectAllOnFocus="true"
+                            android:autofillHints="off"
+                            android:importantForAutofill="no"
+                            android:contentDescription="@string/length_label"
                             android:text="20"
-                            tools:ignore="HardcodedText" />
+                            tools:ignore="HardcodedText,LabelFor" />
                     </LinearLayout>
 
                     <com.google.android.material.slider.Slider
@@ -324,64 +333,86 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                    <!-- Verrou : tant que la session n'est pas authentifiée, on
+                         n'expose qu'un bouton d'authentification (même flux que
+                         l'app Apple). Le champ « nom du site » et le résultat
+                         n'apparaissent qu'ensuite. -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/generateAuthButton"
+                        style="@style/Widget.Material3.Button.TonalButton"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="@string/site_hint"
-                        app:boxCornerRadiusTopStart="14dp"
-                        app:boxCornerRadiusTopEnd="14dp"
-                        app:boxCornerRadiusBottomStart="14dp"
-                        app:boxCornerRadiusBottomEnd="14dp">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/siteEditText"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:autofillHints="off"
-                            android:inputType="textUri"
-                            android:singleLine="true" />
-                    </com.google.android.material.textfield.TextInputLayout>
+                        android:text="@string/generate_unlock_button"
+                        app:icon="@drawable/ic_lock"
+                        app:iconGravity="textStart" />
 
                     <LinearLayout
-                        android:id="@+id/resultCard"
+                        android:id="@+id/generateContent"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
-                        android:layout_marginTop="16dp"
                         android:visibility="gone">
 
                         <com.google.android.material.textfield.TextInputLayout
-                            android:id="@+id/passwordInputLayout"
                             style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="@string/generated_password_hint"
-                            app:endIconMode="custom"
-                            app:endIconDrawable="@drawable/ic_copy"
-                            app:endIconContentDescription="@string/copy"
+                            android:hint="@string/site_hint"
                             app:boxCornerRadiusTopStart="14dp"
                             app:boxCornerRadiusTopEnd="14dp"
                             app:boxCornerRadiusBottomStart="14dp"
                             app:boxCornerRadiusBottomEnd="14dp">
 
                             <com.google.android.material.textfield.TextInputEditText
-                                android:id="@+id/passwordEditText"
+                                android:id="@+id/siteEditText"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:focusable="false"
-                                android:fontFamily="monospace"
-                                android:longClickable="true"
-                                android:textIsSelectable="true" />
+                                android:autofillHints="off"
+                                android:inputType="textUri"
+                                android:singleLine="true" />
                         </com.google.android.material.textfield.TextInputLayout>
 
-                        <TextView
-                            android:id="@+id/securityLabelTextView"
-                            android:layout_width="wrap_content"
+                        <LinearLayout
+                            android:id="@+id/resultCard"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:layout_marginStart="4dp"
-                            android:textAppearance="@style/TextAppearance.Material3.LabelLarge" />
+                            android:orientation="vertical"
+                            android:layout_marginTop="16dp"
+                            android:visibility="gone">
+
+                            <com.google.android.material.textfield.TextInputLayout
+                                android:id="@+id/passwordInputLayout"
+                                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:hint="@string/generated_password_hint"
+                                app:endIconMode="custom"
+                                app:endIconDrawable="@drawable/ic_copy"
+                                app:endIconContentDescription="@string/copy"
+                                app:boxCornerRadiusTopStart="14dp"
+                                app:boxCornerRadiusTopEnd="14dp"
+                                app:boxCornerRadiusBottomStart="14dp"
+                                app:boxCornerRadiusBottomEnd="14dp">
+
+                                <com.google.android.material.textfield.TextInputEditText
+                                    android:id="@+id/passwordEditText"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:focusable="false"
+                                    android:fontFamily="monospace"
+                                    android:longClickable="true"
+                                    android:textIsSelectable="true" />
+                            </com.google.android.material.textfield.TextInputLayout>
+
+                            <TextView
+                                android:id="@+id/securityLabelTextView"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:layout_marginStart="4dp"
+                                android:textAppearance="@style/TextAppearance.Material3.LabelLarge" />
+
+                        </LinearLayout>
 
                     </LinearLayout>
 
