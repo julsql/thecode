@@ -51,7 +51,16 @@ jobs:
         with:
           languages: ${{ matrix.language }}
           config-file: .github/codeql/config.yml
+      # autobuild cherche un projet a la racine et echoue : le Gradle vit dans
+      # apps/android. On construit explicitement pour Java, et on laisse
+      # autobuild faire pour les langages interpretes.
+      - name: Build Java
+        if: matrix.language == 'java-kotlin'
+        run: ./gradlew :app:assembleDebug --console=plain
+        working-directory: apps/android
+
       - uses: github/codeql-action/autobuild@v4
+        if: matrix.language != 'java-kotlin'
       - uses: github/codeql-action/analyze@v4
         with:
           category: /language:${{ matrix.language }}
@@ -93,14 +102,19 @@ jobs:
           push: false
           load: true
           tags: thecode-website:scan
+      # Image officielle plutot que l'action : celle-ci echouait au
+      # telechargement de son binaire (cache introuvable), sans rapport avec le
+      # contenu de l'image.
+      #
+      # Seulement les CVE : gitleaks couvre deja les secrets du depot.
       - name: trivy
-        uses: aquasecurity/trivy-action@v0.33.1
-        with:
-          image-ref: thecode-website:scan
-          severity: HIGH,CRITICAL
-          exit-code: "1"
-          ignore-unfixed: true
-          # Seulement les CVE : le scan de secrets est deja fait par gitleaks
-          # sur le depot, et les scanners par defaut faisaient echouer ce job
-          # alors que l'image ne porte aucune vulnerabilite.
-          scanners: vuln
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$HOME/.cache/trivy:/root/.cache/trivy" \
+            aquasec/trivy:latest image \
+              --severity HIGH,CRITICAL \
+              --ignore-unfixed \
+              --scanners vuln \
+              --exit-code 1 \
+              thecode-website:scan
