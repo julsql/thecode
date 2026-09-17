@@ -1,0 +1,21 @@
+# Les vecteurs de conformite contiennent des mots de passe DERIVES de la
+# passphrase publique "clef" sur des sites fictifs. Ce sont des valeurs de
+# test, publiees depuis 2025 dans les depots d'origine, et necessaires pour
+# garantir que les six implementations produisent le meme resultat.
+#
+# Les champs sont nommes 'master' et 'expected' plutot que 'key'/'password'
+# pour limiter les faux positifs ; cette exclusion sert de filet.
+#
+# But : eviter la fatigue d'alerte. Sur un gestionnaire de mots de passe,
+# s'habituer a ignorer GitGuardian est plus dangereux que ces faux positifs.
+version: 2
+
+secret:
+  ignored-paths:
+    - shared/test-vectors.json
+    - apps/extension/js-test/test-vectors.json
+    - apps/website/test/test-vectors.json
+    - apps/cli/tests/test-vectors.json
+    - apps/android/app/src/test/resources/test-vectors.json
+    - apps/apple/thecodeTests/Resources/test-vectors.json
+    - apps/**/node_modules/**

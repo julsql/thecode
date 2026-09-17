@@ -37,21 +37,21 @@ describe("conformance v1 (vecteurs partages, figes)", () => {
       const { lower, upper, symbols, numbers } = c.charset;
       const res = await generatePassword(
         c.site,
-        c.key,
+        c.master,
         c.length,
         lower,
         upper,
         symbols,
         numbers
       );
-      expect(res.mdp).toBe(c.password);
+      expect(res.mdp).toBe(c.expected);
     });
 
     it("annonce le meme nombre de bits", async () => {
       const { lower, upper, symbols, numbers } = c.charset;
       const res = await generatePassword(
         c.site,
-        c.key,
+        c.master,
         c.length,
         lower,
         upper,
@@ -67,6 +67,6 @@ describe("proprietes documentees de la v1", () => {
   it("presente la collision de concatenation (comportement v1 assume)", async () => {
     const a = vectors.v1.cases.find((c) => c.id === "collision-a");
     const b = vectors.v1.cases.find((c) => c.id === "collision-b");
-    expect(a.password).toBe(b.password);
+    expect(a.expected).toBe(b.expected);
   });
 });

@@ -48,10 +48,10 @@ private struct SharedVectors: Decodable {
     struct Case: Decodable {
         let id: String
         let site: String
-        let key: String
+        let master: String
         let length: Int
         let charset: Charset
-        let password: String
+        let expected: String
         let bits: Int
     }
 }
@@ -100,10 +100,10 @@ struct ConformanceTests {
 
             // La concaténation est faite par l'appelant côté Apple : le hash
             // porte sur site + clef, dans cet ordre.
-            let got = utils.generatePassword(input: c.site + c.key)
+            let got = utils.generatePassword(input: c.site + c.master)
 
-            if got.code != c.password {
-                failures.append("\(c.id) : attendu \(c.password), obtenu \(got.code)")
+            if got.code != c.expected {
+                failures.append("\(c.id) : attendu \(c.expected), obtenu \(got.code)")
             }
             if got.bits != c.bits {
                 failures.append("\(c.id) : bits attendus \(c.bits), obtenus \(got.bits)")
@@ -118,6 +118,6 @@ struct ConformanceTests {
         let cases = try loadSharedVectors().v1.cases
         let a = try #require(cases.first { $0.id == "collision-a" })
         let b = try #require(cases.first { $0.id == "collision-b" })
-        #expect(a.password == b.password)
+        #expect(a.expected == b.expected)
     }
 }

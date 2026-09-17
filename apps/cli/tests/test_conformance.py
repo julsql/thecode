@@ -43,18 +43,18 @@ def test_password_matches_shared_vector(case):
     cs = case["charset"]
     got = generate_password(
         case["site"],
-        case["key"],
+        case["master"],
         case["length"],
         cs["lower"],
         cs["upper"],
         cs["symbols"],
         cs["numbers"],
     )
-    assert got == case["password"]
+    assert got == case["expected"]
 
 
 def test_v1_concatenation_collision_is_documented():
     """Comportement reel de la v1, conserve tel quel. Corrige en v2."""
     a = next(c for c in CASES if c["id"] == "collision-a")
     b = next(c for c in CASES if c["id"] == "collision-b")
-    assert a["password"] == b["password"]
+    assert a["expected"] == b["expected"]
