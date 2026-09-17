@@ -1,0 +1,42 @@
+# Hooks git du monorepo.
+#
+# Installation : npx lefthook install (ou make setup)
+#
+# Le but est d'attraper localement ce qui ferait echouer la CI, pas de
+# reproduire la CI : les hooks doivent rester rapides, sinon on les contourne.
+
+pre-commit:
+  parallel: true
+  commands:
+    # Le garde-fou le plus important : une copie de shared/ qui derive fait
+    # diverger les implementations, donc les mots de passe des utilisateurs.
+    shared-en-phase:
+      run: ./scripts/check-shared.sh
+
+    prettier:
+      glob: "*.{js,ts,vue,json,css,html,md}"
+      exclude: "(^|/)(node_modules|dist|build|coverage)/"
+      run: npx --yes prettier@3 --print-width 100 --check {staged_files}
+
+    ruff:
+      glob: "apps/cli/**/*.py"
+      run: apps/cli/.venv/bin/ruff check {staged_files}
+
+    # Filet anti-secret : le .gitignore couvre les extensions connues, ceci
+    # attrape un fichier renomme ou un contenu colle par megarde.
+    pas-de-secret:
+      run: |
+        if git diff --cached --name-only | grep -qiE '\.(jks|keystore|p12|pem|p8|mobileprovision)$|^keys/'; then
+          echo "Fichier de signature dans le commit. Refus." >&2
+          exit 1
+        fi
+
+commit-msg:
+  commands:
+    conventional-commits:
+      run: |
+        head -1 "{1}" | grep -qE '^(feat|fix|chore|docs|refactor|test|perf|style|build|ci|revert)(\([a-z0-9/-]+\))?!?: .+' || {
+          echo "Message non conforme aux Conventional Commits." >&2
+          echo "Exemples : feat(extension): ... / fix(cli): ... / chore: ..." >&2
+          exit 1
+        }

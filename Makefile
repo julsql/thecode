@@ -23,6 +23,7 @@ setup:  ## Prepare l'environnement de dev local (venv Python, deps npm)
 	@cd apps/cli && $(CLI_PY) -m pip install -q -e '.[test]'
 	@test -d apps/extension/js-test/node_modules || (cd apps/extension/js-test && npm ci --silent)
 	@test -d apps/website/node_modules || (cd apps/website && npm ci --silent)
+	@npx --yes lefthook@1 install >/dev/null 2>&1 || true
 	@echo "Environnement pret."
 
 require-setup:
