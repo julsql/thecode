@@ -90,7 +90,7 @@ jobs:
           load: true
           tags: thecode-website:scan
       - name: trivy
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           image-ref: thecode-website:scan
           severity: HIGH,CRITICAL

@@ -9,9 +9,21 @@
       "component": "extension",
       "changelog-path": "CHANGELOG.md",
       "extra-files": [
-        { "type": "json", "path": "manifest.json", "jsonpath": "$.version" },
-        { "type": "json", "path": "manifest-chrome-brave-edge.json", "jsonpath": "$.version" },
-        { "type": "json", "path": "manifest-safari-firefox.json", "jsonpath": "$.version" }
+        {
+          "type": "json",
+          "path": "manifest.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "manifest-chrome-brave-edge.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "manifest-safari-firefox.json",
+          "jsonpath": "$.version"
+        }
       ]
     },
     "apps/website": {
@@ -28,12 +40,16 @@
       "release-type": "simple",
       "package-name": "android",
       "component": "android",
-      "extra-files": ["app/build.gradle"]
+      "extra-files": [
+        "app/build.gradle"
+      ]
     },
     "apps/apple": {
       "release-type": "simple",
       "package-name": "apple",
       "component": "apple"
     }
-  }
+  },
+  "bootstrap-sha": "affe3ccb43e2b76f09dc17d124402ba922405aa8",
+  "_comment_bootstrap": "Les historiques importes des cinq depots contiennent des messages qui ne sont pas des conventional commits ('Initial commit', 'fix: params'...). release-please echouait en tentant de les parser. bootstrap-sha lui dit de ne pas remonter avant la creation du monorepo."
 }
