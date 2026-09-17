@@ -1,0 +1,10 @@
+{
+    "extension_name": {
+        "message": "TheCode",
+        "description": "The display name for the extension."
+    },
+    "extension_description": {
+        "message": "Générez des mots de passe sécurisés et uniques pour chaque site à partir d'une seule clé secrète. Aucun stockage, zéro risque.\n",
+        "description": "Description of what the extension does."
+    }
+}
