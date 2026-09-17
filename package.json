@@ -1,0 +1,14 @@
+{
+  "name": "thecode-monorepo",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Outillage transverse du monorepo TheCode (hooks git, formatage).",
+  "scripts": {
+    "prepare": "lefthook install",
+    "format": "prettier --print-width 100 --write ."
+  },
+  "devDependencies": {
+    "lefthook": "^1.10.0",
+    "prettier": "^3.4.0"
+  }
+}

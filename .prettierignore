@@ -1,0 +1,12 @@
+node_modules/
+dist/
+build/
+coverage/
+.venv/
+apps/android/
+apps/apple/
+apps/cli/
+shared/public_suffix_list.dat
+**/test-vectors.json
+**/canonical-site-cases.json
+**/package-lock.json
