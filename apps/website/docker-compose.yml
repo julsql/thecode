@@ -1,0 +1,9 @@
+version: "3.8"
+
+services:
+  thecode:
+    build: .
+    image: thecode:latest
+    container_name: thecode
+    ports:
+      - "8002:80"
