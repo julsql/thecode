@@ -5,8 +5,12 @@
 #
 # L'image a change de proprietaire : l'organisation TheCodeDevLab a ete
 # supprimee, donc ghcr.io/thecodedevlab/thecode-website n'est plus pullable.
-# Le nom est desormais fixe explicitement plutot que derive de
-# github.repository, qui donnerait "julsql/thecode".
+#
+# Le nom suit le schema monorepo <owner>/<repo>/<image> : GHCR rattache alors
+# le package a julsql/thecode, ce qui donne au GITHUB_TOKEN de CE depot le
+# droit d'y pousser. Un simple "julsql/thecode-website" serait rattache au
+# depot homonyme julsql/thecode-website (vestige d'avant le transfert), et le
+# push echouerait en permission_denied: write_package.
 #
 # Le push utilise GITHUB_TOKEN via permissions.packages: write, donc aucun
 # PAT n'est necessaire.
@@ -28,7 +32,7 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: julsql/thecode-website
+  IMAGE_NAME: julsql/thecode/website
 
 jobs:
   test:
