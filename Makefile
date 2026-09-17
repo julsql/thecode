@@ -1,7 +1,7 @@
 # Point d'entree unique du monorepo. Chaque cible reste utilisable seule,
 # pour que la CI et le poste de dev lancent exactement la meme chose.
 
-.PHONY: help sync-shared check-shared test-conformance test-js test-py test setup require-setup
+.PHONY: help sync-shared check-shared test-conformance test-conformance-apple test-js test-py test setup require-setup
 
 # Environnement Python local : la CI installe le paquet dans le runner, mais en
 # local on isole dans apps/cli/.venv pour ne pas dependre du python systeme.
@@ -39,6 +39,9 @@ test-conformance: check-shared require-setup  ## Vecteurs partages sur toutes le
 	@cd apps/cli && PYTHONPATH=. $(CLI_PY) -m pytest tests/test_conformance.py -q
 	@echo "── android (junit) ──"
 	@cd apps/android && ./gradlew :app:testDebugUnitTest --tests 'fr.juliette.thecode.CodeConformanceTest' --console=plain -q
+
+test-conformance-apple: check-shared  ## Conformance Apple (cree un simulateur iOS temporaire)
+	@./scripts/test-apple-conformance.sh
 
 test-js:  ## Tests JS/TS
 	@cd apps/extension/js-test && npx jest
