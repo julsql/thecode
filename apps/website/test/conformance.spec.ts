@@ -37,8 +37,8 @@ describe("conformance v1 (vecteurs partagés, figés)", () => {
     "%s — reproduit le mot de passe attendu",
     async (_id: string, c: any) => {
       const { lower, upper, symbols, numbers } = c.charset;
-      const got = await generatePassword(c.site, c.key, c.length, lower, upper, symbols, numbers);
-      expect(got).toBe(c.password);
+      const got = await generatePassword(c.site, c.master, c.length, lower, upper, symbols, numbers);
+      expect(got).toBe(c.expected);
     },
   );
 
@@ -58,6 +58,6 @@ describe("propriétés documentées de la v1", () => {
   it("présente la collision de concaténation (comportement v1 assumé)", () => {
     const a = vectors.v1.cases.find((c: any) => c.id === "collision-a");
     const b = vectors.v1.cases.find((c: any) => c.id === "collision-b");
-    expect(a.password).toBe(b.password);
+    expect(a.expected).toBe(b.expected);
   });
 });

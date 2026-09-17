@@ -83,8 +83,8 @@ public class CodeConformanceTest {
 
             // Attention a l'ordre des arguments : getCode(clef, site), inverse
             // des autres implementations, alors que le hash porte sur site+clef.
-            String got = code.getCode(c.getString("key"), c.getString("site"));
-            String want = c.getString("password");
+            String got = code.getCode(c.getString("master"), c.getString("site"));
+            String want = c.getString("expected");
 
             if (!want.equals(got)) {
                 failures.append(String.format(
