@@ -52,6 +52,21 @@
         "bits": 126
       },
       {
+        "id": "single-char-inputs",
+        "site": "s",
+        "key": "c",
+        "length": 20,
+        "charset": {
+          "lower": true,
+          "upper": true,
+          "symbols": true,
+          "numbers": true
+        },
+        "password": "wDwWUk$@<%r1f:YvVqUI",
+        "bits": 126,
+        "note": "Vecteur historique des suites Android et Apple, verifie conforme a l'extension."
+      },
+      {
         "id": "google-com",
         "site": "google.com",
         "key": "clef",
