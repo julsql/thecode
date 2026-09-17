@@ -1,0 +1,98 @@
+# Analyse de securite du depot.
+#
+# TheCode est un gestionnaire de mots de passe : une dependance compromise en
+# amont ou un secret commis par megarde a des consequences directes pour les
+# utilisateurs. Ces controles tournent donc sur chaque PR, plus une fois par
+# semaine pour attraper les vulnerabilites publiees apres coup.
+name: security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 4 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  secrets:
+    name: secrets commis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  codeql:
+    name: CodeQL (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [javascript-typescript, python, java-kotlin]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: github/codeql-action/init@v4
+        with:
+          language: ${{ matrix.language }}
+      - uses: github/codeql-action/autobuild@v4
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:${{ matrix.language }}
+
+  dependencies:
+    name: dependances vulnerables
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: npm audit (extension)
+        working-directory: apps/extension/js-test
+        run: npm audit --audit-level=high
+      - name: npm audit (website)
+        working-directory: apps/website
+        run: npm audit --audit-level=high
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: pip-audit (cli)
+        working-directory: apps/cli
+        run: |
+          pip install pip-audit
+          pip-audit --progress-spinner off .
+
+  image:
+    name: image du site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build sans push
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/website
+          push: false
+          load: true
+          tags: thecode-website:scan
+      - name: trivy
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: thecode-website:scan
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: true

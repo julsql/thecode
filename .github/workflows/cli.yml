@@ -1,0 +1,34 @@
+# CLI Python : lint, types, tests.
+name: cli
+
+on:
+  push:
+    branches: [main]
+    paths: ["apps/cli/**", "shared/**", ".github/workflows/cli.yml"]
+  pull_request:
+    paths: ["apps/cli/**", "shared/**", ".github/workflows/cli.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: cli-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # La borne basse vient de requires-python dans pyproject.toml.
+        python: ["3.9", "3.13"]
+    steps:
+      - uses: actions/checkout@v5
+      - run: ./scripts/check-shared.sh
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install -e '.[test]' ruff
+        working-directory: apps/cli
+      - run: ruff check .
+        working-directory: apps/cli
+      - run: python -m pytest -q --cov=thecode --cov-report=term-missing
+        working-directory: apps/cli
