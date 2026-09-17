@@ -1,0 +1,326 @@
+{
+  "schema": 1,
+  "generated": "2026-09-17",
+  "README": "Source de verite partagee par les 6 implementations. NE JAMAIS modifier la section v1 : ces valeurs sont en production et un utilisateur en depend pour acceder a ses comptes. Toute divergence = perte d acces.",
+  "v1": {
+    "status": "frozen",
+    "deprecation": "Retire des applications a T0+18 mois. Reste disponible via la page /legacy et le flag CLI --legacy.",
+    "algorithm": [
+      "seed = SHA256(site + key)            // concatenation SANS separateur",
+      "raw  = convertToBase(seed, charset)  // numeration bijective, poids forts en tete",
+      "mdp  = applyCharsetReplacement(seed, raw.slice(0, length), groups)"
+    ],
+    "alphabets": {
+      "lower": "portezcviuxwhskyajgblndqfm",
+      "upper": "THEQUICKBROWNFXJMPSVLAZYDG",
+      "symbols": "@#&!)-%;<:*$+=/?>(",
+      "numbers": "567438921"
+    },
+    "group_order": [
+      "lower",
+      "upper",
+      "symbols",
+      "numbers"
+    ],
+    "known_properties": [
+      "Collision de concatenation : (site=google.com, key=abc) et (site=google.co, key=mabc) produisent le MEME mot de passe. Comportement reel de la v1, conserve tel quel. Corrige en v2 par des separateurs 0x00.",
+      "Entropie de rendu mesuree : 124.3 bits pour 126 annonces en longueur 20 (le premier caractere perd ~1.3 bit, borne par la taille du seed). Distribution des autres positions uniforme.",
+      "Entropie reelle plafonnee par celle de la passphrase, pas par celle du mot de passe affiche.",
+      "Pas de KDF : SHA-256 nu. Un seul mot de passe divulgue permet le brute-force hors ligne de la cle maitresse."
+    ],
+    "bounds": {
+      "note": "Les bornes divergent entre implementations en v1. Les cas ci-dessous restent dans [4,40] pour etre comparables partout.",
+      "extension": "clamp [4,40]",
+      "android": "chaine vide si <4 ou >40",
+      "apple": "clamp haut 40, pas de borne basse",
+      "cli": "aucune",
+      "website": "aucune (slider UI)"
+    },
+    "cases": [
+      {
+        "id": "canonical",
+        "site": "site",
+        "key": "clef",
+        "length": 20,
+        "charset": {
+          "lower": true,
+          "upper": true,
+          "symbols": true,
+          "numbers": true
+        },
+        "password": "u8YfpdVdK*#Bpy6(9f*5",
+        "bits": 126
+      },
+      {
+        "id": "google-com",
+        "site": "google.com",
+        "key": "clef",
+        "length": 20,
+        "charset": {
+          "lower": true,
+          "upper": true,
+          "symbols": true,
+          "numbers": true
+        },
+        "password": "t%*<VAp=-jJjA6I-zQI/",
+        "bits": 126
+      },
+      {
+        "id": "google-fr",
+        "site": "google.fr",
+        "key": "clef",
+        "length": 20,
+        "charset": {
+          "lower": true,
+          "upper": true,
+          "symbols": true,
+          "numbers": true
+        },
+        "password": "u9j);VGUqDab=LD8$BjP",
+        "bits": 126
+      },
+      {
+        "id": "len-min-4",
+        "site": "google.com",
+        "key": "clef",
+        "length": 4,
+        "charset": {
+          "lower": true,
+          "upper": true,
+          "symbols": true,
+          "numbers": true
+        },
+        "password": "6<pA",
+        "bits": 25
+      },
+      {
+        "id": "len-8",
+        "site": "google.com",
+        "key": "clef",
+        "length": 8,
+        "charset": {
+          "lower": true,
+          "upper": true,
+          "symbols": true,
+          "numbers": true
+        },
+        "password": "t<pA65!=",
+        "bits": 50
+      },
+      {
+        "id": "len-16",
+        "site": "google.com",
+        "key": "clef",
+        "length": 16,
+        "charset": {
+          "lower": true,
+          "upper": true,
+          "symbols": true,
+          "numbers": true
+        },
+        "password": "t%*&<A!6-jpjAlI-",
+        "bits": 101
+      },
+      {
+        "id": "len-max-40",
+        "site": "google.com",
+        "key": "clef",
+        "length": 40,
+        "charset": {
+          "lower": true,
+          "upper": true,
+          "symbols": true,
+          "numbers": true
+        },
+        "password": "t%*&V<!=-jJjAlI-zQI/)#Yk6cpCR4fhA6ds%Xh6",
+        "bits": 252
+      },
+      {
+        "id": "lower-only",
+        "site": "google.com",
+        "key": "clef",
+        "length": 20,
+        "charset": {
+          "lower": true,
+          "upper": false,
+          "symbols": false,
+          "numbers": false
+        },
+        "password": "pwbbdepqppkpttwyjpgu",
+        "bits": 94
+      },
+      {
+        "id": "upper-only",
+        "site": "google.com",
+        "key": "clef",
+        "length": 20,
+        "charset": {
+          "lower": false,
+          "upper": true,
+          "symbols": false,
+          "numbers": false
+        },
+        "password": "TWVVZUTYTTXTQQWJPTSR",
+        "bits": 94
+      },
+      {
+        "id": "symbols-only",
+        "site": "google.com",
+        "key": "clef",
+        "length": 20,
+        "charset": {
+          "lower": false,
+          "upper": false,
+          "symbols": true,
+          "numbers": false
+        },
+        "password": "(;#=+-/!:((;!(&$%)%(",
+        "bits": 83
+      },
+      {
+        "id": "numbers-only",
+        "site": "google.com",
+        "key": "clef",
+        "length": 20,
+        "charset": {
+          "lower": false,
+          "upper": false,
+          "symbols": false,
+          "numbers": true
+        },
+        "password": "58888682277378851158",
+        "bits": 63
+      },
+      {
+        "id": "no-symbols",
+        "site": "google.com",
+        "key": "clef",
+        "length": 20,
+        "charset": {
+          "lower": true,
+          "upper": true,
+          "symbols": false,
+          "numbers": true
+        },
+        "password": "NXT1UApfKupzJxc34fRk",
+        "bits": 119
+      },
+      {
+        "id": "alnum-lower-digits",
+        "site": "google.com",
+        "key": "clef",
+        "length": 20,
+        "charset": {
+          "lower": true,
+          "upper": false,
+          "symbols": false,
+          "numbers": true
+        },
+        "password": "vhz5v3pufl2fjzc1v6c4",
+        "bits": 103
+      },
+      {
+        "id": "empty-site",
+        "site": "",
+        "key": "clef",
+        "length": 20,
+        "charset": {
+          "lower": true,
+          "upper": true,
+          "symbols": true,
+          "numbers": true
+        },
+        "password": "c43MriwOXD@El/+fJYa:",
+        "bits": 126
+      },
+      {
+        "id": "empty-key",
+        "site": "google.com",
+        "key": "",
+        "length": 20,
+        "charset": {
+          "lower": true,
+          "upper": true,
+          "symbols": true,
+          "numbers": true
+        },
+        "password": "x9zjWO=ZSu!a6ioAk>==",
+        "bits": 126
+      },
+      {
+        "id": "unicode-key",
+        "site": "google.com",
+        "key": "clé-éà€中",
+        "length": 20,
+        "charset": {
+          "lower": true,
+          "upper": true,
+          "symbols": true,
+          "numbers": true
+        },
+        "password": "umMsu:k6%#GTKK7yE(hK",
+        "bits": 126
+      },
+      {
+        "id": "long-key",
+        "site": "example.org",
+        "key": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "length": 20,
+        "charset": {
+          "lower": true,
+          "upper": true,
+          "symbols": true,
+          "numbers": true
+        },
+        "password": "<kmnb/l#Q<Q28WJu7&6A",
+        "bits": 126
+      },
+      {
+        "id": "subdomain-literal",
+        "site": "a.b.co.uk",
+        "key": "clef",
+        "length": 20,
+        "charset": {
+          "lower": true,
+          "upper": true,
+          "symbols": true,
+          "numbers": true
+        },
+        "password": "skAdu8+o2BLuFkC<kH7&",
+        "bits": 126
+      },
+      {
+        "id": "collision-a",
+        "site": "google.com",
+        "key": "abc",
+        "length": 20,
+        "charset": {
+          "lower": true,
+          "upper": true,
+          "symbols": true,
+          "numbers": true
+        },
+        "password": "c=Vi!5WK(yfH:I$Pxkqm",
+        "bits": 126
+      },
+      {
+        "id": "collision-b",
+        "site": "google.co",
+        "key": "mabc",
+        "length": 20,
+        "charset": {
+          "lower": true,
+          "upper": true,
+          "symbols": true,
+          "numbers": true
+        },
+        "password": "c=Vi!5WK(yfH:I$Pxkqm",
+        "bits": 126
+      }
+    ]
+  },
+  "v2": {
+    "status": "not_implemented",
+    "note": "A remplir au lot 3. Ne jamais reutiliser un id de la section v1."
+  }
+}
