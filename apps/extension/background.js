@@ -92,6 +92,11 @@ async function loadParams() {
 }
 
 async function saveParams(next) {
+  // La rehydratation lancee au demarrage du worker n'est pas attendue : sans
+  // ce point de rendez-vous, un reglage enregistre juste apres le demarrage
+  // etait ecrase par loadParams() qui se terminait ensuite, et la valeur
+  // retombait silencieusement sur celle du stockage.
+  await paramsReady;
   params = normalizeParams(next);
   const store = browser?.storage?.local;
   if (!store) return params;
@@ -106,8 +111,9 @@ async function saveParams(next) {
 }
 
 // Réhydratation au (re)démarrage du worker + suivi des changements, pour que
-// deux popups ou fenêtres ouvertes restent cohérentes.
-loadParams();
+// deux popups ou fenêtres ouvertes restent cohérentes. La promesse est
+// conservee : saveParams() l'attend pour ne pas se faire ecraser.
+const paramsReady = loadParams();
 browser?.storage?.onChanged?.addListener((changes, area) => {
   if (area !== "local") return;
   const touched = Object.keys(changes).some(
