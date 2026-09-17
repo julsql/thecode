@@ -1,0 +1,59 @@
+# Garde-fou anti-divergence : verifie que toutes les implementations
+# produisent les memes mots de passe que shared/test-vectors.json.
+#
+# C'est le job qui aurait attrape la divergence entre la normalisation de
+# domaine d'Android (heuristique 2 labels) et celle de l'extension (PSL).
+#
+# Les plateformes natives (Android, Apple) ne tournent pas ici : leurs
+# runners sont lents et couteux, elles sont couvertes au moment de la release.
+
+name: conformance
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+
+concurrency:
+  group: conformance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  shared-integrity:
+    name: integrite de shared/
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Aucune copie de shared/ n'a diverge
+        run: ./scripts/check-shared.sh
+
+  javascript:
+    name: extension (jest)
+    runs-on: ubuntu-latest
+    needs: shared-integrity
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/extension/js-test/package-lock.json
+      - run: npm ci
+        working-directory: apps/extension/js-test
+      - run: npx jest --ci
+        working-directory: apps/extension/js-test
+
+  python:
+    name: cli (pytest)
+    runs-on: ubuntu-latest
+    needs: shared-integrity
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: pip install -e '.[test]'
+        working-directory: apps/cli
+      - run: python -m pytest -q
+        working-directory: apps/cli
