@@ -1,0 +1,11 @@
+# Configuration CodeQL.
+#
+# apps/apple est exclu des analyses : CodeQL n'analyse Swift que sur un runner
+# macOS, facture 10x, et l'analyse echoue des l'initialisation sur Linux.
+# Le code Swift reste couvert par ses propres tests, lances a la release.
+name: TheCode
+paths-ignore:
+  - apps/apple
+  - "**/node_modules"
+  - "**/build"
+  - "**/dist"
