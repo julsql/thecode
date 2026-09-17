@@ -1,0 +1,44 @@
+# Conformance for the Apple apps.
+#
+# Kept out of conformance.yml on purpose: GitHub bills macOS runners at 10x,
+# and this job needs a full iOS build plus a simulator (unit tests with a host
+# app cannot run on "My Mac (Designed for iPad)").
+#
+# It therefore runs on demand and as part of a release, per the project's CI
+# budget decision. The other four implementations run on every pull request.
+
+name: conformance (apple)
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  apple:
+    name: apple (swift testing)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: shared/ copies are in sync
+        run: ./scripts/check-shared.sh
+
+      - name: Pick an available iOS simulator
+        id: sim
+        run: |
+          RT=$(xcrun simctl list runtimes --json | python3 -c "import json,sys;print(max((r['identifier'] for r in json.load(sys.stdin)['runtimes'] if r['isAvailable'] and 'iOS' in r['name'])))")
+          DT=$(xcrun simctl list devicetypes --json | python3 -c "import json,sys;print([d['identifier'] for d in json.load(sys.stdin)['devicetypes'] if 'iPhone' in d['name']][-1])")
+          echo "id=$(xcrun simctl create ci-conformance "$DT" "$RT")" >> "$GITHUB_OUTPUT"
+
+      - name: Conformance tests
+        working-directory: apps/apple
+        run: |
+          xcodebuild test \
+            -scheme thecode-iosTests \
+            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.id }}" \
+            -only-testing:thecode-iosTests/ConformanceTests \
+            | xcpretty && exit ${PIPESTATUS[0]}
+
+      - name: Clean up simulator
+        if: always()
+        run: xcrun simctl delete "${{ steps.sim.outputs.id }}" || true
