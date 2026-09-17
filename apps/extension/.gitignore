@@ -2,5 +2,4 @@
 **/*.DS_Store
 release
 js-test/node_modules
-js-test/package-lock.json
 Screenshots/
