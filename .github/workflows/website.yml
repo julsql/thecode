@@ -42,6 +42,10 @@ jobs:
     permissions:
       contents: read
       packages: write
+    # Le contexte `secrets` n'est pas accessible depuis un `if:` de step :
+    # on le recopie ici pour pouvoir tester sa presence plus bas.
+    env:
+      KEEL_AUTH: ${{ secrets.KEEL_WEBHOOK_AUTH }}
     steps:
       - uses: actions/checkout@v5
 
@@ -79,16 +83,16 @@ jobs:
       # TheCodeDevLab. L'etape s'auto-desactive tant qu'il n'est pas recree
       # sur ce depot, pour ne pas faire echouer un build par ailleurs valide.
       - name: Notify Keel to redeploy
-        if: ${{ secrets.KEEL_WEBHOOK_AUTH != '' }}
+        if: env.KEEL_AUTH != ''
         run: |
           curl -fsS --retry 3 --retry-delay 5 -X POST \
             https://keel.julsql.fr/v1/webhooks/native \
-            -u "${{ secrets.KEEL_WEBHOOK_AUTH }}" \
+            -u "$KEEL_AUTH" \
             -H 'Content-Type: application/json' \
             -d '{"name":"ghcr.io/${{ env.IMAGE_NAME }}","tag":"latest"}'
 
       - name: Keel secret missing
-        if: ${{ secrets.KEEL_WEBHOOK_AUTH == '' }}
+        if: env.KEEL_AUTH == ''
         run: |
           echo "::warning::KEEL_WEBHOOK_AUTH absent : image poussee mais deploiement non declenche."
           echo "A recreer sur ce depot (il vivait sur l'organisation supprimee)."
