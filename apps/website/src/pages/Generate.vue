@@ -146,6 +146,14 @@ export default defineComponent({
       scoreSecurite.value = bits;
       securityKey.value = securityKeyFromBits(bits);
 
+      // Sans clef, le mot de passe ne dependrait que du site : il serait donc
+      // identique pour tout le monde et calculable par n'importe qui. Le
+      // service worker de l'extension refuse deja ce cas ; on s'aligne.
+      if (!clef.value) {
+        motDePasse.value = "";
+        return;
+      }
+
       const mdp = await generatePassword(site.value, clef.value, longueur.value, minuscules.value, majuscules.value, symboles.value, chiffres.value);
       motDePasse.value = mdp ?? "";
     };
