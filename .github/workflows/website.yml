@@ -1,0 +1,94 @@
+# Construit l'image du site et la pousse sur GHCR, puis notifie Keel.
+#
+# Remplace apps/website/.github/workflows/docker.yml, devenu inerte : GitHub
+# ne lit que .github/workflows/ a la racine du depot.
+#
+# L'image a change de proprietaire : l'organisation TheCodeDevLab a ete
+# supprimee, donc ghcr.io/thecodedevlab/thecode-website n'est plus pullable.
+# Le nom est desormais fixe explicitement plutot que derive de
+# github.repository, qui donnerait "julsql/thecode".
+#
+# Le push utilise GITHUB_TOKEN via permissions.packages: write, donc aucun
+# PAT n'est necessaire.
+
+name: website
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/website/**"
+      - "shared/**"
+      - ".github/workflows/website.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: website-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: julsql/thecode-website
+
+jobs:
+  test:
+    name: tests
+    uses: ./.github/workflows/conformance.yml
+
+  build-push:
+    name: build & push image
+    runs-on: ubuntu-latest
+    needs: test
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: shared/ copies are in sync
+        run: ./scripts/check-shared.sh
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Image metadata (tags)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=sha,format=long
+
+      - name: Build & push
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/website
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # KEEL_WEBHOOK_AUTH etait un secret d'organisation, parti avec
+      # TheCodeDevLab. L'etape s'auto-desactive tant qu'il n'est pas recree
+      # sur ce depot, pour ne pas faire echouer un build par ailleurs valide.
+      - name: Notify Keel to redeploy
+        if: ${{ secrets.KEEL_WEBHOOK_AUTH != '' }}
+        run: |
+          curl -fsS --retry 3 --retry-delay 5 -X POST \
+            https://keel.julsql.fr/v1/webhooks/native \
+            -u "${{ secrets.KEEL_WEBHOOK_AUTH }}" \
+            -H 'Content-Type: application/json' \
+            -d '{"name":"ghcr.io/${{ env.IMAGE_NAME }}","tag":"latest"}'
+
+      - name: Keel secret missing
+        if: ${{ secrets.KEEL_WEBHOOK_AUTH == '' }}
+        run: |
+          echo "::warning::KEEL_WEBHOOK_AUTH absent : image poussee mais deploiement non declenche."
+          echo "A recreer sur ce depot (il vivait sur l'organisation supprimee)."
