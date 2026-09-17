@@ -1,7 +1,12 @@
 # Point d'entree unique du monorepo. Chaque cible reste utilisable seule,
 # pour que la CI et le poste de dev lancent exactement la meme chose.
 
-.PHONY: help sync-shared check-shared test-conformance test-js test-py test lint
+.PHONY: help sync-shared check-shared test-conformance test-js test-py test setup require-setup
+
+# Environnement Python local : la CI installe le paquet dans le runner, mais en
+# local on isole dans apps/cli/.venv pour ne pas dependre du python systeme.
+CLI_VENV := $(CURDIR)/apps/cli/.venv
+CLI_PY   := $(CLI_VENV)/bin/python
 
 help:
 	@grep -E '^[a-z-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -13,17 +18,27 @@ sync-shared:  ## Copie shared/ vers les arborescences des apps
 check-shared:  ## Echoue si une copie de shared/ a diverge
 	@./scripts/check-shared.sh
 
-test-conformance: check-shared  ## Vecteurs partages sur toutes les implementations
+setup:  ## Prepare l'environnement de dev local (venv Python, deps npm)
+	@test -x $(CLI_PY) || python3 -m venv $(CLI_VENV)
+	@cd apps/cli && $(CLI_PY) -m pip install -q -e '.[test]'
+	@test -d apps/extension/js-test/node_modules || (cd apps/extension/js-test && npm ci --silent)
+	@echo "Environnement pret."
+
+require-setup:
+	@test -x $(CLI_PY) || { echo "Environnement absent. Lancer: make setup" >&2; exit 1; }
+	@test -d apps/extension/js-test/node_modules || { echo "Deps npm absentes. Lancer: make setup" >&2; exit 1; }
+
+test-conformance: check-shared require-setup  ## Vecteurs partages sur toutes les implementations
 	@echo "── extension (jest) ──"
 	@cd apps/extension/js-test && npx jest conformance --silent
 	@echo "── cli (pytest) ──"
-	@cd apps/cli && PYTHONPATH=. python3 -m pytest tests/test_conformance.py -q
+	@cd apps/cli && PYTHONPATH=. $(CLI_PY) -m pytest tests/test_conformance.py -q
 
 test-js:  ## Tests JS/TS
 	@cd apps/extension/js-test && npx jest
 	@cd apps/website && npm test --silent -- --run
 
 test-py:  ## Tests Python
-	@cd apps/cli && PYTHONPATH=. python3 -m pytest -q
+	@cd apps/cli && PYTHONPATH=. $(CLI_PY) -m pytest -q
 
 test: check-shared test-js test-py  ## Toute la suite hors plateformes natives
