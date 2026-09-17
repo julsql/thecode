@@ -1,0 +1,120 @@
+{
+  "schema": 1,
+  "README": "Canonicalisation d'un hostname en domaine enregistrable. 'expected' suit la Public Suffix List ; l'implementation Apple en est la reference, c'est la seule a gerer correctement le cas ou le hostname EST un suffixe public.",
+  "why_this_matters": "Deux implementations qui canonicalisent differemment produisent deux mots de passe differents pour le meme site. Un utilisateur ayant un compte sur example.co.uk obtient aujourd'hui un mot de passe different entre Android et son navigateur. Ces divergences ont survecu parce que chaque plateforme testait ses propres cas : la suite Android ne contenait aucun suffixe multi-niveaux, donc son heuristique passait ses propres tests.",
+  "divergences_policy": "Le champ 'divergences' documente le comportement REEL, mesure, de chaque implementation qui s'ecarte de 'expected'. Les tests verifient ce comportement reel : ils ne doivent pas etre rouges en permanence. Corriger une divergence CHANGE LE MOT DE PASSE des utilisateurs concernes ; cela se fait au lot 1, avec le carnet et un siteKey fige. Retirer alors l'entree ici.",
+  "implementations": {
+    "extension": "getRegistrableDomain (background.js) — PSL, conforme",
+    "apple": "DomainNormalizer.registrableDomain — PSL, reference",
+    "android": "DomainNormalizer.registrableDomain — heuristique 2 derniers labels, PAS de PSL",
+    "website": "aucune canonicalisation (saisie libre) — a ajouter au lot 1",
+    "cli": "aucune canonicalisation (argument brut) — a ajouter au lot 1"
+  },
+  "cases": [
+    {
+      "id": "plain-domain",
+      "hostname": "google.com",
+      "expected": "google.com"
+    },
+    {
+      "id": "strip-www",
+      "hostname": "www.google.com",
+      "expected": "google.com"
+    },
+    {
+      "id": "subdomain",
+      "hostname": "accounts.google.com",
+      "expected": "google.com"
+    },
+    {
+      "id": "cctld",
+      "hostname": "google.fr",
+      "expected": "google.fr"
+    },
+    {
+      "id": "multi-level-suffix",
+      "hostname": "example.co.uk",
+      "expected": "example.co.uk",
+      "divergences": {
+        "android": "co.uk"
+      }
+    },
+    {
+      "id": "multi-level-sub",
+      "hostname": "shop.example.co.uk",
+      "expected": "example.co.uk",
+      "divergences": {
+        "android": "co.uk"
+      }
+    },
+    {
+      "id": "deep-subdomains",
+      "hostname": "a.b.c.example.com",
+      "expected": "example.com"
+    },
+    {
+      "id": "hostname-is-suffix",
+      "hostname": "github.io",
+      "expected": "github.io"
+    },
+    {
+      "id": "private-suffix",
+      "hostname": "foo.github.io",
+      "expected": "foo.github.io",
+      "divergences": {
+        "android": "github.io",
+        "apple": "github.io"
+      }
+    },
+    {
+      "id": "private-suffix-deep",
+      "hostname": "a.b.github.io",
+      "expected": "b.github.io",
+      "divergences": {
+        "android": "github.io",
+        "apple": "github.io"
+      }
+    },
+    {
+      "id": "no-dot",
+      "hostname": "localhost",
+      "expected": "localhost"
+    },
+    {
+      "id": "br-suffix",
+      "hostname": "example.com.br",
+      "expected": "example.com.br",
+      "divergences": {
+        "android": "com.br"
+      }
+    },
+    {
+      "id": "bare-suffix",
+      "hostname": "co.uk",
+      "expected": "co.uk"
+    },
+    {
+      "id": "ipv4-literal",
+      "hostname": "192.168.1.1",
+      "expected": "192.168.1.1",
+      "divergences": {
+        "android": "1.1"
+      }
+    },
+    {
+      "id": "punycode",
+      "hostname": "xn--n3h.net",
+      "expected": "xn--n3h.net"
+    },
+    {
+      "id": "s3-private-suffix",
+      "hostname": "test.s3.amazonaws.com",
+      "expected": "test.s3.amazonaws.com",
+      "divergences": {
+        "android": "amazonaws.com",
+        "apple": "amazonaws.com"
+      }
+    }
+  ],
+  "fallback_warning": "Les divergences 'apple' ci-dessus viennent de embeddedFallback dans DomainNormalizer.swift, une liste reduite utilisee quand public_suffix_list.dat est absent du bundle. Elle ne contient aucun suffixe prive (github.io, s3.amazonaws.com), d'ou l'ecart. En production l'extension autofill embarque bien la PSL, mais ce repli est silencieux : si la ressource venait a manquer, les mots de passe changeraient sans aucun signal. A TRAITER : echouer bruyamment plutot que deriver."
+}

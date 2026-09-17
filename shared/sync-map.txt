@@ -16,3 +16,6 @@ test-vectors.json|apps/website/test
 test-vectors.json|apps/cli/tests
 test-vectors.json|apps/android/app/src/test/resources
 test-vectors.json|apps/apple/thecodeTests/Resources
+canonical-site-cases.json|apps/extension/js-test
+canonical-site-cases.json|apps/android/app/src/test/resources
+canonical-site-cases.json|apps/apple/thecode-macosTests/Resources
