@@ -1,0 +1,18 @@
+# Table de synchronisation de shared/ vers les arborescences des apps.
+#
+# Pourquoi copier plutot que referencer : Xcode et Gradle supportent mal les
+# fichiers situes hors du dossier du projet (references relatives fragiles,
+# sandbox de build). On copie donc, et check-shared.sh garantit en CI qu'aucune
+# copie n'a divergé de la source.
+#
+# Format : <source dans shared/>|<dossier de destination depuis la racine>
+
+public_suffix_list.dat|apps/extension/data
+public_suffix_list.dat|apps/apple/thecode-autofill/Resources/data
+public_suffix_list.dat|apps/apple/thecode-macos-autofill/Resources/data
+
+test-vectors.json|apps/extension/js-test
+test-vectors.json|apps/website/test
+test-vectors.json|apps/cli/tests
+test-vectors.json|apps/android/app/src/test/resources
+test-vectors.json|apps/apple/thecodeTests/Resources

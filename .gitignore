@@ -1,0 +1,57 @@
+# ─────────────────────────────────────────────────────────────
+# SECRETS DE SIGNATURE — ne doivent JAMAIS entrer dans le repo.
+# Un keystore Play Store fuite = plus aucune mise a jour legitime
+# possible, de facon irreversible.
+# ─────────────────────────────────────────────────────────────
+keys/
+*.jks
+*.keystore
+*.p12
+*.pem
+*.key
+*.mobileprovision
+*.cer
+*.certSigningRequest
+google-play-service-account*.json
+AuthKey_*.p8
+local.properties
+.env
+.env.*
+!.env.example
+
+# Sources graphiques lourdes (hors repo ou Git LFS)
+*.psd
+*.xcf
+*.odp
+*.ods
+
+# Artefacts de build
+node_modules/
+dist/
+build/
+.next/
+*.aab
+*.apk
+*.ipa
+*.xcarchive
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+coverage/
+.coverage
+htmlcov/
+test-results/
+playwright-report/
+
+# IDE / OS
+.DS_Store
+.idea/
+*.iml
+xcuserdata/
+*.xcuserstate
+.gradle/
