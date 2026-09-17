@@ -98,8 +98,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onStart() {
-        super.onStart();
+    protected void onResume() {
+        super.onResume();
+        refreshAutofillStatus();
+        // Le pendant de onPause() est onResume(), pas onStart() : une activité
+        // qui ne fait que recouvrir la nôtre (le code PIN du déverrouillage,
+        // par exemple) provoque onPause() sans onStop(), donc sans onStart()
+        // au retour — le mot de passe effacé dans onPause() serait resté
+        // masqué jusqu'à une nouvelle frappe.
+        //
         // La session n'est plus systématiquement reverrouillée : elle reste
         // valide tant que la fenêtre de grâce de SessionLock court. On
         // ré-horodate pour que la fenêtre reparte de ce retour au premier plan.
@@ -109,8 +116,8 @@ public class MainActivity extends AppCompatActivity {
         } else {
             sessionLock.invalidate();
         }
-        // La clé reste masquée à l'ouverture, même avec une session valide :
-        // le déverrouillage autorise à la révéler, il ne la révèle pas.
+        // La clé reste masquée au retour, même avec une session valide : le
+        // déverrouillage autorise à la révéler, il ne la révèle pas.
         applyKeyHidden();
         applySessionState();
     }
@@ -126,12 +133,6 @@ public class MainActivity extends AppCompatActivity {
         applyKeyHidden();
         passwordEditText.setText("");
         resultCard.setVisibility(View.GONE);
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        refreshAutofillStatus();
     }
 
     private void bindViews() {
