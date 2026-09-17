@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Couleurs de marque -->
+    <color name="brand_green">#1CD001</color>
+    <color name="brand_blue">#2E8DEF</color>
+
+    <!-- Mode clair -->
+    <color name="background_light">#FFFFFFFF</color>
+    <color name="surface_light">#FFF5F5F7</color>
+    <color name="surface_variant_light">#FFE9E9EE</color>
+    <color name="on_surface_light">#FF1C1C1E</color>
+    <color name="on_surface_variant_light">#FF6E6E73</color>
+    <color name="outline_light">#FFD1D1D6</color>
+
+    <!-- Mode sombre -->
+    <color name="background_dark">#FF000000</color>
+    <color name="surface_dark">#FF1C1C1E</color>
+    <color name="surface_variant_dark">#FF2C2C2E</color>
+    <color name="on_surface_dark">#FFFFFFFF</color>
+    <color name="on_surface_variant_dark">#FF98989F</color>
+    <color name="outline_dark">#FF3A3A3C</color>
+
+    <!-- Niveaux de sécurité -->
+    <color name="safety_none">#FE0101</color>
+    <color name="safety_weak">#FE4501</color>
+    <color name="safety_medium">#FE7601</color>
+    <color name="safety_strong">#53FE38</color>
+    <color name="safety_very_strong">#1CD001</color>
+</resources>
