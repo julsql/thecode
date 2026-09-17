@@ -1,0 +1,53 @@
+# Extension navigateur : lint, tests, et paquet de release.
+# Ne tourne que si l'extension ou un fichier partage a change.
+name: extension
+
+on:
+  push:
+    branches: [main]
+    paths: ["apps/extension/**", "shared/**", ".github/workflows/extension.yml"]
+  pull_request:
+    paths: ["apps/extension/**", "shared/**", ".github/workflows/extension.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: extension-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: ./scripts/check-shared.sh
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/extension/js-test/package-lock.json
+      - run: npm ci
+        working-directory: apps/extension/js-test
+      - run: npx jest --ci --coverage
+        working-directory: apps/extension/js-test
+
+      # web-ext valide le manifeste et les permissions comme le feraient les
+      # stores, ce qui evite de decouvrir un refus au moment de publier.
+      - name: web-ext lint
+        working-directory: apps/extension
+        run: npx --yes web-ext lint --source-dir . --warnings-as-errors=false
+
+  package:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build the store archive
+        working-directory: apps/extension
+        run: |
+          zip -r -q ../../thecode-extension.zip . \
+            -x "js-test/*" ".idea/*" "Screenshots/*" "release/*" "*.DS_Store"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: extension-zip
+          path: thecode-extension.zip
+          retention-days: 30

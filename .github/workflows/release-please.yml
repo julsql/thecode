@@ -1,0 +1,28 @@
+# Versionnage et changelogs, un par application.
+#
+# release-please lit les conventional commits et ouvre une PR de release par
+# app dont le contenu a change. Fusionner cette PR pose le tag, ce qui declenche
+# la publication correspondante.
+#
+# Les cycles de validation des stores etant tres differents (Apple peut prendre
+# plusieurs jours), les releases restent volontairement decouplees :
+# separate-pull-requests, un tag par app.
+name: release-please
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json

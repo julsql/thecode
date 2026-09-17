@@ -1,0 +1,38 @@
+# Application Android : lint et tests unitaires.
+# Pas d'emulateur ici : les tests instrumentes sont lances a la release, ou ils
+# justifient leur cout.
+name: android
+
+on:
+  push:
+    branches: [main]
+    paths: ["apps/android/**", "shared/**", ".github/workflows/android.yml"]
+  pull_request:
+    paths: ["apps/android/**", "shared/**", ".github/workflows/android.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: android-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: ./scripts/check-shared.sh
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v5
+      - run: ./gradlew :app:testDebugUnitTest --console=plain
+        working-directory: apps/android
+      - run: ./gradlew :app:lintDebug --console=plain
+        working-directory: apps/android
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: android-reports
+          path: apps/android/app/build/reports/
+          retention-days: 7

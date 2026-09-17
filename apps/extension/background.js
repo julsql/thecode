@@ -111,8 +111,35 @@ browser?.storage?.onChanged?.addListener((changes, area) => {
     if (touched) loadParams();
 });
 
+/**
+ * Actions reservees aux pages de l'extension (la popup).
+ *
+ * content.js est injecte dans <all_urls> : sans ce filtre, n'importe quel
+ * content script pouvait demander la cle maitresse au service worker via
+ * getEncodingKey. Les pages de l'extension envoient leurs messages sans onglet
+ * associe (sender.tab est undefined), un content script en a toujours un.
+ *
+ * content.js n'utilise que generatePassword et openPopup, donc rien de
+ * legitime n'est bloque ici.
+ */
+const PRIVILEGED_ACTIONS = new Set([
+    'getEncodingKey',
+    'setEncodingKey',
+    'clearEncodingKey',
+    'checkEncodingKey',
+    'setParams',
+]);
+
+function isFromExtensionPage(sender) {
+    return !sender || sender.tab === undefined;
+}
+
 browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
     (async () => {
+        if (PRIVILEGED_ACTIONS.has(request.action) && !isFromExtensionPage(sender)) {
+            sendResponse({ error: 'action reservee a l\'extension' });
+            return;
+        }
         if (request.action === 'checkEncodingKey') {
             sendResponse({ hasEncodingKey: !!encodingKey });
         } else if (request.action === 'getEncodingKey') {
@@ -366,5 +393,5 @@ async function hashToBigInt(input) {
 
 
 if (typeof module !== "undefined") {
-    module.exports = { generatePassword, getRegistrableDomain, registrableDomain, buildCharset, calculateEntropyBits, getSecurityLevel, convertToBase, applyCharsetReplacement, getUniquePosition, hashToBigInt, normalizeParams, clampLength, MIN_LENGTH, MAX_LENGTH, DEFAULT_PARAMS };
+    module.exports = { generatePassword, getRegistrableDomain, registrableDomain, PRIVILEGED_ACTIONS, isFromExtensionPage, buildCharset, calculateEntropyBits, getSecurityLevel, convertToBase, applyCharsetReplacement, getUniquePosition, hashToBigInt, normalizeParams, clampLength, MIN_LENGTH, MAX_LENGTH, DEFAULT_PARAMS };
 }
