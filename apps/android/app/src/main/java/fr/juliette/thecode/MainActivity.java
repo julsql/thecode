@@ -23,6 +23,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.autofill.AutofillManager;
+import android.widget.EditText;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -53,7 +54,7 @@ public class MainActivity extends AppCompatActivity {
     private TextInputEditText siteEditText;
     private TextInputLayout passwordInputLayout;
     private TextInputEditText passwordEditText;
-    private TextView lengthValueTextView;
+    private EditText lengthEditText;
     private TextView securityLabelTextView;
     private View resultCard;
     private Slider lengthSlider;
@@ -61,15 +62,25 @@ public class MainActivity extends AppCompatActivity {
     private TextView autofillStatusText;
     private View autofillStatusDot;
     private MaterialButton autofillButton;
+    private MaterialButton generateAuthButton;
+    private View generateContent;
 
     private Preferences preferences;
+    private SessionLock sessionLock;
     private final Code code = new Code();
     private boolean keyRevealed = false;
 
-    /** Session déverrouillée par auth biométrique. Reset à chaque {@link #onStart()}. */
+    /**
+     * Session déverrouillée par auth biométrique. Réévaluée à chaque
+     * {@link #onStart()} depuis {@link SessionLock} : elle survit donc à une
+     * sortie (voire à une fermeture) de l'app tant que la fenêtre de grâce
+     * n'est pas écoulée.
+     */
     private boolean sessionUnlocked = false;
     /** Garde contre les prompts multiples si l'utilisateur tape vite. */
     private boolean authInFlight = false;
+    /** Évite la boucle slider → champ → slider lors de la synchronisation. */
+    private boolean syncingLength = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -78,6 +89,7 @@ public class MainActivity extends AppCompatActivity {
         setSupportActionBar(findViewById(R.id.topAppBar));
 
         preferences = new Preferences(this);
+        sessionLock = new SessionLock(preferences);
 
         bindViews();
         loadFromPreferences();
@@ -86,21 +98,41 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onStart() {
-        super.onStart();
-        // Chaque retour au premier plan reverrouille la session : autant la
-        // révélation de la clé que la génération d'un mot de passe exigeront
-        // une nouvelle authentification biométrique.
-        sessionUnlocked = false;
-        applyKeyHidden();
-        if (resultCard != null) resultCard.setVisibility(View.GONE);
-        if (passwordEditText != null) passwordEditText.setText("");
-    }
-
-    @Override
     protected void onResume() {
         super.onResume();
         refreshAutofillStatus();
+        // Le pendant de onPause() est onResume(), pas onStart() : une activité
+        // qui ne fait que recouvrir la nôtre (le code PIN du déverrouillage,
+        // par exemple) provoque onPause() sans onStop(), donc sans onStart()
+        // au retour — le mot de passe effacé dans onPause() serait resté
+        // masqué jusqu'à une nouvelle frappe.
+        //
+        // La session n'est plus systématiquement reverrouillée : elle reste
+        // valide tant que la fenêtre de grâce de SessionLock court. On
+        // ré-horodate pour que la fenêtre reparte de ce retour au premier plan.
+        sessionUnlocked = sessionLock.isValid();
+        if (sessionUnlocked) {
+            sessionLock.stamp();
+        } else {
+            sessionLock.invalidate();
+        }
+        // La clé reste masquée au retour, même avec une session valide : le
+        // déverrouillage autorise à la révéler, il ne la révèle pas.
+        applyKeyHidden();
+        applySessionState();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        // Fait courir la fenêtre de grâce à partir de la mise en arrière-plan.
+        if (sessionUnlocked) sessionLock.stamp();
+        // Le snapshot de l'écran « Applications récentes » est capturé ici : on
+        // remasque la clé et on efface le mot de passe pour qu'il n'y figure
+        // pas. Les deux sont restitués à la reprise (cf. onStart).
+        applyKeyHidden();
+        passwordEditText.setText("");
+        resultCard.setVisibility(View.GONE);
     }
 
     private void bindViews() {
@@ -109,7 +141,7 @@ public class MainActivity extends AppCompatActivity {
         siteEditText = findViewById(R.id.siteEditText);
         passwordInputLayout = findViewById(R.id.passwordInputLayout);
         passwordEditText = findViewById(R.id.passwordEditText);
-        lengthValueTextView = findViewById(R.id.lengthValueTextView);
+        lengthEditText = findViewById(R.id.lengthEditText);
         securityLabelTextView = findViewById(R.id.securityLabelTextView);
         resultCard = findViewById(R.id.resultCard);
         lengthSlider = findViewById(R.id.lengthSlider);
@@ -120,6 +152,8 @@ public class MainActivity extends AppCompatActivity {
         autofillStatusText = findViewById(R.id.autofillStatusText);
         autofillStatusDot = findViewById(R.id.autofillStatusDot);
         autofillButton = findViewById(R.id.autofillButton);
+        generateAuthButton = findViewById(R.id.generateAuthButton);
+        generateContent = findViewById(R.id.generateContent);
     }
 
     private void loadFromPreferences() {
@@ -129,7 +163,7 @@ public class MainActivity extends AppCompatActivity {
         lengthSlider.setValueTo(Code.MAX_LENGTH);
         lengthSlider.setStepSize(1f);
         lengthSlider.setValue(length);
-        lengthValueTextView.setText(String.valueOf(length));
+        setLengthText(length);
 
         minSwitch.setChecked(preferences.getMinState());
         majSwitch.setChecked(preferences.getMajState());
@@ -154,10 +188,32 @@ public class MainActivity extends AppCompatActivity {
         });
 
         lengthSlider.addOnChangeListener((slider, value, fromUser) -> {
+            if (syncingLength) return;
             int v = (int) value;
-            lengthValueTextView.setText(String.valueOf(v));
+            setLengthText(v);
             preferences.setLength(v);
             regenerate();
+        });
+
+        lengthEditText.addTextChangedListener(new SimpleTextWatcher() {
+            @Override
+            public void afterTextChanged(Editable s) {
+                if (syncingLength) return;
+                Integer v = parseLength(s.toString());
+                // Saisie complète et dans les bornes → appliquée tout de suite.
+                // Une saisie partielle (« 3 » en tapant « 30 ») est laissée
+                // telle quelle et sera bornée à la validation.
+                if (v != null) applyLength(v, false);
+            }
+        });
+
+        // Le champ ne perd pas forcément le focus : on valide aussi sur « OK ».
+        lengthEditText.setOnEditorActionListener((v, actionId, event) -> {
+            commitLengthText();
+            return false;
+        });
+        lengthEditText.setOnFocusChangeListener((v, hasFocus) -> {
+            if (!hasFocus) commitLengthText();
         });
 
         minSwitch.setOnCheckedChangeListener((b, checked) -> { preferences.setMinState(checked); regenerate(); });
@@ -170,6 +226,86 @@ public class MainActivity extends AppCompatActivity {
         keyInputLayout.setEndIconOnClickListener(v -> onKeyToggleClicked());
 
         autofillButton.setOnClickListener(v -> openAutofillSettings());
+
+        generateAuthButton.setOnClickListener(v ->
+                promptUnlock(R.string.generate_auth_title, R.string.generate_auth_subtitle,
+                        () -> {
+                            applySessionState();
+                            siteEditText.requestFocus();
+                        }));
+    }
+
+    /**
+     * Reflète l'état du verrou dans l'UI : verrouillé, on n'affiche que le
+     * bouton d'authentification ; déverrouillé, le champ « nom du site » (et
+     * le résultat) devient disponible. Le mot de passe affiché est vidé au
+     * reverrouillage pour ne rien laisser s'afficher après expiration.
+     */
+    private void applySessionState() {
+        generateAuthButton.setVisibility(sessionUnlocked ? View.GONE : View.VISIBLE);
+        generateContent.setVisibility(sessionUnlocked ? View.VISIBLE : View.GONE);
+        if (!sessionUnlocked) {
+            // Le nom du site n'est pas un secret : on le conserve (le flux de
+            // déverrouillage par code PIN passe par onStart avant la réussite
+            // de l'auth, l'effacer ferait perdre la saisie).
+            passwordEditText.setText("");
+            resultCard.setVisibility(View.GONE);
+        } else {
+            regenerate();
+        }
+    }
+
+    /** Longueur saisie, ou null si elle n'est pas (encore) dans les bornes. */
+    static Integer parseLength(String raw) {
+        try {
+            int v = Integer.parseInt(raw.trim());
+            return (v >= Code.MIN_LENGTH && v <= Code.MAX_LENGTH) ? v : null;
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /** Écrit la valeur dans le champ sans déclencher le watcher. */
+    private void setLengthText(int length) {
+        syncingLength = true;
+        lengthEditText.setText(String.valueOf(length));
+        lengthEditText.setSelection(lengthEditText.getText().length());
+        syncingLength = false;
+    }
+
+    /**
+     * Applique une longueur : persistée, poussée sur le slider et régénérée.
+     * {@code rewriteText} ne remet le texte à jour que si la valeur a été
+     * corrigée, pour ne pas réécrire le champ sous les doigts de l'utilisateur.
+     */
+    private void applyLength(int length, boolean rewriteText) {
+        int clamped = clamp(length, Code.MIN_LENGTH, Code.MAX_LENGTH);
+        preferences.setLength(clamped);
+        syncingLength = true;
+        lengthSlider.setValue(clamped);
+        syncingLength = false;
+        if (rewriteText) setLengthText(clamped);
+        regenerate();
+    }
+
+    /**
+     * Valide la saisie en cours : vide, partielle ou hors bornes, elle est
+     * ramenée dans les limites plutôt que silencieusement ignorée.
+     */
+    private void commitLengthText() {
+        Integer parsed = parseLength(textOf(lengthEditText));
+        if (parsed != null) {
+            applyLength(parsed, true);
+            return;
+        }
+        int fallback;
+        try {
+            fallback = clamp(Integer.parseInt(textOf(lengthEditText).trim()),
+                    Code.MIN_LENGTH, Code.MAX_LENGTH);
+        } catch (NumberFormatException e) {
+            fallback = (int) lengthSlider.getValue();
+        }
+        applyLength(fallback, true);
     }
 
     private void applyKeyHidden() {
@@ -225,6 +361,7 @@ public class MainActivity extends AppCompatActivity {
         BiometricManager bm = BiometricManager.from(this);
         if (bm.canAuthenticate(authenticators) != BiometricManager.BIOMETRIC_SUCCESS) {
             sessionUnlocked = true;
+            sessionLock.stamp();
             onSuccess.run();
             return;
         }
@@ -237,6 +374,7 @@ public class MainActivity extends AppCompatActivity {
                     public void onAuthenticationSucceeded(@NonNull BiometricPrompt.AuthenticationResult result) {
                         authInFlight = false;
                         sessionUnlocked = true;
+                        sessionLock.stamp();
                         onSuccess.run();
                     }
 
@@ -343,14 +481,12 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        // La clé est un secret : on n'autorise sa transformation en mot de
-        // passe qu'après authentification biométrique. La session reste
-        // déverrouillée jusqu'au prochain onStart().
+        // La clé est un secret : sa transformation en mot de passe exige une
+        // session authentifiée. Plus de prompt implicite déclenché par la
+        // frappe : tant que la session est verrouillée le champ « nom du
+        // site » n'est même pas affiché (cf. applySessionState).
         if (!sessionUnlocked) {
             resultCard.setVisibility(View.GONE);
-            promptUnlock(R.string.generate_auth_title,
-                    R.string.generate_auth_subtitle,
-                    this::regenerate);
             return;
         }
 
@@ -463,7 +599,7 @@ public class MainActivity extends AppCompatActivity {
         return Math.max(min, Math.min(max, value));
     }
 
-    private static String textOf(TextInputEditText editText) {
+    private static String textOf(EditText editText) {
         Editable e = editText.getText();
         return e == null ? "" : e.toString();
     }
