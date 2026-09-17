@@ -2,8 +2,10 @@ package fr.juliette.thecode.autofill;
 
 import android.app.PendingIntent;
 import android.app.assist.AssistStructure;
+import android.app.slice.Slice;
 import android.content.Intent;
 import android.content.IntentSender;
+import android.graphics.drawable.Icon;
 import android.os.Build;
 import android.os.CancellationSignal;
 import android.service.autofill.AutofillService;
@@ -12,13 +14,19 @@ import android.service.autofill.FillCallback;
 import android.service.autofill.FillContext;
 import android.service.autofill.FillRequest;
 import android.service.autofill.FillResponse;
+import android.service.autofill.InlinePresentation;
 import android.service.autofill.SaveCallback;
 import android.service.autofill.SaveRequest;
 import android.view.autofill.AutofillId;
+import android.view.inputmethod.InlineSuggestionsRequest;
 import android.widget.RemoteViews;
+import android.widget.inline.InlinePresentationSpec;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
+import androidx.autofill.inline.UiVersions;
+import androidx.autofill.inline.v1.InlineSuggestionUi;
 
 import java.util.List;
 
@@ -74,7 +82,7 @@ public class TheCodeAutofillService extends AutofillService {
         }
 
         AutofillId[] ids = parsed.passwordIds.toArray(new AutofillId[0]);
-        FillResponse response = buildAuthenticatedResponse(domain, ids);
+        FillResponse response = buildAuthenticatedResponse(request, domain, ids);
         callback.onSuccess(response);
     }
 
@@ -84,7 +92,8 @@ public class TheCodeAutofillService extends AutofillService {
         callback.onSuccess();
     }
 
-    private FillResponse buildAuthenticatedResponse(String domain, AutofillId[] passwordIds) {
+    private FillResponse buildAuthenticatedResponse(FillRequest request, String domain,
+                                                    AutofillId[] passwordIds) {
         RemoteViews presentation = buildPresentation(domain);
 
         Intent authIntent = new Intent(this, AutofillAuthActivity.class);
@@ -111,9 +120,62 @@ public class TheCodeAutofillService extends AutofillService {
             datasetBuilder.setValue(id, null);
         }
 
+        // Présentation inline (barre du clavier) quand le clavier la supporte
+        // (Android 11+). On l'attache EN PLUS de la présentation RemoteViews :
+        // le système choisit l'inline si dispo, sinon il retombe sur le dropdown.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            InlineSuggestionsRequest inlineRequest = request.getInlineSuggestionsRequest();
+            if (inlineRequest != null) {
+                InlinePresentation inline = buildInlinePresentation(domain, inlineRequest);
+                if (inline != null) {
+                    datasetBuilder.setInlinePresentation(inline);
+                }
+            }
+        }
+
         return new FillResponse.Builder()
                 .addDataset(datasetBuilder.build())
                 .build();
+    }
+
+    /**
+     * Construit la présentation inline à partir du premier spec fourni par le
+     * clavier. Renvoie {@code null} si le clavier ne fournit aucun spec ou n'est
+     * pas compatible avec le style inline v1 (auquel cas seul le dropdown s'affiche).
+     */
+    @RequiresApi(Build.VERSION_CODES.R)
+    @Nullable
+    private InlinePresentation buildInlinePresentation(String domain,
+                                                       InlineSuggestionsRequest inlineRequest) {
+        List<InlinePresentationSpec> specs = inlineRequest.getInlinePresentationSpecs();
+        if (specs == null || specs.isEmpty()) {
+            return null;
+        }
+        InlinePresentationSpec spec = specs.get(0);
+        if (!UiVersions.getVersions(spec.getStyle()).contains(UiVersions.INLINE_UI_VERSION_1)) {
+            return null;
+        }
+
+        // Intent lancé au long-press sur la suggestion (« attribution ») : requis
+        // et obligatoirement immuable. On ouvre simplement l'app.
+        Intent attribution = getPackageManager().getLaunchIntentForPackage(getPackageName());
+        if (attribution == null) {
+            attribution = new Intent();
+        }
+        // La méthode est déjà @RequiresApi(R), donc FLAG_IMMUTABLE (API 23) est
+        // toujours disponible : pas besoin de le conditionner.
+        PendingIntent attributionPending = PendingIntent.getActivity(this, 0, attribution,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        Slice slice = InlineSuggestionUi.newContentBuilder(attributionPending)
+                .setTitle(getString(R.string.app_name))
+                .setSubtitle(getString(R.string.autofill_for_domain, domain))
+                .setStartIcon(Icon.createWithResource(this, R.mipmap.logo))
+                .setContentDescription(getString(R.string.app_name))
+                .build()
+                .getSlice();
+
+        return new InlinePresentation(slice, spec, false);
     }
 
     private RemoteViews buildPresentation(String domain) {
