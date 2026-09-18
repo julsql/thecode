@@ -27,3 +27,4 @@ canonical-site-cases.json|apps/website/test
 public_suffix_list.dat|apps/cli/thecode
 canonical-site-cases.json|apps/cli/tests
 vault-fixtures/merge-cases.json|apps/cli/tests
+vault-fixtures/merge-cases.json|apps/extension/js-test
