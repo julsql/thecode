@@ -80,11 +80,12 @@ export async function exportVault(vault: unknown, masterKey: string): Promise<st
 /** Déchiffre un payload. Lève TransferError s'il est illisible. */
 export async function importVault(payload: string, masterKey: string): Promise<unknown> {
   const parts = String(payload).trim().split(".");
-  if (parts.length !== 3) {
+  // Destructure apres le controle de longueur : sans cela TypeScript tient
+  // chaque element pour possiblement absent, et il a raison.
+  const [version, nonce, cipher] = parts;
+  if (parts.length !== 3 || !version || !nonce || !cipher) {
     throw new TransferError("Format inattendu : TC1.<nonce>.<donnees> attendu.");
   }
-
-  const [version, nonce, cipher] = parts;
   if (version !== TRANSFER_PREFIX) {
     // Interpréter un format inconnu au hasard serait pire que refuser.
     throw new TransferError(`Version « ${version} » inconnue, ce client lit ${TRANSFER_PREFIX}.`);
