@@ -101,14 +101,30 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, watch, computed } from "vue";
+import { defineComponent, ref, watch, computed, onMounted } from "vue";
 import { generatePassword, calculateEntropyBits, getSecurityLevel } from "@/utils";
+import { canonicalSite, loadPublicSuffixList } from "@/canonicalSite";
 import { useI18n } from "@/i18n";
 import type { TranslationKey } from "@/i18n";
 
 export default defineComponent({
   name: "Generator",
   setup() {
+    // La PSL est servie depuis public/ : on la charge une fois au montage, puis
+    // on regenere, car la canonicalisation change le resultat.
+    onMounted(async () => {
+      try {
+        const res = await fetch("/public_suffix_list.dat");
+        if (res.ok) {
+          loadPublicSuffixList(await res.text());
+          await genererMotDePasse();
+        }
+      } catch {
+        // Hors ligne ou ressource absente : canonicalSite rendra l'hote tel
+        // quel, ce qui reste coherent avec ce que l'utilisateur a saisi.
+      }
+    });
+
     const { t } = useI18n();
 
     const clef = ref("");
@@ -160,8 +176,11 @@ export default defineComponent({
         return;
       }
 
+      // Canonicalise la saisie pour qu'un meme compte donne le meme mot de
+      // passe que dans l'extension ou les apps : https://www.google.com/login
+      // et google.com doivent converger.
       const mdp = await generatePassword(
-        site.value,
+        canonicalSite(site.value),
         clef.value,
         longueur.value,
         minuscules.value,

@@ -6,7 +6,7 @@
   "implementations": {
     "extension": "getRegistrableDomain (background.js) — PSL, conforme",
     "apple": "DomainNormalizer.registrableDomain — PSL, reference",
-    "android": "DomainNormalizer.registrableDomain — heuristique 2 derniers labels, PAS de PSL",
+    "android": "DomainNormalizer.registrableDomain — PSL (assets), conforme",
     "website": "aucune canonicalisation (saisie libre) — a ajouter au lot 1",
     "cli": "aucune canonicalisation (argument brut) — a ajouter au lot 1"
   },
@@ -34,18 +34,12 @@
     {
       "id": "multi-level-suffix",
       "hostname": "example.co.uk",
-      "expected": "example.co.uk",
-      "divergences": {
-        "android": "co.uk"
-      }
+      "expected": "example.co.uk"
     },
     {
       "id": "multi-level-sub",
       "hostname": "shop.example.co.uk",
-      "expected": "example.co.uk",
-      "divergences": {
-        "android": "co.uk"
-      }
+      "expected": "example.co.uk"
     },
     {
       "id": "deep-subdomains",
@@ -60,18 +54,12 @@
     {
       "id": "private-suffix",
       "hostname": "foo.github.io",
-      "expected": "foo.github.io",
-      "divergences": {
-        "android": "github.io"
-      }
+      "expected": "foo.github.io"
     },
     {
       "id": "private-suffix-deep",
       "hostname": "a.b.github.io",
-      "expected": "b.github.io",
-      "divergences": {
-        "android": "github.io"
-      }
+      "expected": "b.github.io"
     },
     {
       "id": "no-dot",
@@ -81,10 +69,7 @@
     {
       "id": "br-suffix",
       "hostname": "example.com.br",
-      "expected": "example.com.br",
-      "divergences": {
-        "android": "com.br"
-      }
+      "expected": "example.com.br"
     },
     {
       "id": "bare-suffix",
@@ -94,10 +79,7 @@
     {
       "id": "ipv4-literal",
       "hostname": "192.168.1.1",
-      "expected": "192.168.1.1",
-      "divergences": {
-        "android": "1.1"
-      }
+      "expected": "192.168.1.1"
     },
     {
       "id": "punycode",
@@ -107,11 +89,9 @@
     {
       "id": "s3-private-suffix",
       "hostname": "test.s3.amazonaws.com",
-      "expected": "test.s3.amazonaws.com",
-      "divergences": {
-        "android": "amazonaws.com"
-      }
+      "expected": "test.s3.amazonaws.com"
     }
   ],
-  "fallback_warning": "DomainNormalizer.swift retombait silencieusement sur embeddedFallback, une liste reduite sans aucun suffixe prive, quand public_suffix_list.dat manquait du bundle. Les mots de passe produits divergeaient alors des autres plateformes, sans le moindre signal. Corrige : os_log en .fault, drapeau isUsingFallbackList, et refus de canonicaliser. Les divergences 'apple' relevees auparavant etaient des artefacts de ce repli en contexte de test, pas le comportement de production."
+  "fallback_warning": "DomainNormalizer.swift retombait silencieusement sur embeddedFallback, une liste reduite sans aucun suffixe prive, quand public_suffix_list.dat manquait du bundle. Les mots de passe produits divergeaient alors des autres plateformes, sans le moindre signal. Corrige : os_log en .fault, drapeau isUsingFallbackList, et refus de canonicaliser. Les divergences 'apple' relevees auparavant etaient des artefacts de ce repli en contexte de test, pas le comportement de production.",
+  "breaking_change": "Android utilisait une heuristique « deux derniers labels » et rendait co.uk pour example.co.uk, github.io pour foo.github.io, 1.1 pour 192.168.1.1. Le passage a la PSL aligne Android sur les autres plateformes et CHANGE le mot de passe des comptes concernes sur Android uniquement. Rupture assumee, documentee dans le CHANGELOG de l'app."
 }

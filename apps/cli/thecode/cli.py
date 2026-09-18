@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import sys
 
+from .canonical import canonical_site
 from .core import generate_password
 
 
@@ -45,8 +46,13 @@ def _copy_to_clipboard(value: str) -> bool:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
 
+    # Canonicalise la saisie pour qu'un meme compte donne le meme mot de passe
+    # que dans l'extension ou les apps : https://www.google.com/login et
+    # google.com doivent converger.
+    site = canonical_site(args.site)
+
     pwd = generate_password(
-        site=args.site,
+        site=site,
         key=args.password,
         length=args.length,
         use_lower=not args.no_lower,

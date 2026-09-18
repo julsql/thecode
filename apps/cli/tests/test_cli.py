@@ -1,7 +1,6 @@
 """Tests de la CLI."""
 
 import pytest
-
 from thecode import cli
 from thecode.cli import main
 
