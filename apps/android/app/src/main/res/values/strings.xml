@@ -93,4 +93,16 @@
     <string name="vault_saved">"%1$s" saved to the vault.</string>
     <string name="vault_saved_other_key">"%1$s" saved. Careful: this entry generates its password from "%2$s", not from what you typed.</string>
     <string name="vault_save_needs_site">Type a site first.</string>
+    <string name="vault_entry_actions">What do you want to do with "%1$s"?</string>
+    <string name="vault_renew">Renew the password</string>
+    <string name="vault_migrate">Move to v2</string>
+    <string name="vault_renew_title">Renew "%1$s"</string>
+    <string name="vault_migrate_title">Move "%1$s" to v2</string>
+    <string name="vault_password_pair">Current\n%1$s\n\nNew\n%2$s\n\nChange it on the site, then confirm. The new one is useless until you have, and the old one is still what signs you in.</string>
+    <string name="vault_renew_done">"%1$s" renewed, counter %2$d.</string>
+    <string name="vault_migrate_done">"%1$s" is now in v2.</string>
+    <string name="vault_renew_needs_v2">"%1$s" is in v1, where the counter has no effect. Move it to v2 first.</string>
+    <string name="vault_already_v2">"%1$s" is already in v2.</string>
+    <string name="vault_needs_key">Set your master key first: it is what computes the passwords.</string>
+    <string name="vault_working">Computing…</string>
 </resources>

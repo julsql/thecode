@@ -52,7 +52,7 @@ public final class Vault {
         }
     }
 
-    static String nowIso() {
+    public static String nowIso() {
         SimpleDateFormat fmt = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.ROOT);
         fmt.setTimeZone(TimeZone.getTimeZone("UTC"));
         return fmt.format(new Date());
