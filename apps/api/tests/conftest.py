@@ -38,13 +38,16 @@ def postgres_url() -> str:
     """
     existing = os.environ.get("THECODE_TEST_DATABASE_URL")
     if existing:
-        return existing
+        # `yield` et non `return` : dans un générateur, un return ne fournit
+        # aucune valeur à pytest. Le bug ne se voyait pas en local, où la
+        # variable n'est pas définie et où l'on passe par testcontainers.
+        yield existing
+        return
 
     from testcontainers.postgres import PostgresContainer
 
     with PostgresContainer("postgres:16-alpine", driver="psycopg") as container:
         yield container.get_connection_url()
-        return
 
 
 @pytest.fixture(scope="session")
