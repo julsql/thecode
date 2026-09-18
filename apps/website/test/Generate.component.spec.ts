@@ -90,6 +90,10 @@ describe("page de generation", () => {
 });
 
 describe("carnet et empreinte", () => {
+  // localStorage survit d'un test a l'autre : sans ce nettoyage, une entree
+  // laissee par un test change le libelle du bouton d'un autre.
+  beforeEach(() => localStorage.clear());
+
   it("affiche l'empreinte des que la clef est saisie", async () => {
     const wrapper = await mountGenerate();
     expect(wrapper.text()).not.toContain("Empreinte");
@@ -105,6 +109,52 @@ describe("carnet et empreinte", () => {
   it("propose d'enregistrer le site dans le carnet", async () => {
     const wrapper = await mountGenerate();
     expect(wrapper.text()).toContain("Enregistrer ce site");
+  });
+
+  it("propose de migrer une entree v1 et de renouveler une v2", async () => {
+    const { saveVault, emptyVault, newEntry } = await import("@/vault");
+
+    const vault = emptyVault();
+    vault.entries.push(newEntry("google.com", { domains: ["google.com"] }));
+    saveVault(vault);
+
+    const wrapper = await mountGenerate();
+    await wrapper.find("#id_site").setValue("google.com");
+    await wrapper.vm.$nextTick();
+
+    // Une entree v1 n'a rien a renouveler : le compteur n'entre pas dans sa
+    // derivation. On ne propose donc que la migration.
+    expect(wrapper.text()).toContain("Passer en v2");
+    expect(wrapper.text()).not.toContain("Renouveler");
+  });
+
+  it("montre les deux mots de passe avant d'ecrire quoi que ce soit", async () => {
+    const { saveVault, emptyVault, newEntry, loadVault, findAllByDomain } = await import("@/vault");
+
+    const vault = emptyVault();
+    vault.entries.push(newEntry("google.com", { domains: ["google.com"], v: 2 }));
+    saveVault(vault);
+
+    const wrapper = await mountGenerate();
+    await wrapper.find("#id_clef").setValue("clef");
+    await wrapper.find("#id_site").setValue("google.com");
+    await wrapper.vm.$nextTick();
+
+    const renew = wrapper.findAll("button").find((b) => b.text() === "Renouveler");
+    await renew!.trigger("click");
+
+    await vi.waitFor(() => expect(wrapper.text()).toContain("Nouveau"), { timeout: 10000 });
+    expect(wrapper.text()).toContain("Actuel");
+
+    // Rien n'est ecrit tant que ce n'est pas confirme : l'ancien mot de passe
+    // est encore celui du site.
+    expect(findAllByDomain(loadVault(), "google.com")[0].counter).toBe(1);
+
+    const confirm = wrapper.findAll("button").find((b) => b.text() === "Confirmer");
+    await confirm!.trigger("click");
+    await wrapper.vm.$nextTick();
+
+    expect(findAllByDomain(loadVault(), "google.com")[0].counter).toBe(2);
   });
 
   it("enregistre les reglages et les retrouve", async () => {
