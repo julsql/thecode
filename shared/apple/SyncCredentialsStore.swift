@@ -6,9 +6,11 @@
 //  synchronisation, et un fichier de préférences se lit dans une sauvegarde ou
 //  sur un appareil déverrouillé.
 //
-//  L'élément n'appartient à aucun groupe d'accès : seule l'app en a besoin,
-//  l'extension de remplissage automatique ne synchronise pas. Cela évite aussi
-//  d'exiger la capacité « Keychain Sharing ».
+//  Aucun `kSecAttrAccessGroup` n'est passé : l'élément va donc dans le groupe
+//  déclaré par la cible, le même que celui de la clef maîtresse. L'extension de
+//  remplissage automatique pourrait le lire sans en avoir l'usage — elle ne
+//  synchronise pas — mais c'est le même appareil et la même app, et cela évite
+//  d'écrire l'identifiant d'équipe en dur pour désigner un autre groupe.
 //
 //  `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly` : la synchronisation peut
 //  tourner en arrière-plan après un premier déverrouillage, mais les jetons ne
