@@ -623,7 +623,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         int id = item.getItemId();
-        if (id == R.id.action_dark_mode) {
+        if (id == R.id.action_vault) {
+            startActivity(new android.content.Intent(this, VaultActivity.class));
+            return true;
+        } else if (id == R.id.action_dark_mode) {
             toggleTheme();
             return true;
         } else if (id == R.id.action_help) {

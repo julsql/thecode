@@ -30,6 +30,11 @@
             android:windowSoftInputMode="adjustResize" />
 
         <activity
+            android:name=".VaultActivity"
+            android:exported="false"
+            android:label="@string/vault_title"
+            android:parentActivityName=".MainActivity" />
+        <activity
             android:name=".autofill.AutofillAuthActivity"
             android:exported="true"
             android:theme="@style/Theme.TheCode.Transparent"
