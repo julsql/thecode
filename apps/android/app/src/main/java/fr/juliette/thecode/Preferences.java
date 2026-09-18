@@ -2,6 +2,13 @@ package fr.juliette.thecode;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.util.Log;
+
+import androidx.security.crypto.EncryptedSharedPreferences;
+import androidx.security.crypto.MasterKey;
+
+import java.security.GeneralSecurityException;
+import java.io.IOException;
 
 /**
  * Stockage local des préférences utilisateur (clé secrète et options).
@@ -20,15 +27,74 @@ public final class Preferences {
     public static final String KEY_DARK_MODE = "darkMode";
     public static final String KEY_LAST_UNLOCK_AT = "lastUnlockAt";
 
+    private static final String TAG = "TheCode";
+    /** Fichier chiffré, distinct de l'ancien pour permettre la migration. */
+    private static final String SECURE_FILE = "thecode.secure.prefs";
+
     private final SharedPreferences prefs;
+    /**
+     * Préférences chiffrées, adossées au Keystore matériel.
+     *
+     * La clef maîtresse y vit seule : elle ouvre tous les comptes, et la
+     * stocker en clair contredisait ce que le README promettait. Les réglages
+     * ordinaires restent dans le fichier habituel, ils n'ont rien de sensible.
+     */
+    private final SharedPreferences securePrefs;
 
     public Preferences(Context context) {
-        this.prefs = context.getApplicationContext()
-                .getSharedPreferences(FILE, Context.MODE_PRIVATE);
+        Context app = context.getApplicationContext();
+        this.prefs = app.getSharedPreferences(FILE, Context.MODE_PRIVATE);
+        this.securePrefs = openSecure(app);
+        migrateEncodingKey();
     }
 
-    public String getEncodingKey() { return prefs.getString(KEY_ENCODING_KEY, ""); }
-    public void setEncodingKey(String v) { prefs.edit().putString(KEY_ENCODING_KEY, v).apply(); }
+    private static SharedPreferences openSecure(Context app) {
+        try {
+            MasterKey masterKey = new MasterKey.Builder(app)
+                    .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                    .build();
+            return EncryptedSharedPreferences.create(
+                    app,
+                    SECURE_FILE,
+                    masterKey,
+                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM);
+        } catch (GeneralSecurityException | IOException e) {
+            // Keystore indisponible : plutôt que d'écrire la clef en clair sans
+            // le dire, on ne la persiste pas du tout. L'utilisateur la
+            // ressaisira, ce qui est préférable à une fausse promesse.
+            Log.e(TAG, "Stockage chiffré indisponible : la clef ne sera pas conservée", e);
+            return null;
+        }
+    }
+
+    /** Déplace une clef écrite en clair par une version antérieure. */
+    private void migrateEncodingKey() {
+        String legacy = prefs.getString(KEY_ENCODING_KEY, "");
+        if (legacy.isEmpty()) return;
+
+        if (securePrefs != null) {
+            securePrefs.edit().putString(KEY_ENCODING_KEY, legacy).apply();
+        }
+        // Retirée dans tous les cas : la laisser en clair serait pire que de
+        // demander une ressaisie.
+        prefs.edit().remove(KEY_ENCODING_KEY).apply();
+        Log.i(TAG, "Clef maîtresse déplacée vers le stockage chiffré");
+    }
+
+    /** Vrai si la clef peut être conservée entre deux lancements. */
+    public boolean isSecureStorageAvailable() {
+        return securePrefs != null;
+    }
+
+    public String getEncodingKey() {
+        return securePrefs == null ? "" : securePrefs.getString(KEY_ENCODING_KEY, "");
+    }
+
+    public void setEncodingKey(String v) {
+        if (securePrefs == null) return;
+        securePrefs.edit().putString(KEY_ENCODING_KEY, v).apply();
+    }
 
     public int getLength() { return prefs.getInt(KEY_LENGTH, Code.DEFAULT_LENGTH); }
     public void setLength(int v) { prefs.edit().putInt(KEY_LENGTH, v).apply(); }
