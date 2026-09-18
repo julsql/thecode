@@ -22,11 +22,16 @@ const { PRIVILEGED_ACTIONS, isFromExtensionPage } = require("../background");
 
 describe("cloisonnement des actions sensibles", () => {
   it("protege toutes les actions touchant a la cle ou aux parametres", () => {
+    // Liste figee volontairement : ajouter une action sensible doit etre un
+    // geste conscient, pas un effet de bord.
     expect([...PRIVILEGED_ACTIONS].sort()).toStrictEqual([
+      // Derivent ou ecrivent un mot de passe deja en service.
+      "applyChange",
       "checkEncodingKey",
       "clearEncodingKey",
       "deleteEntry",
       "getEncodingKey",
+      "previewChange",
       "saveEntry",
       "setEncodingKey",
       "setParams",

@@ -93,7 +93,24 @@
          souvenir qu'un compte avait ete cree sans symboles. -->
     <div class="vault">
       <button id="saveEntry" type="button">Enregistrer ce site</button>
+
+      <!-- Renouveler et migrer : les deux actions qui changent un mot de passe
+           deja en service. Jamais les deux a la fois — le compteur n'entre pas
+           dans la derivation v1, et une entree v2 n'a plus rien a migrer. -->
+      <button id="changeEntry" type="button" hidden>Renouveler</button>
       <p id="vaultStatus" class="hint"></p>
+
+      <!-- Les deux cote a cote : le nouveau ne sert a rien tant qu'il n'a pas
+           ete pose sur le site, et l'ancien reste celui qui connecte. -->
+      <div id="changePreview" hidden>
+        <p class="hint">Actuel</p>
+        <p><code id="changeBefore"></code></p>
+        <p class="hint">Nouveau</p>
+        <p><code id="changeAfter"></code></p>
+        <p class="hint">Changez-le sur le site, puis confirmez.</p>
+        <button id="changeConfirm" type="button">Confirmer</button>
+        <button id="changeCancel" type="button">Annuler</button>
+      </div>
     </div>
 
     <hr />

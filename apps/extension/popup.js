@@ -19,6 +19,15 @@ const accountRow = document.getElementById("accountRow");
 const accountSelect = document.getElementById("accountSelect");
 const saveEntryBtn = document.getElementById("saveEntry");
 const vaultStatus = document.getElementById("vaultStatus");
+const changeEntryBtn = document.getElementById("changeEntry");
+const changePreview = document.getElementById("changePreview");
+const changeBefore = document.getElementById("changeBefore");
+const changeAfter = document.getElementById("changeAfter");
+const changeConfirmBtn = document.getElementById("changeConfirm");
+const changeCancelBtn = document.getElementById("changeCancel");
+
+/** Entree visee par le changement en cours, et son sens. */
+let pendingChange = null;
 const syncLoggedOut = document.getElementById("syncLoggedOut");
 const syncLoggedIn = document.getElementById("syncLoggedIn");
 const syncEmail = document.getElementById("syncEmail");
@@ -286,8 +295,70 @@ function refreshVault(domain) {
     saveEntryBtn.textContent = currentMatches.length
       ? "Mettre à jour l'entrée"
       : "Enregistrer ce site";
+
+    // Rien a renouveler ni a migrer tant que le site n'est pas dans le carnet.
+    const target = currentMatches[0];
+    changeEntryBtn.hidden = !target;
+    if (target) {
+      changeEntryBtn.textContent = target.v >= 2 ? "Renouveler" : "Passer en v2";
+    }
+    changePreview.hidden = true;
+    pendingChange = null;
   });
 }
+
+/** L'entree visee : celle choisie quand il y en a plusieurs. */
+function selectedEntry() {
+  if (currentMatches.length < 2) return currentMatches[0];
+  return currentMatches[Number(accountSelect.value) || 0];
+}
+
+changeEntryBtn.addEventListener("click", () => {
+  const entry = selectedEntry();
+  if (!entry) return;
+
+  const renew = entry.v >= 2;
+  vaultStatus.textContent = "Calcul en cours…";
+
+  browser.runtime.sendMessage({ action: "previewChange", id: entry.id, renew }, (resp) => {
+    if (!resp?.ok) {
+      vaultStatus.textContent = `Échec : ${resp?.error || "inconnu"}`;
+      return;
+    }
+    pendingChange = { id: entry.id, renew };
+    changeBefore.textContent = resp.before;
+    changeAfter.textContent = resp.after;
+    changePreview.hidden = false;
+    vaultStatus.textContent = "";
+  });
+});
+
+changeCancelBtn.addEventListener("click", () => {
+  // Rien n'a ete ecrit : annuler ne laisse aucune trace.
+  pendingChange = null;
+  changePreview.hidden = true;
+});
+
+changeConfirmBtn.addEventListener("click", () => {
+  if (!pendingChange) return;
+
+  browser.runtime.sendMessage(
+    { action: "applyChange", id: pendingChange.id, renew: pendingChange.renew },
+    (resp) => {
+      if (!resp?.ok) {
+        vaultStatus.textContent = `Échec : ${resp?.error || "inconnu"}`;
+        return;
+      }
+      const renewed = pendingChange.renew;
+      pendingChange = null;
+      changePreview.hidden = true;
+      vaultStatus.textContent = renewed
+        ? `Entrée renouvelée, compteur ${resp.counter}.`
+        : "Entrée passée en v2.";
+      refreshVault(currentDomain);
+    },
+  );
+});
 
 saveEntryBtn.addEventListener("click", () => {
   if (!currentDomain) {
