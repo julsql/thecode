@@ -29,7 +29,12 @@ enum L10n {
 
 struct MainView: View {
     // Paramètres globaux
-    @AppStorage("encodingKey", store: UserDefaults(suiteName: appGroupID)) var encodingKey: String = ""
+    /// La clef maîtresse, lue et écrite dans le trousseau.
+    ///
+    /// Pas @AppStorage : elle vivait alors en clair dans le conteneur de l'app
+    /// group, ce que le README affirmait pourtant ne pas faire. Le trousseau la
+    /// chiffre au repos et la lie à cet appareil.
+    @State var encodingKey: String = SecureKeyStore.read()
     @AppStorage("lengthNumber", store: UserDefaults(suiteName: appGroupID)) var lengthNumber: Int = 20
     @AppStorage("minState", store: UserDefaults(suiteName: appGroupID)) var minState: Bool = true
     @AppStorage("majState", store: UserDefaults(suiteName: appGroupID)) var majState: Bool = true
@@ -204,6 +209,10 @@ struct MainView: View {
                 }
             }
             .onAppear {
+                // Le trousseau peut n'avoir rien rendu au moment où la vue a
+                // été construite ; on retente plutôt que de laisser un champ
+                // vide qui effacerait la clef à la première frappe.
+                if encodingKey.isEmpty { encodingKey = SecureKeyStore.read() }
                 refreshAutofillStatus()
                 restoreSession()
                 lengthDraft = String(lengthNumber)
@@ -237,7 +246,10 @@ struct MainView: View {
             }
         }
         .onChange(of: siteName) { _ in vaultSaveMessage = nil }
-        .onChange(of: encodingKey) { _ in generatePassword() }
+        .onChange(of: encodingKey) { newValue in
+            SecureKeyStore.write(newValue)
+            generatePassword()
+        }
         .onChange(of: lengthNumber) { newVal in
             // Le slider (ou un clamp) a bougé la valeur : on réaligne le champ.
             if lengthDraft != String(newVal) { lengthDraft = String(newVal) }

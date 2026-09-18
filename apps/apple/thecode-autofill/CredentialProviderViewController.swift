@@ -105,7 +105,9 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
         // pour une longueur absente — et `?? 20` ne s'appliquait jamais, car
         // `integer(forKey:)` ne renvoie pas nil.
         let settings = PasswordSettings.load(from: defaults)
-        let encodingKey = defaults?.string(forKey: PasswordSettings.Key.encodingKey) ?? ""
+        // Trousseau et non UserDefaults : la clef ouvre tous les comptes, et
+        // le conteneur de l'app group la gardait en clair.
+        let encodingKey = SecureKeyStore.read()
 
         if domainName.isEmpty || encodingKey.isEmpty || !settings.hasCharset {
             return ""

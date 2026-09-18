@@ -30,8 +30,9 @@ enum PasswordSettings {
 
     // MARK: - Clés de stockage
 
+    /// Réglages seulement : la clef maîtresse vit dans le trousseau, pas ici.
+    /// Cf. `SecureKeyStore`.
     enum Key {
-        static let encodingKey  = "encodingKey"
         static let lengthNumber = "lengthNumber"
         static let minState     = "minState"
         static let majState     = "majState"

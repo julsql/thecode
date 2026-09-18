@@ -71,6 +71,9 @@ public enum SyncCredentialsStore {
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
+            // Même trousseau que sur iOS. Sans cela, macOS écrit dans le
+            // trousseau historique, qui ignore kSecAttrAccessible.
+            kSecUseDataProtectionKeychain as String: true,
         ]
     }
 }
