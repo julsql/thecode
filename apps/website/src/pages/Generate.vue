@@ -120,6 +120,38 @@
             <p v-else-if="vaultEntries.length" class="hint">
               {{ vaultEntries.length }} entrée(s) connue(s) pour ce site.
             </p>
+
+            <!-- Renouveler et migrer : les deux actions qui changent un mot de
+                 passe deja en service. Jamais les deux a la fois — le compteur
+                 n'entre pas dans la derivation v1, et une entree v2 n'a plus
+                 rien a migrer. -->
+            <ul v-if="vaultEntries.length && !pending" class="vault-entries">
+              <li v-for="entry in vaultEntries" :key="entry.id">
+                <span>{{ entry.label || entry.siteKey }}</span>
+                <button type="button" @click="proposeChange(entry, entry.v >= 2)">
+                  {{ entry.v >= 2 ? "Renouveler" : "Passer en v2" }}
+                </button>
+              </li>
+            </ul>
+
+            <!-- Les deux cote a cote : le nouveau ne sert a rien tant qu'il n'a
+                 pas ete pose sur le site, et l'ancien reste celui qui connecte. -->
+            <div v-if="pending" class="vault-change">
+              <p class="hint">Actuel</p>
+              <p>
+                <code>{{ pending.before }}</code>
+              </p>
+              <p class="hint">Nouveau</p>
+              <p>
+                <code>{{ pending.after }}</code>
+              </p>
+              <p class="hint">
+                Changez-le sur le site, puis confirmez. Le nouveau ne sert à rien tant que ce n'est
+                pas fait.
+              </p>
+              <button type="button" @click="applyChange">Confirmer</button>
+              <button type="button" @click="pending = null">Annuler</button>
+            </div>
           </div>
 
           <!-- Le carnet est chiffré avant de quitter le navigateur : le serveur
@@ -179,6 +211,7 @@ import {
   saveVault,
   type VaultEntry,
 } from "@/vault";
+import { generatePasswordV2 } from "@/coreV2";
 import { useI18n } from "@/i18n";
 import type { TranslationKey } from "@/i18n";
 
@@ -214,6 +247,13 @@ export default defineComponent({
     const fingerprint = ref<Fingerprint>({ text: "", color: "", colorName: "" });
     const vaultEntries = ref<VaultEntry[]>([]);
     const vaultMessage = ref("");
+    /** Changement propose, en attente de confirmation. */
+    const pending = ref<{
+      entryId: string;
+      renew: boolean;
+      before: string;
+      after: string;
+    } | null>(null);
     const syncConnected = ref(Boolean(loadSession()));
     const syncEmail = ref("");
     const syncPassword = ref("");
@@ -261,21 +301,113 @@ export default defineComponent({
       // Canonicalise la saisie pour qu'un meme compte donne le meme mot de
       // passe que dans l'extension ou les apps : https://www.google.com/login
       // et google.com doivent converger.
-      const mdp = await generatePassword(
-        canonicalSite(site.value),
-        clef.value,
-        longueur.value,
-        minuscules.value,
-        majuscules.value,
-        symboles.value,
-        chiffres.value,
-      );
+      const domain = canonicalSite(site.value);
+
+      // Une entree du carnet dit sous quelle clef derivee et en quelle version.
+      // L'ignorer rendrait un mot de passe v1 pour une entree v2 : faux, sans
+      // que rien ne le signale.
+      const entry = vaultEntries.value[0];
+      const mdp = entry
+        ? await passwordForEntry(entry)
+        : await generatePassword(
+            domain,
+            clef.value,
+            longueur.value,
+            minuscules.value,
+            majuscules.value,
+            symboles.value,
+            chiffres.value,
+          );
       motDePasse.value = mdp ?? "";
     };
 
     watch(clef, async (value) => {
       fingerprint.value = await keyFingerprint(value);
     });
+
+    /**
+     * Derive le mot de passe d'une entree, dans sa version a elle.
+     *
+     * Les deux versions coexistent entree par entree : une entree existante
+     * reste en v1 et son mot de passe ne doit pas changer.
+     */
+    async function passwordForEntry(entry: VaultEntry, counter?: number, version?: number) {
+      const v = version ?? entry.v;
+      if (v >= 2) {
+        return generatePasswordV2(entry.siteKey, clef.value, entry.length, {
+          useLower: entry.charset.lower,
+          useUpper: entry.charset.upper,
+          useSymbols: entry.charset.symbols,
+          useNumbers: entry.charset.numbers,
+          login: entry.login ?? "",
+          counter: counter ?? entry.counter,
+        });
+      }
+      // v1 : ni login ni compteur n'entrent dans la derivation.
+      return generatePassword(
+        entry.siteKey,
+        clef.value,
+        entry.length,
+        entry.charset.lower,
+        entry.charset.upper,
+        entry.charset.symbols,
+        entry.charset.numbers,
+      );
+    }
+
+    /**
+     * Prepare un renouvellement ou une migration, sans rien ecrire.
+     *
+     * Les deux mots de passe s'affichent cote a cote : le nouveau ne sert a
+     * rien tant qu'il n'a pas ete pose sur le site, et l'ancien reste celui qui
+     * connecte. Ecrire d'abord rendrait le compte inaccessible.
+     */
+    async function proposeChange(entry: VaultEntry, renew: boolean) {
+      if (!clef.value) {
+        vaultMessage.value = "Renseignez d'abord votre clef.";
+        return;
+      }
+      vaultMessage.value = "Calcul en cours…";
+
+      pending.value = {
+        entryId: entry.id,
+        renew,
+        before: (await passwordForEntry(entry)) ?? "",
+        after:
+          (await passwordForEntry(
+            entry,
+            renew ? entry.counter + 1 : entry.counter,
+            renew ? entry.v : 2,
+          )) ?? "",
+      };
+      vaultMessage.value = "";
+    }
+
+    function applyChange() {
+      const change = pending.value;
+      if (!change) return;
+
+      const vault = loadVault() ?? emptyVault();
+      const entry = vault.entries.find((e) => e.id === change.entryId);
+      if (!entry) {
+        pending.value = null;
+        return;
+      }
+
+      if (change.renew) entry.counter += 1;
+      else entry.v = 2;
+      // Sans rehorodatage, la fusion ferait gagner l'autre appareil et le
+      // changement serait perdu a la synchronisation suivante.
+      entry.updatedAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+
+      saveVault(vault);
+      pending.value = null;
+      vaultMessage.value = change.renew
+        ? `Entrée renouvelée, compteur ${entry.counter}.`
+        : "Entrée passée en v2.";
+      refreshVault();
+      genererMotDePasse();
+    }
 
     /** Entrees du carnet couvrant le site saisi. */
     function refreshVault() {
@@ -384,6 +516,9 @@ export default defineComponent({
       vaultEntries,
       vaultMessage,
       saveEntry,
+      pending,
+      proposeChange,
+      applyChange,
       syncConnected,
       syncEmail,
       syncPassword,
