@@ -52,7 +52,37 @@ TC1m.<index>.<total>.<base64url(fragment)>
 ```
 
 Les fragments sont affichés en boucle ; le lecteur les accumule jusqu'à les
-avoir tous. Un fragment lu deux fois est ignoré, l'ordre n'a pas d'importance.
+avoir tous. Un fragment lu deux fois est ignoré, l'ordre n'a pas d'importance,
+et un index hors bornes est écarté plutôt que de corrompre l'assemblage — les
+codes défilent sur l'écran d'en face, rien de tout cela n'est sous contrôle.
+
+Le préfixe `TC1.` n'est pas répété dans chaque fragment : il est remis une fois
+au réassemblage. La coupure se fait à 2600 caractères, pour laisser la place à
+l'en-tête `TC1m.<index>.<total>.` qui s'ajoute à chaque morceau.
+
+## Qui affiche, qui lit
+
+|              | afficher                       | lire                     |
+| ------------ | ------------------------------ | ------------------------ |
+| CLI          | — (`--export` rend le payload) | `--import`               |
+| Extension    | encodeur de `shared/js/qr.js`  | fichier                  |
+| Site         | encodeur de `shared/js/qr.js`  | fichier                  |
+| Android      | ZXing                          | caméra (ZXing + CameraX) |
+| iOS et macOS | CoreImage                      | caméra (AVFoundation)    |
+
+L'encodeur JavaScript est écrit à la main : l'extension ne livre que le code de
+ce dépôt, et y ajouter une bibliothèque tierce contredirait l'argument utilisé
+plus haut pour refuser XChaCha20. Les plateformes natives, elles, ont ce qu'il
+faut dans le système ou dans une bibliothèque déjà nécessaire pour **lire** — un
+décodeur ne s'écrit pas à la main.
+
+`shared/vault-fixtures/qr-vectors.json` fige sept matrices attendues, relues par
+un décodeur indépendant avant d'être figées. Un seul module de différence et le
+code ne se scanne pas.
+
+Le navigateur ne lit pas de QR : il importe un fichier. Une webcam et un
+décodeur supplémentaires ne se justifiaient pas là où un fichier suffit, et le
+fichier marche sur tous les navigateurs.
 
 ## À la réception
 
