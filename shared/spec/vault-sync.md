@@ -125,3 +125,8 @@ Le serveur refuse une entrée dépassant `max_blob_bytes` et un compte dépassan
 Les cinq clients suivent le même ordre et les mêmes règles ; leurs tests
 montent chacun un serveur en mémoire aux règles ci-dessus, et vérifient qu'aucun
 nom de site ni identifiant ne passe en clair sur le réseau.
+
+`shared/vault-fixtures/sync-row.json` fige une ligne chiffrée par le CLI :
+chaque implémentation doit la déchiffrer et retrouver l'entrée à l'identique.
+Le chiffrement n'est pas ce qui a cassé jusqu'ici, c'est le JSON autour — un
+champ inventé, un défaut ajouté, et la fusion diverge.
