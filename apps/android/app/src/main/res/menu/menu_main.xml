@@ -13,6 +13,13 @@
         app:showAsAction="never" />
 
 
+    <!-- Enregistre les reglages du site affiche, pour ne plus avoir a les
+         retenir. -->
+    <item
+        android:id="@+id/action_save_to_vault"
+        android:title="@string/vault_save"
+        app:showAsAction="never" />
+
     <item
         android:id="@+id/action_dark_mode"
         android:icon="@drawable/ic_dark_mode"

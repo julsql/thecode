@@ -3,6 +3,7 @@ package fr.juliette.thecode.vault;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
@@ -58,14 +59,23 @@ public class SyncTest {
         Sync sync = new Sync(server);
 
         Vault phone = sync.sync(vaultWith("google.com", "moi"), "clef", CREDS).vault;
+        String deletedId = phone.entries.get(0).id;
         phone.entries.get(0).deleted = true;
         phone.entries.get(0).updatedAt = "2999-01-01T00:00:00Z";
         sync.sync(phone, "clef", CREDS);
 
         // Une suppression doit se propager : sans pierre tombale, la fusion
         // suivante ressusciterait l'entrée depuis l'autre appareil.
+        //
+        // La recherche se fait par identifiant : merge trie par id, et
+        // l'ordinateur apporte sa propre entrée, d'identifiant aléatoire.
         Vault laptop = sync.sync(vaultWith("google.com", "moi"), "clef", CREDS).vault;
-        assertTrue(laptop.entries.get(0).deleted);
+        VaultEntry propagated = null;
+        for (VaultEntry entry : laptop.entries) {
+            if (entry.id.equals(deletedId)) propagated = entry;
+        }
+        assertNotNull(propagated);
+        assertTrue(propagated.deleted);
     }
 
     @Test

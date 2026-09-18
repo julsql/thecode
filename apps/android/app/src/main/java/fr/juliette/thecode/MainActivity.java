@@ -12,6 +12,8 @@ import android.os.Bundle;
 import android.provider.Settings;
 
 import fr.juliette.thecode.autofill.TheCodeAutofillService;
+import fr.juliette.thecode.vault.Vault;
+import fr.juliette.thecode.vault.VaultEntry;
 import android.text.Editable;
 import android.text.SpannableString;
 import android.text.TextWatcher;
@@ -623,7 +625,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         int id = item.getItemId();
-        if (id == R.id.action_vault) {
+        if (id == R.id.action_save_to_vault) {
+            saveToVault();
+            return true;
+        } else if (id == R.id.action_vault) {
             startActivity(new android.content.Intent(this, VaultActivity.class));
             return true;
         } else if (id == R.id.action_dark_mode) {
@@ -637,6 +642,36 @@ public class MainActivity extends AppCompatActivity {
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    /**
+     * Enregistre les réglages du site affiché.
+     *
+     * Le site est pris tel qu'il a été saisi : c'est lui qui a produit le mot
+     * de passe à l'écran, le canonicaliser ici enregistrerait des réglages sous
+     * une clef qui en produit un autre.
+     */
+    private void saveToVault() {
+        String site = textOf(siteEditText).trim();
+        if (site.isEmpty()) {
+            Snackbar.make(findViewById(android.R.id.content),
+                    R.string.vault_save_needs_site, Snackbar.LENGTH_LONG).show();
+            return;
+        }
+
+        Vault vault = Vault.load(this);
+        VaultEntry entry = vault.upsert(site, (int) lengthSlider.getValue(),
+                minSwitch.isChecked(), majSwitch.isChecked(),
+                symSwitch.isChecked(), chiSwitch.isChecked());
+        vault.save(this);
+
+        // Une entrée existante garde son siteKey : le réécrire changerait un
+        // mot de passe déjà en service. On le dit plutôt que de laisser croire
+        // que le mot de passe affiché est celui de l'entrée.
+        String message = entry.siteKey.equals(site)
+                ? getString(R.string.vault_saved, site)
+                : getString(R.string.vault_saved_other_key, site, entry.siteKey);
+        Snackbar.make(findViewById(android.R.id.content), message, Snackbar.LENGTH_LONG).show();
     }
 
     private static int clamp(int value, int min, int max) {
