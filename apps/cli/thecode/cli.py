@@ -32,6 +32,7 @@ from .vault import (
     load,
     merge,
     new_entry,
+    now_iso,
     save,
 )
 
@@ -96,6 +97,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Affiche l'ancien et le nouveau mot de passe d'une entrée, "
         "et la passe en v2 une fois le site mis à jour",
+    )
+    parser.add_argument(
+        "--renew",
+        action="store_true",
+        help="Renouvelle le mot de passe d'une entrée : incrémente son compteur "
+        "et affiche l'ancien et le nouveau côte à côte",
     )
     parser.add_argument(
         "--login",
@@ -396,8 +403,49 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         entry["v"] = 2
+        entry["updatedAt"] = now_iso()
         save(vault_data, vault_path)
         print(f"✓ « {entry['label']} » est en v2.", file=sys.stderr)
+        return 0
+
+    if args.renew:
+        if entry is None:
+            print(f"Aucune entrée pour {canonical_site(args.site)} dans le carnet.", file=sys.stderr)
+            return 1
+        if entry["v"] < 2:
+            # Le compteur n'entre pas dans la dérivation v1 : l'incrémenter ne
+            # changerait rien, et le dire vaut mieux que de laisser croire que
+            # le mot de passe a été renouvelé.
+            print(
+                f"« {entry['label']} » est en v1, où le compteur n'a aucun effet. "
+                "Passez l'entrée en v2 avec --migrate pour pouvoir la renouveler.",
+                file=sys.stderr,
+            )
+            return 1
+
+        before = _derive(args, params, entry)
+        after = generate_password_v2(
+            entry["siteKey"], args.password, entry["length"],
+            entry["charset"]["lower"], entry["charset"]["upper"],
+            entry["charset"]["symbols"], entry["charset"]["numbers"],
+            login=entry.get("login") or "", counter=entry["counter"] + 1,
+        )
+        # Les deux côte à côte : le nouveau ne sert à rien tant qu'il n'a pas
+        # été posé sur le site, et l'ancien reste nécessaire pour s'y connecter.
+        print(f"Renouvellement de « {entry['label']} » (compteur "
+              f"{entry['counter']} → {entry['counter'] + 1})\n")
+        print(f"  actuel   {before}")
+        print(f"  nouveau  {after}\n")
+        print("Changez le mot de passe sur le site, puis confirmez :")
+        if input("  entrée renouvelée ? [o/N] ").strip().lower() not in ("o", "oui", "y", "yes"):
+            print("Annulé, le compteur reste à "
+                  f"{entry['counter']}.", file=sys.stderr)
+            return 0
+
+        entry["counter"] += 1
+        entry["updatedAt"] = now_iso()
+        save(vault_data, vault_path)
+        print(f"✓ « {entry['label']} » renouvelée, compteur {entry['counter']}.", file=sys.stderr)
         return 0
 
 

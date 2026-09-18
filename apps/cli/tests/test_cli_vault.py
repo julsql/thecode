@@ -9,6 +9,8 @@
 import pytest
 
 from thecode.cli import main
+from thecode.core import generate_password_v2
+from thecode.vault import load, new_entry, save
 
 
 @pytest.fixture
@@ -105,3 +107,95 @@ def test_list_reports_what_is_stored(capsys, vault):
     out = capsys.readouterr().out
     assert "google.com" in out
     assert "16 caracteres" in out
+
+
+# ---------------------------------------------------------------- renouvellement
+
+
+def _v2_entry(tmp_path, counter=1):
+    """Carnet d'un seul site, en v2, prêt à être renouvelé."""
+    vault_path = tmp_path / "vault.json"
+    entry = new_entry("google.com", domains=["google.com"], version=2)
+    entry["counter"] = counter
+    save({"schema": 1, "updatedAt": "2026-01-01T00:00:00Z", "entries": [entry]}, vault_path)
+    return vault_path
+
+
+def test_renew_increments_the_counter_after_confirmation(tmp_path, monkeypatch):
+    vault_path = _v2_entry(tmp_path)
+    monkeypatch.setattr("builtins.input", lambda _: "o")
+
+    code = main(["-p", "clef", "google.com", "--renew", "--vault", str(vault_path)])
+
+    assert code == 0
+    assert load(vault_path)["entries"][0]["counter"] == 2
+
+
+def test_renew_shows_both_passwords_before_confirming(tmp_path, monkeypatch, capsys):
+    """Le nouveau ne sert à rien tant qu'il n'est pas posé sur le site.
+
+    Et l'ancien reste nécessaire pour s'y connecter : les deux doivent être
+    affichés côte à côte.
+    """
+    vault_path = _v2_entry(tmp_path)
+    monkeypatch.setattr("builtins.input", lambda _: "o")
+
+    main(["-p", "clef", "google.com", "--renew", "--vault", str(vault_path)])
+    out = capsys.readouterr().out
+
+    assert "actuel" in out
+    assert "nouveau" in out
+    before = generate_password_v2("google.com", "clef", counter=1)
+    after = generate_password_v2("google.com", "clef", counter=2)
+    assert before in out
+    assert after in out
+    assert before != after
+
+
+def test_renew_leaves_the_counter_alone_when_refused(tmp_path, monkeypatch):
+    vault_path = _v2_entry(tmp_path)
+    monkeypatch.setattr("builtins.input", lambda _: "n")
+
+    main(["-p", "clef", "google.com", "--renew", "--vault", str(vault_path)])
+
+    # Incrémenter sans confirmation rendrait le compte inaccessible : l'ancien
+    # mot de passe est encore celui du site.
+    assert load(vault_path)["entries"][0]["counter"] == 1
+
+
+def test_renew_refuses_a_v1_entry(tmp_path, capsys):
+    vault_path = tmp_path / "vault.json"
+    save(
+        {
+            "schema": 1,
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "entries": [new_entry("google.com", domains=["google.com"])],
+        },
+        vault_path,
+    )
+
+    code = main(["-p", "clef", "google.com", "--renew", "--vault", str(vault_path)])
+
+    # Le compteur n'entre pas dans la dérivation v1 : l'incrémenter ne
+    # changerait rien, et le dire vaut mieux que de le laisser croire.
+    assert code == 1
+    assert "--migrate" in capsys.readouterr().err
+
+
+def test_renew_refuses_an_unknown_site(tmp_path, capsys):
+    vault_path = tmp_path / "vault.json"
+    save({"schema": 1, "updatedAt": "2026-01-01T00:00:00Z", "entries": []}, vault_path)
+
+    assert main(["-p", "clef", "inconnu.fr", "--renew", "--vault", str(vault_path)]) == 1
+
+
+def test_renew_restamps_the_entry(tmp_path, monkeypatch):
+    vault_path = _v2_entry(tmp_path)
+    monkeypatch.setattr("builtins.input", lambda _: "o")
+    before = load(vault_path)["entries"][0]["updatedAt"]
+
+    main(["-p", "clef", "google.com", "--renew", "--vault", str(vault_path)])
+
+    # Sans réhorodatage, la fusion ferait gagner l'autre appareil et le
+    # renouvellement serait perdu.
+    assert load(vault_path)["entries"][0]["updatedAt"] >= before
