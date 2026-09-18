@@ -1,0 +1,96 @@
+# Service de synchronisation : tests, puis image.
+name: api
+
+on:
+  push:
+    branches: [main]
+    paths: ["apps/api/**", ".github/workflows/api.yml"]
+  pull_request:
+    paths: ["apps/api/**", ".github/workflows/api.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: api-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: julsql/thecode/api
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    # Les tests tournent sur le moteur de production. Tester sur SQLite
+    # reviendrait a ne pas tester : types, contraintes, cascades et fuseaux
+    # horaires y different, et un bug Postgres y passerait inapercu.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      THECODE_TEST_DATABASE_URL: postgresql+psycopg://test:test@localhost:5432/test
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: pip install -e '.[test]'
+        working-directory: apps/api
+      - run: ruff check .
+        working-directory: apps/api
+      - run: python -m pytest -q --cov=thecode_api --cov-report=term-missing
+        working-directory: apps/api
+
+  build-push:
+    name: build & push image
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+      packages: write
+    env:
+      KEEL_AUTH: ${{ secrets.KEEL_WEBHOOK_AUTH }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=sha,format=long
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: apps/api
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Notify Keel to redeploy
+        if: env.KEEL_AUTH != ''
+        run: |
+          curl -fsS --retry 3 --retry-delay 5 -X POST \
+            https://keel.julsql.fr/v1/webhooks/native \
+            -u "$KEEL_AUTH" \
+            -H 'Content-Type: application/json' \
+            -d '{"name":"ghcr.io/${{ env.IMAGE_NAME }}","tag":"latest"}'
