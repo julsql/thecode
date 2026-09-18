@@ -125,3 +125,28 @@ describe("carnet et empreinte", () => {
     expect(entry?.length).toBe(16);
   });
 });
+
+describe("synchronisation", () => {
+  it("propose de se connecter, pas de synchroniser", async () => {
+    const wrapper = await mountGenerate();
+    // Sans session, proposer « Synchroniser » donnerait un bouton qui échoue.
+    expect(wrapper.text()).toContain("Connecter");
+    expect(wrapper.text()).not.toContain("Déconnecter");
+  });
+
+  it("refuse de synchroniser sans clef maîtresse", async () => {
+    const { saveSession, clearSession } = await import("@/sync");
+    saveSession({ endpoint: "https://x", accessToken: "a", refreshToken: "r" });
+
+    const wrapper = await mountGenerate();
+    const button = wrapper.findAll("button").find((b) => b.text() === "Synchroniser");
+    await button!.trigger("click");
+    await wrapper.vm.$nextTick();
+
+    // Le carnet est chiffré avec une clef dérivée de la clef maîtresse :
+    // sans elle, il n'y a rien à chiffrer ni à relire.
+    expect(wrapper.text()).toContain("clef maîtresse");
+
+    clearSession();
+  });
+});

@@ -121,6 +121,35 @@
               {{ vaultEntries.length }} entrée(s) connue(s) pour ce site.
             </p>
           </div>
+
+          <!-- Le carnet est chiffré avant de quitter le navigateur : le serveur
+               ne reçoit que des blocs opaques. -->
+          <div class="sync">
+            <h3>Synchronisation</h3>
+
+            <template v-if="!syncConnected">
+              <input
+                v-model="syncEmail"
+                type="email"
+                placeholder="Adresse e-mail"
+                autocomplete="off"
+              />
+              <input
+                v-model="syncPassword"
+                type="password"
+                placeholder="Mot de passe du compte"
+                autocomplete="off"
+              />
+              <button type="button" @click="connectSync">Connecter</button>
+            </template>
+
+            <template v-else>
+              <button type="button" @click="runSync">Synchroniser</button>
+              <button type="button" @click="disconnectSync">Déconnecter</button>
+            </template>
+
+            <p v-if="syncMessage" class="hint">{{ syncMessage }}</p>
+          </div>
           <input type="range" :value="scoreSecurite" min="0" max="252" disabled />
         </div>
       </div>
@@ -133,6 +162,15 @@ import { defineComponent, ref, watch, computed, onMounted } from "vue";
 import { generatePassword, calculateEntropyBits, getSecurityLevel } from "@/utils";
 import { canonicalSite, loadPublicSuffixList } from "@/canonicalSite";
 import { keyFingerprint, type Fingerprint } from "@/fingerprint";
+import {
+  clearSession,
+  loadSession,
+  login as syncLogin,
+  saveSession,
+  syncVault,
+  SyncError,
+  DEFAULT_ENDPOINT,
+} from "@/sync";
 import {
   emptyVault,
   findAllByDomain,
@@ -176,6 +214,10 @@ export default defineComponent({
     const fingerprint = ref<Fingerprint>({ text: "", color: "", colorName: "" });
     const vaultEntries = ref<VaultEntry[]>([]);
     const vaultMessage = ref("");
+    const syncConnected = ref(Boolean(loadSession()));
+    const syncEmail = ref("");
+    const syncPassword = ref("");
+    const syncMessage = ref("");
 
     const scoreSecurite = ref(0);
     const couleurSecurite = ref("");
@@ -279,6 +321,59 @@ export default defineComponent({
       refreshVault();
     }
 
+    async function connectSync() {
+      if (!syncEmail.value || !syncPassword.value) {
+        syncMessage.value = "Renseignez l'adresse et le mot de passe.";
+        return;
+      }
+      syncMessage.value = "Connexion…";
+      try {
+        saveSession(await syncLogin(DEFAULT_ENDPOINT, syncEmail.value, syncPassword.value));
+        // Le mot de passe du compte ne reste pas en mémoire une fois utilisé.
+        syncPassword.value = "";
+        syncConnected.value = true;
+        syncMessage.value = "Connecté.";
+      } catch (e) {
+        syncMessage.value = `Échec : ${(e as Error).message}`;
+      }
+    }
+
+    async function runSync() {
+      const session = loadSession();
+      if (!session) {
+        syncMessage.value = "Connectez-vous d'abord.";
+        return;
+      }
+      if (!clef.value) {
+        // Le carnet est chiffré avec une clef dérivée de la clef maîtresse :
+        // sans elle, il n'y a rien à chiffrer ni à relire.
+        syncMessage.value = "Saisissez votre clef maîtresse.";
+        return;
+      }
+
+      syncMessage.value = "Synchronisation…";
+      try {
+        const result = await syncVault(loadVault(), clef.value, session);
+        saveVault(result.vault);
+        saveSession(result.session);
+        refreshVault();
+        const conflicts = result.conflicts.length
+          ? ` (${result.conflicts.length} conflit(s) signalé(s))`
+          : "";
+        const kept = result.vault.entries.filter((e) => !e.deleted).length;
+        syncMessage.value = `${kept} entrée(s) synchronisée(s)${conflicts}`;
+      } catch (e) {
+        syncMessage.value =
+          e instanceof SyncError ? `Échec : ${e.message}` : `Échec : ${(e as Error).message}`;
+      }
+    }
+
+    function disconnectSync() {
+      clearSession();
+      syncConnected.value = false;
+      syncMessage.value = "Session oubliée sur cet appareil.";
+    }
+
     watch([clef, site, longueur, minuscules, majuscules, symboles, chiffres], genererMotDePasse, {
       immediate: true,
     });
@@ -289,6 +384,13 @@ export default defineComponent({
       vaultEntries,
       vaultMessage,
       saveEntry,
+      syncConnected,
+      syncEmail,
+      syncPassword,
+      syncMessage,
+      connectSync,
+      runSync,
+      disconnectSync,
       clef,
       site,
       longueur,
