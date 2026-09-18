@@ -188,7 +188,15 @@ def sync(
     remote = {"schema": 1, "updatedAt": vault.get("updatedAt", ""), "entries": []}
     for row in pulled["entries"]:
         entry = _decrypt_entry(row, key)
-        entry["deleted"] = entry.get("deleted", False) or row["deleted"]
+        # Absent quand faux, jamais « deleted: false ». La représentation
+        # canonique départage les écritures simultanées : y laisser un champ
+        # que les autres implémentations n'écrivent pas ferait désigner un
+        # gagnant différent selon l'appareil, et les carnets ne convergeraient
+        # jamais.
+        if entry.get("deleted") or row["deleted"]:
+            entry["deleted"] = True
+        else:
+            entry.pop("deleted", None)
         remote["entries"].append(entry)
 
     merged, conflicts = merge(vault, remote)
