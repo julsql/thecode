@@ -22,9 +22,9 @@ _settings = Settings()
 
 app = FastAPI(
     title="TheCode Sync",
-    # Vide sur thecode-api.julsql.fr, où le service est à la racine. Sous le
-    # site, Traefik retire « /api » avant de transmettre : root_path le lui
-    # réapprend, pour que la documentation donne des URL utilisables.
+    # Vide : le service est à la racine de son sous-domaine. Réglable pour le
+    # cas où il serait remonté derrière un préfixe, où la documentation
+    # donnerait sinon des URL inutilisables.
     root_path=_settings.root_path,
     description=(
         "Synchronisation chiffrée des carnets TheCode. Le service ne voit "
@@ -34,9 +34,9 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# Le site appelle désormais une autre origine que la sienne. Les apps natives
-# et les extensions ne passent pas par le CORS, et rien n'utilise de cookie :
-# les jetons voyagent dans l'en-tête Authorization.
+# Le site appelle une autre origine que la sienne. Les apps natives et les
+# extensions ne passent pas par le CORS, et rien n'utilise de cookie : les
+# jetons voyagent dans l'en-tête Authorization.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_settings.cors_origin_list,
