@@ -144,11 +144,14 @@ public class VaultActivity extends AppCompatActivity {
             try {
                 Sync sync = new Sync();
                 Sync.Result result = sync.syncRenewing(Vault.load(this), masterKey, credentials);
+                // Écriture disque ici et non sur le fil principal : la
+                // synchronisation peut rapporter des centaines d'entrées.
+                result.vault.save(this);
+
                 main.post(() -> {
                     // Les jetons peuvent avoir été renouvelés pendant l'appel :
                     // ne pas les réenregistrer forcerait une reconnexion.
                     preferences.setSyncCredentials(result.credentials);
-                    result.vault.save(this);
                     render(result.vault);
 
                     int kept = 0;
