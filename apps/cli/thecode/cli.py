@@ -9,6 +9,20 @@ from pathlib import Path
 from .canonical import canonical_site
 from .core import generate_password, generate_password_v2
 from .fingerprint import fingerprint, fingerprint_color
+from .sync import (
+    DEFAULT_ENDPOINT,
+    Credentials,
+    SyncError,
+)
+from .sync import (
+    login as sync_login,
+)
+from .sync import (
+    register as sync_register,
+)
+from .sync import (
+    sync as sync_vault,
+)
 from .transfer import TransferError, export_vault, import_vault
 from .variants import variants
 from .vault import (
@@ -82,6 +96,31 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Affiche l'ancien et le nouveau mot de passe d'une entrée, "
         "et la passe en v2 une fois le site mis à jour",
+    )
+    parser.add_argument(
+        "--login",
+        metavar="EMAIL",
+        help="Se connecte au service de synchronisation (demande le mot de passe du compte)",
+    )
+    parser.add_argument(
+        "--register",
+        metavar="EMAIL",
+        help="Crée un compte de synchronisation (demande un code d'invitation)",
+    )
+    parser.add_argument(
+        "--logout",
+        action="store_true",
+        help="Oublie la session de synchronisation sur cet appareil",
+    )
+    parser.add_argument(
+        "--sync",
+        action="store_true",
+        help="Synchronise le carnet : tire, fusionne, puis pousse",
+    )
+    parser.add_argument(
+        "--endpoint",
+        default=DEFAULT_ENDPOINT,
+        help=f"Service de synchronisation (défaut: {DEFAULT_ENDPOINT})",
     )
     parser.add_argument(
         "--fingerprint",
@@ -236,6 +275,53 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.list:
         return _print_vault(vault_data)
+
+    if args.register or args.login:
+        import getpass
+
+        email = args.register or args.login
+        prompt = "Mot de passe du compte de synchronisation : "
+        account_password = getpass.getpass(prompt)
+        try:
+            if args.register:
+                invite = getpass.getpass("Code d'invitation : ")
+                sync_register(args.endpoint, email, account_password, invite)
+                print(f"✓ Compte créé pour {email}.", file=sys.stderr)
+            else:
+                import socket
+
+                sync_login(args.endpoint, email, account_password, socket.gethostname())
+                print(f"✓ Connecté en tant que {email}.", file=sys.stderr)
+        except SyncError as exc:
+            print(f"Échec : {exc}", file=sys.stderr)
+            return 1
+        return 0
+
+    if args.logout:
+        Credentials.clear()
+        print("✓ Session oubliée sur cet appareil.", file=sys.stderr)
+        return 0
+
+    if args.sync:
+        creds = Credentials.load()
+        if creds is None:
+            print(
+                "Aucune session : connectez-vous d'abord avec --login.", file=sys.stderr
+            )
+            return 1
+        try:
+            merged, conflicts, _ = sync_vault(vault_data, args.password, creds)
+        except (SyncError, TransferError) as exc:
+            print(f"Échec de synchronisation : {exc}", file=sys.stderr)
+            return 1
+
+        for conflict in conflicts:
+            print(f"⚠ {conflict.kind} sur {conflict.entry_id} : {conflict.detail}", file=sys.stderr)
+
+        save(merged, vault_path)
+        kept = len([e for e in merged["entries"] if not e.get("deleted")])
+        print(f"✓ Carnet synchronisé : {kept} entrée(s).", file=sys.stderr)
+        return 0
 
     if args.fingerprint:
         fp = fingerprint(args.password)
