@@ -28,6 +28,7 @@ struct VaultScreen: View {
     @State private var isLinked = SyncCredentialsStore.load() != nil
 
     @State private var showSignIn = false
+    @State private var showTransfer = false
     @State private var endpoint = Sync.defaultEndpoint
     @State private var email = ""
     @State private var password = ""
@@ -113,6 +114,12 @@ struct VaultScreen: View {
         }
         .onAppear { vault = VaultStore.load() }
         .sheet(isPresented: $showSignIn) { signInSheet }
+        .sheet(isPresented: $showTransfer) {
+            // Le QR transporte le carnet sans serveur : c'est l'option qui
+            // rend la synchronisation facultative.
+            TransferView(masterKey: masterKey, isPresented: $showTransfer)
+                .onDisappear { vault = VaultStore.load() }
+        }
     }
 
     private var signInSheet: some View {

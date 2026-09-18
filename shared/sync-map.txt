@@ -61,3 +61,4 @@ js/qr.js|apps/extension
 js/qr.js|apps/website/src
 vault-fixtures/qr-vectors.json|apps/extension/js-test
 vault-fixtures/qr-vectors.json|apps/website/test
+apple/QrCode.swift|apps/apple/Shared

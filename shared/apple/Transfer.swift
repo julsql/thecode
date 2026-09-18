@@ -88,6 +88,33 @@ public enum Transfer {
         }
     }
 
+    // MARK: - Découpage en plusieurs QR
+
+    /// Un QR plafonne à ~2,9 Ko. On garde de la marge pour l'en-tête du
+    /// fragment, qui s'ajoute à chaque morceau.
+    public static let fragmentPayloadLimit = 2600
+
+    /// Découpe un payload en fragments affichables l'un après l'autre.
+    ///
+    /// Un seul fragment quand le payload tient : inutile d'imposer un
+    /// assemblage pour un carnet ordinaire.
+    public static func fragments(_ payload: String) -> [String] {
+        guard payload.count > fragmentPayloadLimit else { return [payload] }
+
+        // Le préfixe « TC1. » est porté une fois par le réassemblage, pas par
+        // chaque fragment.
+        let body = String(payload.dropFirst(prefix.count + 1))
+        let chunks = stride(from: 0, to: body.count, by: fragmentPayloadLimit).map { start -> String in
+            let from = body.index(body.startIndex, offsetBy: start)
+            let to = body.index(from, offsetBy: min(fragmentPayloadLimit, body.count - start))
+            return String(body[from..<to])
+        }
+
+        return chunks.enumerated().map { index, chunk in
+            "TC1m.\(index).\(chunks.count).\(chunk)"
+        }
+    }
+
     // MARK: - Carnet entier
 
     /// Chiffre un carnet en un payload transportable.
