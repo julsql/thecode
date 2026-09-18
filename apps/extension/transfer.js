@@ -107,6 +107,8 @@ if (typeof module !== "undefined") {
     TRANSFER_PREFIX,
     TRANSFER_KDF_SALT,
     TRANSFER_KDF_ITERATIONS,
+    b64e,
+    b64d,
     deriveTransferKey,
     exportVault,
     importVault,

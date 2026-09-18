@@ -19,6 +19,14 @@ const accountRow = document.getElementById("accountRow");
 const accountSelect = document.getElementById("accountSelect");
 const saveEntryBtn = document.getElementById("saveEntry");
 const vaultStatus = document.getElementById("vaultStatus");
+const syncLoggedOut = document.getElementById("syncLoggedOut");
+const syncLoggedIn = document.getElementById("syncLoggedIn");
+const syncEmail = document.getElementById("syncEmail");
+const syncPassword = document.getElementById("syncPassword");
+const syncLoginBtn = document.getElementById("syncLoginBtn");
+const syncNowBtn = document.getElementById("syncNowBtn");
+const syncLogoutBtn = document.getElementById("syncLogoutBtn");
+const syncStatus = document.getElementById("syncStatus");
 
 const lengthInput = document.getElementById("length");
 // Bornes lues sur le champ lui-même, pour ne pas les redéclarer ici en plus
@@ -36,6 +44,7 @@ if (typeof browser === "undefined") {
 
 // Chargement des paramètres sauvegardés
 window.addEventListener("DOMContentLoaded", () => {
+  refreshSyncState();
   hideResult();
   hideError();
   browser.runtime.sendMessage({ action: "checkEncodingKey" }, (resp) => {
@@ -319,6 +328,59 @@ saveEntryBtn.addEventListener("click", () => {
     } else {
       vaultStatus.textContent = `Échec : ${resp?.error || "inconnu"}`;
     }
+  });
+});
+
+/** Montre la connexion ou les actions, selon qu'une session existe. */
+function refreshSyncState() {
+  browser.runtime.sendMessage({ action: "syncStatus" }, (resp) => {
+    const connected = Boolean(resp?.connected);
+    syncLoggedOut.hidden = connected;
+    syncLoggedIn.hidden = !connected;
+    if (!connected) syncStatus.textContent = "";
+  });
+}
+
+syncLoginBtn.addEventListener("click", () => {
+  const email = syncEmail.value.trim();
+  const password = syncPassword.value;
+  if (!email || !password) {
+    syncStatus.textContent = "Renseignez l'adresse et le mot de passe.";
+    return;
+  }
+
+  syncStatus.textContent = "Connexion…";
+  browser.runtime.sendMessage({ action: "syncLogin", email, password }, (resp) => {
+    if (resp && resp.ok) {
+      // Le mot de passe du compte ne reste pas dans le DOM une fois utilise.
+      syncPassword.value = "";
+      syncStatus.textContent = "Connecté.";
+      refreshSyncState();
+    } else {
+      syncStatus.textContent = `Échec : ${resp?.error || "inconnu"}`;
+    }
+  });
+});
+
+syncNowBtn.addEventListener("click", () => {
+  syncStatus.textContent = "Synchronisation…";
+  browser.runtime.sendMessage({ action: "syncNow" }, (resp) => {
+    if (resp && resp.ok) {
+      const conflicts = resp.conflicts?.length
+        ? ` (${resp.conflicts.length} conflit(s) signalé(s))`
+        : "";
+      syncStatus.textContent = `${resp.entries} entrée(s) synchronisée(s)${conflicts}`;
+      refreshVault(currentDomain);
+    } else {
+      syncStatus.textContent = `Échec : ${resp?.error || "inconnu"}`;
+    }
+  });
+});
+
+syncLogoutBtn.addEventListener("click", () => {
+  browser.runtime.sendMessage({ action: "syncLogout" }, () => {
+    syncStatus.textContent = "Session oubliée sur cet appareil.";
+    refreshSyncState();
   });
 });
 
