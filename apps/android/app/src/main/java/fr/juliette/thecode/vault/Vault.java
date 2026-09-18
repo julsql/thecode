@@ -210,14 +210,23 @@ public final class Vault {
         return v;
     }
 
+    /** JSON compact, pour le transfert : l'indentation gonflerait le QR. */
+    public String toCompactJson() throws JSONException {
+        return buildJson().toString();
+    }
+
     public String toJson() throws JSONException {
+        return buildJson().toString(2);
+    }
+
+    private JSONObject buildJson() throws JSONException {
         JSONObject root = new JSONObject();
         root.put("schema", SCHEMA);
         root.put("updatedAt", updatedAt);
         JSONArray arr = new JSONArray();
         for (VaultEntry e : entries) arr.put(e.toJson());
         root.put("entries", arr);
-        return root.toString(2);
+        return root;
     }
 
     public static Vault load(Context context) {
