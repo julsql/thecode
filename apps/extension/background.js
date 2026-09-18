@@ -157,6 +157,8 @@ const PRIVILEGED_ACTIONS = new Set([
   "deleteEntry",
   "previewChange",
   "applyChange",
+  "exportVault",
+  "importVault",
   "syncLogin",
   "syncLogout",
   "syncNow",
@@ -227,6 +229,20 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
         await saveVault(browser?.storage?.local, vault);
         sendResponse({ ok: true, vault });
+      } catch (e) {
+        sendResponse({ ok: false, error: e.message });
+      }
+    } else if (request.action === "exportVault") {
+      // Le chiffrement se fait ici : la clef maitresse ne descend jamais
+      // jusqu'a la page de transfert.
+      try {
+        sendResponse(await exportVaultPayload());
+      } catch (e) {
+        sendResponse({ ok: false, error: e.message });
+      }
+    } else if (request.action === "importVault") {
+      try {
+        sendResponse(await importVaultPayload(request.payload));
       } catch (e) {
         sendResponse({ ok: false, error: e.message });
       }
@@ -385,6 +401,31 @@ async function passwordForEntry(entry, counter, version) {
     entry.charset.numbers,
   );
   return mdp;
+}
+
+/** Chiffre le carnet courant. Rend la meme forme que l'action du meme nom. */
+async function exportVaultPayload() {
+  const vault = await loadVault(browser?.storage?.local);
+  if (!encodingKey) return { ok: false, error: "aucune clef definie" };
+  if (!vault.entries.filter((e) => !e.deleted).length) {
+    return { ok: false, error: "le carnet est vide" };
+  }
+  return { ok: true, payload: await exportVault(vault, encodingKey) };
+}
+
+/** Fusionne un payload avec le carnet local. */
+async function importVaultPayload(payload) {
+  if (!encodingKey) return { ok: false, error: "aucune clef definie" };
+  const incoming = await importVault(payload, encodingKey);
+  // Fusion et jamais substitution : un import qui ecraserait effacerait les
+  // entrees creees ici.
+  const { vault, conflicts } = mergeVaults(await loadVault(browser?.storage?.local), incoming);
+  await saveVault(browser?.storage?.local, vault);
+  return {
+    ok: true,
+    entries: vault.entries.filter((e) => !e.deleted).length,
+    conflicts: conflicts.length,
+  };
 }
 
 /** Pose la clef en test : elle n'est jamais exposee autrement. */
@@ -630,6 +671,8 @@ if (typeof module !== "undefined") {
     generatePassword,
     generatePasswordForUrl,
     passwordForEntry,
+    exportVaultPayload,
+    importVaultPayload,
     setEncodingKeyForTests,
     getRegistrableDomain,
     registrableDomain,
