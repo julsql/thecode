@@ -43,6 +43,15 @@ import fr.juliette.thecode.R;
 public class TheCodeAutofillService extends AutofillService {
 
     @Override
+    public void onCreate() {
+        super.onCreate();
+        // La Public Suffix List vit dans les assets : elle a besoin d'un
+        // Context, donc on la charge ici plutot que dans un initialiseur
+        // statique. Sans elle, DomainNormalizer refuse de canonicaliser.
+        PublicSuffixList.load(this);
+    }
+
+    @Override
     public void onFillRequest(@NonNull FillRequest request,
                               @NonNull CancellationSignal cancellationSignal,
                               @NonNull FillCallback callback) {

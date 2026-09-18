@@ -20,3 +20,9 @@ canonical-site-cases.json|apps/extension/js-test
 canonical-site-cases.json|apps/android/app/src/test/resources
 canonical-site-cases.json|apps/apple/thecode-macosTests/Resources
 public_suffix_list.dat|apps/apple/thecode-macosTests/Resources
+public_suffix_list.dat|apps/android/app/src/main/assets
+public_suffix_list.dat|apps/android/app/src/test/resources
+public_suffix_list.dat|apps/website/public
+canonical-site-cases.json|apps/website/test
+public_suffix_list.dat|apps/cli/thecode
+canonical-site-cases.json|apps/cli/tests

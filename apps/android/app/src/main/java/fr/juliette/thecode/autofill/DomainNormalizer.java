@@ -80,12 +80,14 @@ final class DomainNormalizer {
     }
 
     /**
-     * Conserve le domaine enregistrable (les deux derniers labels) — heuristique
-     * volontairement simple : pas de Public Suffix List embarquée.
+     * Domaine enregistrable d'après la Public Suffix List.
+     *
+     * Remplace l'ancienne heuristique « deux derniers labels », qui rendait
+     * {@code co.uk} pour {@code example.co.uk} et {@code github.io} pour
+     * {@code foo.github.io} : deux mots de passe différents pour le même compte
+     * selon qu'on était sur Android ou sur les autres plateformes.
      */
     private static String registrableDomain(String host) {
-        String[] parts = host.split("\\.");
-        if (parts.length <= 2) return host;
-        return parts[parts.length - 2] + "." + parts[parts.length - 1];
+        return PublicSuffixList.registrableDomain(host);
     }
 }

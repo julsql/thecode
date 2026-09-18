@@ -20,5 +20,10 @@ thecode = "thecode.cli:main"
 [tool.setuptools]
 packages = ["thecode"]
 
+# La PSL est livree avec le paquet : sans elle, canonical_site refuse de
+# canonicaliser plutot que de produire un domaine divergent.
+[tool.setuptools.package-data]
+thecode = ["public_suffix_list.dat"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

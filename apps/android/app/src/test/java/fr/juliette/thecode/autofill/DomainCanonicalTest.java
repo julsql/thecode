@@ -5,13 +5,19 @@ import static org.junit.Assert.assertTrue;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Canonicalisation des hostnames, verifiee contre le referentiel partage
@@ -28,6 +34,28 @@ import java.util.List;
 public class DomainCanonicalTest {
 
     private static final String IMPL = "android";
+
+    /**
+     * Le service charge la PSL depuis les assets, ce qui demande un Context.
+     * En test unitaire on la lit depuis le meme fichier, via le classpath.
+     */
+    @Before
+    public void loadPublicSuffixList() throws Exception {
+        Set<String> entries = new HashSet<>();
+        try (InputStream in = DomainCanonicalTest.class.getClassLoader()
+                .getResourceAsStream("public_suffix_list.dat")) {
+            assertTrue("public_suffix_list.dat absent du classpath de test "
+                    + "(lancer: make sync-shared)", in != null);
+            BufferedReader reader =
+                    new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String t = line.trim();
+                if (!t.isEmpty() && !t.startsWith("//")) entries.add(t);
+            }
+        }
+        PublicSuffixList.loadForTests(entries);
+    }
 
     private static JSONObject loadSpec() throws Exception {
         try (InputStream in = DomainCanonicalTest.class.getClassLoader()
