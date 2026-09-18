@@ -10,13 +10,32 @@
 //
 
 import Foundation
+import os.log
 import AuthenticationServices
+
+/// Marqueur servant a localiser le bundle de l'extension sans dependre d'une
+/// classe metier (`DomainNormalizer` est un enum, or `Bundle(for:)` exige une
+/// classe). Rend la normalisation testable en isolation.
+private final class BundleToken {}
 
 enum DomainNormalizer {
 
     /// Chargée une seule fois au premier accès. Lecture synchrone d'un
     /// fichier bundlé : pas de course possible avec la génération.
     private static let publicSuffixes: Set<String> = loadPublicSuffixes()
+
+    /// Vrai si la PSL complete n'a pas pu etre chargee et qu'on tourne sur la
+    /// liste embarquee reduite.
+    ///
+    /// Ce cas doit rester visible : la liste de repli ignore les suffixes
+    /// prives (github.io, s3.amazonaws.com), donc elle canonicalise
+    /// differemment. Un mot de passe derive dans cet etat divergerait de celui
+    /// des autres plateformes, serait enregistre sur le site, et l'utilisateur
+    /// ne pourrait plus le retrouver ailleurs. Mieux vaut ne rien proposer.
+    static let isUsingFallbackList: Bool = loadedFromFallback
+
+    private static var loadedFromFallback = false
+
 
     /// Tente plusieurs chemins de bundle pour récupérer la PSL. Xcode 16
     /// (synchronized file system groups) place les ressources d'un
@@ -26,7 +45,7 @@ enum DomainNormalizer {
     /// retombe sur une liste embarquée minimale (cf. `embeddedFallback`).
     private static func loadPublicSuffixes() -> Set<String> {
         let main = Bundle.main
-        let own  = Bundle(for: CredentialProviderViewController.self)
+        let own  = Bundle(for: BundleToken.self)
 
         let candidates: [URL?] = [
             main.url(forResource: "public_suffix_list",
@@ -57,9 +76,16 @@ enum DomainNormalizer {
             }
         }
 
-        // Si on arrive ici c'est que Xcode n'a pas embarqué le .dat. On
-        // retombe sur une liste minimale plutôt que de laisser passer
-        // www.instagram.com en clair.
+        // Xcode n'a pas embarque le .dat. On le signale fort : ce repli change
+        // silencieusement les mots de passe produits, ce qui est pire qu'une
+        // panne visible. `registrableDomain` refusera de canonicaliser tant que
+        // cet etat dure.
+        loadedFromFallback = true
+        os_log(
+            "TheCode: public_suffix_list.dat absent du bundle, canonicalisation desactivee",
+            log: .default,
+            type: .fault
+        )
         return embeddedFallback
     }
 
@@ -125,6 +151,12 @@ enum DomainNormalizer {
     /// Retourne le « registrable domain » d'après la PSL, équivalent strict de
     /// `getRegistrableDomain` côté JavaScript.
     static func registrableDomain(_ hostname: String) -> String {
+        // En repli, la liste embarquee ignore les suffixes prives et
+        // canonicaliserait differemment des autres plateformes. Produire un
+        // mot de passe dans cet etat le rendrait irretrouvable ailleurs : on
+        // rend une chaine vide, que l'appelant traite comme « rien a proposer ».
+        if isUsingFallbackList { return "" }
+
         let lower = hostname.lowercased()
         let parts = lower.split(separator: ".", omittingEmptySubsequences: false)
                          .map(String.init)

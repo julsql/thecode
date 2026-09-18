@@ -62,8 +62,7 @@
       "hostname": "foo.github.io",
       "expected": "foo.github.io",
       "divergences": {
-        "android": "github.io",
-        "apple": "github.io"
+        "android": "github.io"
       }
     },
     {
@@ -71,8 +70,7 @@
       "hostname": "a.b.github.io",
       "expected": "b.github.io",
       "divergences": {
-        "android": "github.io",
-        "apple": "github.io"
+        "android": "github.io"
       }
     },
     {
@@ -111,10 +109,9 @@
       "hostname": "test.s3.amazonaws.com",
       "expected": "test.s3.amazonaws.com",
       "divergences": {
-        "android": "amazonaws.com",
-        "apple": "amazonaws.com"
+        "android": "amazonaws.com"
       }
     }
   ],
-  "fallback_warning": "Les divergences 'apple' ci-dessus viennent de embeddedFallback dans DomainNormalizer.swift, une liste reduite utilisee quand public_suffix_list.dat est absent du bundle. Elle ne contient aucun suffixe prive (github.io, s3.amazonaws.com), d'ou l'ecart. En production l'extension autofill embarque bien la PSL, mais ce repli est silencieux : si la ressource venait a manquer, les mots de passe changeraient sans aucun signal. A TRAITER : echouer bruyamment plutot que deriver."
+  "fallback_warning": "DomainNormalizer.swift retombait silencieusement sur embeddedFallback, une liste reduite sans aucun suffixe prive, quand public_suffix_list.dat manquait du bundle. Les mots de passe produits divergeaient alors des autres plateformes, sans le moindre signal. Corrige : os_log en .fault, drapeau isUsingFallbackList, et refus de canonicaliser. Les divergences 'apple' relevees auparavant etaient des artefacts de ce repli en contexte de test, pas le comportement de production."
 }
