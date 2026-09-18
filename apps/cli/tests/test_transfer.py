@@ -3,6 +3,7 @@
 import json
 
 import pytest
+
 from thecode import vault
 from thecode.transfer import PREFIX, TransferError, export_vault, import_vault
 

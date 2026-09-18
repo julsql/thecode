@@ -15,6 +15,7 @@ import json
 from pathlib import Path
 
 import pytest
+
 from thecode.core import build_charset, generate_password
 
 VECTORS = json.loads((Path(__file__).parent / "test-vectors.json").read_text())

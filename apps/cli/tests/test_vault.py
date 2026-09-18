@@ -11,6 +11,7 @@ import json
 from pathlib import Path
 
 import pytest
+
 from thecode import vault
 
 SPEC = json.loads((Path(__file__).parent / "merge-cases.json").read_text())
