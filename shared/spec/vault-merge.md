@@ -46,8 +46,17 @@ n'est pas commutatif : chaque appareil garderait le sien et ils ne
 convergeraient jamais. L'`id` ne peut pas servir non plus, puisque les deux
 entrées en conflit portent la même.
 
-Le critère est arbitraire ; ce qui compte est qu'il soit **déterministe et
-indépendant de l'ordre des arguments**.
+Le critère est arbitraire ; ce qui compte est qu'il soit **déterministe,
+indépendant de l'ordre des arguments, et identique dans toutes les
+implémentations**.
+
+Ce dernier point impose une normalisation : **`deleted` est absent quand il est
+faux**, jamais écrit `"deleted": false`. Une implémentation qui l'ajouterait
+calculerait une représentation canonique différente pour la même entrée, et
+désignerait un autre gagnant — les deux appareils ne convergeraient jamais. Le
+piège se tend au retour d'une synchronisation, où le serveur rend une pierre
+tombale explicite pour chaque entrée : elle ne doit être reportée sur l'entrée
+que lorsqu'elle est vraie.
 
 ## Propriétés attendues
 
