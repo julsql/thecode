@@ -32,6 +32,8 @@ import androidx.autofill.inline.v1.InlineSuggestionUi;
 import java.util.List;
 
 import fr.juliette.thecode.Preferences;
+import fr.juliette.thecode.vault.SiteResolution;
+import fr.juliette.thecode.vault.Vault;
 import fr.juliette.thecode.R;
 
 /**
@@ -92,8 +94,15 @@ public class TheCodeAutofillService extends AutofillService {
         }
 
         AutofillId[] ids = parsed.passwordIds.toArray(new AutofillId[0]);
-        FillResponse response = buildAuthenticatedResponse(request, domain, ids);
-        callback.onSuccess(response);
+
+        // Le carnet dit sous quelle clef dériver, avec quels réglages, et pour
+        // lequel des comptes du site. Plusieurs entrées pour un même domaine,
+        // c'est plusieurs comptes : on les propose toutes.
+        List<SiteResolution> resolutions = SiteResolution.forDomain(
+                Vault.load(this), domain, prefs.getLength(), prefs.getMinState(),
+                prefs.getMajState(), prefs.getSymState(), prefs.getChiState());
+
+        callback.onSuccess(buildAuthenticatedResponse(request, domain, resolutions, ids));
     }
 
     @Override
@@ -103,19 +112,33 @@ public class TheCodeAutofillService extends AutofillService {
     }
 
     private FillResponse buildAuthenticatedResponse(FillRequest request, String domain,
+                                                    List<SiteResolution> resolutions,
                                                     AutofillId[] passwordIds) {
-        RemoteViews presentation = buildPresentation(domain);
+        FillResponse.Builder response = new FillResponse.Builder();
+        for (int i = 0; i < resolutions.size(); i++) {
+            response.addDataset(buildDataset(request, domain, resolutions.get(i), i, passwordIds));
+        }
+        return response.build();
+    }
+
+    private Dataset buildDataset(FillRequest request, String domain, SiteResolution resolution,
+                                 int index, AutofillId[] passwordIds) {
+        RemoteViews presentation = buildPresentation(resolution.label);
 
         Intent authIntent = new Intent(this, AutofillAuthActivity.class);
         authIntent.putExtra(AutofillAuthActivity.EXTRA_DOMAIN, domain);
+        authIntent.putExtra(AutofillAuthActivity.EXTRA_ENTRY_ID, resolution.entryId);
         authIntent.putExtra(AutofillAuthActivity.EXTRA_PASSWORD_IDS, passwordIds);
 
         int flags = PendingIntent.FLAG_UPDATE_CURRENT;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             flags |= PendingIntent.FLAG_MUTABLE;
         }
+        // Code de requête distinct par suggestion : avec le même,
+        // FLAG_UPDATE_CURRENT ferait pointer toutes les suggestions vers la
+        // dernière, et chaque compte remplirait le mot de passe d'un autre.
         PendingIntent pending = PendingIntent.getActivity(this,
-                domain.hashCode(), authIntent, flags);
+                domain.hashCode() * 31 + index, authIntent, flags);
         IntentSender sender = pending.getIntentSender();
 
         // Authentification au niveau du Dataset (et non du FillResponse) :
@@ -136,16 +159,15 @@ public class TheCodeAutofillService extends AutofillService {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             InlineSuggestionsRequest inlineRequest = request.getInlineSuggestionsRequest();
             if (inlineRequest != null) {
-                InlinePresentation inline = buildInlinePresentation(domain, inlineRequest);
+                InlinePresentation inline =
+                        buildInlinePresentation(resolution.label, inlineRequest);
                 if (inline != null) {
                     datasetBuilder.setInlinePresentation(inline);
                 }
             }
         }
 
-        return new FillResponse.Builder()
-                .addDataset(datasetBuilder.build())
-                .build();
+        return datasetBuilder.build();
     }
 
     /**
@@ -159,7 +181,7 @@ public class TheCodeAutofillService extends AutofillService {
     @SuppressLint("RestrictedApi")
     @RequiresApi(Build.VERSION_CODES.R)
     @Nullable
-    private InlinePresentation buildInlinePresentation(String domain,
+    private InlinePresentation buildInlinePresentation(String label,
                                                        InlineSuggestionsRequest inlineRequest) {
         List<InlinePresentationSpec> specs = inlineRequest.getInlinePresentationSpecs();
         if (specs == null || specs.isEmpty()) {
@@ -183,7 +205,7 @@ public class TheCodeAutofillService extends AutofillService {
 
         Slice slice = InlineSuggestionUi.newContentBuilder(attributionPending)
                 .setTitle(getString(R.string.app_name))
-                .setSubtitle(getString(R.string.autofill_for_domain, domain))
+                .setSubtitle(getString(R.string.autofill_for_domain, label))
                 .setStartIcon(Icon.createWithResource(this, R.mipmap.logo))
                 .setContentDescription(getString(R.string.app_name))
                 .build()
@@ -192,11 +214,11 @@ public class TheCodeAutofillService extends AutofillService {
         return new InlinePresentation(slice, spec, false);
     }
 
-    private RemoteViews buildPresentation(String domain) {
+    private RemoteViews buildPresentation(String label) {
         RemoteViews views = new RemoteViews(getPackageName(), R.layout.autofill_item);
         views.setTextViewText(R.id.autofill_title, getString(R.string.app_name));
         views.setTextViewText(R.id.autofill_subtitle,
-                getString(R.string.autofill_for_domain, domain));
+                getString(R.string.autofill_for_domain, label));
         return views;
     }
 }
