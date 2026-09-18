@@ -62,5 +62,17 @@ La v2 ne remplace pas la v1 : elles coexistent, entrée par entrée, via le cham
 - migrer une entrée est une action explicite, qui affiche l'ancien et le nouveau
   mot de passe côte à côte, puisqu'il faudra aller le changer sur le site.
 
+Même règle pour le **renouvellement**, qui incrémente `counter` : les deux mots
+de passe s'affichent, et rien n'est écrit tant que ce n'est pas confirmé —
+incrémenter d'abord rendrait le compte inaccessible, l'ancien mot de passe étant
+encore celui du site.
+
+Le compteur n'entre pas dans la dérivation v1. Renouveler une entrée v1 est donc
+refusé plutôt que sans effet : il faut d'abord la migrer.
+
+Les deux actions existent dans les cinq implémentations. Jamais ensemble sur une
+même entrée : une entrée v1 n'a que la migration, une entrée v2 n'a plus rien à
+migrer.
+
 Sans le carnet, cette coexistence serait impossible : rien ne dirait quelle
 version appliquer à quel site.
