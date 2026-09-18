@@ -336,7 +336,195 @@
     "field_naming": "Les champs s'appellent 'master' et 'expected', et non 'key'/'password', pour ne pas declencher les detecteurs de secrets (GitGuardian remontait ces vecteurs comme des Generic Password). Ce sont des valeurs de test publiques : la passphrase est 'clef' et les sites sont fictifs."
   },
   "v2": {
-    "status": "not_implemented",
-    "note": "A remplir au lot 3. Ne jamais reutiliser un id de la section v1."
+    "status": "frozen",
+    "algorithm": [
+      "mk   = PBKDF2-SHA256(clef, salt='thecode-master/v2', iterations=600000, dkLen=32)",
+      "seed = HMAC-SHA256(mk, 'thecode/v2' 0x00 site 0x00 login 0x00 counter)",
+      "rendu identique a la v1 (convertToBase + applyCharsetReplacement)"
+    ],
+    "why": "La v1 hache SHA-256(site + clef) : sans separateur, ('google.com','abc') et ('google.co','mabc') collisionnent ; et sans KDF, un seul mot de passe qui fuite permet de retrouver la clef maitresse hors ligne. La v2 corrige les deux, et fait entrer login et counter dans la derivation.",
+    "coexistence": "La v2 ne remplace pas la v1 : le champ 'v' du carnet dit quelle version appliquer a quelle entree. Une entree existante reste en v1 et son mot de passe ne change pas.",
+    "cases": [
+      {
+        "id": "v2-canonical",
+        "site": "site",
+        "master": "clef",
+        "length": 20,
+        "login": "",
+        "counter": 1,
+        "charset": {
+          "lower": true,
+          "upper": true,
+          "symbols": true,
+          "numbers": true
+        },
+        "expected": "h4XOFa2UFJL*xB3f*bc:"
+      },
+      {
+        "id": "v2-google",
+        "site": "google.com",
+        "master": "clef",
+        "length": 20,
+        "login": "",
+        "counter": 1,
+        "charset": {
+          "lower": true,
+          "upper": true,
+          "symbols": true,
+          "numbers": true
+        },
+        "expected": "e$?S86z2(ZgD)Lthm?jx"
+      },
+      {
+        "id": "v2-with-login",
+        "site": "google.com",
+        "master": "clef",
+        "length": 20,
+        "login": "pro",
+        "counter": 1,
+        "charset": {
+          "lower": true,
+          "upper": true,
+          "symbols": true,
+          "numbers": true
+        },
+        "expected": "pZlWe6&1WWP3L?W=:3ap"
+      },
+      {
+        "id": "v2-counter-2",
+        "site": "google.com",
+        "master": "clef",
+        "length": 20,
+        "login": "",
+        "counter": 2,
+        "charset": {
+          "lower": true,
+          "upper": true,
+          "symbols": true,
+          "numbers": true
+        },
+        "expected": "x;#6K&x2JY!jVC9G2*3z"
+      },
+      {
+        "id": "v2-len-min",
+        "site": "google.com",
+        "master": "clef",
+        "length": 4,
+        "login": "",
+        "counter": 1,
+        "charset": {
+          "lower": true,
+          "upper": true,
+          "symbols": true,
+          "numbers": true
+        },
+        "expected": ")Sg8"
+      },
+      {
+        "id": "v2-len-max",
+        "site": "google.com",
+        "master": "clef",
+        "length": 40,
+        "login": "",
+        "counter": 1,
+        "charset": {
+          "lower": true,
+          "upper": true,
+          "symbols": true,
+          "numbers": true
+        },
+        "expected": "eS?)56z2(ZrD5Lthm?jxZpbIFRZc)NgwT/A(Qb8/"
+      },
+      {
+        "id": "v2-no-symbols",
+        "site": "google.com",
+        "master": "clef",
+        "length": 20,
+        "login": "",
+        "counter": 1,
+        "charset": {
+          "lower": true,
+          "upper": true,
+          "symbols": false,
+          "numbers": true
+        },
+        "expected": "AC6SIWQAwwgQ39z26BNf"
+      },
+      {
+        "id": "v2-lower-only",
+        "site": "google.com",
+        "master": "clef",
+        "length": 20,
+        "login": "",
+        "counter": 1,
+        "charset": {
+          "lower": true,
+          "upper": false,
+          "symbols": false,
+          "numbers": false
+        },
+        "expected": "plwxfgvhllgmxvkxoozv"
+      },
+      {
+        "id": "v2-unicode-key",
+        "site": "google.com",
+        "master": "clé-éà€中",
+        "length": 20,
+        "login": "",
+        "counter": 1,
+        "charset": {
+          "lower": true,
+          "upper": true,
+          "symbols": true,
+          "numbers": true
+        },
+        "expected": "oY6Tl1ie?-N>QU9VY)kC"
+      },
+      {
+        "id": "v2-unicode-login",
+        "site": "google.com",
+        "master": "clef",
+        "length": 20,
+        "login": "moi@éxample.com",
+        "counter": 1,
+        "charset": {
+          "lower": true,
+          "upper": true,
+          "symbols": true,
+          "numbers": true
+        },
+        "expected": "W=ML>7#Z?45-C$rTRNQb"
+      },
+      {
+        "id": "v2-no-collision-a",
+        "site": "google.com",
+        "master": "abc",
+        "length": 20,
+        "login": "",
+        "counter": 1,
+        "charset": {
+          "lower": true,
+          "upper": true,
+          "symbols": true,
+          "numbers": true
+        },
+        "expected": "zz44a47&aIEzeGag9s&t"
+      },
+      {
+        "id": "v2-no-collision-b",
+        "site": "google.co",
+        "master": "mabc",
+        "length": 20,
+        "login": "",
+        "counter": 1,
+        "charset": {
+          "lower": true,
+          "upper": true,
+          "symbols": true,
+          "numbers": true
+        },
+        "expected": "eZ!b7l)<tLsjg%Qw<&Y<"
+      }
+    ]
   }
 }

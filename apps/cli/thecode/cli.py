@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 from .canonical import canonical_site
-from .core import generate_password
+from .core import generate_password, generate_password_v2
 from .fingerprint import fingerprint, fingerprint_color
 from .transfer import TransferError, export_vault, import_vault
 from .variants import variants
@@ -68,6 +68,20 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         default=None,
         help=f"Emplacement du carnet (défaut: {default_vault_path()})",
+    )
+    parser.add_argument(
+        "--algo",
+        type=int,
+        choices=(1, 2),
+        default=1,
+        help="Version de l'algorithme pour une nouvelle entrée (défaut: 1, "
+        "pour rester compatible avec les mots de passe existants)",
+    )
+    parser.add_argument(
+        "--migrate",
+        action="store_true",
+        help="Affiche l'ancien et le nouveau mot de passe d'une entrée, "
+        "et la passe en v2 une fois le site mis à jour",
     )
     parser.add_argument(
         "--fingerprint",
@@ -170,6 +184,32 @@ def _resolve(args, vault_data):
     return entry, params
 
 
+def _derive(args, params, entry):
+    """Dérive le mot de passe dans la version demandée par l'entrée."""
+    version = entry["v"] if entry else args.algo
+    if version >= 2:
+        return generate_password_v2(
+            params["site"],
+            args.password,
+            params["length"],
+            params["lower"],
+            params["upper"],
+            params["symbols"],
+            params["numbers"],
+            login=(entry or {}).get("login") or args.account or "",
+            counter=(entry or {}).get("counter", 1),
+        )
+    return generate_password(
+        site=params["site"],
+        key=args.password,
+        length=params["length"],
+        use_lower=params["lower"],
+        use_upper=params["upper"],
+        use_symbols=params["symbols"],
+        use_numbers=params["numbers"],
+    )
+
+
 def _print_vault(vault_data) -> int:
     entries = [e for e in vault_data.get("entries", []) if not e.get("deleted")]
     if not entries:
@@ -244,15 +284,41 @@ def main(argv: list[str] | None = None) -> int:
 
     entry, params = _resolve(args, vault_data)
 
-    pwd = generate_password(
-        site=params["site"],
-        key=args.password,
-        length=params["length"],
-        use_lower=params["lower"],
-        use_upper=params["upper"],
-        use_symbols=params["symbols"],
-        use_numbers=params["numbers"],
-    )
+    if args.migrate:
+        if entry is None:
+            print(f"Aucune entrée pour {canonical_site(args.site)} dans le carnet.", file=sys.stderr)
+            return 1
+        if entry["v"] >= 2:
+            print(f"« {entry['label']} » est déjà en v{entry['v']}.", file=sys.stderr)
+            return 0
+
+        before = _derive(args, params, entry)
+        after = generate_password_v2(
+            entry["siteKey"], args.password, entry["length"],
+            entry["charset"]["lower"], entry["charset"]["upper"],
+            entry["charset"]["symbols"], entry["charset"]["numbers"],
+            login=entry.get("login") or "", counter=entry.get("counter", 1),
+        )
+        # Les deux côte à côte : le nouveau ne sert à rien tant qu'il n'a pas
+        # été posé sur le site, et l'ancien reste nécessaire pour s'y connecter.
+        print(f"Migration de « {entry['label']} » vers la v2\n")
+        print(f"  actuel   {before}")
+        print(f"  nouveau  {after}\n")
+        print("Changez le mot de passe sur le site, puis confirmez :")
+        if input("  entrée migrée ? [o/N] ").strip().lower() not in ("o", "oui", "y", "yes"):
+            print("Annulé, l'entrée reste en v1.", file=sys.stderr)
+            return 0
+
+        entry["v"] = 2
+        save(vault_data, vault_path)
+        print(f"✓ « {entry['label']} » est en v2.", file=sys.stderr)
+        return 0
+
+
+    # La version de l'algorithme est portée par l'entrée : c'est ce qui permet
+    # à la v1 et à la v2 de coexister, et donc de migrer site par site sans
+    # changer d'un coup tous les mots de passe.
+    pwd = _derive(args, params, entry)
 
     if pwd is None:
         print("Erreur : aucune base de caractères sélectionnée ou entrées vides.", file=sys.stderr)
@@ -280,6 +346,7 @@ def main(argv: list[str] | None = None) -> int:
                     "symbols": params["symbols"],
                     "numbers": params["numbers"],
                 },
+                version=args.algo,
             )
             vault_data["entries"].append(entry)
             action = "ajoutée au"
