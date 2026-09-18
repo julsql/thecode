@@ -65,6 +65,7 @@ struct MainView: View {
     @State private var showInfoSheet: Bool = false
     @State private var showNoPasswordAlert: Bool = false
     @State private var showVault: Bool = false
+    @State private var vaultSaveMessage: String?
 
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.colorScheme) private var colorScheme
@@ -149,6 +150,21 @@ struct MainView: View {
                                 Text(L10n.t("Sécurité : ", "Security: ") + localizedSecurityLabel(securityLabel))
                                     .foregroundColor(securityColor)
                                     .foregroundColor(.secondary)
+
+                                Button(action: saveToVault) {
+                                    HStack {
+                                        Image(systemName: "square.and.arrow.down")
+                                        Text(L10n.t("Enregistrer les réglages au carnet",
+                                                    "Save settings to vault"))
+                                    }
+                                }
+                                .padding(.top, 4)
+
+                                if let vaultSaveMessage {
+                                    Text(vaultSaveMessage)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
                             }
                             .padding(.top, 4)
                         }
@@ -220,6 +236,7 @@ struct MainView: View {
                 Button("OK", role: .cancel) { }
             }
         }
+        .onChange(of: siteName) { _ in vaultSaveMessage = nil }
         .onChange(of: encodingKey) { _ in generatePassword() }
         .onChange(of: lengthNumber) { newVal in
             // Le slider (ou un clamp) a bougé la valeur : on réaligne le champ.
@@ -248,6 +265,43 @@ struct MainView: View {
         autofillEnabled
             ? L10n.t("Activé pour cet appareil", "Active on this device")
             : L10n.t("Désactivé — touchez pour configurer", "Disabled — tap to set up")
+    }
+
+
+    /// Enregistre les réglages du site affiché.
+    ///
+    /// Le site est pris tel qu'il a été saisi : c'est lui qui a produit le mot
+    /// de passe à l'écran, le canonicaliser ici enregistrerait des réglages
+    /// sous une clef qui en produit un autre.
+    private func saveToVault() {
+        let site = siteName.trimmingCharacters(in: .whitespaces)
+        guard !site.isEmpty else { return }
+
+        var vault = VaultStore.load()
+        let entry = vault.upsert(
+            site: site, length: lengthNumber,
+            charset: Charset(
+                lower: minState, upper: majState, symbols: symState, numbers: chiState))
+
+        do {
+            try VaultStore.save(vault)
+        } catch {
+            vaultSaveMessage = L10n.t(
+                "Le carnet n'a pas pu être enregistré.", "The vault could not be saved.")
+            return
+        }
+
+        // Une entrée existante garde son siteKey : le réécrire changerait un
+        // mot de passe déjà en service. On le dit plutôt que de laisser croire
+        // que le mot de passe affiché est celui de l'entrée.
+        vaultSaveMessage =
+            entry.siteKey == site
+            ? L10n.t("« \(site) » enregistré au carnet.", "\"\(site)\" saved to the vault.")
+            : L10n.t(
+                "« \(site) » enregistré. Attention : cette entrée génère son mot de passe "
+                    + "depuis « \(entry.siteKey) », pas depuis ce que vous avez saisi.",
+                "\"\(site)\" saved. Careful: this entry generates its password from "
+                    + "\"\(entry.siteKey)\", not from what you typed.")
     }
 
     private func localizedSecurityLabel(_ frenchLabel: String) -> String {

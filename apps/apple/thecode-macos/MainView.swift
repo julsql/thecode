@@ -53,6 +53,7 @@ struct MainView: View {
     @State private var showInfoSheet: Bool = false
     @State private var showNoPasswordAlert: Bool = false
     @State private var showVault: Bool = false
+    @State private var vaultSaveMessage: String?
 
     @Environment(\.colorScheme) private var colorScheme
 
@@ -164,6 +165,21 @@ struct MainView: View {
                                 }
                                 Text(L10n.t("Sécurité : ", "Security: ") + localizedSecurityLabel(securityLabel))
                                     .foregroundColor(securityColor)
+
+                                Button(action: saveToVault) {
+                                    HStack {
+                                        Image(systemName: "square.and.arrow.down")
+                                        Text(L10n.t("Enregistrer les réglages au carnet",
+                                                    "Save settings to vault"))
+                                    }
+                                }
+                                .padding(.top, 4)
+
+                                if let vaultSaveMessage {
+                                    Text(vaultSaveMessage)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
                             }
                             .padding(.top, 4)
                         }
@@ -221,7 +237,10 @@ struct MainView: View {
         .onChange(of: majState) { _ in generatePassword() }
         .onChange(of: symState) { _ in generatePassword() }
         .onChange(of: chiState) { _ in generatePassword() }
-        .onChange(of: siteName) { _ in generatePassword() }
+        .onChange(of: siteName) { _ in
+            vaultSaveMessage = nil
+            generatePassword()
+        }
         .sheet(isPresented: $showInfoSheet) {
             InfoSheet(isPresented: $showInfoSheet)
         }
@@ -308,6 +327,43 @@ struct MainView: View {
         if let contentView = NSApp.keyWindow?.contentView {
             picker.show(relativeTo: .zero, of: contentView, preferredEdge: .minY)
         }
+    }
+
+
+    /// Enregistre les réglages du site affiché.
+    ///
+    /// Le site est pris tel qu'il a été saisi : c'est lui qui a produit le mot
+    /// de passe à l'écran, le canonicaliser ici enregistrerait des réglages
+    /// sous une clef qui en produit un autre.
+    private func saveToVault() {
+        let site = siteName.trimmingCharacters(in: .whitespaces)
+        guard !site.isEmpty else { return }
+
+        var vault = VaultStore.load()
+        let entry = vault.upsert(
+            site: site, length: lengthNumber,
+            charset: Charset(
+                lower: minState, upper: majState, symbols: symState, numbers: chiState))
+
+        do {
+            try VaultStore.save(vault)
+        } catch {
+            vaultSaveMessage = L10n.t(
+                "Le carnet n'a pas pu être enregistré.", "The vault could not be saved.")
+            return
+        }
+
+        // Une entrée existante garde son siteKey : le réécrire changerait un
+        // mot de passe déjà en service. On le dit plutôt que de laisser croire
+        // que le mot de passe affiché est celui de l'entrée.
+        vaultSaveMessage =
+            entry.siteKey == site
+            ? L10n.t("« \(site) » enregistré au carnet.", "\"\(site)\" saved to the vault.")
+            : L10n.t(
+                "« \(site) » enregistré. Attention : cette entrée génère son mot de passe "
+                    + "depuis « \(entry.siteKey) », pas depuis ce que vous avez saisi.",
+                "\"\(site)\" saved. Careful: this entry generates its password from "
+                    + "\"\(entry.siteKey)\", not from what you typed.")
     }
 
     // MARK: - Sécurité

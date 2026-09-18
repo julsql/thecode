@@ -145,17 +145,21 @@ struct SyncTests {
             vault(siteKey: "google.com", login: "moi"), masterKey: "clef",
             credentials: credentials
         ).vault
+        let deletedId = phone.entries[0].id
         phone.entries[0].deleted = true
         phone.entries[0].updatedAt = "2999-01-01T00:00:00Z"
         _ = try await sync.sync(phone, masterKey: "clef", credentials: credentials)
 
         // Sans pierre tombale, la fusion suivante ressusciterait l'entrée
         // depuis l'autre appareil.
+        //
+        // La recherche se fait par identifiant : la fusion trie par id, et
+        // l'ordinateur apporte sa propre entrée, d'identifiant aléatoire.
         let laptop = try await sync.sync(
             vault(siteKey: "google.com", login: "moi"), masterKey: "clef",
             credentials: credentials
         ).vault
-        #expect(laptop.entries[0].deleted == true)
+        #expect(laptop.entries.first { $0.id == deletedId }?.deleted == true)
     }
 
     @Test("Une autre clef maîtresse ne peut pas ouvrir le carnet")
