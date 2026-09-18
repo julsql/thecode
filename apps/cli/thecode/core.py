@@ -93,3 +93,90 @@ def generate_password(
     seed = hash_to_int(site + key)
     raw = convert_to_base(seed, charset_groups)
     return apply_charset_replacement(seed, raw[:length], charset_groups)
+
+
+# ---------------------------------------------------------------------------
+# Version 2
+#
+# La v1 hache SHA-256(site + clef). Trois defauts, dont un grave : sans KDF, un
+# seul mot de passe qui fuite permet de retrouver la clef maitresse hors ligne,
+# et cette clef ouvre tous les comptes.
+#
+# Specification complete : shared/spec/algo-v2.md
+# ---------------------------------------------------------------------------
+
+V2_MASTER_SALT = b"thecode-master/v2"
+V2_ITERATIONS = 600_000
+V2_PREFIX = b"thecode/v2"
+V2_SEPARATOR = b"\x00"
+
+
+def derive_master_key_v2(key: str) -> bytes:
+    """Passe la clef maitresse dans un KDF couteux.
+
+    C'est la correction qui compte : SHA-256 se calcule par milliards par
+    seconde, PBKDF2 a 600 000 iterations ramene chaque essai a quelques
+    centaines de millisecondes.
+    """
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=V2_MASTER_SALT,
+        iterations=V2_ITERATIONS,
+    )
+    return kdf.derive(key.encode("utf-8"))
+
+
+def seed_v2(master: bytes, site: str, login: str = "", counter: int = 1) -> int:
+    """Graine de la v2.
+
+    Les champs sont separes par un octet nul, qu'aucun d'eux ne peut contenir :
+    en v1, la simple concatenation faisait collisionner
+    ("google.com", "abc") et ("google.co", "mabc").
+    """
+    import hmac as _hmac
+
+    message = (
+        V2_PREFIX
+        + V2_SEPARATOR
+        + site.encode("utf-8")
+        + V2_SEPARATOR
+        + login.encode("utf-8")
+        + V2_SEPARATOR
+        + str(counter).encode("ascii")
+    )
+    digest = _hmac.new(master, message, hashlib.sha256).digest()
+    return int.from_bytes(digest, "big")
+
+
+def generate_password_v2(
+    site: str,
+    key: str,
+    length: int = 20,
+    use_lower: bool = True,
+    use_upper: bool = True,
+    use_symbols: bool = True,
+    use_numbers: bool = True,
+    *,
+    login: str = "",
+    counter: int = 1,
+    master: bytes | None = None,
+) -> str | None:
+    """Genere un mot de passe en v2.
+
+    ``master`` permet de reutiliser une clef deja derivee : le KDF coute
+    volontairement cher, on ne le repaie pas a chaque site.
+
+    Le rendu est identique a la v1 — c'est la partie mesuree saine
+    (124,3 bits sur 126 annonces en longueur 20). Seule la graine change.
+    """
+    groups = build_charset(use_lower, use_upper, use_symbols, use_numbers)
+    if not groups or (not site and not key):
+        return None
+
+    seed = seed_v2(master if master is not None else derive_master_key_v2(key), site, login, counter)
+    raw = convert_to_base(seed, groups)
+    return apply_charset_replacement(seed, raw[:length], groups)
