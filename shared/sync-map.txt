@@ -36,3 +36,4 @@ vault-fixtures/transfer-vector.json|apps/cli/tests
 vault-fixtures/transfer-vector.json|apps/website/test
 apple/Fingerprint.swift|apps/apple/Shared
 apple/Fingerprint.swift|apps/apple/thecode-macosTests
+apple/VaultView.swift|apps/apple/Shared
