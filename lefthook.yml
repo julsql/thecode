@@ -20,7 +20,9 @@ pre-commit:
 
     ruff:
       glob: "apps/cli/**/*.py"
-      run: apps/cli/.venv/bin/ruff check {staged_files}
+      # Lance depuis apps/cli, comme la CI : le classement first-party de
+      # `thecode` depend du repertoire courant, et le tri des imports avec.
+      run: cd apps/cli && .venv/bin/ruff check .
 
     # Filet anti-secret : le .gitignore couvre les extensions connues, ceci
     # attrape un fichier renomme ou un contenu colle par megarde.

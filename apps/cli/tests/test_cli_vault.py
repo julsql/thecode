@@ -7,6 +7,7 @@
 """
 
 import pytest
+
 from thecode.cli import main
 
 

@@ -1,6 +1,7 @@
 """Tests pour la logique de génération (parallèle à thecode-extension/js-test/background.spec.js)."""
 
 import pytest
+
 from thecode.core import (
     LOWER,
     NUMBERS,

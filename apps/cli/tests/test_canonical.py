@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 
 import pytest
+
 from thecode.canonical import (
     canonical_site,
     load_public_suffixes,
