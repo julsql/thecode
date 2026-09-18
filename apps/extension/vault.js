@@ -52,8 +52,32 @@ function findByDomain(vault, domain) {
 }
 
 /** Representation stable, pour departager sans dependre de l'ordre. */
+
+/**
+ * Forme canonique d'une entree, pour departager de facon deterministe.
+ *
+ * Compacte, cles triees a tous les niveaux, `deleted` faux retire. La forme est
+ * fixee par shared/spec/vault-merge.md et non laissee a JSON.stringify : deux
+ * appareils qui n'ecrivent pas la meme chaine designent un gagnant different et
+ * ne convergent jamais.
+ *
+ * JSON.stringify avec un tableau de cles ne convient pas : il applique le
+ * filtre a tous les niveaux, ce qui vidait `charset`.
+ */
 function canonicalJson(entry) {
-  return JSON.stringify(entry, Object.keys(entry).sort());
+  const stable = (value) => {
+    if (Array.isArray(value)) return value.map(stable);
+    if (value === null || typeof value !== "object") return value;
+    const out = {};
+    for (const key of Object.keys(value).sort()) {
+      if (value[key] !== undefined) out[key] = stable(value[key]);
+    }
+    return out;
+  };
+
+  const normalised = { ...entry };
+  if (!normalised.deleted) delete normalised.deleted;
+  return JSON.stringify(stable(normalised));
 }
 
 function mergeEntry(left, right, conflicts) {
@@ -170,5 +194,8 @@ if (typeof module !== "undefined") {
     mergeVaults,
     loadVault,
     saveVault,
+    // Interne, expose pour le test contre la fixture partagee : la forme
+    // canonique doit etre identique dans les cinq implementations.
+    __canonicalJson: canonicalJson,
   };
 }

@@ -12,6 +12,7 @@ shared/public_suffix_list.dat
 **/merge-cases.json
 **/transfer-vector.json
 **/sync-row.json
+**/canonical-entries.json
 shared/vault-fixtures/
 **/package-lock.json
 

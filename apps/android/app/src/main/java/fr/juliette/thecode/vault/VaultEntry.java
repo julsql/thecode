@@ -100,13 +100,102 @@ public final class VaultEntry {
         return o;
     }
 
-    /** Représentation stable, pour départager sans dépendre de l'ordre. */
+    /**
+     * Forme canonique, pour départager sans dépendre de l'ordre.
+     *
+     * Écrite à la main plutôt que via {@code JSONObject.toString()}, qui ne
+     * trie pas les clefs et échappe {@code /} en {@code \/}. La forme est fixée
+     * par shared/spec/vault-merge.md : deux appareils qui n'écrivent pas la
+     * même chaîne désignent un gagnant différent et ne convergent jamais.
+     *
+     * Part de {@link #toJson()} pour que la liste des champs ne vive qu'à un
+     * seul endroit.
+     */
     String canonical() {
         try {
-            return toJson().toString();
+            JSONObject json = toJson();
+            // Absent quand faux : des carnets écrits par des versions
+            // antérieures en portent un, et il ne doit pas peser dans le
+            // départage.
+            json.remove("deleted");
+            if (deleted) json.put("deleted", true);
+
+            StringBuilder out = new StringBuilder();
+            writeValue(out, json);
+            return out.toString();
         } catch (JSONException e) {
             return id;
         }
+    }
+
+    private static void writeValue(StringBuilder out, Object value) throws JSONException {
+        if (value instanceof JSONObject) {
+            JSONObject object = (JSONObject) value;
+            List<String> keys = new ArrayList<>();
+            for (java.util.Iterator<String> it = object.keys(); it.hasNext(); ) {
+                keys.add(it.next());
+            }
+            // Collections.sort plutot que List#sort, qui demande l'API 24.
+            java.util.Collections.sort(keys);
+
+            out.append('{');
+            for (int i = 0; i < keys.size(); i++) {
+                if (i > 0) out.append(',');
+                writeString(out, keys.get(i));
+                out.append(':');
+                writeValue(out, object.get(keys.get(i)));
+            }
+            out.append('}');
+            return;
+        }
+
+        if (value instanceof JSONArray) {
+            JSONArray array = (JSONArray) value;
+            out.append('[');
+            for (int i = 0; i < array.length(); i++) {
+                if (i > 0) out.append(',');
+                writeValue(out, array.get(i));
+            }
+            out.append(']');
+            return;
+        }
+
+        if (value instanceof String) {
+            writeString(out, (String) value);
+            return;
+        }
+
+        out.append(value);
+    }
+
+    /**
+     * Échappement JSON minimal.
+     *
+     * Ni {@code /}, que org.json échappe, ni d'échappement unicode pour les
+     * accents : les autres implémentations les écrivent tels quels.
+     *
+     * La séquence unicode n'apparaît pas en toutes lettres dans ce commentaire
+     * parce que javac l'interprète même là, et refuse alors de compiler.
+     */
+    private static void writeString(StringBuilder out, String value) {
+        out.append('"');
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            switch (c) {
+                case '"': out.append("\\\""); break;
+                case '\\': out.append("\\\\"); break;
+                case '\n': out.append("\\n"); break;
+                case '\r': out.append("\\r"); break;
+                case '\t': out.append("\\t"); break;
+                case '\b': out.append("\\b"); break;
+                case '\f': out.append("\\f"); break;
+                default:
+                    // Seuls les caractères de contrôle sont échappés.
+                    if (c < 0x20) out.append(String.format("\\u%04x", (int) c));
+                    else out.append(c);
+            }
+        }
+        out.append('"');
     }
 
     boolean coversDomain(String domain) {

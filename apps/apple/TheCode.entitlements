@@ -8,5 +8,9 @@
 	<array>
 		<string>group.fr.julsql.thecode.params</string>
 	</array>
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)fr.julsql.thecode</string>
+	</array>
 </dict>
 </plist>

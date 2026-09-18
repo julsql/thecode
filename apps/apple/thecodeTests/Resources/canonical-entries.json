@@ -1,0 +1,139 @@
+{
+  "_comment": "Forme canonique d'une entree, utilisee pour departager deux ecritures au meme horodatage. Les cinq implementations doivent produire exactement la chaine 'canonical' pour l'entree 'entry'. Voir shared/spec/vault-merge.md.",
+  "cases": [
+    {
+      "name": "entree-simple",
+      "entry": {
+        "id": "6f1d2c34-5b6a-4c7d-8e9f-0a1b2c3d4e5f",
+        "label": "Google",
+        "siteKey": "google.com",
+        "domains": [
+          "google.com",
+          "google.fr"
+        ],
+        "login": "moi@example.fr",
+        "counter": 1,
+        "length": 20,
+        "charset": {
+          "lower": true,
+          "upper": true,
+          "symbols": true,
+          "numbers": true
+        },
+        "v": 1,
+        "updatedAt": "2026-01-15T10:30:00Z"
+      },
+      "canonical": "{\"charset\":{\"lower\":true,\"numbers\":true,\"symbols\":true,\"upper\":true},\"counter\":1,\"domains\":[\"google.com\",\"google.fr\"],\"id\":\"6f1d2c34-5b6a-4c7d-8e9f-0a1b2c3d4e5f\",\"label\":\"Google\",\"length\":20,\"login\":\"moi@example.fr\",\"siteKey\":\"google.com\",\"updatedAt\":\"2026-01-15T10:30:00Z\",\"v\":1}"
+    },
+    {
+      "name": "deleted-faux-retire",
+      "entry": {
+        "id": "aaaaaaaa-0000-0000-0000-000000000001",
+        "siteKey": "a.fr",
+        "domains": [
+          "a.fr"
+        ],
+        "counter": 1,
+        "length": 20,
+        "charset": {
+          "lower": true,
+          "upper": false,
+          "symbols": false,
+          "numbers": true
+        },
+        "v": 1,
+        "updatedAt": "2026-01-15T10:30:00Z",
+        "deleted": false
+      },
+      "canonical": "{\"charset\":{\"lower\":true,\"numbers\":true,\"symbols\":false,\"upper\":false},\"counter\":1,\"domains\":[\"a.fr\"],\"id\":\"aaaaaaaa-0000-0000-0000-000000000001\",\"length\":20,\"siteKey\":\"a.fr\",\"updatedAt\":\"2026-01-15T10:30:00Z\",\"v\":1}"
+    },
+    {
+      "name": "deleted-vrai-conserve",
+      "entry": {
+        "id": "aaaaaaaa-0000-0000-0000-000000000002",
+        "siteKey": "a.fr",
+        "domains": [
+          "a.fr"
+        ],
+        "counter": 2,
+        "length": 20,
+        "charset": {
+          "lower": true,
+          "upper": true,
+          "symbols": true,
+          "numbers": true
+        },
+        "v": 1,
+        "updatedAt": "2026-01-15T10:30:00Z",
+        "deleted": true
+      },
+      "canonical": "{\"charset\":{\"lower\":true,\"numbers\":true,\"symbols\":true,\"upper\":true},\"counter\":2,\"deleted\":true,\"domains\":[\"a.fr\"],\"id\":\"aaaaaaaa-0000-0000-0000-000000000002\",\"length\":20,\"siteKey\":\"a.fr\",\"updatedAt\":\"2026-01-15T10:30:00Z\",\"v\":1}"
+    },
+    {
+      "name": "label-et-login-absents",
+      "entry": {
+        "id": "aaaaaaaa-0000-0000-0000-000000000003",
+        "siteKey": "b.fr",
+        "domains": [
+          "b.fr"
+        ],
+        "counter": 1,
+        "length": 32,
+        "charset": {
+          "lower": true,
+          "upper": true,
+          "symbols": true,
+          "numbers": true
+        },
+        "v": 2,
+        "updatedAt": "2026-01-15T10:30:00Z"
+      },
+      "canonical": "{\"charset\":{\"lower\":true,\"numbers\":true,\"symbols\":true,\"upper\":true},\"counter\":1,\"domains\":[\"b.fr\"],\"id\":\"aaaaaaaa-0000-0000-0000-000000000003\",\"length\":32,\"siteKey\":\"b.fr\",\"updatedAt\":\"2026-01-15T10:30:00Z\",\"v\":2}"
+    },
+    {
+      "name": "accents-et-slash",
+      "entry": {
+        "id": "aaaaaaaa-0000-0000-0000-000000000004",
+        "label": "Café & Thé — édition « été »",
+        "siteKey": "site.fr/chemin",
+        "domains": [
+          "site.fr/chemin"
+        ],
+        "login": "élodie@exemple.fr",
+        "counter": 1,
+        "length": 20,
+        "charset": {
+          "lower": true,
+          "upper": true,
+          "symbols": true,
+          "numbers": true
+        },
+        "v": 1,
+        "updatedAt": "2026-01-15T10:30:00Z"
+      },
+      "canonical": "{\"charset\":{\"lower\":true,\"numbers\":true,\"symbols\":true,\"upper\":true},\"counter\":1,\"domains\":[\"site.fr/chemin\"],\"id\":\"aaaaaaaa-0000-0000-0000-000000000004\",\"label\":\"Café & Thé — édition « été »\",\"length\":20,\"login\":\"élodie@exemple.fr\",\"siteKey\":\"site.fr/chemin\",\"updatedAt\":\"2026-01-15T10:30:00Z\",\"v\":1}"
+    },
+    {
+      "name": "guillemets-et-antislash",
+      "entry": {
+        "id": "aaaaaaaa-0000-0000-0000-000000000005",
+        "label": "dit \"bonjour\" \\ fin",
+        "siteKey": "c.fr",
+        "domains": [
+          "c.fr"
+        ],
+        "counter": 1,
+        "length": 20,
+        "charset": {
+          "lower": true,
+          "upper": true,
+          "symbols": true,
+          "numbers": true
+        },
+        "v": 1,
+        "updatedAt": "2026-01-15T10:30:00Z"
+      },
+      "canonical": "{\"charset\":{\"lower\":true,\"numbers\":true,\"symbols\":true,\"upper\":true},\"counter\":1,\"domains\":[\"c.fr\"],\"id\":\"aaaaaaaa-0000-0000-0000-000000000005\",\"label\":\"dit \\\"bonjour\\\" \\\\ fin\",\"length\":20,\"siteKey\":\"c.fr\",\"updatedAt\":\"2026-01-15T10:30:00Z\",\"v\":1}"
+    }
+  ]
+}

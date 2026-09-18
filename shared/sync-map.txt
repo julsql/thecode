@@ -48,3 +48,8 @@ vault-fixtures/sync-row.json|apps/apple/thecodeTests/Resources
 vault-fixtures/sync-row.json|apps/cli/tests
 vault-fixtures/sync-row.json|apps/website/test
 vault-fixtures/sync-row.json|apps/extension/js-test
+vault-fixtures/canonical-entries.json|apps/cli/tests
+vault-fixtures/canonical-entries.json|apps/extension/js-test
+vault-fixtures/canonical-entries.json|apps/website/test
+vault-fixtures/canonical-entries.json|apps/android/app/src/test/resources
+vault-fixtures/canonical-entries.json|apps/apple/thecodeTests/Resources

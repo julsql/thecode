@@ -50,13 +50,31 @@ Le critère est arbitraire ; ce qui compte est qu'il soit **déterministe,
 indépendant de l'ordre des arguments, et identique dans toutes les
 implémentations**.
 
-Ce dernier point impose une normalisation : **`deleted` est absent quand il est
-faux**, jamais écrit `"deleted": false`. Une implémentation qui l'ajouterait
-calculerait une représentation canonique différente pour la même entrée, et
-désignerait un autre gagnant — les deux appareils ne convergeraient jamais. Le
-piège se tend au retour d'une synchronisation, où le serveur rend une pierre
-tombale explicite pour chaque entrée : elle ne doit être reportée sur l'entrée
-que lorsqu'elle est vraie.
+### Forme canonique
+
+Deux appareils qui n'écrivent pas la même chaîne désignent un gagnant différent
+et ne convergent jamais. La forme est donc fixée, et non laissée au
+sérialiseur JSON de chaque plateforme — leurs comportements par défaut diffèrent
+sur les quatre points suivants, tous rencontrés dans ce projet :
+
+1. **JSON compact** : `,` et `:` sans espace autour. `json.dumps` en met par
+   défaut, `JSON.stringify` non.
+2. **Clés triées à tous les niveaux**, y compris dans `charset`. Un tri
+   seulement au premier niveau laisse l'ordre d'insertion décider du reste.
+3. **`/` non échappé**. `org.json` écrit `\/`, les autres écrivent `/`.
+4. **Caractères non-ASCII écrits tels quels**, jamais en `\uXXXX`.
+
+Et une normalisation de contenu : **`deleted` est absent quand il est faux**,
+jamais `"deleted": false`. Le piège se tend au retour d'une synchronisation, où
+le serveur rend une pierre tombale explicite pour chaque entrée : elle ne doit
+être reportée que lorsqu'elle est vraie. La forme canonique le retire de toute
+façon, pour que les carnets écrits par des versions antérieures ne divergent
+pas.
+
+`shared/vault-fixtures/canonical-entries.json` fige des entrées et la chaîne
+attendue pour chacune. Les cinq implémentations sont testées contre ce fichier :
+c'est la seule garantie qui vaille, les tests par plateforme ayant déjà laissé
+passer exactement ce genre d'écart.
 
 ## Propriétés attendues
 
