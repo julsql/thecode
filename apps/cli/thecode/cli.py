@@ -8,11 +8,13 @@ from pathlib import Path
 
 from .canonical import canonical_site
 from .core import generate_password
+from .transfer import TransferError, export_vault, import_vault
 from .vault import (
     DEFAULT_LENGTH,
     default_vault_path,
     find_all_by_domain,
     load,
+    merge,
     new_entry,
     save,
 )
@@ -64,6 +66,17 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         default=None,
         help=f"Emplacement du carnet (défaut: {default_vault_path()})",
+    )
+    parser.add_argument(
+        "--export",
+        action="store_true",
+        help="Exporte le carnet chiffré, à transférer vers un autre appareil",
+    )
+    parser.add_argument(
+        "--import",
+        dest="import_payload",
+        metavar="PAYLOAD",
+        help="Importe un carnet chiffré et le fusionne avec le carnet local",
     )
     parser.add_argument(
         "--list",
@@ -171,6 +184,29 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.list:
         return _print_vault(vault_data)
+
+    if args.export:
+        # Le carnet ne contient aucun mot de passe, mais il révèle les sites et
+        # les identifiants : il est chiffré avant de quitter l'appareil.
+        print(export_vault(vault_data, args.password))
+        return 0
+
+    if args.import_payload:
+        try:
+            incoming = import_vault(args.import_payload, args.password)
+        except TransferError as exc:
+            print(f"Import impossible : {exc}", file=sys.stderr)
+            return 1
+
+        # On fusionne, jamais on n'écrase : un import qui remplace effacerait
+        # les entrées créées sur cet appareil.
+        merged, conflicts = merge(vault_data, incoming)
+        for conflict in conflicts:
+            print(f"⚠ {conflict.kind} sur {conflict.entry_id} : {conflict.detail}", file=sys.stderr)
+        save(merged, vault_path)
+        kept = len([e for e in merged["entries"] if not e.get("deleted")])
+        print(f"✓ Carnet fusionné : {kept} entrée(s). ({vault_path})", file=sys.stderr)
+        return 0
 
     entry, params = _resolve(args, vault_data)
 
