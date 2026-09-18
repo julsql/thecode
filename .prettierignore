@@ -10,3 +10,7 @@ shared/public_suffix_list.dat
 **/test-vectors.json
 **/canonical-site-cases.json
 **/package-lock.json
+
+# release-please reecrit ces manifestes a chaque release, avec son propre
+# formatage. Les laisser a prettier garantit un conflit a chaque PR de release.
+apps/extension/manifest*.json
