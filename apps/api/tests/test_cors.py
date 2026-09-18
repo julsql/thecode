@@ -55,8 +55,7 @@ def test_origins_can_be_listed_in_the_environment(monkeypatch):
     assert Settings().cors_origin_list == ["https://a.fr", "https://b.fr"]
 
 
-def test_root_path_defaults_to_the_subdomain(monkeypatch):
-    # Vide sur thecode-api.julsql.fr ; « /api » seulement tant que le service
-    # reste servi sous le site.
+def test_root_path_is_empty_by_default(monkeypatch):
+    # Le service est à la racine de son sous-domaine.
     monkeypatch.delenv("THECODE_ROOT_PATH", raising=False)
     assert Settings().root_path == ""

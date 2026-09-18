@@ -42,18 +42,18 @@ class Settings(BaseSettings):
 
     environment: str = "development"
 
-    #: Préfixe sous lequel le service est exposé. Vide sur son propre
-    #: sous-domaine ; « /api » tant qu'il reste servi sous le site, où Traefik
-    #: retire le préfixe avant de transmettre — sans cette valeur, la
-    #: documentation et le schéma OpenAPI donneraient des URL inutilisables.
+    #: Préfixe sous lequel le service est exposé. Vide : il a son propre
+    #: sous-domaine et vit à la racine. Le réglage reste, parce qu'un service
+    #: remonté derrière un préfixe sans le savoir publie une documentation et
+    #: un schéma OpenAPI aux URL inutilisables.
     root_path: str = ""
 
     #: Origines autorisées à appeler le service depuis un navigateur, séparées
     #: par des virgules.
     #:
-    #: Nécessaire depuis que l'API a son propre sous-domaine : le site n'est
-    #: plus sur la même origine. Les applications natives et les extensions ne
-    #: sont pas soumises au CORS, et les jetons circulent dans l'en-tête
+    #: Nécessaire puisque l'API a son propre sous-domaine : le site n'est pas
+    #: sur la même origine. Les applications natives et les extensions ne sont
+    #: pas soumises au CORS, et les jetons circulent dans l'en-tête
     #: Authorization, donc aucune requête n'a besoin de cookies.
     cors_origins: str = "https://thecode.julsql.fr"
 

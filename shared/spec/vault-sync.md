@@ -73,10 +73,10 @@ suffirait à casser l'interopérabilité entre implémentations.
 
 `https://thecode-api.julsql.fr`.
 
-Le service a d'abord vécu sous `https://thecode.julsql.fr/api`. Cet accès reste
-ouvert : un appareil déjà lié a enregistré cette adresse avec ses jetons, et la
-lui retirer le déconnecterait sans explication. Il partira quand plus personne
-ne l'utilisera.
+Le service a d'abord vécu sous `https://thecode.julsql.fr/api`. Cet accès a été
+retiré. Un appareil qui l'aurait encore enregistré avec ses jetons reçoit le
+HTML du site — le routeur de la page attrape tout — et doit se reconnecter sur
+le sous-domaine.
 
 Le sous-domaine impose au service d'envoyer les en-têtes CORS pour le site, qui
 n'est plus sur la même origine. Les applications natives et les extensions n'y
