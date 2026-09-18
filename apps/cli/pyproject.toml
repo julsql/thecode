@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "thecode"
-version = "1.0.1"
+version = "2.0.0"
 description = "Génération déterministe de mots de passe à partir d'un site et d'une clef."
 requires-python = ">=3.9"
 authors = [{ name = "Juliette Debono" }]
