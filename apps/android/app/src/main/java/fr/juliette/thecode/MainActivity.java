@@ -51,6 +51,8 @@ public class MainActivity extends AppCompatActivity {
 
     private TextInputLayout keyInputLayout;
     private TextInputEditText keyEditText;
+    private android.view.View fingerprintRow;
+    private android.widget.TextView fingerprintChip;
     private TextInputEditText siteEditText;
     private TextInputLayout passwordInputLayout;
     private TextInputEditText passwordEditText;
@@ -138,6 +140,8 @@ public class MainActivity extends AppCompatActivity {
     private void bindViews() {
         keyInputLayout = findViewById(R.id.keyInputLayout);
         keyEditText = findViewById(R.id.keyEditText);
+        fingerprintRow = findViewById(R.id.fingerprintRow);
+        fingerprintChip = findViewById(R.id.fingerprintChip);
         siteEditText = findViewById(R.id.siteEditText);
         passwordInputLayout = findViewById(R.id.passwordInputLayout);
         passwordEditText = findViewById(R.id.passwordEditText);
@@ -176,6 +180,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void afterTextChanged(Editable s) {
                 preferences.setEncodingKey(s.toString());
+                updateFingerprint(s.toString());
                 regenerate();
             }
         });
@@ -444,6 +449,36 @@ public class MainActivity extends AppCompatActivity {
         ComponentName configured = ComponentName.unflattenFromString(setting);
         ComponentName ours = new ComponentName(this, TheCodeAutofillService.class);
         return ours.equals(configured);
+    }
+
+    /**
+     * Affiche l'empreinte de la clef.
+     *
+     * Le calcul passe par PBKDF2 à 600 000 itérations : volontairement coûteux,
+     * donc hors du fil principal pour ne pas figer la saisie.
+     */
+    private void updateFingerprint(String masterKey) {
+        if (masterKey == null || masterKey.isEmpty()) {
+            fingerprintRow.setVisibility(android.view.View.GONE);
+            return;
+        }
+
+        new Thread(() -> {
+            Fingerprint.Result result = Fingerprint.of(masterKey);
+            runOnUiThread(() -> {
+                // La clef a pu changer pendant le calcul : on n'affiche que si
+                // l'empreinte correspond encore à ce qui est saisi.
+                if (!masterKey.equals(textOf(keyEditText))) return;
+
+                if (result == null) {
+                    fingerprintRow.setVisibility(android.view.View.GONE);
+                    return;
+                }
+                fingerprintChip.setText(result.text);
+                fingerprintChip.setBackgroundColor(result.color);
+                fingerprintRow.setVisibility(android.view.View.VISIBLE);
+            });
+        }).start();
     }
 
     private void tintStatusDot(int colorRes) {
