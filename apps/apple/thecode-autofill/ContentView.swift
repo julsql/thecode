@@ -51,8 +51,12 @@ struct ContentView: View {
                     Text(L10n.t("Aucun domaine détecté", "No domain detected"))
                         .foregroundColor(.secondary)
                 } else {
-                    Text(L10n.t("Mot de passe disponible pour", "Password available for"))
-                        .foregroundColor(.secondary)
+                    Text(
+                        model.mustChoose
+                            ? L10n.t("Plusieurs comptes pour", "Several accounts for")
+                            : L10n.t("Mot de passe disponible pour", "Password available for")
+                    )
+                    .foregroundColor(.secondary)
                     Text(model.domain)
                         .font(.title3)
                         .fontWeight(.semibold)
@@ -71,6 +75,26 @@ struct ContentView: View {
 
             Spacer()
 
+            // Choisir d'abord, s'authentifier ensuite : demander la biométrie
+            // avant de savoir quel compte remplir obligerait à la redemander.
+            if model.mustChoose {
+                ScrollView {
+                    VStack(spacing: 8) {
+                        ForEach(model.accounts) { account in
+                            Button {
+                                model.choose(account)
+                            } label: {
+                                Text(account.label)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.vertical, 4)
+                            }
+                            .buttonStyle(.bordered)
+                        }
+                    }
+                    .padding(.horizontal, 24)
+                }
+            }
+
             Button {
                 model.startBiometric()
             } label: {
@@ -86,7 +110,7 @@ struct ContentView: View {
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
-            .disabled(model.busy || model.domain.isEmpty)
+            .disabled(model.busy || model.domain.isEmpty || model.mustChoose)
             .padding(.horizontal, 24)
 
             Button(L10n.t("Annuler", "Cancel"), role: .cancel) {

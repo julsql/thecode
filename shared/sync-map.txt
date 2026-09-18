@@ -56,3 +56,4 @@ vault-fixtures/canonical-entries.json|apps/apple/thecodeTests/Resources
 apple/SecureKeyStore.swift|apps/apple/Shared
 apple/SecureKeyStore.swift|apps/apple/thecode-macosTests
 apple/CoreV2.swift|apps/apple/Shared
+apple/SiteResolution.swift|apps/apple/Shared

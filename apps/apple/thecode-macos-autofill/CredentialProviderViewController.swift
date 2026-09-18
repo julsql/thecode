@@ -79,6 +79,7 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
     @MainActor
     private func present(domain: String) {
         model.domain = domain
+        model.accounts = resolutions(for: domain)
         if isKeyDefined() {
             model.startBiometricIfNeeded()
         } else {
@@ -98,8 +99,8 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
 
     // MARK: – Appelé par AutofillModel après auth
 
-    func completeFill(domain: String) {
-        let password = generatePassword(domainName: domain)
+    func completeFill(domain: String, resolution: SiteResolution?) {
+        let password = generatePassword(domainName: domain, resolution: resolution)
         guard !password.isEmpty else {
             // Cas pathologique : clé absente ou aucun charset coché dans l'app.
             extensionContext.cancelRequest(withError: NSError(
@@ -108,7 +109,10 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
             ))
             return
         }
-        let credential = ASPasswordCredential(user: "", password: password)
+        // Le login est rendu au site quand le carnet le connaît : il fait
+        // partie de ce qu'on ne devait plus avoir à retenir.
+        let credential = ASPasswordCredential(
+            user: resolution?.login ?? "", password: password)
         extensionContext.completeRequest(
             withSelectedCredential: credential,
             completionHandler: nil
@@ -131,7 +135,17 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
 
     // MARK: – Génération
 
-    private func generatePassword(domainName: String) -> String {
+    /// Ce que le carnet sait de ce domaine, réglages généraux en repli.
+    private func resolutions(for domain: String) -> [SiteResolution] {
+        let settings = PasswordSettings.load(from: UserDefaults(suiteName: appGroupID))
+        return SiteResolution.forDomain(
+            domain, in: VaultStore.load(), length: settings.length,
+            charset: Charset(
+                lower: settings.minState, upper: settings.majState,
+                symbols: settings.symState, numbers: settings.chiState))
+    }
+
+    private func generatePassword(domainName: String, resolution: SiteResolution?) -> String {
         let defaults = UserDefaults(suiteName: appGroupID)
         // Lecture centralisée (cf. PasswordSettings) : une clé jamais écrite
         // prend sa valeur par défaut. Avant, `integer(forKey:)` renvoyait 0
@@ -146,13 +160,18 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
             return ""
         }
 
-        let utils = PasswordUtils()
-        utils.minState = settings.minState
-        utils.majState = settings.majState
-        utils.symState = settings.symState
-        utils.chiState = settings.chiState
-        utils.longueur = settings.length
+        // Le carnet dit sous quelle clef dériver, avec quels réglages et en
+        // quelle version. Sans lui, on prenait le domaine tel quel avec les
+        // réglages généraux, et les trois problèmes d'usage restaient entiers
+        // dans ce chemin-là.
+        let chosen =
+            resolution
+            ?? SiteResolution(
+                fallbackFor: domainName, length: settings.length,
+                charset: Charset(
+                    lower: settings.minState, upper: settings.majState,
+                    symbols: settings.symState, numbers: settings.chiState))
 
-        return utils.generatePassword(input: domainName + encodingKey).code
+        return PasswordUtils().generatePassword(for: chosen, masterKey: encodingKey).code
     }
 }

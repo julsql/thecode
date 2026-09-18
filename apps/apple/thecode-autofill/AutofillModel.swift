@@ -19,6 +19,17 @@ final class AutofillModel: ObservableObject {
     @Published var busy: Bool = false
     @Published var errorMessage: String? = nil
 
+    /// Les comptes que le carnet connaît pour ce domaine.
+    ///
+    /// Plusieurs entrées, c'est plusieurs comptes sur le même site : on les
+    /// propose tous plutôt que d'en choisir un au hasard — c'était le premier
+    /// des problèmes d'usage. Une seule entrée, ou aucune, et il n'y a rien à
+    /// choisir.
+    @Published var accounts: [SiteResolution] = []
+    @Published var chosen: SiteResolution? = nil
+
+    var mustChoose: Bool { accounts.count > 1 && chosen == nil }
+
     /// Le ViewController s'enregistre ici pour recevoir les ordres d'achever
     /// ou d'annuler la requête.
     weak var controller: CredentialProviderViewController?
@@ -28,9 +39,17 @@ final class AutofillModel: ObservableObject {
 
     /// Appelé quand le domaine est connu : on lance immédiatement Face ID /
     /// Touch ID pour éviter une étape inutile.
+    ///
+    /// Sauf s'il y a un choix à faire : demander la biométrie avant de savoir
+    /// quel compte remplir obligerait à la redemander après.
     func startBiometricIfNeeded() {
-        guard !didAutoStart, !domain.isEmpty else { return }
+        guard !didAutoStart, !domain.isEmpty, !mustChoose else { return }
         didAutoStart = true
+        startBiometric()
+    }
+
+    func choose(_ account: SiteResolution) {
+        chosen = account
         startBiometric()
     }
 
@@ -67,7 +86,9 @@ final class AutofillModel: ObservableObject {
                 if success {
                     // Seul moment où la clé est consommée : à l'intérieur
                     // de completeFill, dans l'extension, après auth.
-                    self.controller?.completeFill(domain: self.domain)
+                    self.controller?.completeFill(
+                        domain: self.domain,
+                        resolution: self.chosen ?? self.accounts.first)
                 } else {
                     self.errorMessage = evalError?.localizedDescription
                         ?? L10n.t("Authentification annulée.", "Authentication cancelled.")
