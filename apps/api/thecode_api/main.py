@@ -15,6 +15,10 @@ from .routes import auth, health, vault
 
 app = FastAPI(
     title="TheCode Sync",
+    # Le service est exposé sous thecode.julsql.fr/api, et Traefik retire le
+    # préfixe avant de transmettre. root_path le lui réapprend, pour que la
+    # documentation et le schéma OpenAPI donnent des URL utilisables.
+    root_path="/api",
     description=(
         "Synchronisation chiffrée des carnets TheCode. Le service ne voit "
         "jamais le contenu d'un carnet : tout est chiffré sur l'appareil, avec "
