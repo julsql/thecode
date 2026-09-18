@@ -13,6 +13,12 @@ const siteContainer = document.getElementById("siteContainer");
 const passwordResultContainer = document.getElementById("passwordResultContainer");
 const passwordSecurityContainer = document.getElementById("passwordSecurityContainer");
 const errorContainer = document.getElementById("errorContainer");
+const fingerprintRow = document.getElementById("fingerprintRow");
+const fingerprintChip = document.getElementById("fingerprint");
+const accountRow = document.getElementById("accountRow");
+const accountSelect = document.getElementById("accountSelect");
+const saveEntryBtn = document.getElementById("saveEntry");
+const vaultStatus = document.getElementById("vaultStatus");
 
 const lengthInput = document.getElementById("length");
 // Bornes lues sur le champ lui-même, pour ne pas les redéclarer ici en plus
@@ -118,6 +124,9 @@ setBtn.addEventListener("click", () => {
 });
 
 // Déclenche setPassword() si on appuie sur "Entrée" dans passInput
+// L'empreinte suit la saisie, pour que l'erreur se voie avant de generer.
+passInput.addEventListener("input", () => refreshFingerprint(passInput.value.trim()));
+
 passInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") {
     e.preventDefault();
@@ -196,6 +205,7 @@ function generatePassword() {
           hideError();
           showResult();
           site.textContent = response.site;
+          refreshVault(response.site);
           passwordResult.textContent = response.password;
           passwordSecurity.style.color = response.color;
           passwordSecurity.textContent = `${response.security} (${response.bits} bits)`;
@@ -209,6 +219,108 @@ function generatePassword() {
     );
   });
 }
+
+/** Entrees du carnet couvrant le domaine affiche, et celle retenue. */
+let currentDomain = "";
+let currentMatches = [];
+
+/**
+ * Affiche l'empreinte de la clef.
+ *
+ * Une faute de frappe sur la clef ne se voit pas autrement : elle produit
+ * simplement un autre mot de passe, valide en apparence.
+ */
+async function refreshFingerprint(key) {
+  if (!key) {
+    fingerprintRow.hidden = true;
+    return;
+  }
+  try {
+    const { text, color } = await keyFingerprint(key);
+    fingerprintChip.textContent = text;
+    fingerprintChip.style.backgroundColor = color;
+    fingerprintRow.hidden = false;
+  } catch {
+    fingerprintRow.hidden = true;
+  }
+}
+
+/** Charge les entrees du carnet pour le domaine courant. */
+function refreshVault(domain) {
+  currentDomain = domain || "";
+  if (!currentDomain) {
+    accountRow.hidden = true;
+    return;
+  }
+
+  browser.runtime.sendMessage({ action: "getVault" }, (resp) => {
+    const vault = resp?.vault || { entries: [] };
+    currentMatches = (vault.entries || []).filter(
+      (e) => !e.deleted && e.domains.some((d) => d.toLowerCase() === currentDomain.toLowerCase()),
+    );
+
+    // Un seul compte : rien a choisir, on n'encombre pas l'interface.
+    accountRow.hidden = currentMatches.length < 2;
+    if (currentMatches.length >= 2) {
+      accountSelect.innerHTML = "";
+      currentMatches.forEach((entry, index) => {
+        const option = document.createElement("option");
+        option.value = String(index);
+        option.textContent = entry.login || entry.label || entry.siteKey;
+        accountSelect.appendChild(option);
+      });
+    }
+
+    vaultStatus.textContent = currentMatches.length
+      ? `${currentMatches.length} entrée(s) connue(s) pour ${currentDomain}`
+      : `${currentDomain} n'est pas encore dans le carnet`;
+    saveEntryBtn.textContent = currentMatches.length
+      ? "Mettre à jour l'entrée"
+      : "Enregistrer ce site";
+  });
+}
+
+saveEntryBtn.addEventListener("click", () => {
+  if (!currentDomain) {
+    vaultStatus.textContent = "Aucun site détecté.";
+    return;
+  }
+
+  const params = getParams();
+  const charset = {
+    lower: params.minState,
+    upper: params.majState,
+    symbols: params.symState,
+    numbers: params.chiState,
+  };
+  const existing = currentMatches[0];
+
+  // siteKey n'est jamais reecrit : il produit le mot de passe, le modifier
+  // en changerait un deja en service.
+  const entry = existing
+    ? { ...existing, length: Number(params.length), charset }
+    : {
+        id: crypto.randomUUID(),
+        label: currentDomain,
+        siteKey: currentDomain,
+        domains: [currentDomain],
+        login: "",
+        counter: 1,
+        length: Number(params.length),
+        charset,
+        v: 1,
+        updatedAt: new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
+      };
+
+  browser.runtime.sendMessage({ action: "saveEntry", entry }, (resp) => {
+    if (resp && resp.ok) {
+      vaultStatus.textContent = existing ? "Entrée mise à jour." : "Site enregistré.";
+      refreshVault(currentDomain);
+    } else {
+      vaultStatus.textContent = `Échec : ${resp?.error || "inconnu"}`;
+    }
+  });
+});
 
 function hideError() {
   errorContainer.style.display = "none";

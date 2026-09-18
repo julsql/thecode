@@ -1,3 +1,10 @@
+/* L'attribut hidden doit l'emporter : n'importe quelle regle display de
+   cette feuille ecraserait sinon la valeur par defaut du navigateur, et un
+   element marque hidden resterait visible. */
+[hidden] {
+  display: none !important;
+}
+
 :root {
   color-scheme: light dark;
 }
@@ -115,4 +122,37 @@ button {
   margin: 0 0 8px;
   font-size: 12px;
   opacity: 0.75;
+}
+
+/* Empreinte de clef : un repere visuel, pas une decoration. Elle doit
+   sauter aux yeux quand elle change. */
+.fingerprint {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+}
+
+.chip {
+  display: inline-block;
+  padding: 0.05rem 0.4rem;
+  border-radius: 0.25rem;
+  color: #fff;
+  font-family: monospace;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.vault {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.78125rem;
+  opacity: 0.75;
+}
+
+#accountRow select {
+  max-width: 12rem;
 }

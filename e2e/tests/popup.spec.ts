@@ -1,0 +1,83 @@
+/**
+ * Tests de bout en bout de la popup.
+ *
+ * Verifient ce qu'aucun test unitaire ne peut voir : que la page s'ouvre
+ * reellement dans le navigateur, que ses scripts se chargent sans erreur, et
+ * que l'empreinte de clef apparait a la saisie.
+ */
+import { test, expect, chromium, type BrowserContext } from "@playwright/test";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const extensionPath = join(here, "..", "..", "apps", "extension");
+
+let context: BrowserContext;
+let extensionId: string;
+
+test.beforeAll(async () => {
+  context = await chromium.launchPersistentContext(mkdtempSync(join(tmpdir(), "tc-popup-")), {
+    headless: false,
+    args: [
+      `--disable-extensions-except=${extensionPath}`,
+      `--load-extension=${extensionPath}`,
+      "--no-sandbox",
+    ],
+  });
+
+  const worker =
+    context.serviceWorkers()[0] ??
+    (await context.waitForEvent("serviceworker", { timeout: 10_000 }));
+  extensionId = new URL(worker.url()).host;
+});
+
+test.afterAll(async () => {
+  await context?.close();
+});
+
+test("la popup s'ouvre sans erreur de console", async () => {
+  const page = await context.newPage();
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
+
+  await page.goto(`chrome-extension://${extensionId}/popup.html`);
+  await page.waitForTimeout(500);
+
+  expect(errors).toEqual([]);
+  await page.close();
+});
+
+test("l'empreinte apparait a la saisie de la clef", async () => {
+  const page = await context.newPage();
+  await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+  // Masquee tant qu'aucune clef n'est saisie : rien a identifier.
+  await expect(page.locator("#fingerprintRow")).toBeHidden();
+
+  await page.locator("#passphrase").fill("clef");
+  // PBKDF2 a 600k iterations prend un moment, volontairement.
+  await expect(page.locator("#fingerprintRow")).toBeVisible({ timeout: 10_000 });
+
+  // Meme valeur que le CLI Python et le site : un indicateur qui differe
+  // selon l'appareil est un indicateur auquel on ne se fie plus.
+  await expect(page.locator("#fingerprint")).toHaveText("KG8");
+
+  await page.close();
+});
+
+test("le carnet propose d'enregistrer le site", async () => {
+  const page = await context.newPage();
+  await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+  await expect(page.locator("#saveEntry")).toBeVisible();
+  // Le selecteur de compte reste masque tant qu'il n'y a pas d'ambiguite :
+  // on n'encombre pas l'interface pour un cas qui n'existe pas.
+  await expect(page.locator("#accountRow")).toBeHidden();
+
+  await page.close();
+});
