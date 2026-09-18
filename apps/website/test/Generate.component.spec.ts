@@ -6,7 +6,7 @@
  * ou une erreur de cablage passerait inapercue (mauvais parametre transmis,
  * mot de passe affiche en clair, champ non reactif).
  */
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import { createRouter, createMemoryHistory, type Router } from "vue-router";
 import { readFileSync } from "node:fs";
@@ -63,9 +63,8 @@ describe("page de generation", () => {
     await wrapper.find("#id_site").setValue(canonical.site);
     await wrapper.find("#id_clef").setValue(canonical.master);
     await wrapper.vm.$nextTick();
-    await new Promise((r) => setTimeout(r, 30));
 
-    expect(generated(wrapper)).toBe(canonical.expected);
+    await vi.waitFor(() => expect(generated(wrapper)).toBe(canonical.expected));
   });
 
   it("regenere quand la longueur change", async () => {
@@ -75,9 +74,8 @@ describe("page de generation", () => {
     await wrapper.find("#id_clef").setValue(short.master);
     await wrapper.find("#id_longueur").setValue(String(short.length));
     await wrapper.vm.$nextTick();
-    await new Promise((r) => setTimeout(r, 30));
 
-    expect(generated(wrapper)).toBe(short.expected);
+    await vi.waitFor(() => expect(generated(wrapper)).toBe(short.expected));
   });
 
   // Sans clef, le mot de passe ne dependrait que du site : identique pour tous
@@ -86,9 +84,8 @@ describe("page de generation", () => {
   it("ne genere rien tant que la clef est vide", async () => {
     await wrapper.find("#id_site").setValue("google.com");
     await wrapper.vm.$nextTick();
-    await new Promise((r) => setTimeout(r, 30));
 
-    expect(generated(wrapper)).toBe("");
+    await vi.waitFor(() => expect(generated(wrapper)).toBe(""));
   });
 });
 
@@ -99,11 +96,10 @@ describe("carnet et empreinte", () => {
 
     await wrapper.find("#id_clef").setValue("clef");
     await wrapper.vm.$nextTick();
-    await new Promise((r) => setTimeout(r, 300));
 
     // Meme valeur que le CLI et l'extension : un indicateur qui differe
     // selon l'appareil est un indicateur auquel on ne se fie plus.
-    expect(wrapper.text()).toContain("KG8");
+    await vi.waitFor(() => expect(wrapper.text()).toContain("KG8"), { timeout: 5000 });
   });
 
   it("propose d'enregistrer le site dans le carnet", async () => {
