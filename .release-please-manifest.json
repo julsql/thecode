@@ -3,5 +3,5 @@
   "apps/website": "1.0.0",
   "apps/cli": "1.0.1",
   "apps/android": "3.0.0",
-  "apps/apple": "2.3.1"
+  "apps/apple": "3.0.0"
 }
