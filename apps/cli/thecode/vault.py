@@ -37,8 +37,17 @@ DEFAULT_LENGTH = 20
 
 
 def _canonical(entry: dict[str, Any]) -> str:
-    """Représentation stable d'une entrée, pour départager de façon déterministe."""
-    return json.dumps(entry, sort_keys=True, ensure_ascii=False)
+    """Forme canonique d'une entrée, pour départager de façon déterministe.
+
+    Compacte, clés triées à tous les niveaux, ``deleted`` faux retiré. La forme
+    est fixée par ``shared/spec/vault-merge.md`` et non laissée au sérialiseur
+    de chaque plateforme : deux appareils qui n'écrivent pas la même chaîne
+    désignent un gagnant différent et ne convergent jamais.
+    """
+    normalised = {k: v for k, v in entry.items() if not (k == "deleted" and not v)}
+    return json.dumps(
+        normalised, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+    )
 
 
 def _now() -> str:

@@ -63,11 +63,22 @@ public struct VaultEntry: Codable, Equatable {
         domains.contains { $0.lowercased() == domain.lowercased() }
     }
 
-    /// Représentation stable, pour départager sans dépendre de l'ordre.
+    /// Forme canonique, pour départager sans dépendre de l'ordre.
+    ///
+    /// Compacte, clés triées à tous les niveaux, `deleted` faux retiré. La
+    /// forme est fixée par `shared/spec/vault-merge.md` : deux appareils qui
+    /// n'écrivent pas la même chaîne désignent un gagnant différent et ne
+    /// convergent jamais.
+    ///
+    /// `withoutEscapingSlashes` est indispensable : par défaut JSONEncoder
+    /// écrit `\/`, ce que les autres implémentations n'écrivent pas.
     func canonical() -> String {
+        var normalised = self
+        if normalised.deleted != true { normalised.deleted = nil }
+
         let encoder = JSONEncoder()
-        encoder.outputFormatting = [.sortedKeys]
-        return (try? encoder.encode(self)).flatMap { String(data: $0, encoding: .utf8) } ?? id
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        return (try? encoder.encode(normalised)).flatMap { String(data: $0, encoding: .utf8) } ?? id
     }
 }
 
