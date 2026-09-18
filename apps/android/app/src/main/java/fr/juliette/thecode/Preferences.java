@@ -4,11 +4,15 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.security.crypto.EncryptedSharedPreferences;
 import androidx.security.crypto.MasterKey;
 
 import java.security.GeneralSecurityException;
 import java.io.IOException;
+
+import fr.juliette.thecode.vault.Sync;
 
 /**
  * Stockage local des préférences utilisateur (clé secrète et options).
@@ -26,6 +30,9 @@ public final class Preferences {
     public static final String KEY_CHI = "chiState";
     public static final String KEY_DARK_MODE = "darkMode";
     public static final String KEY_LAST_UNLOCK_AT = "lastUnlockAt";
+    public static final String KEY_SYNC_ENDPOINT = "syncEndpoint";
+    public static final String KEY_SYNC_ACCESS = "syncAccessToken";
+    public static final String KEY_SYNC_REFRESH = "syncRefreshToken";
 
     private static final String TAG = "TheCode";
     /** Fichier chiffré, distinct de l'ancien pour permettre la migration. */
@@ -113,6 +120,45 @@ public final class Preferences {
 
     public String getDarkMode() { return prefs.getString(KEY_DARK_MODE, "SYSTEM"); }
     public void setDarkMode(String v) { prefs.edit().putString(KEY_DARK_MODE, v).apply(); }
+
+    /**
+     * Jetons de synchronisation.
+     *
+     * Dans le fichier chiffré, comme la clef maîtresse : ils ouvrent le compte
+     * de synchronisation. Ils y sont stockés à part du carnet, et ne s'y
+     * retrouvent jamais.
+     *
+     * Rend {@code null} tant qu'aucun compte n'est lié, ou si le stockage
+     * chiffré est indisponible : plutôt que de les écrire en clair, on
+     * redemandera la connexion.
+     */
+    @Nullable
+    public Sync.Credentials getSyncCredentials() {
+        if (securePrefs == null) return null;
+        String endpoint = securePrefs.getString(KEY_SYNC_ENDPOINT, "");
+        String access = securePrefs.getString(KEY_SYNC_ACCESS, "");
+        String refresh = securePrefs.getString(KEY_SYNC_REFRESH, "");
+        if (endpoint.isEmpty() || access.isEmpty() || refresh.isEmpty()) return null;
+        return new Sync.Credentials(endpoint, access, refresh);
+    }
+
+    public void setSyncCredentials(@NonNull Sync.Credentials credentials) {
+        if (securePrefs == null) return;
+        securePrefs.edit()
+                .putString(KEY_SYNC_ENDPOINT, credentials.endpoint)
+                .putString(KEY_SYNC_ACCESS, credentials.accessToken)
+                .putString(KEY_SYNC_REFRESH, credentials.refreshToken)
+                .apply();
+    }
+
+    public void clearSyncCredentials() {
+        if (securePrefs == null) return;
+        securePrefs.edit()
+                .remove(KEY_SYNC_ENDPOINT)
+                .remove(KEY_SYNC_ACCESS)
+                .remove(KEY_SYNC_REFRESH)
+                .apply();
+    }
 
     /** Horodatage (epoch ms) de la dernière session authentifiée. Cf. {@link SessionLock}. */
     public long getLastUnlockAt() { return prefs.getLong(KEY_LAST_UNLOCK_AT, 0L); }

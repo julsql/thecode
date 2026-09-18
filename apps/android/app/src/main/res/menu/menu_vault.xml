@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Actions du carnet. La synchronisation est facultative : sans compte lié,
+     l'application ne contacte aucun serveur. -->
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/action_sync"
+        android:title="@string/sync_action"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/action_sync_unlink"
+        android:title="@string/sync_unlink"
+        app:showAsAction="never" />
+</menu>

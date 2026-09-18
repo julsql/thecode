@@ -71,4 +71,22 @@
     <string name="vault_title">Carnet</string>
     <string name="vault_empty">Aucun site enregistré. Enregistrez-en un depuis l\'écran principal pour ne plus avoir à retenir ses réglages.</string>
     <string name="vault_entry_settings">%1$d caractères, %2$s — v%3$d</string>
+
+    <!-- Synchronisation chiffrée (facultative). -->
+    <string name="sync_action">Synchroniser</string>
+    <string name="sync_unlink">Délier le compte</string>
+    <string name="sync_title">Synchronisation chiffrée</string>
+    <string name="sync_explainer">Votre carnet est chiffré sur cet appareil avant d\'être envoyé. Le serveur ne stocke que des blocs opaques : il ne peut lire ni vos sites, ni vos identifiants. Connectez-vous avec les identifiants du compte, jamais avec votre clef maîtresse.</string>
+    <string name="sync_endpoint">Adresse du service</string>
+    <string name="sync_email">Adresse e-mail</string>
+    <string name="sync_password">Mot de passe du compte</string>
+    <string name="sync_connect">Se connecter</string>
+    <string name="sync_running">Synchronisation…</string>
+    <string name="sync_done">Carnet synchronisé : %1$d entrées.</string>
+    <string name="sync_done_conflicts">Carnet synchronisé : %1$d entrées, %2$d demandent votre attention.</string>
+    <string name="sync_failed">Échec de la synchronisation : %1$s</string>
+    <string name="sync_needs_key">Définissez d\'abord votre clef maîtresse : le carnet est chiffré avec elle avant de quitter cet appareil.</string>
+    <string name="sync_no_secure_storage">Le stockage chiffré est indisponible sur cet appareil : les identifiants ne peuvent pas être conservés.</string>
+    <string name="sync_unlinked">Compte délié. Cet appareil ne se synchronise plus.</string>
+    <string name="sync_nothing_to_unlink">Aucun compte n\'est lié.</string>
 </resources>
