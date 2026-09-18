@@ -91,3 +91,41 @@ describe("page de generation", () => {
     expect(generated(wrapper)).toBe("");
   });
 });
+
+describe("carnet et empreinte", () => {
+  it("affiche l'empreinte des que la clef est saisie", async () => {
+    const wrapper = await mountGenerate();
+    expect(wrapper.text()).not.toContain("Empreinte");
+
+    await wrapper.find("#id_clef").setValue("clef");
+    await wrapper.vm.$nextTick();
+    await new Promise((r) => setTimeout(r, 300));
+
+    // Meme valeur que le CLI et l'extension : un indicateur qui differe
+    // selon l'appareil est un indicateur auquel on ne se fie plus.
+    expect(wrapper.text()).toContain("KG8");
+  });
+
+  it("propose d'enregistrer le site dans le carnet", async () => {
+    const wrapper = await mountGenerate();
+    expect(wrapper.text()).toContain("Enregistrer ce site");
+  });
+
+  it("enregistre les reglages et les retrouve", async () => {
+    const wrapper = await mountGenerate();
+
+    await wrapper.find("#id_site").setValue("google.com");
+    await wrapper.find("#id_longueur").setValue("16");
+    await wrapper.vm.$nextTick();
+
+    const button = wrapper.findAll("button").find((b) => b.text().includes("Enregistrer"));
+    await button!.trigger("click");
+    await wrapper.vm.$nextTick();
+
+    // C'etait le probleme : rien ne memorisait qu'un site avait ete regle
+    // autrement que par defaut.
+    const { loadVault, findAllByDomain } = await import("@/vault");
+    const entry = findAllByDomain(loadVault(), "google.com")[0];
+    expect(entry?.length).toBe(16);
+  });
+});

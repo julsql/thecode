@@ -36,6 +36,15 @@
           </div>
 
           <div class="form-group">
+            <!-- L'empreinte se memorise a force d'etre vue : une valeur differente
+                 signale une faute de frappe avant qu'elle ne coute un acces. -->
+            <p v-if="fingerprint.text" class="fingerprint">
+              Empreinte
+              <span class="chip" :style="{ backgroundColor: fingerprint.color }">
+                {{ fingerprint.text }}
+              </span>
+            </p>
+
             <label for="id_site">{{ t("gen_label_site") }}</label>
             <input
               type="text"
@@ -56,7 +65,14 @@
               <label for="id_longueur" class="no-margin-bottom">{{ t("gen_label_length") }}</label>
               <output>{{ longueur }}</output>
             </span>
-            <input type="range" v-model="longueur" min="4" max="40" step="1" id="id_longueur" />
+            <input
+              type="range"
+              v-model.number="longueur"
+              min="4"
+              max="40"
+              step="1"
+              id="id_longueur"
+            />
           </div>
 
           <div class="checkbox-group">
@@ -93,6 +109,18 @@
             {{ t("gen_security_label") }} :
             <span :style="{ color: couleurSecurite }">{{ niveauSecurite }}</span>
           </p>
+
+          <!-- Le carnet retient les reglages par site : plus besoin de se souvenir
+               qu'un compte avait ete cree sans symboles. -->
+          <div class="vault">
+            <button type="button" @click="saveEntry">
+              {{ vaultEntries.length ? "Mettre à jour l'entrée" : "Enregistrer ce site" }}
+            </button>
+            <p v-if="vaultMessage" class="hint">{{ vaultMessage }}</p>
+            <p v-else-if="vaultEntries.length" class="hint">
+              {{ vaultEntries.length }} entrée(s) connue(s) pour ce site.
+            </p>
+          </div>
           <input type="range" :value="scoreSecurite" min="0" max="252" disabled />
         </div>
       </div>
@@ -104,6 +132,15 @@
 import { defineComponent, ref, watch, computed, onMounted } from "vue";
 import { generatePassword, calculateEntropyBits, getSecurityLevel } from "@/utils";
 import { canonicalSite, loadPublicSuffixList } from "@/canonicalSite";
+import { keyFingerprint, type Fingerprint } from "@/fingerprint";
+import {
+  emptyVault,
+  findAllByDomain,
+  loadVault,
+  newEntry,
+  saveVault,
+  type VaultEntry,
+} from "@/vault";
 import { useI18n } from "@/i18n";
 import type { TranslationKey } from "@/i18n";
 
@@ -136,6 +173,9 @@ export default defineComponent({
     const chiffres = ref(true);
     const showPassword = ref(false);
     const motDePasse = ref("");
+    const fingerprint = ref<Fingerprint>({ text: "", color: "", colorName: "" });
+    const vaultEntries = ref<VaultEntry[]>([]);
+    const vaultMessage = ref("");
 
     const scoreSecurite = ref(0);
     const couleurSecurite = ref("");
@@ -191,12 +231,64 @@ export default defineComponent({
       motDePasse.value = mdp ?? "";
     };
 
+    watch(clef, async (value) => {
+      fingerprint.value = await keyFingerprint(value);
+    });
+
+    /** Entrees du carnet couvrant le site saisi. */
+    function refreshVault() {
+      const domain = canonicalSite(site.value);
+      vaultEntries.value = domain ? findAllByDomain(loadVault(), domain) : [];
+    }
+
+    watch(site, refreshVault, { immediate: true });
+
+    /**
+     * Enregistre le site et ses reglages.
+     *
+     * siteKey n'est jamais reecrit : il produit le mot de passe, le modifier
+     * en changerait un deja en service.
+     */
+    function saveEntry() {
+      const domain = canonicalSite(site.value);
+      if (!domain) {
+        vaultMessage.value = "Renseignez un site.";
+        return;
+      }
+
+      const vault = loadVault() ?? emptyVault();
+      const charset = {
+        lower: minuscules.value,
+        upper: majuscules.value,
+        symbols: symboles.value,
+        numbers: chiffres.value,
+      };
+      const existing = findAllByDomain(vault, domain)[0];
+
+      if (existing) {
+        existing.length = Number(longueur.value);
+        existing.charset = charset;
+        existing.updatedAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+        vaultMessage.value = "Entrée mise à jour.";
+      } else {
+        vault.entries.push(newEntry(domain, { length: Number(longueur.value), charset }));
+        vaultMessage.value = "Site enregistré.";
+      }
+
+      saveVault(vault);
+      refreshVault();
+    }
+
     watch([clef, site, longueur, minuscules, majuscules, symboles, chiffres], genererMotDePasse, {
       immediate: true,
     });
 
     return {
       t,
+      fingerprint,
+      vaultEntries,
+      vaultMessage,
+      saveEntry,
       clef,
       site,
       longueur,
