@@ -64,6 +64,7 @@ struct MainView: View {
     @State private var showShareSheet: Bool = false
     @State private var showInfoSheet: Bool = false
     @State private var showNoPasswordAlert: Bool = false
+    @State private var showVault: Bool = false
 
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.colorScheme) private var colorScheme
@@ -175,6 +176,11 @@ struct MainView: View {
                     }
                     .accessibilityLabel(L10n.t("Partager", "Share"))
 
+                    Button(action: { showVault = true }) {
+                        Image(systemName: "list.bullet.rectangle")
+                    }
+                    .accessibilityLabel(L10n.t("Carnet", "Vault"))
+
                     Button(action: { showInfoSheet = true }) {
                         Image(systemName: "info.circle")
                     }
@@ -206,6 +212,9 @@ struct MainView: View {
             }
             .sheet(isPresented: $showInfoSheet) {
                 InfoSheet(isPresented: $showInfoSheet)
+            }
+            .sheet(isPresented: $showVault) {
+                VaultScreen(masterKey: encodingKey, isPresented: $showVault)
             }
             .alert(L10n.t("Aucun mot de passe à partager", "No password to share"), isPresented: $showNoPasswordAlert) {
                 Button("OK", role: .cancel) { }
