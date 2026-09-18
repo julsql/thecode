@@ -6,6 +6,12 @@
 	<true/>
 	<key>com.apple.security.app-sandbox</key>
 	<true/>
+	<!-- Sortie réseau : uniquement pour la synchronisation chiffrée, qui reste
+	     facultative. Hors de celle-ci, l'app ne contacte aucun serveur. Sans
+	     cette clef le bac à sable bloque URLSession, et la synchronisation
+	     échouerait sans que rien ne l'explique. -->
+	<key>com.apple.security.network.client</key>
+	<true/>
 	<key>com.apple.security.application-groups</key>
 	<array>
 		<string>group.fr.julsql.thecode.params</string>
