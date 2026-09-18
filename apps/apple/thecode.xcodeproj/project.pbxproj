@@ -15,6 +15,7 @@
 		6D47B00C2EDC7C4A00AF712A /* AuthenticationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6D47AFF62EDC7B9300AF712A /* AuthenticationServices.framework */; };
 		6D47B0172EDC7C4A00AF712A /* thecode-autofill.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 6D47B00B2EDC7C4A00AF712A /* thecode-autofill.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		6D9A11022F010002000A0002 /* PasswordSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D9A11012F010001000A0001 /* PasswordSettings.swift */; };
+		6D9A11042F010004000A0004 /* SecureKeyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D9A11032F010003000A0003 /* SecureKeyStore.swift */; };
 		8082053F89E82DB40A9C1DDD /* Swift-Big-Number-Core.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6563939875087D60FD6A6802 /* Swift-Big-Number-Core.swift */; };
 		A7AB93E0E9CA2FF7C2528A32 /* thecode-macos-autofill.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 603E8E144104C1AF9FC9FA7E /* thecode-macos-autofill.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		BBA429162865F67794BE1E57 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 369242748686486E14A8FDEA /* Cocoa.framework */; };
@@ -108,6 +109,7 @@
 		6D47AFF62EDC7B9300AF712A /* AuthenticationServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AuthenticationServices.framework; path = System/Library/Frameworks/AuthenticationServices.framework; sourceTree = SDKROOT; };
 		6D47B00B2EDC7C4A00AF712A /* thecode-autofill.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "thecode-autofill.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
 		6D9A11012F010001000A0001 /* PasswordSettings.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PasswordSettings.swift; sourceTree = "<group>"; };
+		6D9A11032F010003000A0003 /* SecureKeyStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SecureKeyStore.swift; sourceTree = "<group>"; };
 		7B47A588570C392E2CFDD3F7 /* ContentView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		7EAAE6AA6683F10E22E19FC0 /* DomainNormalizer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DomainNormalizer.swift; sourceTree = "<group>"; };
 		926462236D22378C079D4A45 /* DomainNormalizer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DomainNormalizer.swift; sourceTree = "<group>"; };
@@ -327,6 +329,7 @@
 			children = (
 				BD6AAF5E425C082A00D6DD0B /* PasswordUtils.swift */,
 				6D9A11012F010001000A0001 /* PasswordSettings.swift */,
+				6D9A11032F010003000A0003 /* SecureKeyStore.swift */,
 				6563939875087D60FD6A6802 /* Swift-Big-Number-Core.swift */,
 			);
 			name = "Shared (macos-autofill)";
@@ -689,6 +692,7 @@
 				CFB0B64C121707C8FAF95E20 /* DomainNormalizer.swift in Sources */,
 				35851FAD8C1F458ED7B63B6B /* PasswordUtils.swift in Sources */,
 				6D9A11022F010002000A0002 /* PasswordSettings.swift in Sources */,
+				6D9A11042F010004000A0004 /* SecureKeyStore.swift in Sources */,
 				8082053F89E82DB40A9C1DDD /* Swift-Big-Number-Core.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -124,11 +124,9 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
 
     // MARK: – Clé partagée
 
-    /// Vrai si une clé a été définie dans l'app (lue depuis l'app group).
+    /// Vrai si une clé a été définie dans l'app.
     func isKeyDefined() -> Bool {
-        let defaults = UserDefaults(suiteName: appGroupID)
-        let key = defaults?.string(forKey: "encodingKey") ?? ""
-        return !key.isEmpty
+        !SecureKeyStore.read().isEmpty
     }
 
     // MARK: – Génération
@@ -140,7 +138,9 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
         // pour une longueur absente — et `?? 20` ne s'appliquait jamais, car
         // `integer(forKey:)` ne renvoie pas nil.
         let settings = PasswordSettings.load(from: defaults)
-        let encodingKey = defaults?.string(forKey: PasswordSettings.Key.encodingKey) ?? ""
+        // Trousseau et non UserDefaults : la clef ouvre tous les comptes, et
+        // le conteneur de l'app group la gardait en clair.
+        let encodingKey = SecureKeyStore.read()
 
         if domainName.isEmpty || encodingKey.isEmpty || !settings.hasCharset {
             return ""

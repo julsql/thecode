@@ -56,14 +56,11 @@ The iOS ecosystem includes:
 
 ## 🔐 Security Summary
 
-### macOS
-Secret key is not persisted and never stored unencrypted
-Key is kept only in memory while the extension's service worker is alive
-
-### iOS
-Secret key is stored securely (Keychain / App Group)
-Shared between the app and the Safari extension to ensure smooth UX
-Never stored or transmitted outside the device
+### macOS and iOS
+Secret key is stored in the keychain, encrypted at rest and tied to this device
+Shared with the AutoFill extension through the app's keychain access group
+Never written to the app group container, and never leaves the device
+(earlier versions kept it in plain text there; it is migrated on first launch)
 
 ### Both platforms
 Passwords are never stored

@@ -30,7 +30,9 @@ class ViewController: NSViewController {
     private func initializeSharedDefaults() {
         guard let defaults = UserDefaults(suiteName: appGroupID) else { return }
 
-        if defaults.string(forKey: "encodingKey") == nil { defaults.set("", forKey: "encodingKey") }
+        // La clef maîtresse ne vit plus ici : elle est dans le trousseau, et
+        // une version antérieure l'y avait laissée en clair.
+        SecureKeyStore.migrateFromUserDefaults()
         if defaults.object(forKey: "lengthNumber") == nil {
             defaults.set(PasswordSettings.defaultLength, forKey: "lengthNumber")
         }
