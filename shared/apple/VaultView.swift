@@ -20,7 +20,15 @@ public struct VaultView: View {
     /// la vue.
     let visibleEntries: [VaultEntry]
 
-    public init(vault: Vault) {
+    /// Action proposée sur une entrée, ou `nil` quand la vue n'en offre pas.
+    ///
+    /// Renouveler et migrer touchent au stockage et à la dérivation : la vue
+    /// partagée reste vérifiable sans conteneur de groupe d'app ni clef
+    /// maîtresse, et l'app décide quoi en faire.
+    private let onSelect: ((VaultEntry) -> Void)?
+
+    public init(vault: Vault, onSelect: ((VaultEntry) -> Void)? = nil) {
+        self.onSelect = onSelect
         // Les entrées supprimées portent une pierre tombale pour que la
         // suppression se propage à la synchronisation ; elles n'ont rien à
         // faire à l'écran.
@@ -55,7 +63,7 @@ public struct VaultView: View {
                 .padding()
             } else {
                 List(visibleEntries, id: \.id) { entry in
-                    VStack(alignment: .leading, spacing: 4) {
+                    let row = VStack(alignment: .leading, spacing: 4) {
                         Text(Self.label(of: entry))
                             .font(.headline)
 
@@ -68,6 +76,15 @@ public struct VaultView: View {
                             .foregroundStyle(.secondary)
                     }
                     .padding(.vertical, 4)
+
+                    if let onSelect {
+                        Button { onSelect(entry) } label: {
+                            row.frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .buttonStyle(.plain)
+                    } else {
+                        row
+                    }
                 }
             }
         }

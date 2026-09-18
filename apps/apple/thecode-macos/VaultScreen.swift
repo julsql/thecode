@@ -24,6 +24,7 @@ struct VaultScreen: View {
     @State private var vault = Vault()
     @State private var status: String?
     @State private var isWorking = false
+    @State private var pending: PendingChange? = nil
     @State private var isLinked = SyncCredentialsStore.load() != nil
 
     @State private var showSignIn = false
@@ -74,9 +75,42 @@ struct VaultScreen: View {
                     .padding(.vertical, 8)
             }
 
-            VaultView(vault: vault)
+            VaultView(vault: vault, onSelect: propose)
         }
         .frame(minWidth: 420, minHeight: 440)
+        .alert(pending?.title ?? "", isPresented: Binding(
+            get: { pending != nil },
+            set: { if !$0 { pending = nil } }
+        ), presenting: pending) { change in
+            Button(L10n.t("Annuler", "Cancel"), role: .cancel) { pending = nil }
+            Button(L10n.t("Confirmer", "Confirm")) {
+                apply(change)
+                pending = nil
+            }
+        } message: { change in
+            // Les deux côte à côte : le nouveau ne sert à rien tant qu'il n'a
+            // pas été posé sur le site, et l'ancien reste celui qui connecte.
+            Text(
+                L10n.t(
+                    """
+                    Actuel
+                    \(change.before)
+
+                    Nouveau
+                    \(change.after)
+
+                    Changez-le sur le site, puis confirmez.
+                    """,
+                    """
+                    Current
+                    \(change.before)
+
+                    New
+                    \(change.after)
+
+                    Change it on the site, then confirm.
+                    """))
+        }
         .onAppear { vault = VaultStore.load() }
         .sheet(isPresented: $showSignIn) { signInSheet }
     }
@@ -115,6 +149,98 @@ struct VaultScreen: View {
         }
         .padding(20)
         .frame(width: 420)
+    }
+
+
+    // MARK: - Renouvellement et migration
+
+    /// Ce qui est proposé sur une entrée, et ce qu'elle deviendrait.
+    ///
+    /// Les deux actions ne sont jamais offertes ensemble : le compteur n'entre
+    /// pas dans la dérivation v1, et une entrée v2 n'a plus rien à migrer.
+    private struct PendingChange: Identifiable {
+        let entry: VaultEntry
+        let isRenewal: Bool
+        let before: String
+        let after: String
+
+        var id: String { entry.id }
+
+        var title: String {
+            let label = entry.label.flatMap { $0.isEmpty ? nil : $0 } ?? entry.siteKey
+            return isRenewal
+                ? L10n.t("Renouveler « \(label) »", "Renew \"\(label)\"")
+                : L10n.t("Passer « \(label) » en v2", "Move \"\(label)\" to v2")
+        }
+    }
+
+    private func propose(_ entry: VaultEntry) {
+        guard !masterKey.isEmpty else {
+            status = L10n.t(
+                "Définissez d'abord votre clef maîtresse : c'est elle qui calcule les mots "
+                    + "de passe.",
+                "Set your master key first: it is what computes the passwords.")
+            return
+        }
+
+        let isRenewal = entry.v >= 2
+        isWorking = true
+        status = L10n.t("Calcul en cours…", "Computing…")
+
+        // Deux dérivations PBKDF2 à 600 000 itérations : jamais sur le fil qui
+        // dessine l'écran.
+        Task.detached {
+            let tool = PasswordUtils()
+            let before = tool.generatePassword(
+                for: SiteResolution(entry: entry), masterKey: masterKey
+            ).code
+
+            // Sur une copie : modifier l'entrée puis renoncer laisserait la
+            // porte ouverte à un carnet enregistré à mi-chemin.
+            var preview = entry
+            if isRenewal { preview.counter += 1 } else { preview.v = 2 }
+            let after = PasswordUtils().generatePassword(
+                for: SiteResolution(entry: preview), masterKey: masterKey
+            ).code
+
+            await MainActor.run {
+                pending = PendingChange(
+                    entry: entry, isRenewal: isRenewal, before: before, after: after)
+                isWorking = false
+                status = nil
+            }
+        }
+    }
+
+    private func apply(_ change: PendingChange) {
+        guard let index = vault.entries.firstIndex(where: { $0.id == change.entry.id }) else {
+            return
+        }
+
+        if change.isRenewal {
+            vault.entries[index].counter += 1
+        } else {
+            vault.entries[index].v = 2
+        }
+        // Sans réhorodatage, la fusion ferait gagner l'autre appareil et le
+        // changement serait perdu à la synchronisation suivante.
+        vault.entries[index].updatedAt = Vault.nowIso()
+
+        do {
+            try VaultStore.save(vault)
+        } catch {
+            status = L10n.t(
+                "Le carnet n'a pas pu être enregistré.", "The vault could not be saved.")
+            return
+        }
+
+        let label = change.entry.label.flatMap { $0.isEmpty ? nil : $0 } ?? change.entry.siteKey
+        status =
+            change.isRenewal
+            ? L10n.t(
+                "« \(label) » renouvelée, compteur \(vault.entries[index].counter).",
+                "\"\(label)\" renewed, counter \(vault.entries[index].counter).")
+            : L10n.t("« \(label) » est en v2.", "\"\(label)\" is now in v2.")
     }
 
     // MARK: - Actions
