@@ -200,3 +200,56 @@ describe("synchronisation", () => {
     clearSession();
   });
 });
+
+describe("transfert du carnet", () => {
+  beforeEach(async () => {
+    localStorage.clear();
+    // jsdom fournit un Blob sans .stream(), dont depend CompressionStream.
+    // Celui de node a la meme API : c'est l'environnement de test qui est
+    // incomplet, pas le code.
+    vi.stubGlobal("Blob", (await import("node:buffer")).Blob);
+  });
+
+  it("refuse d'afficher un QR sans clef", async () => {
+    const wrapper = await mountGenerate();
+
+    const button = wrapper.findAll("button").find((b) => b.text().includes("QR"));
+    await button!.trigger("click");
+    await wrapper.vm.$nextTick();
+
+    // Sans clef, il n'y a pas de quoi chiffrer : mieux vaut le dire que
+    // d'afficher un code que personne ne pourra ouvrir.
+    expect(wrapper.text()).toContain("clef");
+  });
+
+  it("refuse d'afficher un QR d'un carnet vide", async () => {
+    const wrapper = await mountGenerate();
+    await wrapper.find("#id_clef").setValue("clef");
+
+    const button = wrapper.findAll("button").find((b) => b.text().includes("QR"));
+    await button!.trigger("click");
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.text()).toContain("vide");
+  });
+
+  it("affiche un QR du carnet chiffré", { timeout: 20000 }, async () => {
+    const { saveVault, emptyVault, newEntry } = await import("@/vault");
+    const vault = emptyVault();
+    vault.entries.push(newEntry("google.com", { domains: ["google.com"] }));
+    saveVault(vault);
+
+    const wrapper = await mountGenerate();
+    await wrapper.find("#id_clef").setValue("clef");
+
+    const button = wrapper.findAll("button").find((b) => b.text().includes("QR"));
+    await button!.trigger("click");
+
+    await vi.waitFor(() => expect(wrapper.findAll(".qr-row").length).toBeGreaterThan(20), {
+      timeout: 10000,
+    });
+    // Carré : un QR non carré signalerait une matrice mal construite.
+    const rows = wrapper.findAll(".qr-row");
+    expect(rows[0].findAll("span").length).toBe(rows.length);
+  });
+});

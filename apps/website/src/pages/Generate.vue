@@ -154,6 +154,35 @@
             </div>
           </div>
 
+          <!-- Transfert hors serveur : le QR pour envoyer vers un téléphone,
+               le fichier pour aller vers un autre navigateur. Le contenu est
+               chiffré avec une clef dérivée de la clef maîtresse, donc une
+               photo de l'écran ne révèle rien. -->
+          <div class="vault">
+            <h3>Transférer le carnet</h3>
+            <button type="button" @click="showTransfer">Afficher le QR code</button>
+            <button type="button" @click="downloadVault">Enregistrer un fichier</button>
+            <label class="import-file">
+              Importer un fichier
+              <input type="file" accept=".txt,.thecode,text/plain" @change="importFile" />
+            </label>
+            <p v-if="transferMessage" class="hint">{{ transferMessage }}</p>
+
+            <div v-if="qrRows.length" class="qr">
+              <!-- Un module = une case. Le rendu passe par des div plutôt que
+                   par une image : pas de canvas à sérialiser, et le code reste
+                   net à n'importe quel zoom. -->
+              <div v-for="(row, r) in qrRows" :key="r" class="qr-row">
+                <span
+                  v-for="(module, c) in row"
+                  :key="c"
+                  :class="module ? 'qr-dark' : 'qr-light'"
+                />
+              </div>
+              <p class="hint">Scannez-le depuis l'application sur votre téléphone.</p>
+            </div>
+          </div>
+
           <!-- Le carnet est chiffré avant de quitter le navigateur : le serveur
                ne reçoit que des blocs opaques. -->
           <div class="sync">
@@ -207,11 +236,15 @@ import {
   emptyVault,
   findAllByDomain,
   loadVault,
+  mergeVaults,
   newEntry,
   saveVault,
+  type Vault,
   type VaultEntry,
 } from "@/vault";
 import { generatePasswordV2 } from "@/coreV2";
+import { exportVault, importVault } from "@/transfer";
+import { encodeQr } from "@/qr.js";
 import { useI18n } from "@/i18n";
 import type { TranslationKey } from "@/i18n";
 
@@ -247,6 +280,9 @@ export default defineComponent({
     const fingerprint = ref<Fingerprint>({ text: "", color: "", colorName: "" });
     const vaultEntries = ref<VaultEntry[]>([]);
     const vaultMessage = ref("");
+    const transferMessage = ref("");
+    /** Modules du QR affiché, vide tant qu'on n'en demande pas. */
+    const qrRows = ref<number[][]>([]);
     /** Changement propose, en attente de confirmation. */
     const pending = ref<{
       entryId: string;
@@ -409,6 +445,92 @@ export default defineComponent({
       genererMotDePasse();
     }
 
+    /**
+     * Affiche le carnet chiffré en QR code.
+     *
+     * Rien n'est envoyé nulle part : le QR se lit d'un écran à l'autre, et son
+     * contenu est chiffré avec une clef dérivée de la clef maîtresse.
+     */
+    async function showTransfer() {
+      if (!clef.value) {
+        transferMessage.value = "Renseignez d'abord votre clef.";
+        return;
+      }
+      const vault = loadVault();
+      if (!vault || !vault.entries.length) {
+        transferMessage.value = "Le carnet est vide, il n'y a rien à transférer.";
+        return;
+      }
+
+      transferMessage.value = "Calcul en cours…";
+      try {
+        const payload = await exportVault(vault, clef.value);
+        qrRows.value = encodeQr(payload).modules;
+        transferMessage.value = "";
+      } catch (e) {
+        // Un carnet trop gros ne tient pas dans un QR : le dire plutôt que
+        // d'afficher un code tronqué que rien ne saura lire.
+        qrRows.value = [];
+        transferMessage.value = `Impossible : ${(e as Error).message}`;
+      }
+    }
+
+    /** Enregistre le carnet chiffré dans un fichier. */
+    async function downloadVault() {
+      if (!clef.value) {
+        transferMessage.value = "Renseignez d'abord votre clef.";
+        return;
+      }
+      const vault = loadVault();
+      if (!vault || !vault.entries.length) {
+        transferMessage.value = "Le carnet est vide, il n'y a rien à transférer.";
+        return;
+      }
+
+      const payload = await exportVault(vault, clef.value);
+      const url = URL.createObjectURL(new Blob([payload], { type: "text/plain" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "thecode-carnet.txt";
+      link.click();
+      URL.revokeObjectURL(url);
+
+      transferMessage.value = "Fichier enregistré.";
+    }
+
+    /**
+     * Importe un fichier et le fusionne avec le carnet local.
+     *
+     * Fusion et jamais substitution : un import qui écraserait effacerait les
+     * entrées créées ici.
+     */
+    async function importFile(event: Event) {
+      const input = event.target as HTMLInputElement;
+      const file = input.files?.[0];
+      if (!file) return;
+      input.value = "";
+
+      if (!clef.value) {
+        transferMessage.value = "Renseignez d'abord votre clef.";
+        return;
+      }
+
+      transferMessage.value = "Lecture en cours…";
+      try {
+        const incoming = (await importVault((await file.text()).trim(), clef.value)) as Vault;
+        const { vault: merged, conflicts } = mergeVaults(loadVault() ?? emptyVault(), incoming);
+        saveVault(merged);
+        refreshVault();
+
+        const kept = merged.entries.filter((e) => !e.deleted).length;
+        transferMessage.value = conflicts.length
+          ? `Carnet fusionné : ${kept} entrées, ${conflicts.length} à vérifier.`
+          : `Carnet fusionné : ${kept} entrées.`;
+      } catch (e) {
+        transferMessage.value = `Impossible : ${(e as Error).message}`;
+      }
+    }
+
     /** Entrees du carnet couvrant le site saisi. */
     function refreshVault() {
       const domain = canonicalSite(site.value);
@@ -519,6 +641,11 @@ export default defineComponent({
       pending,
       proposeChange,
       applyChange,
+      transferMessage,
+      qrRows,
+      showTransfer,
+      downloadVault,
+      importFile,
       syncConnected,
       syncEmail,
       syncPassword,

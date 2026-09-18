@@ -41,3 +41,45 @@ a {
   background: var(--c4);
   color: #fff;
 }
+
+/* QR code : un module par case. Des div plutot qu'une image, pour que le code
+   reste net a n'importe quel zoom et qu'il n'y ait rien a serialiser. */
+.qr {
+  margin-top: 1rem;
+  /* Marge blanche obligatoire : sans elle, un lecteur ne trouve pas les bords
+     du code. La norme demande quatre modules. */
+  background: #fff;
+  padding: 12px;
+  display: inline-block;
+  line-height: 0;
+}
+
+.qr-row {
+  display: block;
+  height: 4px;
+}
+
+.qr-row span {
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+}
+
+.qr-dark {
+  background: #000;
+}
+
+.qr-light {
+  background: #fff;
+}
+
+.qr .hint {
+  line-height: normal;
+  color: #000;
+  margin-top: 8px;
+}
+
+.import-file input[type="file"] {
+  display: block;
+  margin-top: 4px;
+}
