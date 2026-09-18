@@ -6,8 +6,11 @@ if (typeof browser === "undefined" && typeof chrome !== "undefined") {
 // service worker classique, donc sur Chrome, Firefox et Safari ; les modules
 // ES ne sont pas supportes partout de la meme facon.
 if (typeof importScripts === "function") {
-  importScripts("vault.js", "transfer.js", "sync.js");
-} else if (typeof require === "function") {
+  importScripts("vault.js", "transfer.js", "sync.js", "core-v2.js");
+}
+// En test, core-v2.js est charge en fin de fichier : il require background.js,
+// et le faire ici rendrait des exports encore vides.
+else if (typeof require === "function") {
   // Environnement de test : pas de service worker, donc pas d'importScripts.
   // On expose les memes symboles pour tester le cablage reellement livre.
   Object.assign(globalThis, require("./vault.js"), require("./transfer.js"), require("./sync.js"));
@@ -152,6 +155,8 @@ const PRIVILEGED_ACTIONS = new Set([
   "setParams",
   "saveEntry",
   "deleteEntry",
+  "previewChange",
+  "applyChange",
   "syncLogin",
   "syncLogout",
   "syncNow",
@@ -222,6 +227,48 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
         await saveVault(browser?.storage?.local, vault);
         sendResponse({ ok: true, vault });
+      } catch (e) {
+        sendResponse({ ok: false, error: e.message });
+      }
+    } else if (request.action === "previewChange") {
+      // Calcule sans rien ecrire : l'ancien mot de passe est encore celui du
+      // site tant qu'il n'y a pas ete change.
+      try {
+        const vault = await loadVault(browser?.storage?.local);
+        const entry = vault.entries.find((e) => e.id === request.id && !e.deleted);
+        if (!entry) {
+          sendResponse({ ok: false, error: "entree introuvable" });
+        } else if (!encodingKey) {
+          sendResponse({ ok: false, error: "aucune clef definie" });
+        } else {
+          sendResponse({
+            ok: true,
+            before: await passwordForEntry(entry),
+            after: await passwordForEntry(
+              entry,
+              request.renew ? entry.counter + 1 : entry.counter,
+              request.renew ? entry.v : 2,
+            ),
+          });
+        }
+      } catch (e) {
+        sendResponse({ ok: false, error: e.message });
+      }
+    } else if (request.action === "applyChange") {
+      try {
+        const vault = await loadVault(browser?.storage?.local);
+        const entry = vault.entries.find((e) => e.id === request.id && !e.deleted);
+        if (!entry) {
+          sendResponse({ ok: false, error: "entree introuvable" });
+        } else {
+          if (request.renew) entry.counter += 1;
+          else entry.v = 2;
+          // Sans rehorodatage, la fusion ferait gagner l'autre appareil et le
+          // changement serait perdu a la synchronisation suivante.
+          entry.updatedAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+          await saveVault(browser?.storage?.local, vault);
+          sendResponse({ ok: true, counter: entry.counter, v: entry.v });
+        }
       } catch (e) {
         sendResponse({ ok: false, error: e.message });
       }
@@ -309,6 +356,42 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 // Code
 
+/**
+ * Derive le mot de passe d'une entree, dans sa version a elle.
+ *
+ * Les deux versions coexistent entree par entree : une entree existante reste
+ * en v1 et son mot de passe ne doit pas changer.
+ */
+async function passwordForEntry(entry, counter, version) {
+  const v = version ?? entry.v;
+  if (v >= 2) {
+    return generatePasswordV2(entry.siteKey, encodingKey, entry.length, {
+      useLower: entry.charset.lower,
+      useUpper: entry.charset.upper,
+      useSymbols: entry.charset.symbols,
+      useNumbers: entry.charset.numbers,
+      login: entry.login || "",
+      counter: counter ?? entry.counter,
+    });
+  }
+  // v1 : ni login ni compteur n'entrent dans la derivation.
+  const { mdp } = await generatePassword(
+    entry.siteKey,
+    encodingKey,
+    entry.length,
+    entry.charset.lower,
+    entry.charset.upper,
+    entry.charset.symbols,
+    entry.charset.numbers,
+  );
+  return mdp;
+}
+
+/** Pose la clef en test : elle n'est jamais exposee autrement. */
+function setEncodingKeyForTests(key) {
+  encodingKey = key;
+}
+
 async function generatePasswordForUrl(url) {
   if (!encodingKey) {
     return { error: "Aucune clé n'est définie. Ouvre l'extension TheCode et entre ta clé." };
@@ -326,17 +409,39 @@ async function generatePasswordForUrl(url) {
     const hostname = u.hostname;
     const domain = getRegistrableDomain(hostname);
 
-    const { mdp, security, bits, color } = await generatePassword(
-      domain,
+    // Le carnet dit sous quelle clef deriver, avec quels reglages et en
+    // quelle version. L'ignorer rendrait un mot de passe v1 pour une entree
+    // v2 : faux, sans que rien ne le signale. Et le domaine saisi peut etre un
+    // alias — google.fr doit rendre le mot de passe de google.com.
+    const vault = await loadVault(browser?.storage?.local);
+    const entry = findAllByDomain(vault, domain)[0];
+
+    if (!entry) {
+      const { mdp, security, bits, color } = await generatePassword(
+        domain,
+        encodingKey,
+        lengthNumber,
+        minState,
+        majState,
+        symState,
+        chiState,
+      );
+      return { password: mdp, site: domain, security, bits, color };
+    }
+
+    const { security, bits, color } = await generatePassword(
+      entry.siteKey,
       encodingKey,
-      lengthNumber,
-      minState,
-      majState,
-      symState,
-      chiState,
+      entry.length,
+      entry.charset.lower,
+      entry.charset.upper,
+      entry.charset.symbols,
+      entry.charset.numbers,
     );
 
-    return { password: mdp, site: domain, security, bits, color };
+    const mdp = await passwordForEntry(entry);
+
+    return { password: mdp, site: domain, login: entry.login || "", security, bits, color };
   } catch (err) {
     return { error: err.message };
   }
@@ -523,6 +628,9 @@ async function hashToBigInt(input) {
 if (typeof module !== "undefined") {
   module.exports = {
     generatePassword,
+    generatePasswordForUrl,
+    passwordForEntry,
+    setEncodingKeyForTests,
     getRegistrableDomain,
     registrableDomain,
     PRIVILEGED_ACTIONS,
@@ -540,4 +648,11 @@ if (typeof module !== "undefined") {
     MAX_LENGTH,
     DEFAULT_PARAMS,
   };
+}
+
+// Charge apres module.exports : core-v2.js require ce fichier pour le rendu
+// (convertToBase, applyCharsetReplacement), et l'inverse donnerait un require
+// circulaire aux exports incomplets.
+if (typeof importScripts !== "function" && typeof require === "function") {
+  Object.assign(globalThis, require("./core-v2.js"));
 }
