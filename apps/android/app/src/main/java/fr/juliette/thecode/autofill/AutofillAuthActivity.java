@@ -19,7 +19,9 @@ import androidx.fragment.app.FragmentActivity;
 
 import android.service.autofill.Dataset;
 
-import fr.juliette.thecode.Code;
+import fr.juliette.thecode.Generator;
+import fr.juliette.thecode.vault.SiteResolution;
+import fr.juliette.thecode.vault.Vault;
 import fr.juliette.thecode.Preferences;
 import fr.juliette.thecode.R;
 
@@ -32,9 +34,12 @@ import fr.juliette.thecode.R;
 public class AutofillAuthActivity extends FragmentActivity {
 
     public static final String EXTRA_DOMAIN = "fr.juliette.thecode.autofill.DOMAIN";
+    /** Entrée du carnet choisie, vide quand le carnet ne connaît pas le site. */
+    public static final String EXTRA_ENTRY_ID = "fr.juliette.thecode.autofill.ENTRY_ID";
     public static final String EXTRA_PASSWORD_IDS = "fr.juliette.thecode.autofill.PASSWORD_IDS";
 
     private String domain;
+    private String entryId;
     private AutofillId[] passwordIds;
 
     @Override
@@ -44,6 +49,7 @@ public class AutofillAuthActivity extends FragmentActivity {
 
         Intent intent = getIntent();
         domain = intent.getStringExtra(EXTRA_DOMAIN);
+        entryId = intent.getStringExtra(EXTRA_ENTRY_ID);
         passwordIds = readAutofillIds(intent.getParcelableArrayExtra(EXTRA_PASSWORD_IDS));
 
         if (domain == null || passwordIds == null || passwordIds.length == 0) {
@@ -103,14 +109,14 @@ public class AutofillAuthActivity extends FragmentActivity {
             return;
         }
 
-        Code code = new Code();
-        code.setMinState(prefs.getMinState());
-        code.setMajState(prefs.getMajState());
-        code.setSymState(prefs.getSymState());
-        code.setChiState(prefs.getChiState());
-        code.setLength(prefs.getLength());
+        // Le carnet est relu ici plutôt que transporté par l'Intent : une
+        // synchronisation a pu passer entre la suggestion et la validation, et
+        // les réglages n'ont pas à transiter par un Intent.
+        SiteResolution resolution = SiteResolution.byId(Vault.load(this), entryId, domain,
+                prefs.getLength(), prefs.getMinState(), prefs.getMajState(),
+                prefs.getSymState(), prefs.getChiState());
 
-        String password = code.getCode(key, domain);
+        String password = Generator.generate(resolution, key, null);
         if (password.isEmpty()) {
             cancelAndFinish();
             return;
