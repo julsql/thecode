@@ -1,0 +1,586 @@
+{
+  "schema": 1,
+  "README": "Cas de fusion partages. La regle est decrite dans shared/spec/vault-merge.md. Chaque implementation doit produire 'expected' et signaler exactement les 'conflicts' listes.",
+  "properties": [
+    "commutative : merge(a,b) == merge(b,a)",
+    "idempotente : merge(a,a) == a et merge(merge(a,b),b) == merge(a,b)"
+  ],
+  "entries_sorted_by": "id",
+  "cases": [
+    {
+      "id": "entree-seulement-a-gauche",
+      "why": "Rien a arbitrer : l'entree est reprise telle quelle.",
+      "left": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "google.com",
+            "domains": ["google.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 1,
+            "updatedAt": "2026-01-01T00:00:00Z"
+          }
+        ]
+      },
+      "right": {
+        "schema": 1,
+        "entries": []
+      },
+      "expected": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "google.com",
+            "domains": ["google.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 1,
+            "updatedAt": "2026-01-01T00:00:00Z"
+          }
+        ]
+      },
+      "conflicts": []
+    },
+    {
+      "id": "domains-union",
+      "why": "Ajouter un domaine d'un cote ne doit pas effacer celui ajoute de l'autre.",
+      "left": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "google.com",
+            "domains": ["google.com", "google.fr"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 1,
+            "updatedAt": "2026-01-01T00:00:00Z"
+          }
+        ]
+      },
+      "right": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "google.com",
+            "domains": ["google.com", "youtube.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 1,
+            "updatedAt": "2026-01-01T00:00:00Z"
+          }
+        ]
+      },
+      "expected": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "google.com",
+            "domains": ["google.com", "google.fr", "youtube.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 1,
+            "updatedAt": "2026-01-01T00:00:00Z"
+          }
+        ]
+      },
+      "conflicts": []
+    },
+    {
+      "id": "counter-max",
+      "why": "Un compteur ne recule pas : la valeur haute signifie que le mot de passe a deja ete renouvele.",
+      "left": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "google.com",
+            "domains": ["google.com"],
+            "counter": 3,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 1,
+            "updatedAt": "2026-01-01T00:00:00Z"
+          }
+        ]
+      },
+      "right": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "google.com",
+            "domains": ["google.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 1,
+            "updatedAt": "2026-06-01T00:00:00Z"
+          }
+        ]
+      },
+      "expected": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "google.com",
+            "domains": ["google.com"],
+            "counter": 3,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 1,
+            "updatedAt": "2026-06-01T00:00:00Z"
+          }
+        ]
+      },
+      "conflicts": ["counter-recul"]
+    },
+    {
+      "id": "last-write-wins-par-champ",
+      "why": "Le plus recent gagne, champ par champ.",
+      "left": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "google.com",
+            "domains": ["google.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 1,
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "label": "Google"
+          }
+        ]
+      },
+      "right": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "google.com",
+            "domains": ["google.com"],
+            "counter": 1,
+            "length": 32,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 1,
+            "updatedAt": "2026-06-01T00:00:00Z",
+            "label": "Google perso"
+          }
+        ]
+      },
+      "expected": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "google.com",
+            "domains": ["google.com"],
+            "counter": 1,
+            "length": 32,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 1,
+            "updatedAt": "2026-06-01T00:00:00Z",
+            "label": "Google perso"
+          }
+        ]
+      },
+      "conflicts": []
+    },
+    {
+      "id": "suppression-se-propage",
+      "why": "Une pierre tombale l'emporte, sinon l'autre carnet ressusciterait l'entree.",
+      "left": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "google.com",
+            "domains": ["google.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 1,
+            "updatedAt": "2026-01-01T00:00:00Z"
+          }
+        ]
+      },
+      "right": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "google.com",
+            "domains": ["google.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 1,
+            "updatedAt": "2026-06-01T00:00:00Z",
+            "deleted": true
+          }
+        ]
+      },
+      "expected": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "google.com",
+            "domains": ["google.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 1,
+            "updatedAt": "2026-06-01T00:00:00Z",
+            "deleted": true
+          }
+        ]
+      },
+      "conflicts": []
+    },
+    {
+      "id": "sitekey-divergent-jamais-resolu",
+      "why": "siteKey produit le mot de passe : choisir au hasard en changerait un sans qu'on le demande. L'horodatage suit la regle generale (le plus recent) ; seul siteKey est fige.",
+      "left": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "google.com",
+            "domains": ["google.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 1,
+            "updatedAt": "2026-01-01T00:00:00Z"
+          }
+        ]
+      },
+      "right": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "google.com#pro",
+            "domains": ["google.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 1,
+            "updatedAt": "2026-06-01T00:00:00Z"
+          }
+        ]
+      },
+      "expected": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "google.com",
+            "domains": ["google.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 1,
+            "updatedAt": "2026-06-01T00:00:00Z"
+          }
+        ]
+      },
+      "conflicts": ["sitekey-divergent"]
+    },
+    {
+      "id": "egalite-updatedAt-departagee-par-id",
+      "why": "Arbitraire mais deterministe : sans cela les deux appareils choisiraient chacun le sien.",
+      "left": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "google.com",
+            "domains": ["google.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 1,
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "label": "A"
+          },
+          {
+            "id": "22222222-2222-4222-8222-222222222222",
+            "siteKey": "google.com",
+            "domains": ["google.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 1,
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "label": "B"
+          }
+        ]
+      },
+      "right": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "22222222-2222-4222-8222-222222222222",
+            "siteKey": "google.com",
+            "domains": ["google.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 1,
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "label": "C"
+          },
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "google.com",
+            "domains": ["google.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 1,
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "label": "D"
+          }
+        ]
+      },
+      "expected": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "google.com",
+            "domains": ["google.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 1,
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "label": "A"
+          },
+          {
+            "id": "22222222-2222-4222-8222-222222222222",
+            "siteKey": "google.com",
+            "domains": ["google.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 1,
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "label": "B"
+          }
+        ]
+      },
+      "conflicts": []
+    },
+    {
+      "id": "carnets-disjoints",
+      "why": "Cas courant : deux appareils qui decouvrent des sites differents.",
+      "left": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "google.com",
+            "domains": ["google.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 1,
+            "updatedAt": "2026-01-01T00:00:00Z"
+          }
+        ]
+      },
+      "right": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "33333333-3333-4333-8333-333333333333",
+            "siteKey": "github.com",
+            "domains": ["github.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 1,
+            "updatedAt": "2026-01-01T00:00:00Z"
+          }
+        ]
+      },
+      "expected": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "google.com",
+            "domains": ["google.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 1,
+            "updatedAt": "2026-01-01T00:00:00Z"
+          },
+          {
+            "id": "33333333-3333-4333-8333-333333333333",
+            "siteKey": "github.com",
+            "domains": ["github.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 1,
+            "updatedAt": "2026-01-01T00:00:00Z"
+          }
+        ]
+      },
+      "conflicts": []
+    }
+  ]
+}
