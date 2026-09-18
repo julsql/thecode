@@ -2,6 +2,17 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
+    <!-- Le carnet : voir ce qui est enregistre et sous quels reglages. -->
+
+    <item
+
+        android:id="@+id/action_vault"
+
+        android:title="@string/vault_title"
+
+        app:showAsAction="never" />
+
+
     <item
         android:id="@+id/action_dark_mode"
         android:icon="@drawable/ic_dark_mode"
