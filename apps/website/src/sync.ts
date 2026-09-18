@@ -98,7 +98,11 @@ export async function login(endpoint: string, email: string, password: string): 
   const body = await request(`${endpoint}/v1/auth/login`, {
     payload: { email, password, device_label: "site web" },
   });
-  return { endpoint, accessToken: body.access_token, refreshToken: body.refresh_token };
+  return {
+    endpoint,
+    accessToken: body.access_token,
+    refreshToken: body.refresh_token,
+  };
 }
 
 /**
@@ -180,7 +184,12 @@ export async function syncVault(
   const remote: Vault = { schema: 1, updatedAt: vault.updatedAt, entries: [] };
   for (const row of pulled.result.entries) {
     const entry = await decryptEntry(row, key);
-    entry.deleted = Boolean(entry.deleted || row.deleted);
+    // Absent quand faux, jamais « deleted: false ». La représentation
+    // canonique départage les écritures simultanées : y laisser un champ que
+    // les autres implémentations n'écrivent pas ferait désigner un gagnant
+    // différent selon l'appareil, et les carnets ne convergeraient jamais.
+    if (entry.deleted || row.deleted) entry.deleted = true;
+    else delete entry.deleted;
     remote.entries.push(entry);
   }
 

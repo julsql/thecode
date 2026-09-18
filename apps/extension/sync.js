@@ -75,14 +75,22 @@ async function syncLogin(endpoint, email, password, deviceLabel = "extension") {
   const body = await syncRequest(`${endpoint}/v1/auth/login`, {
     payload: { email, password, device_label: deviceLabel },
   });
-  return { endpoint, accessToken: body.access_token, refreshToken: body.refresh_token };
+  return {
+    endpoint,
+    accessToken: body.access_token,
+    refreshToken: body.refresh_token,
+  };
 }
 
 async function syncRegister(endpoint, email, password, inviteCode = "") {
   const body = await syncRequest(`${endpoint}/v1/auth/register`, {
     payload: { email, password, invite_code: inviteCode },
   });
-  return { endpoint, accessToken: body.access_token, refreshToken: body.refresh_token };
+  return {
+    endpoint,
+    accessToken: body.access_token,
+    refreshToken: body.refresh_token,
+  };
 }
 
 /**
@@ -156,7 +164,12 @@ async function syncVault(vault, masterKey, session) {
   const remote = { schema: 1, updatedAt: vault.updatedAt || "", entries: [] };
   for (const row of pulled.result.entries) {
     const entry = await decryptEntry(row, key);
-    entry.deleted = Boolean(entry.deleted || row.deleted);
+    // Absent quand faux, jamais « deleted: false ». La representation
+    // canonique departage les ecritures simultanees : y laisser un champ que
+    // les autres implementations n'ecrivent pas ferait designer un gagnant
+    // different selon l'appareil, et les carnets ne convergeraient jamais.
+    if (entry.deleted || row.deleted) entry.deleted = true;
+    else delete entry.deleted;
     remote.entries.push(entry);
   }
 
