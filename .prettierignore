@@ -13,6 +13,7 @@ shared/public_suffix_list.dat
 **/transfer-vector.json
 **/sync-row.json
 **/canonical-entries.json
+**/qr-vectors.json
 shared/vault-fixtures/
 **/package-lock.json
 
