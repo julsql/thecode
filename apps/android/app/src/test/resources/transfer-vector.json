@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "README": "Vecteur d'interoperabilite du transfert chiffre. Toute implementation doit dechiffrer 'payload' avec 'masterKey' et retrouver exactement 'vault'. Genere par le CLI Python ; un carnet exporte sur un appareil doit etre lisible sur tous les autres.",
+  "masterKey": "clef",
+  "vault": {
+    "schema": 1,
+    "updatedAt": "2026-01-01T00:00:00Z",
+    "entries": [
+      {
+        "id": "11111111-1111-4111-8111-111111111111",
+        "label": "Google",
+        "siteKey": "google.com",
+        "domains": [
+          "google.com",
+          "google.fr"
+        ],
+        "login": "moi@example.com",
+        "counter": 1,
+        "length": 20,
+        "charset": {
+          "lower": true,
+          "upper": true,
+          "symbols": true,
+          "numbers": true
+        },
+        "v": 1,
+        "updatedAt": "2026-01-01T00:00:00Z"
+      }
+    ]
+  },
+  "payload": "TC1.Xe_YWrxOEujEnRU8.Az2l0o1pS3G2FVSl_pVfokb8AXfEIobKFCzlt4uJns_zuj4eUf1N9Q9nJWTE3HzjkDoeHwpQMr_j4bUV6b7J2wgQpeJS_LabLwQzOa9gmlth8boPN6hgx1cKjoxsx6pCaCTj28l16LqLSdmd4RO0q1F_PVwZW0WC1RNf_zwjqN5uLHzcFi75cJWwijrvFVqM5ZwgwV0ObbB8mLvFDA6ny_jy4Ok4BL-FqvhjHbc4fKj4pGMzcuIr11d0CyUm5GaWGFvUqZ99RVq5yQnvizsB1-6GvZqKLw"
+}
