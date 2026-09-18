@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://thecode.julsql.fr/schemas/vault-1.json",
+  "title": "Carnet TheCode",
+  "description": "Metadonnees non secretes d'un carnet TheCode. Ne contient JAMAIS de mot de passe ni de clef maitresse : uniquement de quoi rejouer une derivation. Une fuite du carnet revele les sites et identifiants, pas les mots de passe.",
+  "type": "object",
+  "required": ["schema", "entries"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": 1 },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Derniere modification du carnet, en UTC."
+    },
+    "entries": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/entry" }
+    }
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "required": ["id", "siteKey", "domains", "counter", "length", "charset", "v", "updatedAt"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "description": "UUID v4. Stable pour la vie de l'entree : c'est lui qui permet de fusionner deux carnets sans doublon."
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "Nom affiche. Purement cosmetique, n'entre jamais dans la derivation."
+        },
+        "siteKey": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255,
+          "description": "Chaine REELLEMENT passee a la derivation. Figee a la creation : elle ne suit pas les evolutions de la canonicalisation, sinon un changement de PSL modifierait des mots de passe existants. Permet aussi de distinguer deux comptes sur un meme site en v1 (google.com et google.com#pro)."
+        },
+        "domains": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true,
+          "description": "Domaines qui resolvent vers cette entree. C'est ce qui permet a google.com, google.fr et youtube.com de partager un mot de passe."
+        },
+        "login": {
+          "type": "string",
+          "maxLength": 255,
+          "description": "Identifiant du compte. Affiche et pre-rempli. N'entre dans la derivation qu'a partir de la v2."
+        },
+        "counter": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Numero de revision du mot de passe. L'incrementer en produit un nouveau sans toucher a la clef maitresse. N'entre dans la derivation qu'a partir de la v2."
+        },
+        "length": { "type": "integer", "minimum": 4, "maximum": 40 },
+        "charset": {
+          "type": "object",
+          "required": ["lower", "upper", "symbols", "numbers"],
+          "additionalProperties": false,
+          "properties": {
+            "lower": { "type": "boolean" },
+            "upper": { "type": "boolean" },
+            "symbols": { "type": "boolean" },
+            "numbers": { "type": "boolean" }
+          },
+          "description": "Parametres PAR ENTREE. C'etait le probleme : ils etaient globaux, donc changer la longueur pour un site cassait tous les autres."
+        },
+        "v": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Version de l'algorithme de derivation. Permet a la v1 et a la v2 de coexister, et donc de migrer site par site."
+        },
+        "notes": { "type": "string", "maxLength": 2000 },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Arbitre la fusion : dernier ecrivain gagne, champ par champ."
+        },
+        "deleted": {
+          "type": "boolean",
+          "description": "Pierre tombale. Une entree supprimee est conservee pour que la suppression se propage a la fusion au lieu d'etre annulee par l'autre carnet."
+        }
+      }
+    }
+  }
+}
