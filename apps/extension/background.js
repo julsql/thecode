@@ -2,6 +2,17 @@ if (typeof browser === "undefined" && typeof chrome !== "undefined") {
   var browser = chrome;
 }
 
+// Le carnet vit dans un fichier a part. importScripts fonctionne dans un
+// service worker classique, donc sur Chrome, Firefox et Safari ; les modules
+// ES ne sont pas supportes partout de la meme facon.
+if (typeof importScripts === "function") {
+  importScripts("vault.js");
+} else if (typeof require === "function") {
+  // Environnement de test : pas de service worker, donc pas d'importScripts.
+  // On expose les memes symboles pour tester le cablage reellement livre.
+  Object.assign(globalThis, require("./vault.js"));
+}
+
 let psl = [];
 
 // Promise réutilisable : on attendra son résolution avant d'utiliser `psl`,
@@ -139,6 +150,8 @@ const PRIVILEGED_ACTIONS = new Set([
   "clearEncodingKey",
   "checkEncodingKey",
   "setParams",
+  "saveEntry",
+  "deleteEntry",
 ]);
 
 function isFromExtensionPage(sender) {
@@ -176,6 +189,41 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
     } else if (request.action === "generatePassword") {
       const res = await generatePasswordForUrl(request.url || "");
       sendResponse(res);
+    } else if (request.action === "getVault") {
+      sendResponse({ ok: true, vault: await loadVault(browser?.storage?.local) });
+    } else if (request.action === "saveEntry") {
+      try {
+        const vault = await loadVault(browser?.storage?.local);
+        const incoming = request.entry;
+        const existing = vault.entries.find((e) => e.id === incoming.id);
+        if (existing) {
+          // siteKey n'est jamais reecrit : il produit le mot de passe, le
+          // modifier en changerait un deja en service.
+          Object.assign(existing, incoming, { siteKey: existing.siteKey });
+          existing.updatedAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+        } else {
+          vault.entries.push(incoming);
+        }
+        await saveVault(browser?.storage?.local, vault);
+        sendResponse({ ok: true, vault });
+      } catch (e) {
+        sendResponse({ ok: false, error: e.message });
+      }
+    } else if (request.action === "deleteEntry") {
+      try {
+        const vault = await loadVault(browser?.storage?.local);
+        const entry = vault.entries.find((e) => e.id === request.id);
+        if (entry) {
+          // Pierre tombale plutot que suppression : sinon la suppression
+          // serait annulee a la prochaine fusion.
+          entry.deleted = true;
+          entry.updatedAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+          await saveVault(browser?.storage?.local, vault);
+        }
+        sendResponse({ ok: true });
+      } catch (e) {
+        sendResponse({ ok: false, error: e.message });
+      }
     } else if (request.action === "openPopup") {
       try {
         if (browser.action && typeof browser.action.openPopup === "function") {
