@@ -164,3 +164,62 @@ struct ResolvedGenerationTests {
         #expect(password.allSatisfy { $0.isLetter || $0.isNumber })
     }
 }
+
+@Suite("Renouvellement et migration")
+struct RenewAndMigrateTests {
+
+    private func password(for entry: VaultEntry) -> String {
+        PasswordUtils().generatePassword(for: SiteResolution(entry: entry), masterKey: "clef").code
+    }
+
+    @Test("Renouveler change le mot de passe d'une entrée v2")
+    func renewingChangesAV2Password() {
+        var entry = VaultEntry(siteKey: "google.com")
+        entry.v = 2
+
+        var preview = entry
+        preview.counter += 1
+
+        #expect(password(for: entry) != password(for: preview))
+    }
+
+    @Test("La prévisualisation ne touche pas à l'entrée")
+    func previewLeavesTheEntryAlone() {
+        // Modifier l'entrée puis renoncer laisserait la porte ouverte à un
+        // carnet enregistré à mi-chemin. Les structures Swift copient, encore
+        // faut-il ne pas écrire dans le carnet avant confirmation.
+        var entry = VaultEntry(siteKey: "google.com")
+        entry.v = 2
+
+        var preview = entry
+        preview.counter = 99
+        preview.v = 1
+
+        #expect(entry.counter == 1)
+        #expect(entry.v == 2)
+    }
+
+    @Test("Migrer change le mot de passe")
+    func migratingChangesThePassword() {
+        // C'est pourquoi la migration s'affiche avec les deux mots de passe :
+        // il faudra aller changer celui du site.
+        let entry = VaultEntry(siteKey: "google.com")
+
+        var migrated = entry
+        migrated.v = 2
+
+        #expect(password(for: entry) != password(for: migrated))
+    }
+
+    @Test("Le compteur n'a aucun effet en v1")
+    func theCounterDoesNothingInV1() {
+        // D'où le fait de ne proposer que la migration sur une entrée v1 :
+        // incrémenter ne changerait rien, et le laisser croire serait pire.
+        let entry = VaultEntry(siteKey: "google.com")
+
+        var bumped = entry
+        bumped.counter = 5
+
+        #expect(password(for: entry) == password(for: bumped))
+    }
+}
