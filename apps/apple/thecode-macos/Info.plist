@@ -2,9 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- Schéma d'URL permettant à l'extension AutoFill d'ouvrir l'app
-	     (ex. quand aucune clé n'est définie, pour que l'utilisateur la
-	     renseigne). -->
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -16,5 +13,7 @@
 			</array>
 		</dict>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Pour lire le QR code d'un carnet affiché sur un autre appareil. Aucune image n'est enregistrée ni envoyée.</string>
 </dict>
 </plist>

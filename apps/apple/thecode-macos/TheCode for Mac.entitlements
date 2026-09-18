@@ -10,6 +10,10 @@
 	<array>
 		<string>group.fr.julsql.thecode.params</string>
 	</array>
+	<!-- Camera : uniquement pour lire un QR code de carnet. Sans cette clef,
+	     le bac a sable refuse l'acces et la lecture echouerait sans explication. -->
+	<key>com.apple.security.device.camera</key>
+	<true/>
 	<key>com.apple.security.network.client</key>
 	<true/>
 	<key>keychain-access-groups</key>

@@ -148,3 +148,58 @@ struct TransferInteropDirectionTests {
         #expect(compressed.count > 6)
     }
 }
+
+@Suite("Découpage en plusieurs QR")
+struct TransferFragmentTests {
+
+    @Test("Un payload court reste en un seul morceau")
+    func shortPayloadStaysWhole() {
+        // Imposer un assemblage pour un carnet ordinaire n'apporterait rien.
+        let payload = "TC1.abc.def"
+        #expect(Transfer.fragments(payload) == [payload])
+    }
+
+    @Test("Un payload long est découpé et se réassemble")
+    func longPayloadSplitsAndRejoins() throws {
+        let body = String(repeating: "A", count: 7000)
+        let payload = "TC1.\(body)"
+
+        let parts = Transfer.fragments(payload)
+        #expect(parts.count == 3)
+        #expect(parts.allSatisfy { $0.hasPrefix("TC1m.") })
+
+        // Le lecteur accumule : l'ordre ne doit pas compter, et un fragment lu
+        // deux fois ne doit pas casser l'assemblage.
+        let scanner = QrScanner()
+        for text in parts.reversed() { scanner.accept(text) }
+        scanner.accept(parts[1])
+
+        #expect(scanner.payload == payload)
+    }
+
+    @Test("Un seul QR est accepté directement")
+    func singleCodeIsAcceptedAsIs() {
+        let scanner = QrScanner()
+        scanner.accept("TC1.nonce.donnees")
+        #expect(scanner.payload == "TC1.nonce.donnees")
+    }
+
+    @Test("Un QR étranger est ignoré sans bruit")
+    func foreignCodeIsIgnored() {
+        // L'utilisateur vise peut-être encore : se plaindre serait prématuré.
+        let scanner = QrScanner()
+        scanner.accept("https://example.fr")
+        #expect(scanner.payload == nil)
+        #expect(scanner.failure == nil)
+    }
+
+    @Test("Tant qu'il manque un fragment, rien n'est rendu")
+    func incompleteYieldsNothing() {
+        let scanner = QrScanner()
+        scanner.accept("TC1m.0.3.aaa")
+        scanner.accept("TC1m.2.3.ccc")
+
+        #expect(scanner.payload == nil)
+        #expect(scanner.progress != nil)
+    }
+}
