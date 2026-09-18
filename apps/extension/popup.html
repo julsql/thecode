@@ -4,7 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="popup.css" />
-    <script type="module" src="popup.js"></script>
+    <!-- Charges avant popup.js : ils exposent keyFingerprint et les
+         helpers du carnet. -->
+    <!-- defer : sans lui, ces scripts s'executeraient avant le corps du
+         document et ne trouveraient aucun element. type="module" le faisait
+         implicitement. -->
+    <script defer src="fingerprint.js"></script>
+    <script defer src="popup.js"></script>
     <title>TheCode - Clef</title>
   </head>
 
@@ -19,6 +25,11 @@
       <button id="setKey">Définir</button>
       <button id="clearKey">Effacer</button>
       <p id="status"></p>
+      <!-- L'empreinte se memorise a force d'etre vue : une valeur differente
+           signale une faute de frappe avant qu'elle ne coute un acces. -->
+      <p id="fingerprintRow" class="fingerprint" hidden>
+        Empreinte <span id="fingerprint" class="chip"></span>
+      </p>
     </div>
 
     <hr />
@@ -47,6 +58,14 @@
     <!-- Bouton de génération -->
     <button id="generatePassword">Générer mot de passe</button>
 
+    <!-- Plusieurs comptes sur un meme site : il faut choisir, pas deviner.
+         Un mauvais choix donne un mot de passe qui ne marche pas, sans
+         rien expliquer. -->
+    <p id="accountRow" hidden>
+      <label for="accountSelect">Compte :</label>
+      <select id="accountSelect"></select>
+    </p>
+
     <p id="siteContainer">Site : <span id="site"></span></p>
     <p id="passwordResultContainer">
       Mot de passe : <span id="passwordResult"></span>
@@ -67,5 +86,14 @@
     </p>
     <p id="passwordSecurityContainer">Sécurité : <span id="passwordSecurity"></span></p>
     <p id="errorContainer">Erreur : <span id="error"></span></p>
+
+    <hr />
+
+    <!-- Le carnet retient les reglages par site : plus besoin de se
+         souvenir qu'un compte avait ete cree sans symboles. -->
+    <div class="vault">
+      <button id="saveEntry" type="button">Enregistrer ce site</button>
+      <p id="vaultStatus" class="hint"></p>
+    </div>
   </body>
 </html>
