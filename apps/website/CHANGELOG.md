@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.1.0](https://github.com/julsql/thecode/compare/website-v2.0.0...website-v2.1.0) (2026-09-18)
+
+
+### Features
+
+* point the clients at thecode-api.julsql.fr ([2a35656](https://github.com/julsql/thecode/commit/2a3565629c5bbbd148f0684c8963f2fa31e64f4e))
+* **website:** surface the vault and key fingerprint ([a5ac5ce](https://github.com/julsql/thecode/commit/a5ac5ce6609c4c89b47c72c406bd1ebba19f60da))
+* **website:** sync the vault through the server ([de6b565](https://github.com/julsql/thecode/commit/de6b565ad78288f3712ad2af528677d0a834e72f))
+
+
+### Bug Fixes
+
+* pin one canonical form for merge tie-breaks ([9419141](https://github.com/julsql/thecode/commit/9419141677ee42ac00babdada94468b5b1b9c9ac))
+* **website:** keep a false "deleted" absent after a sync ([e414a29](https://github.com/julsql/thecode/commit/e414a299b06e9936f978bfc90cde0a164e23a50b))
+
 ## [2.0.0](https://github.com/julsql/thecode/compare/website-v1.0.0...website-v2.0.0) (2026-09-18)
 
 

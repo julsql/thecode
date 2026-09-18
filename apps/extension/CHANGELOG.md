@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.1.0](https://github.com/julsql/thecode/compare/extension-v3.0.0...extension-v3.1.0) (2026-09-18)
+
+
+### Features
+
+* **extension:** surface the vault and key fingerprint in the popup ([156776a](https://github.com/julsql/thecode/commit/156776a673b699e9f8f7033d14bbe7b8f31cf92e))
+* **extension:** sync the vault through the server ([a04262c](https://github.com/julsql/thecode/commit/a04262c779ff52f26eabd740e6b6db0a13d403e4))
+* point the clients at thecode-api.julsql.fr ([2a35656](https://github.com/julsql/thecode/commit/2a3565629c5bbbd148f0684c8963f2fa31e64f4e))
+
+
+### Bug Fixes
+
+* pin one canonical form for merge tie-breaks ([9419141](https://github.com/julsql/thecode/commit/9419141677ee42ac00babdada94468b5b1b9c9ac))
+* **website:** keep a false "deleted" absent after a sync ([e414a29](https://github.com/julsql/thecode/commit/e414a299b06e9936f978bfc90cde0a164e23a50b))
+
 ## [3.0.0](https://github.com/julsql/thecode/compare/extension-v2.2.2...extension-v3.0.0) (2026-09-18)
 
 ### ⚠ BREAKING CHANGES
