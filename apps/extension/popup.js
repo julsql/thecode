@@ -478,3 +478,7 @@ function showResult() {
   passwordResultContainer.style.display = "block";
   passwordSecurityContainer.style.display = "block";
 }
+
+document.getElementById("openTransfer").addEventListener("click", () => {
+  browser.tabs.create({ url: browser.runtime.getURL("transfer-page.html") });
+});

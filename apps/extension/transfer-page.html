@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="popup.css" />
+    <link rel="stylesheet" href="transfer-page.css" />
+    <!-- Page a part et non popup : un popup se ferme des qu'il perd le focus,
+         et on perdrait le QR en changeant de fenetre pour le scanner. -->
+    <script src="qr.js"></script>
+    <script src="transfer-page.js" defer></script>
+    <title>TheCode — Transférer le carnet</title>
+  </head>
+
+  <body class="transfer-page">
+    <h3>Transférer le carnet</h3>
+
+    <p class="hint">
+      Le carnet est chiffré avec une clef dérivée de votre clef maîtresse. Une photo de l'écran ou
+      le fichier seul ne révèlent rien.
+    </p>
+
+    <div>
+      <button id="showQr" type="button">Afficher le QR code</button>
+      <button id="download" type="button">Enregistrer un fichier</button>
+      <label class="import-file">
+        Importer un fichier
+        <input id="importFile" type="file" accept=".txt,.thecode,text/plain" />
+      </label>
+    </div>
+
+    <p id="status" class="hint"></p>
+
+    <div id="qr" hidden>
+      <div id="qrModules"></div>
+      <p class="hint">Scannez-le depuis l'application sur votre téléphone.</p>
+    </div>
+  </body>
+</html>

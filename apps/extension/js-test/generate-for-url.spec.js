@@ -168,3 +168,53 @@ describe("renouvellement et migration", () => {
     expect(await worker.passwordForEntry(entry)).toBe(await worker.passwordForEntry(entry, 5, 1));
   });
 });
+
+describe("transfert du carnet par le service worker", () => {
+  it("refuse d'exporter un carnet vide", async () => {
+    const { worker } = loadWorker();
+    // Un QR d'un carnet vide n'aurait rien a transporter.
+    expect(await worker.exportVaultPayload()).toMatchObject({ ok: false });
+  });
+
+  it("chiffre le carnet et le relit", async () => {
+    const { worker, storage } = loadWorker();
+    const { emptyVault, newEntry, saveVault } = require("../vault");
+
+    const vault = emptyVault();
+    vault.entries.push(newEntry("banque-secrete.fr", { domains: ["banque-secrete.fr"] }));
+    await saveVault(storage, vault);
+
+    const exported = await worker.exportVaultPayload();
+    expect(exported.ok).toBe(true);
+    expect(exported.payload.startsWith("TC1.")).toBe(true);
+    // Rien de lisible : c'est ce qui rend une photo de l'ecran inoffensive.
+    expect(exported.payload).not.toContain("banque-secrete");
+
+    const { importVault } = require("../transfer");
+    const back = await importVault(exported.payload, "clef");
+    expect(back.entries[0].siteKey).toBe("banque-secrete.fr");
+  });
+
+  it("fusionne un import au lieu de remplacer", async () => {
+    const { worker, storage } = loadWorker();
+    const { emptyVault, newEntry, saveVault, loadVault } = require("../vault");
+    const { exportVault } = require("../transfer");
+
+    // Ce qui arrive.
+    const incoming = emptyVault();
+    incoming.entries.push(newEntry("github.com", { domains: ["github.com"] }));
+    const payload = await exportVault(incoming, "clef");
+
+    // Ce qui est deja la.
+    const local = emptyVault();
+    local.entries.push(newEntry("google.com", { domains: ["google.com"] }));
+    await saveVault(storage, local);
+
+    const result = await worker.importVaultPayload(payload);
+    expect(result.ok).toBe(true);
+
+    // Un import qui ecraserait effacerait les entrees creees ici.
+    const merged = await loadVault(storage);
+    expect(merged.entries.map((e) => e.siteKey).sort()).toStrictEqual(["github.com", "google.com"]);
+  });
+});

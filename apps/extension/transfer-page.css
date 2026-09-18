@@ -1,0 +1,48 @@
+/* Page de transfert du carnet. */
+
+.transfer-page {
+  min-width: 420px;
+  padding: 16px;
+}
+
+.transfer-page button,
+.transfer-page .import-file {
+  margin-right: 8px;
+}
+
+/* Un module par case. Des div plutot qu'un canvas : rien a serialiser, et le
+   code reste net a n'importe quel zoom. */
+#qr {
+  margin-top: 16px;
+  /* Marge blanche obligatoire : sans quatre modules de marge, un lecteur ne
+     trouve pas les bords du code. */
+  background: #fff;
+  padding: 12px;
+  display: inline-block;
+  line-height: 0;
+}
+
+#qrModules div {
+  display: block;
+  height: 4px;
+}
+
+#qrModules span {
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+}
+
+#qrModules .dark {
+  background: #000;
+}
+
+#qrModules .light {
+  background: #fff;
+}
+
+#qr .hint {
+  line-height: normal;
+  color: #000;
+  margin-top: 8px;
+}

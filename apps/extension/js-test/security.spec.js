@@ -30,7 +30,10 @@ describe("cloisonnement des actions sensibles", () => {
       "checkEncodingKey",
       "clearEncodingKey",
       "deleteEntry",
+      // Chiffrent ou fusionnent le carnet entier.
+      "exportVault",
       "getEncodingKey",
+      "importVault",
       "previewChange",
       "saveEntry",
       "setEncodingKey",
