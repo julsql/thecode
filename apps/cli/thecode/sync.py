@@ -23,7 +23,7 @@ from typing import Any
 from .transfer import derive_transfer_key
 from .vault import Conflict, merge
 
-DEFAULT_ENDPOINT = "https://thecode.julsql.fr/api"
+DEFAULT_ENDPOINT = "https://thecode-api.julsql.fr"
 
 
 class SyncError(Exception):

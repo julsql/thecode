@@ -69,6 +69,19 @@ propager même si le serveur ne sait pas ce qu'elle efface.
 Tout l'encodage est en **base64url sans remplissage**. Un « + » ou un « = »
 suffirait à casser l'interopérabilité entre implémentations.
 
+## Adresse du service
+
+`https://thecode-api.julsql.fr`.
+
+Le service a d'abord vécu sous `https://thecode.julsql.fr/api`. Cet accès reste
+ouvert : un appareil déjà lié a enregistré cette adresse avec ses jetons, et la
+lui retirer le déconnecterait sans explication. Il partira quand plus personne
+ne l'utilisera.
+
+Le sous-domaine impose au service d'envoyer les en-têtes CORS pour le site, qui
+n'est plus sur la même origine. Les applications natives et les extensions n'y
+sont pas soumises.
+
 ## Protocole
 
 ### `GET /v1/vault?since=<révision>`

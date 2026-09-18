@@ -68,7 +68,7 @@ public protocol SyncTransport {
 
 public struct Sync {
 
-    public static let defaultEndpoint = "https://thecode.julsql.fr/api"
+    public static let defaultEndpoint = "https://thecode-api.julsql.fr"
 
     /// Ce que la synchronisation rend : le carnet fusionné et ses désaccords.
     public struct Result {

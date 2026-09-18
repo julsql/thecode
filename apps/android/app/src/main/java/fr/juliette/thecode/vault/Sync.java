@@ -36,7 +36,7 @@ import javax.crypto.SecretKey;
  */
 public final class Sync {
 
-    public static final String DEFAULT_ENDPOINT = "https://thecode.julsql.fr/api";
+    public static final String DEFAULT_ENDPOINT = "https://thecode-api.julsql.fr";
 
     private static final int TIMEOUT_MS = 30_000;
 
