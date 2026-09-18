@@ -42,3 +42,4 @@ apple/Transfer.swift|apps/apple/Shared
 vault-fixtures/transfer-vector.json|apps/apple/thecodeTests/Resources
 apple/VaultStore.swift|apps/apple/Shared
 apple/Sync.swift|apps/apple/Shared
+apple/SyncCredentialsStore.swift|apps/apple/Shared
