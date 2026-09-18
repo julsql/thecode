@@ -1,5 +1,27 @@
 # Changelog
 
+## [3.1.0](https://github.com/julsql/thecode/compare/apple-v3.0.0...apple-v3.1.0) (2026-09-18)
+
+
+### Features
+
+* **apple:** add a vault view ([591b47e](https://github.com/julsql/thecode/commit/591b47e1a8bc2ce4717b4fc50f6ef6a80cd8d6a5))
+* **apple:** encrypt the vault before it leaves the device ([02f8992](https://github.com/julsql/thecode/commit/02f8992a618b1a17ec7f73f4ce0355884a659628))
+* **apple:** open the vault and sync it from the iOS app ([52b817c](https://github.com/julsql/thecode/commit/52b817cf402b56dba76996a9943bbcaaf76e6097))
+* **apple:** open the vault and sync it from the macOS app ([acf5bc5](https://github.com/julsql/thecode/commit/acf5bc5fba1e27aa6a908a288e6dec613096da78))
+* **apple:** save a site's settings to the vault ([856a8a4](https://github.com/julsql/thecode/commit/856a8a4402520efe5e49ccc9e426754cf1b0e43a))
+* **apple:** sync the vault with the encrypted service ([856e07c](https://github.com/julsql/thecode/commit/856e07c9f824241cd15a14f4ee05434ce583bc08))
+* **mobile:** show the key fingerprint on Android and Apple ([257a482](https://github.com/julsql/thecode/commit/257a482daebc40312e71e868eeb9e1670e296334))
+* point the clients at thecode-api.julsql.fr ([2a35656](https://github.com/julsql/thecode/commit/2a3565629c5bbbd148f0684c8963f2fa31e64f4e))
+
+
+### Bug Fixes
+
+* **apple:** let the sandboxed macOS app reach the sync service ([aec900e](https://github.com/julsql/thecode/commit/aec900ee00bda7590ffc676d381bd1eb888c1913))
+* **apple:** move the master key out of plain text into the keychain ([cb13a11](https://github.com/julsql/thecode/commit/cb13a115cfcfe3589b86fb84b30a8caa62fb8e37))
+* pin one canonical form for merge tie-breaks ([9419141](https://github.com/julsql/thecode/commit/9419141677ee42ac00babdada94468b5b1b9c9ac))
+* **website:** keep a false "deleted" absent after a sync ([e414a29](https://github.com/julsql/thecode/commit/e414a299b06e9936f978bfc90cde0a164e23a50b))
+
 ## [3.0.0](https://github.com/julsql/thecode/compare/apple-v2.3.1...apple-v3.0.0) (2026-09-18)
 
 

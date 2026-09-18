@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.1.0](https://github.com/julsql/thecode/compare/cli-v2.0.0...cli-v2.1.0) (2026-09-18)
+
+
+### Features
+
+* **cli:** sync the vault through the server ([e546a1e](https://github.com/julsql/thecode/commit/e546a1e98368b98b35acb020c8995090a700c107))
+* point the clients at thecode-api.julsql.fr ([2a35656](https://github.com/julsql/thecode/commit/2a3565629c5bbbd148f0684c8963f2fa31e64f4e))
+
+
+### Bug Fixes
+
+* **cli:** keep a false "deleted" absent after a sync ([8153493](https://github.com/julsql/thecode/commit/81534936d2ec31b9e9b25a09214ffbb9076bda2d))
+* pin one canonical form for merge tie-breaks ([9419141](https://github.com/julsql/thecode/commit/9419141677ee42ac00babdada94468b5b1b9c9ac))
+
 ## [2.0.0](https://github.com/julsql/thecode/compare/cli-v1.0.1...cli-v2.0.0) (2026-09-18)
 
 

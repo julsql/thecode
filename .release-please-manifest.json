@@ -1,7 +1,7 @@
 {
-  "apps/extension": "3.0.0",
-  "apps/website": "2.0.0",
-  "apps/cli": "2.0.0",
-  "apps/android": "3.0.0",
-  "apps/apple": "3.0.0"
+  "apps/extension": "3.1.0",
+  "apps/website": "2.1.0",
+  "apps/cli": "2.1.0",
+  "apps/android": "3.1.0",
+  "apps/apple": "3.1.0"
 }

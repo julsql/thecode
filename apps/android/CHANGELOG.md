@@ -1,5 +1,28 @@
 # Changelog
 
+## [3.1.0](https://github.com/julsql/thecode/compare/android-v3.0.0...android-v3.1.0) (2026-09-18)
+
+
+### Features
+
+* **android:** add a vault screen ([0442738](https://github.com/julsql/thecode/commit/0442738d2050759c96b8a5d8425a921e86c83ff0))
+* **android:** encrypt the vault for transfer ([c3a0f34](https://github.com/julsql/thecode/commit/c3a0f3478e8dda14e58d354c2061b5cbb9bc41c7))
+* **android:** save a site's settings to the vault ([6c190cb](https://github.com/julsql/thecode/commit/6c190cbdf58507a1acd8f7bc59afd257488cdd1d))
+* **android:** sync the vault with the encrypted service ([cf2942c](https://github.com/julsql/thecode/commit/cf2942c6845ecdcdbba36b05509840f22f06e5c5))
+* **mobile:** show the key fingerprint on Android and Apple ([257a482](https://github.com/julsql/thecode/commit/257a482daebc40312e71e868eeb9e1670e296334))
+* point the clients at thecode-api.julsql.fr ([2a35656](https://github.com/julsql/thecode/commit/2a3565629c5bbbd148f0684c8963f2fa31e64f4e))
+
+
+### Bug Fixes
+
+* pin one canonical form for merge tie-breaks ([9419141](https://github.com/julsql/thecode/commit/9419141677ee42ac00babdada94468b5b1b9c9ac))
+* **website:** keep a false "deleted" absent after a sync ([e414a29](https://github.com/julsql/thecode/commit/e414a299b06e9936f978bfc90cde0a164e23a50b))
+
+
+### Performance Improvements
+
+* **android:** write the synced vault off the main thread ([c134afe](https://github.com/julsql/thecode/commit/c134afedb5691ce59d9cb7c648e03e86924ed088))
+
 ## [3.0.0](https://github.com/julsql/thecode/compare/android-v2.3.1...android-v3.0.0) (2026-09-18)
 
 
