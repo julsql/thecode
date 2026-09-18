@@ -42,6 +42,28 @@ struct ContentView: View {
                 .font(.title)
                 .fontWeight(.bold)
 
+            // Choisir d'abord, s'authentifier ensuite : demander Touch ID avant
+            // de savoir quel compte remplir obligerait à le redemander.
+            if model.mustChoose {
+                Text(L10n.t("Plusieurs comptes pour \(model.domain)",
+                            "Several accounts for \(model.domain)"))
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+
+                ScrollView {
+                    VStack(spacing: 8) {
+                        ForEach(model.accounts) { account in
+                            Button {
+                                model.choose(account)
+                            } label: {
+                                Text(account.label)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                        }
+                    }
+                }
+            }
+
             if model.busy {
                 ProgressView()
             }

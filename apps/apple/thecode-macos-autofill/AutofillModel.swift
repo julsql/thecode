@@ -19,6 +19,15 @@ import Combine
 final class AutofillModel: ObservableObject {
 
     @Published var domain: String = ""
+
+    /// Les comptes que le carnet connaît pour ce domaine.
+    ///
+    /// Plusieurs entrées, c'est plusieurs comptes sur le même site : on les
+    /// propose tous plutôt que d'en choisir un au hasard.
+    @Published var accounts: [SiteResolution] = []
+    @Published var chosen: SiteResolution? = nil
+
+    var mustChoose: Bool { accounts.count > 1 && chosen == nil }
     @Published var busy: Bool = false
 
     /// Le ViewController s'enregistre ici pour recevoir les ordres d'achever
@@ -28,10 +37,18 @@ final class AutofillModel: ObservableObject {
     /// On évite de relancer plusieurs fois la biométrie de manière automatique.
     private var didAutoStart = false
 
+    func choose(_ account: SiteResolution) {
+        chosen = account
+        startBiometric()
+    }
+
     /// Appelé quand le domaine est connu : on lance immédiatement Touch ID
     /// pour éviter une étape inutile.
+    ///
+    /// Sauf s'il y a un choix à faire : demander la biométrie avant de savoir
+    /// quel compte remplir obligerait à la redemander après.
     func startBiometricIfNeeded() {
-        guard !didAutoStart, !domain.isEmpty else { return }
+        guard !didAutoStart, !domain.isEmpty, !mustChoose else { return }
         didAutoStart = true
         startBiometric()
     }
@@ -66,7 +83,9 @@ final class AutofillModel: ObservableObject {
                 if success {
                     // Seul moment où la clé est consommée : à l'intérieur de
                     // completeFill, dans l'extension, après auth.
-                    self.controller?.completeFill(domain: self.domain)
+                    self.controller?.completeFill(
+                        domain: self.domain,
+                        resolution: self.chosen ?? self.accounts.first)
                 } else {
                     // Annulation / échec de l'auth : on annule la requête pour
                     // ne pas laisser le navigateur en attente.
