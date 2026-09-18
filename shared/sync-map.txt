@@ -40,3 +40,5 @@ apple/VaultView.swift|apps/apple/Shared
 vault-fixtures/transfer-vector.json|apps/android/app/src/test/resources
 apple/Transfer.swift|apps/apple/Shared
 vault-fixtures/transfer-vector.json|apps/apple/thecodeTests/Resources
+apple/VaultStore.swift|apps/apple/Shared
+apple/Sync.swift|apps/apple/Shared
