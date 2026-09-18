@@ -110,6 +110,31 @@ public struct Vault: Codable {
 
     /// Fusionne deux carnets. Commutative et idempotente : l'ordre de
     /// synchronisation des appareils ne doit pas changer le résultat.
+    /// Enregistre les réglages d'un site, en créant l'entrée si besoin.
+    ///
+    /// Même sémantique que le CLI : la recherche se fait par domaine et non par
+    /// `siteKey`, sinon « google.fr » créerait un doublon d'une entrée qui
+    /// couvre déjà « google.com » et « google.fr ».
+    ///
+    /// `siteKey` n'est jamais réécrit : il produit le mot de passe, le modifier
+    /// en changerait un déjà en service. L'appelant compare le `siteKey` rendu
+    /// au site saisi pour prévenir quand les deux diffèrent.
+    @discardableResult
+    public mutating func upsert(site: String, length: Int, charset: Charset) -> VaultEntry {
+        if let index = entries.firstIndex(where: { $0.deleted != true && $0.covers(domain: site) }) {
+            entries[index].length = length
+            entries[index].charset = charset
+            entries[index].updatedAt = Vault.nowIso()
+            return entries[index]
+        }
+
+        var created = VaultEntry(siteKey: site, domains: [site])
+        created.length = length
+        created.charset = charset
+        entries.append(created)
+        return created
+    }
+
     public static func merge(_ left: Vault, _ right: Vault) -> (Vault, [VaultConflict]) {
         var conflicts: [VaultConflict] = []
         var byId: [String: VaultEntry] = [:]
