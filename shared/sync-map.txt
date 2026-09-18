@@ -34,3 +34,5 @@ vault-fixtures/merge-cases.json|apps/apple/thecodeTests/Resources
 vault-fixtures/transfer-vector.json|apps/extension/js-test
 vault-fixtures/transfer-vector.json|apps/cli/tests
 vault-fixtures/transfer-vector.json|apps/website/test
+apple/Fingerprint.swift|apps/apple/Shared
+apple/Fingerprint.swift|apps/apple/thecode-macosTests
