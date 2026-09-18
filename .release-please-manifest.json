@@ -1,6 +1,6 @@
 {
   "apps/extension": "2.2.1",
-  "apps/website": "0.0.0",
+  "apps/website": "1.0.0",
   "apps/cli": "1.0.1",
   "apps/android": "2.3.0",
   "apps/apple": "2.3.1"
