@@ -43,3 +43,35 @@ inchangée : le champ est libre et sert parfois d'étiquette.
 L'ancienne valeur reste calculable : il suffit de saisir le site sous sa forme
 d'avant (`co.uk`, `www.google.com`…) dans le CLI ou sur le site web, qui
 laissent les libellés non canonicalisables intacts.
+
+## Lot 5 — Stockage de la clef maîtresse
+
+### Android
+
+La clef vivait en clair dans `thecode.prefs`, aux côtés des réglages ordinaires,
+alors que le README affirmait qu'elle n'était jamais persistée.
+
+Elle est désormais seule dans `thecode.secure.prefs`, chiffré par
+`EncryptedSharedPreferences` et adossé au Keystore matériel. Une clef écrite par
+une version antérieure est déplacée au premier lancement, puis **retirée de
+l'ancien fichier dans tous les cas** : l'y laisser après avoir annoncé le
+contraire serait pire que de demander une ressaisie.
+
+Si le Keystore est indisponible, la clef n'est pas persistée du tout plutôt
+qu'écrite en clair sans le dire.
+
+Aucun mot de passe n'est affecté.
+
+### Apple — à faire
+
+Le même problème existe : la clef est dans `UserDefaults`, donc en clair dans le
+conteneur de l'app group.
+
+Le correctif demande d'activer la capability **Keychain Sharing** sur les quatre
+targets (`TheCode`, `TheCode for Mac`, et les deux extensions autofill), avec le
+groupe `group.fr.julsql.thecode.params`. Cela passe par Xcode : l'ajout de
+l'entitlement à la main casse la signature, et sans l'entitlement le trousseau
+refuse d'écrire — la clef devrait être ressaisie à chaque lancement.
+
+Une fois la capability activée, le portage est direct : il reprend ce qui a été
+fait côté Android.

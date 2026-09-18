@@ -13,7 +13,6 @@ import org.json.JSONObject;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -91,7 +90,8 @@ public final class Vault {
 
         Vault merged = new Vault();
         merged.entries.addAll(byId.values());
-        merged.entries.sort((a, b) -> a.id.compareTo(b.id));
+        // Collections.sort plutot que List#sort, qui demande l'API 24.
+        java.util.Collections.sort(merged.entries, (a, b) -> a.id.compareTo(b.id));
 
         String latest = left.updatedAt.compareTo(right.updatedAt) >= 0
                 ? left.updatedAt : right.updatedAt;
@@ -189,8 +189,13 @@ public final class Vault {
     public static Vault load(Context context) {
         File file = new File(context.getFilesDir(), FILENAME);
         if (!file.isFile()) return new Vault();
-        try {
-            return fromJson(new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8));
+        try (java.io.FileInputStream in = new java.io.FileInputStream(file)) {
+            // FileInputStream plutot que java.nio.file.Files, qui demande l'API 26.
+            java.io.ByteArrayOutputStream buf = new java.io.ByteArrayOutputStream();
+            byte[] chunk = new byte[8192];
+            int n;
+            while ((n = in.read(chunk)) != -1) buf.write(chunk, 0, n);
+            return fromJson(new String(buf.toByteArray(), StandardCharsets.UTF_8));
         } catch (IOException | JSONException e) {
             Log.e(TAG, "Carnet illisible, on repart d'un carnet vide", e);
             return new Vault();
@@ -204,7 +209,9 @@ public final class Vault {
         try {
             // Écriture atomique : une interruption ne doit pas laisser un
             // carnet tronqué, qui ferait perdre toutes les entrées.
-            Files.write(tmp.toPath(), toJson().getBytes(StandardCharsets.UTF_8));
+            try (java.io.FileOutputStream out = new java.io.FileOutputStream(tmp)) {
+                out.write(toJson().getBytes(StandardCharsets.UTF_8));
+            }
             if (!tmp.renameTo(file)) {
                 Log.e(TAG, "Echec du remplacement du carnet");
             }
