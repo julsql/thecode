@@ -123,3 +123,93 @@ class TestMe:
             client.get("/v1/auth/me", headers={"Authorization": "Bearer nimporte.quoi"}).status_code
             == 401
         )
+
+
+class TestRegistrationModes:
+    """Ouvrir un service de synchronisation de mots de passe à tous dès le
+    premier jour, sans limitation de débit ni modération, est une invitation à
+    l'abus. Le mode invitation est donc le défaut."""
+
+    def test_invite_mode_requires_the_code(self, client, settings):
+        settings.registration_mode = "invite"
+        settings.invite_code = "le-bon-code"
+
+        refused = client.post(
+            "/v1/auth/register",
+            json={"email": "sans@example.com", "password": "mot-de-passe-de-test"},
+        )
+        assert refused.status_code == 403
+        assert "invitation" in refused.json()["detail"].lower()
+
+    def test_invite_mode_accepts_the_right_code(self, client, settings):
+        settings.registration_mode = "invite"
+        settings.invite_code = "le-bon-code"
+
+        accepted = client.post(
+            "/v1/auth/register",
+            json={
+                "email": "avec@example.com",
+                "password": "mot-de-passe-de-test",
+                "invite_code": "le-bon-code",
+            },
+        )
+        assert accepted.status_code == 201
+
+    def test_invite_mode_refuses_a_wrong_code(self, client, settings):
+        settings.registration_mode = "invite"
+        settings.invite_code = "le-bon-code"
+
+        assert (
+            client.post(
+                "/v1/auth/register",
+                json={
+                    "email": "faux@example.com",
+                    "password": "mot-de-passe-de-test",
+                    "invite_code": "pas-le-bon",
+                },
+            ).status_code
+            == 403
+        )
+
+    def test_closed_mode_refuses_everyone(self, client, settings):
+        settings.registration_mode = "closed"
+        settings.invite_code = "le-bon-code"
+
+        refused = client.post(
+            "/v1/auth/register",
+            json={
+                "email": "personne@example.com",
+                "password": "mot-de-passe-de-test",
+                "invite_code": "le-bon-code",
+            },
+        )
+        assert refused.status_code == 403
+        assert "ferm" in refused.json()["detail"].lower()
+
+    def test_open_mode_lets_anyone_in(self, client, settings):
+        settings.registration_mode = "open"
+        assert (
+            client.post(
+                "/v1/auth/register",
+                json={"email": "libre@example.com", "password": "mot-de-passe-de-test"},
+            ).status_code
+            == 201
+        )
+
+    def test_login_still_works_when_registration_is_closed(self, client, settings):
+        """Fermer les inscriptions ne doit pas enfermer dehors ceux qui ont
+        déjà un compte."""
+        settings.registration_mode = "open"
+        client.post(
+            "/v1/auth/register",
+            json={"email": "ancien@example.com", "password": "mot-de-passe-de-test"},
+        )
+
+        settings.registration_mode = "closed"
+        assert (
+            client.post(
+                "/v1/auth/login",
+                json={"email": "ancien@example.com", "password": "mot-de-passe-de-test"},
+            ).status_code
+            == 200
+        )

@@ -30,16 +30,44 @@ class Settings(BaseSettings):
     max_entries_per_account: int = 2000
     max_blob_bytes: int = 8 * 1024
 
+    #: open   — n'importe qui peut s'inscrire
+    #: invite — il faut connaître le code d'invitation
+    #: closed — plus aucune inscription
+    #:
+    #: `invite` par défaut : un service de synchronisation de mots de passe
+    #: ouvert à tous dès le premier jour, sans limitation de débit ni
+    #: modération, est une invitation à l'abus.
+    registration_mode: str = "invite"
+    invite_code: str = ""
+
     environment: str = "development"
 
     @property
     def is_production(self) -> bool:
         return self.environment == "production"
 
+    @property
+    def registration_open(self) -> bool:
+        return self.registration_mode == "open"
+
+    @property
+    def registration_closed(self) -> bool:
+        return self.registration_mode == "closed"
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     settings = Settings()
+    if settings.registration_mode not in ("open", "invite", "closed"):
+        raise RuntimeError(
+            f"THECODE_REGISTRATION_MODE invalide : {settings.registration_mode!r}. "
+            "Attendu open, invite ou closed."
+        )
+    if settings.registration_mode == "invite" and not settings.invite_code:
+        raise RuntimeError(
+            "THECODE_REGISTRATION_MODE vaut invite mais THECODE_INVITE_CODE est vide : "
+            "personne ne pourrait s'inscrire, et l'erreur ne se verrait qu'à l'usage."
+        )
     if settings.is_production and not settings.jwt_secret:
         raise RuntimeError(
             "THECODE_JWT_SECRET doit être défini en production : "
