@@ -5,6 +5,19 @@
  * l'extension. content.js etant injecte dans <all_urls>, le service worker
  * doit distinguer ses propres pages d'un content script.
  */
+const EXTENSION_ORIGIN = "chrome-extension://abcdefghijklmnop/";
+global.chrome = {
+  runtime: {
+    getURL: (path) => EXTENSION_ORIGIN + path,
+    onMessage: { addListener: () => {} },
+  },
+  storage: {
+    local: { get: async () => ({}), set: async () => {}, remove: async () => {} },
+    onChanged: { addListener: () => {} },
+  },
+};
+global.browser = global.chrome;
+
 const { PRIVILEGED_ACTIONS, isFromExtensionPage } = require("../background");
 
 describe("cloisonnement des actions sensibles", () => {
@@ -17,13 +30,26 @@ describe("cloisonnement des actions sensibles", () => {
       "saveEntry",
       "setEncodingKey",
       "setParams",
+      "syncLogin",
+      "syncLogout",
+      "syncNow",
+      "syncStatus",
     ]);
   });
 
   it("reconnait un message venant d'une page de l'extension", () => {
     // La popup envoie sans onglet associe.
-    expect(isFromExtensionPage({ url: "chrome-extension://abc/popup.html" })).toBe(true);
+    expect(isFromExtensionPage({ url: `${EXTENSION_ORIGIN}popup.html` })).toBe(true);
     expect(isFromExtensionPage(undefined)).toBe(true);
+  });
+
+  it("accepte une page de l'extension ouverte dans un onglet", () => {
+    // Quand browser.action.openPopup() n'existe pas — Firefox pour Android,
+    // Safari — la popup s'ouvre dans un onglet. Elle reste une page de
+    // l'extension, et doit pouvoir enregistrer la clef.
+    expect(isFromExtensionPage({ tab: { id: 3 }, url: `${EXTENSION_ORIGIN}popup.html` })).toBe(
+      true,
+    );
   });
 
   it("rejette un message venant d'un content script", () => {
@@ -39,6 +65,14 @@ describe("cloisonnement des actions sensibles", () => {
     // reecrivant le siteKey.
     expect(PRIVILEGED_ACTIONS.has("saveEntry")).toBe(true);
     expect(PRIVILEGED_ACTIONS.has("deleteEntry")).toBe(true);
+  });
+
+  it("protege la synchronisation", () => {
+    // syncNow derive avec la clef maitresse et parle au serveur : une page web
+    // ne doit pas pouvoir la declencher, ni lire l'etat de la session.
+    for (const action of ["syncLogin", "syncLogout", "syncNow", "syncStatus"]) {
+      expect(PRIVILEGED_ACTIONS.has(action)).toBe(true);
+    }
   });
 
   it("laisse passer les actions dont content.js a besoin", () => {

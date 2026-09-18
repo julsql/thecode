@@ -95,5 +95,27 @@
       <button id="saveEntry" type="button">Enregistrer ce site</button>
       <p id="vaultStatus" class="hint"></p>
     </div>
+
+    <hr />
+
+    <!-- Le carnet est chiffre avant de quitter le navigateur : le serveur
+         ne recoit que des blocs opaques. -->
+    <div id="syncSection" class="vault">
+      <div id="syncLoggedOut">
+        <input id="syncEmail" type="email" placeholder="Adresse e-mail" autocomplete="off" />
+        <input
+          id="syncPassword"
+          type="password"
+          placeholder="Mot de passe du compte"
+          autocomplete="off"
+        />
+        <button id="syncLoginBtn" type="button">Connecter la synchronisation</button>
+      </div>
+      <div id="syncLoggedIn" hidden>
+        <button id="syncNowBtn" type="button">Synchroniser</button>
+        <button id="syncLogoutBtn" type="button">Déconnecter</button>
+      </div>
+      <p id="syncStatus" class="hint"></p>
+    </div>
   </body>
 </html>

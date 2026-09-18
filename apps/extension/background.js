@@ -6,11 +6,11 @@ if (typeof browser === "undefined" && typeof chrome !== "undefined") {
 // service worker classique, donc sur Chrome, Firefox et Safari ; les modules
 // ES ne sont pas supportes partout de la meme facon.
 if (typeof importScripts === "function") {
-  importScripts("vault.js");
+  importScripts("vault.js", "transfer.js", "sync.js");
 } else if (typeof require === "function") {
   // Environnement de test : pas de service worker, donc pas d'importScripts.
   // On expose les memes symboles pour tester le cablage reellement livre.
-  Object.assign(globalThis, require("./vault.js"));
+  Object.assign(globalThis, require("./vault.js"), require("./transfer.js"), require("./sync.js"));
 }
 
 let psl = [];
@@ -152,10 +152,26 @@ const PRIVILEGED_ACTIONS = new Set([
   "setParams",
   "saveEntry",
   "deleteEntry",
+  "syncLogin",
+  "syncLogout",
+  "syncNow",
+  "syncStatus",
 ]);
 
 function isFromExtensionPage(sender) {
-  return !sender || sender.tab === undefined;
+  if (!sender) return true;
+
+  // Ce qui compte est l'origine, pas la presence d'un onglet. Quand
+  // browser.action.openPopup() n'existe pas — Firefox pour Android, Safari —
+  // la popup est ouverte dans un onglet : elle a donc un sender.tab tout en
+  // etant une page de l'extension. Se fier au seul sender.tab lui refusait
+  // jusqu'a l'enregistrement de la clef.
+  const base = browser?.runtime?.getURL ? browser.runtime.getURL("") : "";
+  if (base && typeof sender.url === "string" && sender.url.startsWith(base)) {
+    return true;
+  }
+
+  return sender.tab === undefined;
 }
 
 browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -221,6 +237,49 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
           await saveVault(browser?.storage?.local, vault);
         }
         sendResponse({ ok: true });
+      } catch (e) {
+        sendResponse({ ok: false, error: e.message });
+      }
+    } else if (request.action === "syncStatus") {
+      const session = await loadSession(browser?.storage?.local);
+      sendResponse({ ok: true, connected: Boolean(session), endpoint: session?.endpoint || "" });
+    } else if (request.action === "syncLogin") {
+      try {
+        const session = await syncLogin(
+          request.endpoint || SYNC_DEFAULT_ENDPOINT,
+          request.email,
+          request.password,
+        );
+        await saveSession(browser?.storage?.local, session);
+        sendResponse({ ok: true });
+      } catch (e) {
+        sendResponse({ ok: false, error: e.message });
+      }
+    } else if (request.action === "syncLogout") {
+      await clearSession(browser?.storage?.local);
+      sendResponse({ ok: true });
+    } else if (request.action === "syncNow") {
+      // La clef maitresse ne quitte pas le service worker : la popup demande
+      // la synchronisation, elle ne la fait pas elle-meme.
+      if (!encodingKey) {
+        sendResponse({ ok: false, error: "Aucune clef definie." });
+        return;
+      }
+      const session = await loadSession(browser?.storage?.local);
+      if (!session) {
+        sendResponse({ ok: false, error: "Aucune session. Connectez-vous d'abord." });
+        return;
+      }
+      try {
+        const vault = await loadVault(browser?.storage?.local);
+        const result = await syncVault(vault, encodingKey, session);
+        await saveVault(browser?.storage?.local, result.vault);
+        await saveSession(browser?.storage?.local, result.session);
+        sendResponse({
+          ok: true,
+          entries: result.vault.entries.filter((e) => !e.deleted).length,
+          conflicts: result.conflicts,
+        });
       } catch (e) {
         sendResponse({ ok: false, error: e.message });
       }
