@@ -52,7 +52,7 @@ public final class SiteResolution {
         this.numbers = numbers;
     }
 
-    static SiteResolution of(@NonNull VaultEntry entry) {
+    public static SiteResolution of(@NonNull VaultEntry entry) {
         String label = entry.label != null && !entry.label.isEmpty() ? entry.label : entry.siteKey;
         if (entry.login != null && !entry.login.isEmpty()) {
             label = label + " · " + entry.login;

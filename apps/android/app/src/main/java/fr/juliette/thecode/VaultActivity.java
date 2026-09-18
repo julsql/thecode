@@ -17,6 +17,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
+import fr.juliette.thecode.vault.SiteResolution;
 import fr.juliette.thecode.vault.Sync;
 import fr.juliette.thecode.vault.Vault;
 import fr.juliette.thecode.vault.VaultEntry;
@@ -44,6 +45,8 @@ public class VaultActivity extends AppCompatActivity {
     private final Handler main = new Handler(Looper.getMainLooper());
 
     private Preferences preferences;
+    /** Le carnet affiché : les actions le modifient et le réenregistrent. */
+    private Vault vault = new Vault();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -185,6 +188,7 @@ public class VaultActivity extends AppCompatActivity {
     }
 
     private void render(Vault vault) {
+        this.vault = vault;
         LinearLayout list = findViewById(R.id.vaultList);
         View empty = findViewById(R.id.vaultEmpty);
         list.removeAllViews();
@@ -216,8 +220,96 @@ public class VaultActivity extends AppCompatActivity {
                     getString(R.string.vault_entry_settings,
                             entry.length, charsetSummary(entry), entry.v));
 
+            card.setOnClickListener(v -> showActions(entry));
             list.addView(card);
         }
+    }
+
+    // --------------------------------------------- renouvellement et migration
+
+    /**
+     * Les deux actions qui changent un mot de passe déjà en service.
+     *
+     * Elles ne sont pas offertes à la fois : le compteur n'entre pas dans la
+     * dérivation v1, et une entrée v2 n'a plus rien à migrer.
+     */
+    private void showActions(VaultEntry entry) {
+        String label = label(entry);
+        boolean isV2 = entry.v >= 2;
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(getString(R.string.vault_entry_actions, label))
+                .setItems(new CharSequence[]{
+                        getString(isV2 ? R.string.vault_renew : R.string.vault_migrate)
+                }, (dialog, which) -> {
+                    if (isV2) {
+                        proposeChange(entry, true);
+                    } else {
+                        proposeChange(entry, false);
+                    }
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    /**
+     * Affiche l'ancien et le nouveau mot de passe, puis n'écrit qu'après
+     * confirmation.
+     *
+     * Écrire d'abord rendrait le compte inaccessible : l'ancien mot de passe
+     * est encore celui du site tant qu'il n'y a pas été changé.
+     */
+    private void proposeChange(VaultEntry entry, boolean renew) {
+        String masterKey = preferences.getEncodingKey();
+        if (masterKey.isEmpty()) {
+            toast(getString(R.string.vault_needs_key));
+            return;
+        }
+
+        String label = label(entry);
+        toast(getString(R.string.vault_working));
+
+        // PBKDF2 à 600 000 itérations, deux fois : jamais sur le fil qui
+        // dessine l'écran.
+        worker.execute(() -> {
+            SiteResolution current = SiteResolution.byId(vault, entry.id, entry.siteKey,
+                    entry.length, entry.lower, entry.upper, entry.symbols, entry.numbers);
+            String before = Generator.generate(current, masterKey, null);
+
+            VaultEntry preview = VaultEntry.copyOf(entry);
+            if (renew) {
+                preview.counter = entry.counter + 1;
+            } else {
+                preview.v = 2;
+            }
+            String after = Generator.generate(SiteResolution.of(preview), masterKey, null);
+
+            main.post(() -> new MaterialAlertDialogBuilder(this)
+                    .setTitle(getString(renew ? R.string.vault_renew_title
+                            : R.string.vault_migrate_title, label))
+                    .setMessage(getString(R.string.vault_password_pair, before, after))
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .setPositiveButton(android.R.string.ok,
+                            (dialog, which) -> applyChange(entry, renew, label))
+                    .show());
+        });
+    }
+
+    private void applyChange(VaultEntry entry, boolean renew, String label) {
+        if (renew) {
+            entry.counter += 1;
+        } else {
+            entry.v = 2;
+        }
+        // Sans réhorodatage, la fusion ferait gagner l'autre appareil et le
+        // changement serait perdu à la synchronisation suivante.
+        entry.updatedAt = Vault.nowIso();
+        vault.save(this);
+
+        render(vault);
+        toast(renew
+                ? getString(R.string.vault_renew_done, label, entry.counter)
+                : getString(R.string.vault_migrate_done, label));
     }
 
     private static String label(VaultEntry entry) {

@@ -54,6 +54,31 @@ public final class VaultEntry {
         return e;
     }
 
+    /**
+     * Copie une entrée, pour prévisualiser un changement sans l'appliquer.
+     *
+     * Modifier l'entrée du carnet puis revenir en arrière laisserait la porte
+     * ouverte à un carnet enregistré à mi-chemin.
+     */
+    public static VaultEntry copyOf(@NonNull VaultEntry other) {
+        VaultEntry e = new VaultEntry();
+        e.id = other.id;
+        e.label = other.label;
+        e.siteKey = other.siteKey;
+        e.domains = new ArrayList<>(other.domains);
+        e.login = other.login;
+        e.counter = other.counter;
+        e.length = other.length;
+        e.lower = other.lower;
+        e.upper = other.upper;
+        e.symbols = other.symbols;
+        e.numbers = other.numbers;
+        e.v = other.v;
+        e.updatedAt = other.updatedAt;
+        e.deleted = other.deleted;
+        return e;
+    }
+
     static VaultEntry fromJson(JSONObject o) throws JSONException {
         VaultEntry e = new VaultEntry();
         e.id = o.getString("id");
