@@ -89,4 +89,8 @@
     <string name="sync_no_secure_storage">Le stockage chiffré est indisponible sur cet appareil : les identifiants ne peuvent pas être conservés.</string>
     <string name="sync_unlinked">Compte délié. Cet appareil ne se synchronise plus.</string>
     <string name="sync_nothing_to_unlink">Aucun compte n\'est lié.</string>
+    <string name="vault_save">Enregistrer les réglages au carnet</string>
+    <string name="vault_saved">« %1$s » enregistré au carnet.</string>
+    <string name="vault_saved_other_key">« %1$s » enregistré. Attention : cette entrée génère son mot de passe depuis « %2$s », pas depuis ce que vous avez saisi.</string>
+    <string name="vault_save_needs_site">Saisissez d\'abord un site.</string>
 </resources>

@@ -89,4 +89,8 @@
     <string name="sync_no_secure_storage">Encrypted storage is unavailable on this device, so sign-in details cannot be kept.</string>
     <string name="sync_unlinked">Account unlinked. This device no longer syncs.</string>
     <string name="sync_nothing_to_unlink">No account is linked.</string>
+    <string name="vault_save">Save settings to vault</string>
+    <string name="vault_saved">"%1$s" saved to the vault.</string>
+    <string name="vault_saved_other_key">"%1$s" saved. Careful: this entry generates its password from "%2$s", not from what you typed.</string>
+    <string name="vault_save_needs_site">Type a site first.</string>
 </resources>

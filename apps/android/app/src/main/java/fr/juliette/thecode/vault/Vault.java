@@ -75,6 +75,40 @@ public final class Vault {
     }
 
     /**
+     * Enregistre les réglages d'un site, en créant l'entrée si besoin.
+     *
+     * Même sémantique que le CLI : la recherche se fait par domaine, pas par
+     * siteKey, sinon « google.fr » créerait un doublon d'une entrée qui couvre
+     * déjà « google.com » et « google.fr ».
+     *
+     * Le siteKey n'est jamais réécrit : il produit le mot de passe, le modifier
+     * en changerait un déjà en service. L'appelant compare le siteKey rendu au
+     * site saisi pour prévenir quand les deux diffèrent.
+     */
+    public VaultEntry upsert(String site, int length,
+                             boolean lower, boolean upper, boolean symbols, boolean numbers) {
+        VaultEntry entry = findByDomain(site);
+
+        if (entry == null) {
+            entry = VaultEntry.create(site, null);
+            entries.add(entry);
+        } else if (!entry.coversDomain(site)) {
+            // Atteint seulement si findByDomain change de critère ; garde le
+            // domaine saisi rattaché à l'entrée dans tous les cas.
+            entry.domains.add(site);
+            java.util.Collections.sort(entry.domains);
+        }
+
+        entry.length = length;
+        entry.lower = lower;
+        entry.upper = upper;
+        entry.symbols = symbols;
+        entry.numbers = numbers;
+        entry.updatedAt = nowIso();
+        return entry;
+    }
+
+    /**
      * Fusionne deux carnets. Commutative et idempotente : l'ordre de
      * synchronisation des appareils ne doit pas changer le résultat.
      */
