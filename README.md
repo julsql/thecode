@@ -1,7 +1,12 @@
 # TheCode
 
 Deterministic password manager: one secret key plus a site name gives you the
-same password every time, on every device. Nothing is stored, nothing is synced.
+same password every time, on every device. No password is ever stored — each one
+is recomputed on demand.
+
+A local vault remembers which settings apply to which site, and can be carried
+between devices by QR code or, optionally, through an encrypted sync service
+that never sees anything but opaque blocks.
 
 Six implementations share one algorithm — which is exactly why this is a
 monorepo.
@@ -16,6 +21,7 @@ monorepo.
 | `apps/android/`   | Android app (Java) with Autofill service                              |
 | `apps/apple/`     | iOS and macOS apps (Swift) with AutoFill extensions                   |
 | `apps/cli/`       | Python CLI                                                            |
+| `apps/api/`       | FastAPI sync service (zero-knowledge) — optional, self-hostable       |
 | `scripts/`        | Shared-file sync and conformance helpers                              |
 
 ## Why a monorepo
