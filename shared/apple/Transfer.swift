@@ -14,16 +14,21 @@
 //
 
 import CommonCrypto
+import Compression
 import CryptoKit
 import Foundation
 
 public enum Transfer {
+
+    public static let prefix = "TC1"
 
     private static let salt = "thecode-transfer/v1"
     private static let iterations: UInt32 = 600_000
     private static let keyBytes = 32
 
     public enum TransferError: Error, Equatable {
+        /// Version inconnue, ou payload mal forme.
+        case unreadable(String)
         /// La clef maîtresse n'est pas celle qui a servi à chiffrer, ou les
         /// données ont été altérées. AES-GCM ne distingue pas les deux, et
         /// c'est volontaire.
@@ -82,4 +87,126 @@ public enum Transfer {
             throw TransferError.cannotOpen
         }
     }
+
+    // MARK: - Carnet entier
+
+    /// Chiffre un carnet en un payload transportable.
+    public static func exportVault(_ vault: Vault, masterKey: String) throws -> String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let compressed = try deflate(encoder.encode(vault))
+
+        let sealed = try seal(compressed, with: deriveKey(masterKey))
+        return "\(prefix).\(Base64URL.encode(sealed.nonce)).\(Base64URL.encode(sealed.blob))"
+    }
+
+    /// Déchiffre un payload. Lève `TransferError` s'il est illisible.
+    public static func importVault(_ payload: String, masterKey: String) throws -> Vault {
+        let parts = payload.trimmingCharacters(in: .whitespacesAndNewlines).split(
+            separator: ".", omittingEmptySubsequences: false
+        ).map(String.init)
+
+        guard parts.count == 3 else {
+            throw TransferError.unreadable("Format inattendu : TC1.<nonce>.<donnees> attendu.")
+        }
+        guard parts[0] == prefix else {
+            // Interpréter un format inconnu au hasard serait pire que refuser.
+            throw TransferError.unreadable(
+                "Version « \(parts[0]) » inconnue, ce client lit \(prefix).")
+        }
+        guard let nonce = Base64URL.decode(parts[1]), let blob = Base64URL.decode(parts[2]) else {
+            throw TransferError.unreadable("Encodage invalide.")
+        }
+
+        let compressed = try open(nonce: nonce, blob: blob, with: deriveKey(masterKey))
+        return try JSONDecoder().decode(Vault.self, from: try inflate(compressed))
+    }
+}
+
+// MARK: - Compression zlib
+
+/// Compresse, pour qu'un carnet de cinquante entrées tienne dans un QR.
+///
+/// Le format attendu est **zlib** (RFC 1950) : c'est ce que produisent
+/// `zlib.compress` côté Python, `Deflater` côté Java et `CompressionStream
+/// ("deflate")` côté navigateur — où « deflate » désigne justement le format
+/// zlib, « deflate-raw » étant le format brut.
+///
+/// `COMPRESSION_ZLIB` d'Apple, malgré son nom, produit du deflate **brut**
+/// (RFC 1951). On ajoute donc l'en-tête et l'Adler-32 nous-mêmes. Sans cela
+/// l'aller-retour local fonctionne — et rien d'autre ne relit le payload.
+private func deflate(_ data: Data) throws -> Data {
+    var out = Data([0x78, 0x9C])
+    out.append(try perform(data, operation: COMPRESSION_STREAM_ENCODE))
+
+    var checksum = adler32(data).bigEndian
+    out.append(Data(bytes: &checksum, count: 4))
+    return out
+}
+
+private func inflate(_ data: Data) throws -> Data {
+    // 2 octets d'en-tête, 4 d'Adler-32 : le reste est du deflate brut.
+    guard data.count > 6, data[data.startIndex] & 0x0F == 8 else {
+        throw Transfer.TransferError.unreadable("Contenu compressé illisible.")
+    }
+    let body = data.dropFirst(2).dropLast(4)
+    let plain = try perform(Data(body), operation: COMPRESSION_STREAM_DECODE)
+
+    let expected = data.suffix(4).reduce(UInt32(0)) { ($0 << 8) | UInt32($1) }
+    guard adler32(plain) == expected else {
+        throw Transfer.TransferError.unreadable("Somme de contrôle invalide.")
+    }
+    return plain
+}
+
+/// Adler-32, tel que le définit RFC 1950. Trivial, et il évite d'accepter un
+/// contenu décompressé de travers.
+private func adler32(_ data: Data) -> UInt32 {
+    var a: UInt32 = 1
+    var b: UInt32 = 0
+    for byte in data {
+        a = (a + UInt32(byte)) % 65521
+        b = (b + a) % 65521
+    }
+    return (b << 16) | a
+}
+
+private func perform(_ data: Data, operation: compression_stream_operation) throws -> Data {
+    guard !data.isEmpty else { return Data() }
+
+    var stream = compression_stream(
+        dst_ptr: UnsafeMutablePointer<UInt8>(bitPattern: 1)!, dst_size: 0,
+        src_ptr: UnsafePointer<UInt8>(bitPattern: 1)!, src_size: 0, state: nil)
+    guard compression_stream_init(&stream, operation, COMPRESSION_ZLIB) == COMPRESSION_STATUS_OK
+    else {
+        throw Transfer.TransferError.unreadable("Compression indisponible.")
+    }
+    defer { compression_stream_destroy(&stream) }
+
+    let bufferSize = 32_768
+    let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
+    defer { buffer.deallocate() }
+
+    var output = Data()
+    let flags = Int32(COMPRESSION_STREAM_FINALIZE.rawValue)
+
+    try data.withUnsafeBytes { (raw: UnsafeRawBufferPointer) in
+        stream.src_ptr = raw.bindMemory(to: UInt8.self).baseAddress!
+        stream.src_size = data.count
+
+        repeat {
+            stream.dst_ptr = buffer
+            stream.dst_size = bufferSize
+
+            switch compression_stream_process(&stream, flags) {
+            case COMPRESSION_STATUS_OK, COMPRESSION_STATUS_END:
+                output.append(buffer, count: bufferSize - stream.dst_size)
+                if stream.dst_size != 0 { return }
+            default:
+                throw Transfer.TransferError.unreadable("Contenu illisible après déchiffrement.")
+            }
+        } while true
+    }
+
+    return output
 }
