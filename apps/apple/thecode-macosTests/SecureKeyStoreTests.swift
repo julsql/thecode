@@ -15,7 +15,26 @@ import Foundation
 import Security
 import Testing
 
-@Suite("Clef maîtresse au trousseau", .serialized)
+/// Vrai si le processus peut réellement écrire dans le trousseau.
+///
+/// Une app non signée — ce qui est le cas en CI, faute de certificats — reçoit
+/// `errSecMissingEntitlement`. Mieux vaut le dire que faire échouer une suite
+/// qui ne teste alors plus rien.
+private let keychainIsUsable: Bool = {
+    let probe: [String: Any] = [
+        kSecClass as String: kSecClassGenericPassword,
+        kSecAttrService as String: "fr.julsql.thecode.probe",
+        kSecAttrAccount as String: "probe",
+        kSecValueData as String: Data("x".utf8),
+        kSecUseDataProtectionKeychain as String: true,
+    ]
+    SecItemDelete(probe as CFDictionary)
+    let status = SecItemAdd(probe as CFDictionary, nil)
+    SecItemDelete(probe as CFDictionary)
+    return status == errSecSuccess
+}()
+
+@Suite("Clef maîtresse au trousseau", .serialized, .enabled(if: keychainIsUsable))
 struct SecureKeyStoreTests {
 
     private func reset() {

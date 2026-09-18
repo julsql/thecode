@@ -29,6 +29,8 @@ jobs:
           read -r DT RT < <(./scripts/pick-ios-simulator.py)
           echo "id=$(xcrun simctl create ci-conformance "$DT" "$RT")" >> "$GITHUB_OUTPUT"
 
+      # Les suites croisees : chacune verifie une implementation contre un
+      # fichier de shared/, seule garantie que les cinq restent d'accord.
       - name: Conformance tests
         working-directory: apps/apple
         run: |
@@ -36,8 +38,17 @@ jobs:
             -scheme thecode-iosTests \
             -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.id }}" \
             -only-testing:thecode-iosTests/ConformanceTests \
+            -only-testing:thecode-iosTests/CanonicalFormTests \
+            -only-testing:thecode-iosTests/SyncInteropTests \
+            -only-testing:thecode-iosTests/TransferTests \
+            -only-testing:thecode-iosTests/VaultMergeTests \
             | xcpretty && exit ${PIPESTATUS[0]}
 
+      # Signature desactivee : le runner n'a pas les certificats de l'equipe,
+      # et depuis l'ajout de keychain-access-groups le lien reclame un profil
+      # de provisionnement. Consequence assumee : SecureKeyStoreTests ne tourne
+      # pas ici, il lui faut une app signee. Cette suite se desactive d'elle
+      # meme quand le trousseau est inaccessible.
       - name: Canonicalisation (target macOS, pas de simulateur)
         working-directory: apps/apple
         run: |
@@ -45,6 +56,9 @@ jobs:
             -scheme "TheCode for Mac" \
             -destination "platform=macOS" \
             -only-testing:thecode-macosTests/CanonicalSiteTests \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
             -quiet
 
       - name: Clean up simulator
