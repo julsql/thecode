@@ -50,7 +50,7 @@ def _canonical(entry: dict[str, Any]) -> str:
     )
 
 
-def _now() -> str:
+def now_iso() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
@@ -89,7 +89,7 @@ def new_entry(
         "length": length,
         "charset": dict(charset or DEFAULT_CHARSET),
         "v": version,
-        "updatedAt": _now(),
+        "updatedAt": now_iso(),
     }
 
 
@@ -105,7 +105,7 @@ def default_vault_path() -> Path:
 
 
 def empty_vault() -> dict[str, Any]:
-    return {"schema": SCHEMA_VERSION, "updatedAt": _now(), "entries": []}
+    return {"schema": SCHEMA_VERSION, "updatedAt": now_iso(), "entries": []}
 
 
 def find_by_domain(vault: dict[str, Any], domain: str) -> dict[str, Any] | None:
@@ -208,7 +208,7 @@ def merge(
     updated = max(
         [left.get("updatedAt", ""), right.get("updatedAt", "")]
         + [e["updatedAt"] for e in entries],
-        default=_now(),
+        default=now_iso(),
     )
     return {"schema": SCHEMA_VERSION, "updatedAt": updated, "entries": entries}, conflicts
 
@@ -226,7 +226,7 @@ def load(path: Path) -> dict[str, Any]:
 
 def save(vault: dict[str, Any], path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    vault["updatedAt"] = _now()
+    vault["updatedAt"] = now_iso()
     # Écriture atomique : une interruption ne doit pas laisser un carnet
     # tronqué, qui ferait perdre toutes les entrées.
     tmp = path.with_suffix(path.suffix + ".tmp")
