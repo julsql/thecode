@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import secrets
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -53,6 +54,20 @@ def _issue_tokens(db: DbSession, account: Account, device_label: str = "") -> To
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 def register(payload: RegisterRequest, db: DbSession = Depends(get_db)) -> TokenResponse:
+    settings = get_settings()
+
+    if settings.registration_closed:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "Les inscriptions sont fermées pour le moment."
+        )
+
+    # compare_digest : la comparaison ne doit pas fuir le code par le temps
+    # qu'elle prend.
+    if not settings.registration_open and not secrets.compare_digest(
+        payload.invite_code, settings.invite_code
+    ):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Code d'invitation invalide.")
+
     account = Account(email=payload.email.lower(), password_hash=hash_password(payload.password))
     db.add(account)
     try:

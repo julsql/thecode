@@ -34,6 +34,8 @@ class RegisterRequest(BaseModel):
     # 12 caractères minimum : ce mot de passe protège la synchronisation, pas
     # les mots de passe eux-mêmes, mais il reste la porte d'entrée du compte.
     password: Annotated[str, Field(min_length=12, max_length=256)]
+    #: Requis quand le service tourne en mode invitation.
+    invite_code: Annotated[str, Field(max_length=128)] = ""
 
 
 class LoginRequest(BaseModel):
