@@ -9,6 +9,8 @@ apps/cli/
 shared/public_suffix_list.dat
 **/test-vectors.json
 **/canonical-site-cases.json
+**/merge-cases.json
+shared/vault-fixtures/
 **/package-lock.json
 
 # release-please reecrit ces manifestes a chaque release, avec son propre

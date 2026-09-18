@@ -12,8 +12,11 @@ while IFS='|' read -r src dest; do
   [[ -z "${src// }" || "$src" == \#* ]] && continue
   [[ -f "shared/$src" ]] || { echo "ERREUR: shared/$src introuvable" >&2; exit 1; }
   mkdir -p "$dest"
-  cp "shared/$src" "$dest/$src"
-  echo "  shared/$src -> $dest/$src"
+  # La source peut vivre dans un sous-dossier de shared/ ; la destination ne
+  # reprend que le nom de fichier.
+  base="$(basename "$src")"
+  cp "shared/$src" "$dest/$base"
+  echo "  shared/$src -> $dest/$base"
   n=$((n + 1))
 done < shared/sync-map.txt
 

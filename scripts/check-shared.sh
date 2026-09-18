@@ -8,7 +8,7 @@ cd "$(dirname "$0")/.."
 fail=0
 while IFS='|' read -r src dest; do
   [[ -z "${src// }" || "$src" == \#* ]] && continue
-  target="$dest/$src"
+  target="$dest/$(basename "$src")"
   if [[ ! -f "$target" ]]; then
     echo "MANQUANT  $target  (lancer: make sync-shared)" >&2
     fail=1
