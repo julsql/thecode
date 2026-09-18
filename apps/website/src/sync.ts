@@ -13,7 +13,7 @@
 import { deriveTransferKey } from "@/transfer";
 import { mergeVaults, type Conflict, type Vault, type VaultEntry } from "@/vault";
 
-export const DEFAULT_ENDPOINT = "https://thecode.julsql.fr/api";
+export const DEFAULT_ENDPOINT = "https://thecode-api.julsql.fr";
 const SESSION_KEY = "thecode.session";
 
 export class SyncError extends Error {}

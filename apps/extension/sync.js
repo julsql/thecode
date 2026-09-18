@@ -10,7 +10,7 @@
  * du service exposerait les mots de passe eux-memes.
  */
 
-const SYNC_DEFAULT_ENDPOINT = "https://thecode.julsql.fr/api";
+const SYNC_DEFAULT_ENDPOINT = "https://thecode-api.julsql.fr";
 const SYNC_SESSION_KEY = "syncSession";
 
 class SyncError extends Error {}
