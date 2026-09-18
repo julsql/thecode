@@ -66,3 +66,21 @@ couplés.
   `pre-commit` les bloquent.
 - Une vulnérabilité de dépendance, même en développement, se corrige : la chaîne
   de build d'un gestionnaire de mots de passe est une cible.
+
+## Releases
+
+`release-please` ouvre **une seule PR de release** pour l'ensemble du dépôt, et
+non une par application.
+
+C'est délibéré : des PR séparées touchent toutes `.release-please-manifest.json`,
+donc merger l'une mettait les autres en conflit. Et release-please ne rebase pas
+ses propres PR quand `main` avance — il ne les régénère que si le contenu de la
+release change. Le conflit restait donc à demeure.
+
+Les **tags restent par composant** (`extension-v3.0.0`, `apple-v3.0.0`…) et les
+workflows de publication se déclenchent par tag. Poser un tag ne publie pas :
+chaque boutique garde son propre calendrier, ce que les délais de validation
+d'Apple rendent indispensable.
+
+**Ne jamais rebaser une PR de release à la main.** Si elle diverge, fermez-la et
+relancez le workflow `release-please` : il la reconstruira proprement.

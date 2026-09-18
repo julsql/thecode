@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
-  "separate-pull-requests": true,
+  "separate-pull-requests": false,
   "plugins": [],
   "packages": {
     "apps/extension": {
@@ -49,5 +49,6 @@
     }
   },
   "bootstrap-sha": "affe3ccb43e2b76f09dc17d124402ba922405aa8",
-  "_comment_bootstrap": "Les historiques importes des cinq depots contiennent des messages qui ne sont pas des conventional commits ('Initial commit', 'fix: params'...). release-please echouait en tentant de les parser. bootstrap-sha lui dit de ne pas remonter avant la creation du monorepo."
+  "_comment_bootstrap": "Les historiques importes des cinq depots contiennent des messages qui ne sont pas des conventional commits ('Initial commit', 'fix: params'...). release-please echouait en tentant de les parser. bootstrap-sha lui dit de ne pas remonter avant la creation du monorepo.",
+  "_comment_separate_pull_requests": "Une seule PR de release, et non une par application. Des PR separees touchent toutes .release-please-manifest.json, donc chaque merge mettait les autres en conflit — et release-please ne rebase pas ses PR quand main avance, il ne les met a jour que si le contenu de la release change. Regrouper supprime le probleme a la racine. Les tags restent par composant (extension-v3.0.0, apple-v3.0.0...), et les workflows de publication se declenchent par tag : poser un tag ne publie pas, ce qui laisse le choix du moment pour chaque boutique."
 }
