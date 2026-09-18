@@ -57,3 +57,7 @@ apple/SecureKeyStore.swift|apps/apple/Shared
 apple/SecureKeyStore.swift|apps/apple/thecode-macosTests
 apple/CoreV2.swift|apps/apple/Shared
 apple/SiteResolution.swift|apps/apple/Shared
+js/qr.js|apps/extension
+js/qr.js|apps/website/src
+vault-fixtures/qr-vectors.json|apps/extension/js-test
+vault-fixtures/qr-vectors.json|apps/website/test
