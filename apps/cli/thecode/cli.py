@@ -8,7 +8,9 @@ from pathlib import Path
 
 from .canonical import canonical_site
 from .core import generate_password
+from .fingerprint import fingerprint, fingerprint_color
 from .transfer import TransferError, export_vault, import_vault
+from .variants import variants
 from .vault import (
     DEFAULT_LENGTH,
     default_vault_path,
@@ -66,6 +68,16 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         default=None,
         help=f"Emplacement du carnet (défaut: {default_vault_path()})",
+    )
+    parser.add_argument(
+        "--fingerprint",
+        action="store_true",
+        help="Affiche l'empreinte de la clef, pour vérifier qu'elle est bien saisie",
+    )
+    parser.add_argument(
+        "--variants",
+        action="store_true",
+        help="Liste les mots de passe possibles quand on a oublié les réglages d'un site",
     )
     parser.add_argument(
         "--export",
@@ -184,6 +196,28 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.list:
         return _print_vault(vault_data)
+
+    if args.fingerprint:
+        fp = fingerprint(args.password)
+        name, _ = fingerprint_color(args.password)
+        # L'empreinte se mémorise à force d'être vue : une valeur différente
+        # signale une faute de frappe avant qu'elle ne coûte un accès.
+        print(f"{fp}  ({name})")
+        return 0
+
+    if args.variants:
+        domain = canonical_site(args.site)
+        # L'ancienne forme est incluse : un mot de passe créé avant
+        # l'unification de la canonicalisation reste ainsi retrouvable.
+        legacy = [args.site] if args.site != domain else []
+        found = variants(domain, args.password, legacy_sites=legacy)
+        print(f"{len(found)} possibilités pour {domain} :\n")
+        for v in found:
+            marker = "  " if v.site == domain else "* "
+            print(f"{marker}{v.password}")
+            print(f"    {v.describe()}" + ("" if v.site == domain else f"  [ancien site : {v.site}]"))
+        print("\nUne fois la bonne reconnue, enregistrez-la avec --save.")
+        return 0
 
     if args.export:
         # Le carnet ne contient aucun mot de passe, mais il révèle les sites et
