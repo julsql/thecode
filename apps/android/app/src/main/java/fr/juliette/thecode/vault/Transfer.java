@@ -2,9 +2,15 @@ package fr.juliette.thecode.vault;
 
 import androidx.annotation.NonNull;
 
+import org.json.JSONException;
+
+import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
+import java.util.zip.Deflater;
+import java.util.zip.Inflater;
+import java.util.zip.DataFormatException;
 
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
@@ -26,6 +32,8 @@ import javax.crypto.spec.SecretKeySpec;
  * Spécification : shared/spec/vault-transfer.md
  */
 public final class Transfer {
+
+    public static final String PREFIX = "TC1";
 
     private static final byte[] SALT = "thecode-transfer/v1".getBytes(StandardCharsets.UTF_8);
     private static final int ITERATIONS = 600_000;
@@ -85,5 +93,93 @@ public final class Transfer {
     public static String open(@NonNull SecretKey key, @NonNull byte[] nonce, @NonNull byte[] blob)
             throws GeneralSecurityException {
         return new String(openBytes(key, nonce, blob), StandardCharsets.UTF_8);
+    }
+
+    // ------------------------------------------------- carnet entier
+
+    /** Payload illisible : version inconnue, format casse, ou mauvaise clef. */
+    public static class TransferException extends Exception {
+        public TransferException(String message) {
+            super(message);
+        }
+    }
+
+    /** Deflate brut, pour qu'un carnet de cinquante entrees tienne dans un QR. */
+    static byte[] deflate(byte[] raw) {
+        Deflater deflater = new Deflater(Deflater.BEST_COMPRESSION);
+        deflater.setInput(raw);
+        deflater.finish();
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        byte[] chunk = new byte[8192];
+        while (!deflater.finished()) {
+            out.write(chunk, 0, deflater.deflate(chunk));
+        }
+        deflater.end();
+        return out.toByteArray();
+    }
+
+    static byte[] inflate(byte[] raw) throws TransferException {
+        Inflater inflater = new Inflater();
+        inflater.setInput(raw);
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        byte[] chunk = new byte[8192];
+        try {
+            while (!inflater.finished()) {
+                int n = inflater.inflate(chunk);
+                if (n == 0 && (inflater.needsInput() || inflater.needsDictionary())) break;
+                out.write(chunk, 0, n);
+            }
+        } catch (DataFormatException e) {
+            throw new TransferException("Contenu illisible apres dechiffrement.");
+        } finally {
+            inflater.end();
+        }
+        return out.toByteArray();
+    }
+
+    /** Chiffre un carnet en un payload transportable. */
+    public static String exportVault(@NonNull Vault vault, @NonNull String masterKey)
+            throws GeneralSecurityException, JSONException {
+        byte[] compressed = deflate(vault.toCompactJson().getBytes(StandardCharsets.UTF_8));
+
+        byte[] nonce = new byte[NONCE_BYTES];
+        RANDOM.nextBytes(nonce);
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+        cipher.init(Cipher.ENCRYPT_MODE, deriveKey(masterKey),
+                new GCMParameterSpec(TAG_BITS, nonce));
+
+        return PREFIX + "." + Base64Url.encode(nonce) + "."
+                + Base64Url.encode(cipher.doFinal(compressed));
+    }
+
+    /** Dechiffre un payload. Leve TransferException s'il est illisible. */
+    public static Vault importVault(@NonNull String payload, @NonNull String masterKey)
+            throws TransferException {
+        String[] parts = payload.trim().split("\\.");
+        if (parts.length != 3) {
+            throw new TransferException("Format inattendu : TC1.<nonce>.<donnees> attendu.");
+        }
+        if (!PREFIX.equals(parts[0])) {
+            // Interpreter un format inconnu au hasard serait pire que refuser.
+            throw new TransferException(
+                    "Version « " + parts[0] + " » inconnue, ce client lit " + PREFIX + ".");
+        }
+
+        byte[] plain;
+        try {
+            plain = openBytes(deriveKey(masterKey),
+                    Base64Url.decode(parts[1]), Base64Url.decode(parts[2]));
+        } catch (GeneralSecurityException | IllegalArgumentException e) {
+            throw new TransferException(
+                    "Dechiffrement impossible : clef maitresse differente, ou donnees alterees.");
+        }
+
+        try {
+            return Vault.fromJson(new String(inflate(plain), StandardCharsets.UTF_8));
+        } catch (JSONException e) {
+            throw new TransferException("Carnet illisible : " + e.getMessage());
+        }
     }
 }
