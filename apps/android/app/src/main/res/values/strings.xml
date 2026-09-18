@@ -105,4 +105,19 @@
     <string name="vault_already_v2">"%1$s" is already in v2.</string>
     <string name="vault_needs_key">Set your master key first: it is what computes the passwords.</string>
     <string name="vault_working">Computing…</string>
+    <!-- Transfert du carnet par QR code. -->
+    <string name="transfer_title">Transfer the vault</string>
+    <string name="transfer_explainer">The vault is encrypted with a key derived from your master key. A photo of the screen reveals nothing. Show the code on one device and read it from the other — no server, no account.</string>
+    <string name="transfer_show">Show the QR code</string>
+    <string name="transfer_scan">Read a QR code</string>
+    <string name="transfer_needs_key">Set your master key first: it is what encrypts the vault.</string>
+    <string name="transfer_empty">The vault is empty, there is nothing to transfer.</string>
+    <string name="transfer_too_big">This vault is too large for a QR code.</string>
+    <string name="transfer_working">Preparing…</string>
+    <string name="transfer_cycling">Code %1$d of %2$d — let it cycle</string>
+    <string name="transfer_progress">Fragment %1$d of %2$d…</string>
+    <string name="transfer_merged">Vault merged: %1$d entries.</string>
+    <string name="transfer_merged_conflicts">Vault merged: %1$d entries, %2$d to check.</string>
+    <string name="transfer_unreadable">Cannot read: does this code come from another master key?</string>
+    <string name="transfer_no_camera">Camera unavailable. Without it, a code can only be shown, not read.</string>
 </resources>

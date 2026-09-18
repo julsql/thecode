@@ -7,6 +7,12 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- Uniquement pour lire le QR code d'un carnet affiche sur un autre
+         appareil. Aucune image n'est enregistree ni envoyee. L'app reste
+         utilisable sans : on peut alors afficher un code, pas en lire un. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+
     <application
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -27,6 +33,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".transfer.TransferActivity"
+            android:exported="false"
+            android:label="@string/transfer_title" />
 
         <activity
             android:name=".MainActivity"

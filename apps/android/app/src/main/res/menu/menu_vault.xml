@@ -10,6 +10,11 @@
         app:showAsAction="ifRoom" />
 
     <item
+        android:id="@+id/action_transfer"
+        android:title="@string/transfer_title"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/action_sync_unlink"
         android:title="@string/sync_unlink"
         app:showAsAction="never" />

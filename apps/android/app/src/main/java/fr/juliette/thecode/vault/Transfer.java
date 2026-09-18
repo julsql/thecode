@@ -1,6 +1,7 @@
 package fr.juliette.thecode.vault;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import org.json.JSONException;
 
@@ -8,6 +9,9 @@ import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.zip.Deflater;
 import java.util.zip.Inflater;
 import java.util.zip.DataFormatException;
@@ -93,6 +97,58 @@ public final class Transfer {
     public static String open(@NonNull SecretKey key, @NonNull byte[] nonce, @NonNull byte[] blob)
             throws GeneralSecurityException {
         return new String(openBytes(key, nonce, blob), StandardCharsets.UTF_8);
+    }
+
+    // --------------------------------------- decoupage en plusieurs QR
+
+    /**
+     * Un QR plafonne a ~2,9 Ko. On garde de la marge pour l'en-tete du
+     * fragment, qui s'ajoute a chaque morceau.
+     */
+    public static final int FRAGMENT_LIMIT = 2600;
+
+    /**
+     * Decoupe un payload en fragments affichables l'un apres l'autre.
+     *
+     * Un seul fragment quand le payload tient : inutile d'imposer un
+     * assemblage pour un carnet ordinaire.
+     */
+    public static List<String> fragments(@NonNull String payload) {
+        List<String> out = new ArrayList<>();
+        if (payload.length() <= FRAGMENT_LIMIT) {
+            out.add(payload);
+            return out;
+        }
+
+        // Le prefixe « TC1. » est porte une fois par le reassemblage, pas par
+        // chaque fragment.
+        String body = payload.substring(PREFIX.length() + 1);
+        int total = (body.length() + FRAGMENT_LIMIT - 1) / FRAGMENT_LIMIT;
+        for (int i = 0; i < total; i++) {
+            int from = i * FRAGMENT_LIMIT;
+            int to = Math.min(from + FRAGMENT_LIMIT, body.length());
+            out.add("TC1m." + i + "." + total + "." + body.substring(from, to));
+        }
+        return out;
+    }
+
+    /**
+     * Assemble les fragments lus. Rend null tant qu'il en manque.
+     *
+     * L'ordre n'a pas d'importance et un fragment lu deux fois est ignore :
+     * les codes defilent en boucle, on ne maitrise pas ce qui est vu quand.
+     */
+    @Nullable
+    public static String assemble(@NonNull Map<Integer, String> fragments, int total) {
+        if (total <= 0 || fragments.size() != total) return null;
+
+        StringBuilder body = new StringBuilder();
+        for (int i = 0; i < total; i++) {
+            String part = fragments.get(i);
+            if (part == null) return null;
+            body.append(part);
+        }
+        return PREFIX + "." + body;
     }
 
     // ------------------------------------------------- carnet entier
