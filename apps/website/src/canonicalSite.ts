@@ -30,8 +30,9 @@ function extractHostname(input: string): string {
   let v = input.trim().toLowerCase();
   v = v.replace(/^[a-z][a-z0-9+.-]*:\/\//, ""); // schéma
   v = v.replace(/^[^/@]*@/, ""); // userinfo
-  v = v.split("/")[0].split("?")[0].split("#")[0]; // chemin, query, fragment
-  v = v.split(":")[0]; // port
+  // split renvoie toujours au moins un element ; le ?? "" satisfait
+  // noUncheckedIndexedAccess sans changer le comportement.
+  v = (v.split(/[/?#]/)[0] ?? "").split(":")[0] ?? ""; // chemin, query, fragment, port
   return v.replace(/^www\./, "");
 }
 
