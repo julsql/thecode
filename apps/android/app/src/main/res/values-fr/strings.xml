@@ -105,4 +105,19 @@
     <string name="vault_already_v2">« %1$s » est déjà en v2.</string>
     <string name="vault_needs_key">Définissez d\'abord votre clef maîtresse : c\'est elle qui calcule les mots de passe.</string>
     <string name="vault_working">Calcul en cours…</string>
+    <!-- Transfert du carnet par QR code. -->
+    <string name="transfer_title">Transférer le carnet</string>
+    <string name="transfer_explainer">Le carnet est chiffré avec une clef dérivée de votre clef maîtresse. Une photo de l\'écran ne révèle rien. Affichez le code sur un appareil et lisez-le depuis l\'autre — sans serveur ni compte.</string>
+    <string name="transfer_show">Afficher le QR code</string>
+    <string name="transfer_scan">Lire un QR code</string>
+    <string name="transfer_needs_key">Définissez d\'abord votre clef maîtresse : c\'est elle qui chiffre le carnet.</string>
+    <string name="transfer_empty">Le carnet est vide, il n\'y a rien à transférer.</string>
+    <string name="transfer_too_big">Ce carnet est trop gros pour un QR code.</string>
+    <string name="transfer_working">Préparation…</string>
+    <string name="transfer_cycling">Code %1$d sur %2$d — laissez défiler</string>
+    <string name="transfer_progress">Fragment %1$d sur %2$d…</string>
+    <string name="transfer_merged">Carnet fusionné : %1$d entrées.</string>
+    <string name="transfer_merged_conflicts">Carnet fusionné : %1$d entrées, %2$d à vérifier.</string>
+    <string name="transfer_unreadable">Lecture impossible : ce code vient-il d\'une autre clef maîtresse ?</string>
+    <string name="transfer_no_camera">Caméra indisponible. Sans elle, on peut afficher un code mais pas en lire.</string>
 </resources>

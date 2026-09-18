@@ -64,6 +64,13 @@ public class VaultActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        // Un transfert a pu fusionner des entrees pendant qu'on etait ailleurs.
+        render(Vault.load(this));
+    }
+
+    @Override
     protected void onDestroy() {
         worker.shutdownNow();
         super.onDestroy();
@@ -73,6 +80,13 @@ public class VaultActivity extends AppCompatActivity {
 
     private boolean onMenuItem(MenuItem item) {
         int id = item.getItemId();
+        if (id == R.id.action_transfer) {
+            // Le QR transporte le carnet sans serveur : c'est l'option qui
+            // rend la synchronisation facultative.
+            startActivity(new android.content.Intent(this,
+                    fr.juliette.thecode.transfer.TransferActivity.class));
+            return true;
+        }
         if (id == R.id.action_sync) {
             startSync();
             return true;
