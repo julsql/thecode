@@ -10,6 +10,7 @@ shared/public_suffix_list.dat
 **/test-vectors.json
 **/canonical-site-cases.json
 **/merge-cases.json
+**/transfer-vector.json
 shared/vault-fixtures/
 **/package-lock.json
 

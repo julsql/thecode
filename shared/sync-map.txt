@@ -31,3 +31,6 @@ vault-fixtures/merge-cases.json|apps/extension/js-test
 vault-fixtures/merge-cases.json|apps/website/test
 vault-fixtures/merge-cases.json|apps/android/app/src/test/resources
 vault-fixtures/merge-cases.json|apps/apple/thecodeTests/Resources
+vault-fixtures/transfer-vector.json|apps/extension/js-test
+vault-fixtures/transfer-vector.json|apps/cli/tests
+vault-fixtures/transfer-vector.json|apps/website/test
