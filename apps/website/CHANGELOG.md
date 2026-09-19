@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.2.0](https://github.com/julsql/thecode/compare/website-v2.1.0...website-v2.2.0) (2026-09-19)
+
+
+### Features
+
+* add a shared QR encoder, byte mode, EC level L ([e4a414f](https://github.com/julsql/thecode/commit/e4a414f625c0b12a8f78edc321ccabad6a245fcd))
+* **website:** export and import an encrypted vault ([b5eaec5](https://github.com/julsql/thecode/commit/b5eaec50889ab7e605fb2b5b26c57a6f4de7349c))
+* **website:** implement v2, and renew or migrate an entry ([0b9ddbb](https://github.com/julsql/thecode/commit/0b9ddbb76dcd8dee0e40e6d4b914e68496823c2b))
+* **website:** transfer the vault by QR code or file ([3f4e31c](https://github.com/julsql/thecode/commit/3f4e31c00b47b766bc89ff688a4e25b9e711a1a6))
+
+
+### Bug Fixes
+
+* **website:** make the vault, transfer and sync actions legible ([e7a5c5a](https://github.com/julsql/thecode/commit/e7a5c5a251a60d6a6198ed108d5c486adf2163b2))
+* **website:** satisfy the build's stricter type checking ([7408843](https://github.com/julsql/thecode/commit/74088435b6492be825302031b6da13a1eabad995))
+
 ## [2.1.0](https://github.com/julsql/thecode/compare/website-v2.0.0...website-v2.1.0) (2026-09-18)
 
 
