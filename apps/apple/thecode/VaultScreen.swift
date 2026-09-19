@@ -111,6 +111,16 @@ struct VaultScreen: View {
         }
     }
 
+    /// La page du compte, dans la langue de l'application.
+    ///
+    /// Litteral constant : cette URL ne peut pas ne pas se construire, et un
+    /// repli silencieux cacherait une faute de frappe.
+    private var accountURL: URL {
+        URL(string: L10n.t(
+            "https://thecode.julsql.fr/fr/account",
+            "https://thecode.julsql.fr/en/account"))!
+    }
+
     private var signInSheet: some View {
         NavigationView {
             Form {
@@ -138,6 +148,15 @@ struct VaultScreen: View {
 
                     SecureField(L10n.t("Mot de passe du compte", "Account password"),
                         text: $password)
+                }
+
+                // Le compte, l'offre et les appareils se gèrent sur le site,
+                // et nulle part ailleurs. Sans ce lien, un nouveau venu reste
+                // devant un formulaire de connexion sans compte à y mettre.
+                Section {
+                    Link(
+                        L10n.t("Créer un compte sur le site", "Create an account on the site"),
+                        destination: accountURL)
                 }
             }
             .navigationBarTitle(

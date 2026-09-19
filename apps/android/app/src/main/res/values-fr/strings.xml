@@ -81,6 +81,7 @@
     <string name="sync_email">Adresse e-mail</string>
     <string name="sync_password">Mot de passe du compte</string>
     <string name="sync_connect">Se connecter</string>
+    <string name="sync_no_account">Pas encore de compte ? Créez-le sur https://thecode.julsql.fr/fr/account — l\'offre et les appareils s\'y gèrent aussi.</string>
     <string name="sync_running">Synchronisation…</string>
     <string name="sync_done">Carnet synchronisé : %1$d entrées.</string>
     <string name="sync_done_conflicts">Carnet synchronisé : %1$d entrées, %2$d demandent votre attention.</string>

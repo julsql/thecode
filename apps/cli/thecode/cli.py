@@ -294,6 +294,14 @@ def main(argv: list[str] | None = None) -> int:
                 invite = getpass.getpass("Code d'invitation : ")
                 sync_register(args.endpoint, email, account_password, invite)
                 print(f"✓ Compte créé pour {email}.", file=sys.stderr)
+                # L'offre, l'abonnement et les appareils se gèrent sur le
+                # site, et nulle part ailleurs : le dire ici évite de chercher
+                # une option qui n'existera pas.
+                print(
+                    "  Confirmez votre adresse et choisissez votre offre sur "
+                    "https://thecode.julsql.fr/fr/account",
+                    file=sys.stderr,
+                )
             else:
                 import socket
 

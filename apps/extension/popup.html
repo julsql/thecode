@@ -155,6 +155,15 @@
           autocomplete="off"
         />
         <button id="syncLoginBtn" type="button">Connecter la synchronisation</button>
+        <!-- Le compte, l'offre et les appareils se gerent sur le site, et
+             nulle part ailleurs : sans ce lien, quelqu'un sans compte reste
+             devant un formulaire de connexion sans rien a y mettre. -->
+        <p class="hint">
+          Pas encore de compte ?
+          <a href="https://thecode.julsql.fr/fr/account" target="_blank" rel="noopener">
+            Créez-le sur le site</a
+          >.
+        </p>
       </div>
       <div id="syncLoggedIn" hidden>
         <button id="syncNowBtn" type="button">Synchroniser</button>

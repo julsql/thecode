@@ -122,6 +122,16 @@ struct VaultScreen: View {
         }
     }
 
+    /// La page du compte, dans la langue de l'application.
+    ///
+    /// Litteral constant : cette URL ne peut pas ne pas se construire, et un
+    /// repli silencieux cacherait une faute de frappe.
+    private var accountURL: URL {
+        URL(string: L10n.t(
+            "https://thecode.julsql.fr/fr/account",
+            "https://thecode.julsql.fr/en/account"))!
+    }
+
     private var signInSheet: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(L10n.t("Synchronisation chiffrée", "Encrypted sync"))
@@ -144,6 +154,13 @@ struct VaultScreen: View {
             TextField(L10n.t("Adresse du service", "Service address"), text: $endpoint)
             TextField(L10n.t("Adresse e-mail", "Email"), text: $email)
             SecureField(L10n.t("Mot de passe du compte", "Account password"), text: $password)
+
+            // Le compte, l'offre et les appareils se gèrent sur le site, et
+            // nulle part ailleurs.
+            Link(
+                L10n.t("Créer un compte sur le site", "Create an account on the site"),
+                destination: accountURL)
+                .font(.callout)
 
             HStack {
                 Spacer()
