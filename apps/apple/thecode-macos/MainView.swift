@@ -83,6 +83,57 @@ struct MainView: View {
     var v2NoticeSeen: Bool = false
 
     @State private var showV2Notice = false
+
+    /// Empreinte de la clef maîtresse.
+    ///
+    /// Une faute de frappe sur la clef ne se voit pas : elle produit un autre
+    /// mot de passe, valide en apparence, et on ne s'en aperçoit qu'au refus
+    /// de connexion. L'empreinte rend la clef reconnaissable sans la révéler.
+    ///
+    /// Le calcul passe par un KDF coûteux : il se fait hors du fil principal,
+    /// et seulement quand la clef change.
+    @State private var fingerprint: Fingerprint.Result? = nil
+
+    private var fingerprintRow: some View {
+        HStack(spacing: 8) {
+            Text(L10n.t("Empreinte", "Fingerprint"))
+                .font(.footnote)
+                .foregroundColor(.secondary)
+
+            if let fingerprint {
+                Text(fingerprint.text)
+                    .font(.footnote.monospaced())
+                    .fontWeight(.semibold)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(fingerprint.color)
+                    .foregroundColor(.white)
+                    .cornerRadius(6)
+            } else {
+                ProgressView().controlSize(.small)
+            }
+        }
+    }
+
+    /// Recalcule l'empreinte pour la clef donnée.
+    private func refreshFingerprint(_ key: String) {
+        guard !key.isEmpty else {
+            fingerprint = nil
+            return
+        }
+        fingerprint = nil
+
+        Task.detached {
+            let computed = Fingerprint.of(key)
+            await MainActor.run {
+                // La clef a pu changer pendant le calcul : une empreinte en
+                // retard désignerait une autre clef que celle affichée.
+                guard key == encodingKey else { return }
+                fingerprint = computed
+            }
+        }
+    }
+
     @State private var v2NoticeNeverAgain = false
 
     private var v2NoticeSheet: some View {
@@ -220,6 +271,10 @@ struct MainView: View {
                                  showRealKey: $showRealKey,
                                  unlocked: $unlocked)
 
+                    if !encodingKey.isEmpty {
+                        fingerprintRow
+                    }
+
                     VStack(alignment: .leading, spacing: 8) {
                         Text(L10n.t("Longueur du mot de passe", "Password length"))
                         HStack {
@@ -325,6 +380,7 @@ struct MainView: View {
             applyAppAppearance()
             restoreSession()
             lengthDraft = String(lengthNumber)
+            refreshFingerprint(encodingKey)
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didResignActiveNotification)) { _ in
             // Dès qu'on bascule sur une autre app : re-masquage de la clé
@@ -343,6 +399,7 @@ struct MainView: View {
         .onChange(of: useV1) { _ in generatePassword() }
         .onChange(of: encodingKey) { newValue in
             SecureKeyStore.write(newValue)
+            refreshFingerprint(newValue)
             generatePassword()
         }
         .onChange(of: lengthNumber) { newVal in
@@ -547,10 +604,18 @@ struct MainView: View {
         }
     }
 
-    /// Réévalue la session à chaque activation : si la fenêtre de grâce court
-    /// toujours on reste déverrouillé (et on régénère l'affichage effacé au
-    /// passage en arrière-plan), sinon on repart d'un écran verrouillé propre.
+    /// Réévalue la session, exactement comme le fait l'application Android.
+    ///
+    /// La clef est remasquée à chaque retour, même avec une session valide :
+    /// le déverrouillage autorise à la révéler, il ne la révèle pas.
+    ///
+    /// Le nom du site est conservé : ce n'est pas un secret, et le flux de
+    /// déverrouillage par code passe par ce point avant que l'auth réussisse —
+    /// l'effacer ferait perdre la saisie en cours.
     private func restoreSession() {
+        // Remasquage inconditionnel, avant même de savoir si la session tient.
+        showRealKey = false
+
         if SessionLock.isValid {
             SessionLock.stamp()
             unlocked = true
@@ -558,8 +623,6 @@ struct MainView: View {
         } else {
             SessionLock.invalidate()
             unlocked = false
-            showRealKey = false
-            siteName = ""
             generatedValue = ""
         }
     }
