@@ -40,12 +40,33 @@ jobs:
           files = ["manifest.json",
                    "manifest-chrome-brave-edge.json",
                    "manifest-safari-firefox.json"]
+          # Cles reconnues par Chrome et Firefox en manifest v3. Une cle hors
+          # de cette liste passe la validation JSON mais fait avertir les deux
+          # navigateurs au chargement — « license » l'a fait pendant des mois.
+          KNOWN = {
+              "manifest_version", "name", "description", "version",
+              "version_name", "default_locale", "icons", "action",
+              "background", "content_scripts", "permissions",
+              "host_permissions", "optional_permissions",
+              "web_accessible_resources", "commands", "options_ui",
+              "content_security_policy", "author", "homepage_url",
+              "browser_specific_settings", "minimum_chrome_version",
+              "incognito", "short_name", "devtools_page", "omnibox",
+              "storage", "declarative_net_request", "side_panel",
+          }
+
           versions = {}
           for f in files:
               with open(f) as fh:
                   m = json.load(fh)
               versions[f] = m["version"]
               assert m["manifest_version"] == 3, f"{f}: manifest_version attendu 3"
+
+              unknown = sorted(set(m) - KNOWN)
+              if unknown:
+                  print(f"{f}: cles non reconnues : {', '.join(unknown)}")
+                  sys.exit(1)
+
           if len(set(versions.values())) != 1:
               print("Versions desynchronisees :", versions)
               sys.exit(1)
