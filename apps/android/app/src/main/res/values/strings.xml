@@ -130,4 +130,9 @@
     <string name="v2_notice_title">New algorithm</string>
     <string name="v2_notice_never_again">Don\'t show again</string>
     <string name="v2_notice_close">Close</string>
+    <!-- Verrouillage du carnet. -->
+    <string name="vault_locked_title">Unlock the vault</string>
+    <string name="vault_locked_subtitle">The vault lists the sites where you have an account and under which username. It is as sensitive as a password store.</string>
+    <!-- La version en cours, lisible sans ouvrir de menu. -->
+    <string name="security_with_algo">Security: %1$s — v%2$d</string>
 </resources>

@@ -598,8 +598,11 @@ public class MainActivity extends AppCompatActivity {
         code.setLength((int) lengthSlider.getValue());
         code.updateSafetyAndColor();
 
-        securityLabelTextView.setText(getString(R.string.security_with_value,
-                getString(safetyLabelRes(code.getSafetyLevel()))));
+        // La version en cours doit se lire sans ouvrir de menu : c'est elle
+        // qui décide quel mot de passe sort.
+        securityLabelTextView.setText(getString(R.string.security_with_algo,
+                getString(safetyLabelRes(code.getSafetyLevel())),
+                useV1 ? 1 : 2));
         securityLabelTextView.setTextColor(code.getColor());
         resultCard.setVisibility(View.VISIBLE);
 
@@ -759,6 +762,9 @@ public class MainActivity extends AppCompatActivity {
         VaultEntry entry = vault.upsert(site, (int) lengthSlider.getValue(),
                 minSwitch.isChecked(), majSwitch.isChecked(),
                 symSwitch.isChecked(), chiSwitch.isChecked());
+        // Enregistrer un mot de passe genere en v1 sous une entree v2
+        // donnerait un autre mot de passe a la relecture.
+        entry.v = useV1 ? 1 : 2;
         vault.save(this);
 
         // Une entrée existante garde son siteKey : le réécrire changerait un

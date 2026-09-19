@@ -43,6 +43,17 @@
                 android:textAppearance="?attr/textAppearanceBodyMedium"
                 android:visibility="gone" />
 
+            <!-- Affiche tant que la session n'est pas authentifiee. Le contenu
+                 du carnet n'est jamais rendu avant : une capture du selecteur
+                 d'applications suffirait a le reveler. -->
+            <TextView
+                android:id="@+id/vaultLocked"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/vault_locked_subtitle"
+                android:textAppearance="?attr/textAppearanceBodyMedium"
+                android:visibility="gone" />
+
             <LinearLayout
                 android:id="@+id/vaultList"
                 android:layout_width="match_parent"
