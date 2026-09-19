@@ -112,10 +112,19 @@
 
           <!-- Le carnet retient les reglages par site : plus besoin de se souvenir
                qu'un compte avait ete cree sans symboles. -->
-          <div class="vault">
-            <button type="button" @click="saveEntry">
-              {{ vaultEntries.length ? "Mettre à jour l'entrée" : "Enregistrer ce site" }}
-            </button>
+          <section class="panel">
+            <h3 class="panel-title">Carnet</h3>
+            <p class="panel-lead">
+              Retient les réglages de chaque site, pour ne plus avoir à se souvenir qu'un compte a
+              été créé sans symboles, ni sous quel identifiant.
+            </p>
+
+            <div class="panel-actions">
+              <button type="button" class="ghost-btn" @click="saveEntry">
+                {{ vaultEntries.length ? "Mettre à jour l'entrée" : "Enregistrer ce site" }}
+              </button>
+            </div>
+
             <p v-if="vaultMessage" class="hint">{{ vaultMessage }}</p>
             <p v-else-if="vaultEntries.length" class="hint">
               {{ vaultEntries.length }} entrée(s) connue(s) pour ce site.
@@ -125,10 +134,14 @@
                  passe deja en service. Jamais les deux a la fois — le compteur
                  n'entre pas dans la derivation v1, et une entree v2 n'a plus
                  rien a migrer. -->
-            <ul v-if="vaultEntries.length && !pending" class="vault-entries">
+            <ul v-if="vaultEntries.length && !pending" class="entry-list">
               <li v-for="entry in vaultEntries" :key="entry.id">
-                <span>{{ entry.label || entry.siteKey }}</span>
-                <button type="button" @click="proposeChange(entry, entry.v >= 2)">
+                <span class="entry-name">{{ entry.label || entry.siteKey }}</span>
+                <button
+                  type="button"
+                  class="ghost-btn small"
+                  @click="proposeChange(entry, entry.v >= 2)"
+                >
                   {{ entry.v >= 2 ? "Renouveler" : "Passer en v2" }}
                 </button>
               </li>
@@ -136,36 +149,57 @@
 
             <!-- Les deux cote a cote : le nouveau ne sert a rien tant qu'il n'a
                  pas ete pose sur le site, et l'ancien reste celui qui connecte. -->
-            <div v-if="pending" class="vault-change">
-              <p class="hint">Actuel</p>
+            <div v-if="pending" class="change-box">
+              <p class="hint">Mot de passe actuel</p>
               <p>
                 <code>{{ pending.before }}</code>
               </p>
-              <p class="hint">Nouveau</p>
+              <p class="hint">Nouveau mot de passe</p>
               <p>
                 <code>{{ pending.after }}</code>
               </p>
               <p class="hint">
                 Changez-le sur le site, puis confirmez. Le nouveau ne sert à rien tant que ce n'est
-                pas fait.
+                pas fait, et l'ancien reste celui qui vous connecte.
               </p>
-              <button type="button" @click="applyChange">Confirmer</button>
-              <button type="button" @click="pending = null">Annuler</button>
+              <div class="panel-actions">
+                <button type="button" class="ghost-btn primary" @click="applyChange">
+                  Confirmer
+                </button>
+                <button type="button" class="ghost-btn" @click="pending = null">Annuler</button>
+              </div>
             </div>
-          </div>
+          </section>
 
           <!-- Transfert hors serveur : le QR pour envoyer vers un téléphone,
                le fichier pour aller vers un autre navigateur. Le contenu est
                chiffré avec une clef dérivée de la clef maîtresse, donc une
                photo de l'écran ne révèle rien. -->
-          <div class="vault">
-            <h3>Transférer le carnet</h3>
-            <button type="button" @click="showTransfer">Afficher le QR code</button>
-            <button type="button" @click="downloadVault">Enregistrer un fichier</button>
-            <label class="import-file">
-              Importer un fichier
-              <input type="file" accept=".txt,.thecode,text/plain" @change="importFile" />
-            </label>
+          <section class="panel">
+            <h3 class="panel-title">Transférer le carnet</h3>
+            <p class="panel-lead">
+              Pour emporter le carnet sur un autre appareil, sans serveur ni compte. Le contenu est
+              chiffré : une photo de l'écran, ou le fichier seul, ne révèlent rien.
+            </p>
+
+            <div class="panel-actions">
+              <button type="button" class="ghost-btn" @click="showTransfer">
+                Afficher un QR code
+                <small>à scanner depuis le téléphone</small>
+              </button>
+              <button type="button" class="ghost-btn" @click="downloadVault">
+                Télécharger un fichier
+                <small>pour un autre navigateur</small>
+              </button>
+              <!-- Le champ natif est masqué : « Choose File » n'est ni
+                   traduisible ni stylable, et ne dit pas ce qu'on attend. -->
+              <label class="ghost-btn as-label">
+                Importer un fichier
+                <small>reçu d'un autre appareil</small>
+                <input type="file" accept=".txt,.thecode,text/plain" @change="importFile" />
+              </label>
+            </div>
+
             <p v-if="transferMessage" class="hint">{{ transferMessage }}</p>
 
             <div v-if="qrRows.length" class="qr">
@@ -181,36 +215,54 @@
               </div>
               <p class="hint">Scannez-le depuis l'application sur votre téléphone.</p>
             </div>
-          </div>
+          </section>
 
           <!-- Le carnet est chiffré avant de quitter le navigateur : le serveur
                ne reçoit que des blocs opaques. -->
-          <div class="sync">
-            <h3>Synchronisation</h3>
+          <section class="panel">
+            <h3 class="panel-title">Synchronisation</h3>
+            <p class="panel-lead">
+              Garde le carnet à jour entre vos appareils, par le serveur. Il est chiffré avant de
+              partir : le service ne voit ni vos sites, ni vos identifiants. Le mot de passe du
+              compte n'est pas votre clef.
+            </p>
 
             <template v-if="!syncConnected">
-              <input
-                v-model="syncEmail"
-                type="email"
-                placeholder="Adresse e-mail"
-                autocomplete="off"
-              />
-              <input
-                v-model="syncPassword"
-                type="password"
-                placeholder="Mot de passe du compte"
-                autocomplete="off"
-              />
-              <button type="button" @click="connectSync">Connecter</button>
+              <div class="field-row">
+                <input
+                  v-model="syncEmail"
+                  type="email"
+                  placeholder="Adresse e-mail du compte"
+                  autocomplete="off"
+                />
+                <input
+                  v-model="syncPassword"
+                  type="password"
+                  placeholder="Mot de passe du compte"
+                  autocomplete="off"
+                />
+              </div>
+              <div class="panel-actions">
+                <button type="button" class="ghost-btn primary" @click="connectSync">
+                  Se connecter
+                </button>
+              </div>
             </template>
 
             <template v-else>
-              <button type="button" @click="runSync">Synchroniser</button>
-              <button type="button" @click="disconnectSync">Déconnecter</button>
+              <div class="panel-actions">
+                <button type="button" class="ghost-btn primary" @click="runSync">
+                  Synchroniser maintenant
+                </button>
+                <button type="button" class="ghost-btn" @click="disconnectSync">
+                  Se déconnecter
+                </button>
+              </div>
             </template>
 
             <p v-if="syncMessage" class="hint">{{ syncMessage }}</p>
-          </div>
+          </section>
+
           <input type="range" :value="scoreSecurite" min="0" max="252" disabled />
         </div>
       </div>
@@ -842,6 +894,139 @@ input[type="text"]:read-only {
   border-color: var(--c4);
 }
 
+/* Panneaux : chaque bloc dit ce qu'il fait avant de proposer des boutons.
+   Sans cela, six boutons s'alignaient sans qu'on sache lequel sert a quoi. */
+.panel {
+  margin-top: 28px;
+  padding-top: 22px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.panel-title {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.panel-lead {
+  margin: 0 0 14px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: stretch;
+}
+
+/* Les boutons de ces panneaux portent une legende : ils ne peuvent donc pas
+   etre centres sur une seule ligne comme ceux du formulaire. */
+.panel-actions .ghost-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 16px;
+  text-align: left;
+}
+
+.ghost-btn small {
+  font-weight: 400;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.ghost-btn.primary {
+  background: var(--accent-gradient);
+  border-color: transparent;
+}
+
+.ghost-btn.primary:hover {
+  filter: brightness(1.15);
+}
+
+.ghost-btn.small {
+  padding: 6px 12px;
+  font-size: 0.8rem;
+}
+
+/* Un label qui se comporte en bouton : le champ natif est masque parce que
+   « Choose File » n'est ni traduisible ni stylable. */
+.ghost-btn.as-label {
+  cursor: pointer;
+}
+
+.ghost-btn.as-label input[type="file"] {
+  display: none;
+}
+
+.field-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.field-row input {
+  flex: 1 1 200px;
+  min-width: 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border-soft);
+  background: var(--surface-elevated);
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.field-row input::placeholder {
+  color: var(--text-muted);
+}
+
+.entry-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.entry-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-soft);
+}
+
+.entry-name {
+  font-size: 0.9rem;
+  word-break: break-all;
+}
+
+.change-box {
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-strong);
+}
+
+.change-box code {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.35);
+  font-size: 0.95rem;
+  word-break: break-all;
+}
+
 .range-group {
   display: block;
 }
@@ -1018,6 +1203,15 @@ input[type="range"]:disabled {
 
   .ghost-btn {
     padding: 10px;
+  }
+
+  /* Sur un ecran etroit, des boutons cote a cote deviennent illisibles. */
+  .panel-actions {
+    flex-direction: column;
+  }
+
+  .panel-actions .ghost-btn {
+    width: 100%;
   }
 
   .page-hero {
