@@ -68,8 +68,13 @@ public class TransferVaultTest {
     @Test
     public void detectsTampering() throws Exception {
         String[] parts = Transfer.exportVault(filled(), "clef").split("\\.");
+        // Remplacer par une autre lettre, pas par une lettre fixe : un
+        // chiffre qui finissait deja par « A » serait recopie a l'identique et
+        // le test passerait sans rien alterer, une fois sur soixante-quatre.
+        String cipher = parts[2];
+        String tail = cipher.endsWith("A") ? "B" : "A";
         String tampered = parts[0] + "." + parts[1] + "."
-                + parts[2].substring(0, parts[2].length() - 1) + "A";
+                + cipher.substring(0, cipher.length() - 1) + tail;
 
         assertThrows(Transfer.TransferException.class,
                 () -> Transfer.importVault(tampered, "clef"));

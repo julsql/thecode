@@ -54,7 +54,11 @@ describe("transfert d'un carnet", () => {
   it("détecte une altération", async () => {
     const payload = await exportVault(filled(), "clef");
     const parts = payload.split(".");
-    const tampered = `${parts[0]}.${parts[1]}.${parts[2].slice(0, -1)}A`;
+    // Une autre lettre, pas une lettre fixe : un chiffré qui finissait déjà
+    // par « A » serait recopié à l'identique, et le test passerait sans rien
+    // altérer, une fois sur soixante-quatre.
+    const cipher = parts[2];
+    const tampered = `${parts[0]}.${parts[1]}.${cipher.slice(0, -1)}${cipher.endsWith("A") ? "B" : "A"}`;
 
     await expect(importVault(tampered, "clef")).rejects.toThrow(TransferError);
   });

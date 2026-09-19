@@ -66,7 +66,12 @@ struct TransferVaultTests {
     @Test("Une altération est détectée")
     func detectsTampering() throws {
         let parts = try Transfer.exportVault(filled(), masterKey: "clef").split(separator: ".")
-        let tampered = "\(parts[0]).\(parts[1]).\(parts[2].dropLast())A"
+        // Une autre lettre, pas une lettre fixe : un chiffré qui finissait
+        // déjà par « A » serait recopié à l'identique, et le test passerait
+        // sans rien altérer, une fois sur soixante-quatre.
+        let cipher = parts[2]
+        let tail = cipher.hasSuffix("A") ? "B" : "A"
+        let tampered = "\(parts[0]).\(parts[1]).\(cipher.dropLast())\(tail)"
 
         #expect(throws: (any Error).self) {
             _ = try Transfer.importVault(tampered, masterKey: "clef")
