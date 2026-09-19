@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from contextlib import contextmanager
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
@@ -31,6 +32,21 @@ def get_sessionmaker():
 
 
 def get_db() -> Iterator[Session]:
+    db = get_sessionmaker()()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+@contextmanager
+def session_scope() -> Iterator[Session]:
+    """Une session pour un script, hors requête HTTP.
+
+    `get_db` est une dépendance FastAPI : l'utiliser en ligne de commande
+    obligerait à dérouler un générateur à la main, ce qui laisse la connexion
+    ouverte dès qu'une exception passe.
+    """
     db = get_sessionmaker()()
     try:
         yield db

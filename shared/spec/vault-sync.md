@@ -124,6 +124,47 @@ rejoue le cycle **entier**, pour la même raison.
 Le serveur refuse une entrée dépassant `max_blob_bytes` et un compte dépassant
 `max_entries_per_account`. Le carnet stocke des métadonnées, pas des fichiers.
 
+## Offres
+
+La génération ne passe par aucun serveur : elle est gratuite, hors ligne, sans
+compte. Ce que l'abonnement paie, c'est la synchronisation.
+
+| Offre               | Entrées synchronisées     | Appareils connectés |
+| ------------------- | ------------------------- | ------------------- |
+| Gratuite            | `free_max_entries`        | `free_max_devices`  |
+| Complète (2 €/mois) | `max_entries_per_account` | `pro_max_devices`   |
+
+Un dépassement dû à l'offre répond **402**, jamais 403 : le client doit pouvoir
+distinguer « vous n'avez pas le droit » de « il faut s'abonner », et ne proposer
+l'abonnement que dans le second cas. Le carnet local, lui, n'est jamais bridé :
+les entrées au-delà du plafond restent sur l'appareil.
+
+Les plafonds sont dans `apps/api/thecode_api/plans.py`, et nulle part ailleurs.
+Une limite écrite deux fois finit par dire deux choses différentes, et la
+divergence se découvre en s'y cognant.
+
+## Compte, codes et abonnement
+
+Le **site est le seul endroit** où l'on crée un compte, choisit son offre, paie
+et déconnecte un appareil. Les clients se connectent et synchronisent : un
+écran de facturation par plateforme multiplierait les endroits où une erreur de
+droits peut se glisser, pour un geste qu'on fait deux fois par an.
+
+- `GET /v1/auth/me` — l'état du compte : offre, statut, consommation, plafonds.
+- `POST /v1/auth/verify` / `/verify/resend` — confirmation d'adresse. Le jeton
+  est stocké haché, à usage unique, et un nouvel envoi invalide le précédent.
+- `GET /v1/account/devices`, `DELETE /v1/account/devices/{id}` — un plafond
+  d'appareils sans moyen d'en déconnecter un laisserait bloqué qui l'atteint.
+- `POST /v1/account/code` — un code d'invitation, de parrainage (remise Stripe)
+  ou à vie. Un code ne se rejoue pas sur le même compte.
+- `GET /v1/billing/plans`, `POST /v1/billing/checkout`, `POST /v1/billing/portal`,
+  `POST /v1/billing/webhook`.
+
+La source de vérité de l'abonnement est le **webhook**, jamais le retour de
+navigateur : fermer l'onglet juste après avoir payé doit quand même abonner, et
+recopier l'URL de succès ne doit rien donner. Un compte à vie ne se rétrograde
+jamais sur un événement Stripe : il n'a pas d'abonnement.
+
 ## Implémentations
 
 | Implémentation | Fichier                                |
