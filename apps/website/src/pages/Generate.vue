@@ -280,48 +280,16 @@
               compte n'est pas votre clef.
             </p>
 
+            <!-- Le compte se cree et se gere sur sa propre page : le
+                 formulaire vivait ici, au milieu du generateur, ou personne
+                 n'allait le chercher — et il n'y a pas sa place, l'abonnement
+                 et les appareils ne sont pas des affaires de generation. -->
             <template v-if="!syncConnected">
-              <div class="field-row">
-                <input
-                  v-model="syncEmail"
-                  type="email"
-                  placeholder="Adresse e-mail du compte"
-                  autocomplete="off"
-                />
-                <input
-                  v-model="syncPassword"
-                  type="password"
-                  placeholder="Mot de passe du compte"
-                  autocomplete="off"
-                />
-              </div>
-              <!-- Le code n'est réclamé qu'une fois les places libres
-                   épuisées : le demander sans raison rebute, et cacher qu'il
-                   faudra le fournir jusqu'au refus est pire. -->
-              <div v-if="syncNeedsCode" class="field-row">
-                <input
-                  v-model="syncInviteCode"
-                  type="text"
-                  placeholder="Code de parrainage"
-                  autocomplete="off"
-                />
-              </div>
-
               <div class="panel-actions">
-                <button type="button" class="ghost-btn primary" @click="connectSync">
-                  Se connecter
-                </button>
-                <button type="button" class="ghost-btn" @click="createAccount">
-                  Créer un compte
-                </button>
+                <router-link class="ghost-btn primary" :to="localePath('account')">
+                  {{ t("gen_account_link") }}
+                </router-link>
               </div>
-
-              <p v-if="syncFreeSlots !== null && syncFreeSlots > 0" class="hint">
-                {{ syncFreeSlots }} compte(s) encore disponible(s) sans code.
-              </p>
-              <p v-else-if="syncNeedsCode" class="hint">
-                Les comptes libres sont pris : la création demande un code de parrainage.
-              </p>
             </template>
 
             <template v-else>
@@ -348,17 +316,7 @@ import { defineComponent, ref, watch, computed, onMounted } from "vue";
 import { generatePassword, calculateEntropyBits, getSecurityLevel } from "@/utils";
 import { canonicalSite, loadPublicSuffixList } from "@/canonicalSite";
 import { keyFingerprint, type Fingerprint } from "@/fingerprint";
-import {
-  clearSession,
-  loadSession,
-  login as syncLogin,
-  register,
-  registrationState,
-  saveSession,
-  syncVault,
-  SyncError,
-  DEFAULT_ENDPOINT,
-} from "@/sync";
+import { clearSession, loadSession, saveSession, syncVault, SyncError } from "@/sync";
 import {
   emptyVault,
   findAllByDomain,
@@ -381,7 +339,6 @@ export default defineComponent({
     // La PSL est servie depuis public/ : on la charge une fois au montage, puis
     // on regenere, car la canonicalisation change le resultat.
     onMounted(async () => {
-      refreshRegistrationState();
       try {
         const res = await fetch("/public_suffix_list.dat");
         if (res.ok) {
@@ -394,7 +351,7 @@ export default defineComponent({
       }
     });
 
-    const { t } = useI18n();
+    const { t, localePath } = useI18n();
 
     const clef = ref("");
     const site = ref("");
@@ -458,56 +415,7 @@ export default defineComponent({
       after: string;
     } | null>(null);
     const syncConnected = ref(Boolean(loadSession()));
-    const syncEmail = ref("");
-    const syncPassword = ref("");
     const syncMessage = ref("");
-    const syncInviteCode = ref("");
-    /** Places restantes sans code, null tant qu'on ne sait pas. */
-    const syncFreeSlots = ref<number | null>(null);
-    const syncNeedsCode = ref(false);
-
-    /**
-     * Demande au service ce que l'inscription reclame.
-     *
-     * Silencieux en cas d'echec : le service peut etre injoignable, la page de
-     * generation doit marcher sans lui.
-     */
-    async function refreshRegistrationState() {
-      try {
-        const state = await registrationState(DEFAULT_ENDPOINT);
-        syncFreeSlots.value = state.freeSlots;
-        syncNeedsCode.value = state.needsCode;
-      } catch {
-        syncFreeSlots.value = null;
-        syncNeedsCode.value = false;
-      }
-    }
-
-    /** Cree un compte, puis ouvre la session avec. */
-    async function createAccount() {
-      if (!syncEmail.value || !syncPassword.value) {
-        syncMessage.value = "Renseignez l'adresse et le mot de passe.";
-        return;
-      }
-      syncMessage.value = "Création du compte…";
-      try {
-        saveSession(
-          await register(
-            DEFAULT_ENDPOINT,
-            syncEmail.value,
-            syncPassword.value,
-            syncInviteCode.value,
-          ),
-        );
-        syncConnected.value = true;
-        syncPassword.value = "";
-        syncInviteCode.value = "";
-        syncMessage.value = "Compte créé, vous êtes connectée.";
-        refreshRegistrationState();
-      } catch (e) {
-        syncMessage.value = e instanceof SyncError ? e.message : "Échec de la création.";
-      }
-    }
 
     const scoreSecurite = ref(0);
     const couleurSecurite = ref("");
@@ -811,23 +719,6 @@ export default defineComponent({
       refreshVault();
     }
 
-    async function connectSync() {
-      if (!syncEmail.value || !syncPassword.value) {
-        syncMessage.value = "Renseignez l'adresse et le mot de passe.";
-        return;
-      }
-      syncMessage.value = "Connexion…";
-      try {
-        saveSession(await syncLogin(DEFAULT_ENDPOINT, syncEmail.value, syncPassword.value));
-        // Le mot de passe du compte ne reste pas en mémoire une fois utilisé.
-        syncPassword.value = "";
-        syncConnected.value = true;
-        syncMessage.value = "Connecté.";
-      } catch (e) {
-        syncMessage.value = `Échec : ${(e as Error).message}`;
-      }
-    }
-
     async function runSync() {
       const session = loadSession();
       if (!session) {
@@ -870,6 +761,7 @@ export default defineComponent({
 
     return {
       t,
+      localePath,
       fingerprint,
       vaultEntries,
       vaultMessage,
@@ -887,14 +779,7 @@ export default defineComponent({
       downloadVault,
       importFile,
       syncConnected,
-      syncEmail,
-      syncPassword,
       syncMessage,
-      syncInviteCode,
-      syncFreeSlots,
-      syncNeedsCode,
-      createAccount,
-      connectSync,
       runSync,
       disconnectSync,
       clef,
@@ -1065,135 +950,6 @@ input[type="text"]:read-only {
 
 .input-with-button input {
   flex: 1;
-}
-
-.ghost-btn {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border-soft);
-  color: var(--text);
-  padding: 0 18px;
-  border-radius: 12px;
-  font-weight: 600;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition:
-    background 0.2s ease,
-    border-color 0.2s ease;
-}
-
-.ghost-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: var(--c4);
-}
-
-/* Panneaux : chaque bloc dit ce qu'il fait avant de proposer des boutons.
-   Sans cela, six boutons s'alignaient sans qu'on sache lequel sert a quoi. */
-.panel {
-  margin-top: 28px;
-  padding-top: 22px;
-  border-top: 1px solid var(--border-soft);
-}
-
-.panel-title {
-  margin: 0 0 6px;
-  font-size: 1rem;
-  font-weight: 700;
-}
-
-.panel-lead {
-  margin: 0 0 14px;
-  font-size: 0.85rem;
-  line-height: 1.5;
-  color: var(--text-muted);
-}
-
-.panel-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: stretch;
-}
-
-.panel-actions.centered {
-  justify-content: center;
-}
-
-/* Une seule ligne, a largeur egale : les trois actions de transfert sont de
-   meme rang, rien ne justifie qu'une prenne plus de place qu'une autre. */
-.panel-actions.fill {
-  flex-wrap: nowrap;
-}
-
-.panel-actions.fill > * {
-  /* base 0 : la largeur se partage a parts egales, sans tenir compte de la
-     longueur du libelle. */
-  flex: 1 1 0;
-  min-width: 0;
-}
-
-/* Les boutons de ces panneaux portent une legende : ils ne peuvent donc pas
-   etre centres sur une seule ligne comme ceux du formulaire. */
-.panel-actions .ghost-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  padding: 10px 16px;
-  text-align: left;
-}
-
-.ghost-btn small {
-  font-weight: 400;
-  font-size: 0.75rem;
-  color: var(--text-muted);
-}
-
-.ghost-btn.primary {
-  background: var(--accent-gradient);
-  /* Sans bordure : le degrade porte deja le bouton, un liseré par-dessus
-     l'alourdit. */
-  border: 0;
-}
-
-.ghost-btn.primary:hover {
-  filter: brightness(1.15);
-}
-
-.ghost-btn.small {
-  padding: 6px 12px;
-  font-size: 0.8rem;
-}
-
-/* Un label qui se comporte en bouton : le champ natif est masque parce que
-   « Choose File » n'est ni traduisible ni stylable. */
-.ghost-btn.as-label {
-  cursor: pointer;
-}
-
-.ghost-btn.as-label input[type="file"] {
-  display: none;
-}
-
-.field-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 12px;
-}
-
-.field-row input {
-  flex: 1 1 200px;
-  min-width: 0;
-  padding: 10px 14px;
-  border-radius: 12px;
-  border: 1px solid var(--border-soft);
-  background: var(--surface-elevated);
-  color: var(--text);
-  font-size: 0.9rem;
-}
-
-.field-row input::placeholder {
-  color: var(--text-muted);
 }
 
 /* Annonce du passage a la v2, en fenetre modale a l'ouverture. */

@@ -8,6 +8,23 @@
           <span class="brand-title">TheCode</span>
         </router-link>
 
+        <!-- Le compte se gere uniquement sur le site : il lui faut une porte
+             visible depuis n'importe quelle page, pas un lien enfoui dans le
+             generateur. -->
+        <router-link
+          :to="localePath('account')"
+          class="account-link"
+          active-class="is-active"
+          :title="t('nav_account')"
+          :aria-label="t('nav_account')"
+          @click="closeMenu"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <circle cx="12" cy="8" r="3.4" />
+            <path d="M4.5 19.5c0-3.6 3.4-5.6 7.5-5.6s7.5 2 7.5 5.6" />
+          </svg>
+        </router-link>
+
         <nav aria-label="primary" class="primary-nav">
           <router-link
             :to="localePath('')"
@@ -40,6 +57,14 @@
             @click="closeMenu"
           >
             {{ t("nav_tutorial") }}
+          </router-link>
+          <router-link
+            :to="localePath('pricing')"
+            class="nav-link"
+            active-class="is-active"
+            @click="closeMenu"
+          >
+            {{ t("nav_pricing") }}
           </router-link>
           <router-link
             :to="localePath('contact')"
@@ -124,12 +149,28 @@
             {{ t("nav_tutorial") }}
           </router-link>
           <router-link
+            :to="localePath('pricing')"
+            class="mobile-link"
+            active-class="is-active"
+            @click="closeMenu"
+          >
+            {{ t("nav_pricing") }}
+          </router-link>
+          <router-link
             :to="localePath('contact')"
             class="mobile-link"
             active-class="is-active"
             @click="closeMenu"
           >
             {{ t("nav_contact") }}
+          </router-link>
+          <router-link
+            :to="localePath('account')"
+            class="mobile-link"
+            active-class="is-active"
+            @click="closeMenu"
+          >
+            {{ t("nav_account") }}
           </router-link>
         </nav>
       </transition>
@@ -157,6 +198,8 @@
             <router-link :to="localePath('')">{{ t("nav_home") }}</router-link>
             <router-link :to="localePath('about')">{{ t("nav_about") }}</router-link>
             <router-link :to="localePath('generate')">{{ t("nav_generator") }}</router-link>
+            <router-link :to="localePath('pricing')">{{ t("nav_pricing") }}</router-link>
+            <router-link :to="localePath('account')">{{ t("nav_account") }}</router-link>
           </div>
 
           <div class="footer-col">
@@ -269,6 +312,41 @@ export default defineComponent({
   font-weight: 700;
   font-size: 1.15rem;
   letter-spacing: 0.2px;
+}
+
+/* Icone de compte : une pastille sobre a cote de la marque. Assez discrete
+   pour ne pas concurrencer la navigation, assez presente pour qu'on la
+   trouve sans la chercher. */
+.account-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  margin-left: 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-soft);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  flex: none;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.account-link:hover,
+.account-link.is-active {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--c4);
+}
+
+.account-link svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
 }
 
 .primary-nav {

@@ -83,3 +83,148 @@ a {
   display: block;
   margin-top: 4px;
 }
+
+/* ---------------------------------------------------------------------------
+   Boutons, panneaux et champs partages.
+   
+   Ces regles vivaient dans la page du generateur, en `scoped`. La page du
+   compte et celle des tarifs s'en servent aussi : les recopier aurait garanti
+   qu'un bouton finisse par ne plus ressembler au meme bouton d'a cote.
+   --------------------------------------------------------------------------- */
+
+.ghost-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-soft);
+  color: var(--text);
+  padding: 0 18px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.ghost-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--c4);
+}
+
+/* Panneaux : chaque bloc dit ce qu'il fait avant de proposer des boutons.
+   Sans cela, six boutons s'alignaient sans qu'on sache lequel sert a quoi. */
+.panel {
+  margin-top: 28px;
+  padding-top: 22px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.panel-title {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.panel-lead {
+  margin: 0 0 14px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.panel-actions.centered {
+  justify-content: center;
+}
+
+/* Une seule ligne, a largeur egale : les trois actions de transfert sont de
+   meme rang, rien ne justifie qu'une prenne plus de place qu'une autre. */
+.panel-actions.fill {
+  flex-wrap: nowrap;
+}
+
+.panel-actions.fill > * {
+  /* base 0 : la largeur se partage a parts egales, sans tenir compte de la
+     longueur du libelle. */
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* Les boutons de ces panneaux portent une legende : ils ne peuvent donc pas
+   etre centres sur une seule ligne comme ceux du formulaire. */
+.panel-actions .ghost-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 16px;
+  text-align: left;
+}
+
+.ghost-btn small {
+  font-weight: 400;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.ghost-btn.primary {
+  background: var(--accent-gradient);
+  /* Sans bordure : le degrade porte deja le bouton, un liseré par-dessus
+     l'alourdit. */
+  border: 0;
+}
+
+.ghost-btn.primary:hover {
+  filter: brightness(1.15);
+}
+
+.ghost-btn.small {
+  padding: 6px 12px;
+  font-size: 0.8rem;
+}
+
+/* Un label qui se comporte en bouton : le champ natif est masque parce que
+   « Choose File » n'est ni traduisible ni stylable. */
+.ghost-btn.as-label {
+  cursor: pointer;
+}
+
+.ghost-btn.as-label input[type="file"] {
+  display: none;
+}
+
+.field-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.field-row input {
+  flex: 1 1 200px;
+  min-width: 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border-soft);
+  background: var(--surface-elevated);
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.field-row input::placeholder {
+  color: var(--text-muted);
+}
+
+/* Une precision sous un champ ou apres une action : secondaire par nature. */
+.hint {
+  margin: 10px 0 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}

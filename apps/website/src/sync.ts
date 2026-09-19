@@ -36,11 +36,14 @@ function b64d(text: string): Uint8Array {
   return Uint8Array.from(binary, (c) => c.charCodeAt(0));
 }
 
-async function request(url: string, options: { payload?: unknown; token?: string } = {}) {
+export async function request(
+  url: string,
+  options: { payload?: unknown; token?: string; method?: string } = {},
+) {
   let response: Response;
   try {
     response = await fetch(url, {
-      method: options.payload ? "POST" : "GET",
+      method: options.method ?? (options.payload ? "POST" : "GET"),
       headers: {
         "Content-Type": "application/json",
         ...(options.token ? { Authorization: `Bearer ${options.token}` } : {}),
@@ -106,15 +109,31 @@ export async function registrationState(endpoint: string): Promise<RegistrationS
   return (await request(`${endpoint}/v1/auth/registration`)) as RegistrationState;
 }
 
-/** Crée un compte. `inviteCode` n'est réclamé qu'au-delà des places libres. */
+/**
+ * Crée un compte.
+ *
+ * `code` couvre l'invitation, le parrainage et l'offre à vie : c'est le même
+ * champ pour l'utilisateur, et le serveur sait lequel il tient.
+ *
+ * `lang` part avec l'inscription parce que le lien de vérification mène au
+ * site, qui est traduit : recevoir un lien en anglais quand on lit le site en
+ * français donne l'impression de s'être trompé d'endroit.
+ */
 export async function register(
   endpoint: string,
   email: string,
   password: string,
-  inviteCode = "",
+  code = "",
+  lang = "en",
 ): Promise<Session> {
   const body = (await request(`${endpoint}/v1/auth/register`, {
-    payload: { email, password, invite_code: inviteCode },
+    payload: {
+      email,
+      password,
+      invite_code: code,
+      lang,
+      device_label: "site web",
+    },
   })) as { access_token: string; refresh_token: string };
 
   return {
@@ -160,6 +179,21 @@ async function withFreshToken<T>(
     };
     return { result: await call(refreshed.accessToken), session: refreshed };
   }
+}
+
+/**
+ * Exécute un appel authentifié et garde la session à jour.
+ *
+ * Le renouvellement fait tourner le jeton : oublier de réécrire la session
+ * revient à se déconnecter au prochain chargement, sans rien comprendre.
+ */
+export async function authorized<T>(
+  session: Session,
+  call: (token: string) => Promise<T>,
+): Promise<T> {
+  const { result, session: fresh } = await withFreshToken(session, call);
+  if (fresh !== session) saveSession(fresh);
+  return result;
 }
 
 async function encryptEntry(entry: VaultEntry, key: CryptoKey) {
