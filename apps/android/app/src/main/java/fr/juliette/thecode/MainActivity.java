@@ -89,6 +89,7 @@ public class MainActivity extends AppCompatActivity {
      * sur un site avant qu'elle n'existe.
      */
     private boolean useV1 = false;
+    private MenuItem algoItem;
 
     /**
      * Clef maîtresse déjà dérivée, et la clef dont elle vient.
@@ -123,6 +124,7 @@ public class MainActivity extends AppCompatActivity {
         setSupportActionBar(findViewById(R.id.topAppBar));
 
         preferences = new Preferences(this);
+        useV1 = preferences.getUseV1();
         sessionLock = new SessionLock(preferences);
 
         bindViews();
@@ -736,19 +738,45 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_main, menu);
+
+        // Un bouton qui affiche le mode en cours, comme celui du theme : le
+        // lire ne doit pas demander d'ouvrir un menu.
+        algoItem = menu.findItem(R.id.action_algo);
+        com.google.android.material.button.MaterialButton button =
+                (com.google.android.material.button.MaterialButton) algoItem.getActionView();
+        if (button != null) {
+            button.setOnClickListener(v -> toggleAlgo());
+        }
+        applyAlgoLabel();
         return true;
+    }
+
+    /** Bascule entre les deux algorithmes et le fait savoir. */
+    private void toggleAlgo() {
+        useV1 = !useV1;
+        preferences.setUseV1(useV1);
+        applyAlgoLabel();
+        Snackbar.make(findViewById(android.R.id.content),
+                useV1 ? R.string.algo_now_v1 : R.string.algo_now_v2,
+                Snackbar.LENGTH_LONG).show();
+        regenerate();
+    }
+
+    private void applyAlgoLabel() {
+        if (algoItem == null) return;
+        int label = useV1 ? R.string.algo_mode_v1 : R.string.algo_mode_v2;
+        algoItem.setTitle(label);
+
+        com.google.android.material.button.MaterialButton button =
+                (com.google.android.material.button.MaterialButton) algoItem.getActionView();
+        if (button != null) button.setText(label);
     }
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         int id = item.getItemId();
         if (id == R.id.action_algo) {
-            useV1 = !useV1;
-            item.setTitle(useV1 ? R.string.algo_back_to_v2 : R.string.algo_use_v1);
-            Snackbar.make(findViewById(android.R.id.content),
-                    useV1 ? R.string.algo_now_v1 : R.string.algo_now_v2,
-                    Snackbar.LENGTH_LONG).show();
-            regenerate();
+            toggleAlgo();
             return true;
         } else if (id == R.id.action_save_to_vault) {
             saveToVault();
