@@ -109,6 +109,22 @@
             </router-link>
           </div>
 
+          <p v-if="mode === 'login'" class="hint">
+            <button type="button" class="link-btn" @click="forgot">
+              {{ t("acc_forgot") }}
+            </button>
+          </p>
+
+          <!-- Le bouton Google n'apparaît que si le service l'annonce et si
+               son script a pu se charger : un bouton qui ne répond pas serait
+               pire que pas de bouton. -->
+          <div v-show="googleReady" class="google-zone">
+            <p class="separator">
+              <span>{{ t("acc_or") }}</span>
+            </p>
+            <div ref="googleButton" class="google-button"></div>
+          </div>
+
           <p v-if="freeSlots !== null && freeSlots > 0" class="hint">
             {{ freeSlots }} compte(s) encore disponible(s) sans code.
           </p>
@@ -188,6 +204,72 @@
           </section>
 
           <section class="panel">
+            <h3 class="panel-title">{{ t("acc_password_title") }}</h3>
+            <!-- Un compte créé par Google n'a pas de mot de passe : il en pose
+                 un ici, et c'est ce qui lui ouvre les applications. -->
+            <p v-if="info && !info.hasPassword" class="hint">{{ t("acc_password_none") }}</p>
+            <div v-if="info && info.hasPassword" class="field-row">
+              <input
+                id="acc_current_password"
+                v-model="currentPassword"
+                type="password"
+                :placeholder="t('acc_password_current')"
+                autocomplete="current-password"
+              />
+            </div>
+            <div class="field-row">
+              <input
+                id="acc_new_password"
+                v-model="newPassword"
+                type="password"
+                :placeholder="t('acc_password_new')"
+                autocomplete="new-password"
+              />
+              <input
+                id="acc_new_password_confirm"
+                v-model="newPasswordConfirm"
+                type="password"
+                :placeholder="t('acc_password_confirm')"
+                autocomplete="new-password"
+              />
+            </div>
+            <div class="panel-actions">
+              <button type="button" class="ghost-btn" @click="submitPassword">
+                {{ info && info.hasPassword ? t("acc_password_change") : t("acc_password_set") }}
+              </button>
+            </div>
+          </section>
+
+          <section class="panel">
+            <h3 class="panel-title">{{ t("acc_email_title") }}</h3>
+            <p v-if="info && info.pendingEmail" class="hint">
+              {{ t("acc_email_pending") }} {{ info.pendingEmail }}
+            </p>
+            <div class="field-row">
+              <input
+                id="acc_new_email"
+                v-model="newEmail"
+                type="email"
+                :placeholder="t('acc_email_new')"
+                autocomplete="off"
+              />
+              <input
+                v-if="info && info.hasPassword"
+                id="acc_email_password"
+                v-model="emailPassword"
+                type="password"
+                :placeholder="t('acc_password')"
+                autocomplete="current-password"
+              />
+            </div>
+            <div class="panel-actions">
+              <button type="button" class="ghost-btn" @click="submitEmail">
+                {{ t("acc_email_change") }}
+              </button>
+            </div>
+          </section>
+
+          <section class="panel">
             <h3 class="panel-title">{{ t("acc_code_title") }}</h3>
             <div class="field-row">
               <input
@@ -232,9 +314,12 @@ import { computed, defineComponent, onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
 import { useI18n } from "@/i18n";
 import {
+  changeEmail,
+  changePassword,
   fetchAccount,
   fetchDevices,
   fetchPlans,
+  forgotPassword,
   openPortal,
   redeemCode,
   resendVerification,
@@ -243,9 +328,11 @@ import {
   type AccountInfo,
   type Device,
 } from "@/account";
+import { renderGoogleButton } from "@/google";
 import {
   clearSession,
   DEFAULT_ENDPOINT,
+  googleSignIn,
   loadSession,
   login,
   register,
@@ -274,6 +361,13 @@ export default defineComponent({
     const info = ref<AccountInfo | null>(null);
     const devices = ref<Device[]>([]);
     const freeSlots = ref<number | null>(null);
+    const currentPassword = ref("");
+    const newPassword = ref("");
+    const newPasswordConfirm = ref("");
+    const newEmail = ref("");
+    const emailPassword = ref("");
+    const googleButton = ref<HTMLElement | null>(null);
+    const googleReady = ref(false);
     const priceCents = ref(200);
     const currency = ref("EUR");
 
@@ -344,6 +438,14 @@ export default defineComponent({
       try {
         const state = await registrationState(DEFAULT_ENDPOINT);
         freeSlots.value = state.freeSlots;
+        if (state.googleClientId && googleButton.value) {
+          googleReady.value = await renderGoogleButton(
+            googleButton.value,
+            state.googleClientId,
+            continueWithGoogle,
+            lang.value,
+          );
+        }
       } catch {
         freeSlots.value = null;
       }
@@ -397,6 +499,72 @@ export default defineComponent({
         // choisir puis devoir la rechoisir ailleurs serait un pas de plus pour
         // rien.
         if (chosenPlan.value === "pro" && info.value?.plan !== "pro") await upgrade();
+      } catch (e) {
+        message.value = (e as Error).message;
+      }
+    }
+
+    async function continueWithGoogle(idToken: string) {
+      message.value = t("acc_connecting");
+      try {
+        saveSession(await googleSignIn(DEFAULT_ENDPOINT, idToken, code.value, lang.value));
+        code.value = "";
+        message.value = t("acc_connected");
+        await refresh();
+      } catch (e) {
+        message.value = (e as Error).message;
+      }
+    }
+
+    async function forgot() {
+      if (!email.value) {
+        message.value = t("acc_fill");
+        return;
+      }
+      try {
+        await forgotPassword(DEFAULT_ENDPOINT, email.value, lang.value);
+      } catch {
+        // Le service peut être injoignable ; la réponse reste la même, elle ne
+        // doit rien dire de l'existence du compte.
+      }
+      message.value = t("acc_forgot_sent");
+    }
+
+    async function submitPassword() {
+      const session = loadSession();
+      if (!session) return;
+      if (newPassword.value.length < 12) {
+        message.value = t("acc_password_short");
+        return;
+      }
+      if (newPassword.value !== newPasswordConfirm.value) {
+        message.value = t("acc_password_mismatch");
+        return;
+      }
+      try {
+        await changePassword(session, currentPassword.value, newPassword.value);
+        currentPassword.value = "";
+        newPassword.value = "";
+        newPasswordConfirm.value = "";
+        message.value = t("acc_password_changed");
+        await refresh();
+      } catch (e) {
+        message.value = (e as Error).message;
+      }
+    }
+
+    async function submitEmail() {
+      const session = loadSession();
+      if (!session || !newEmail.value) {
+        message.value = t("acc_fill");
+        return;
+      }
+      try {
+        await changeEmail(session, newEmail.value, emailPassword.value, lang.value);
+        newEmail.value = "";
+        emailPassword.value = "";
+        message.value = t("acc_email_sent");
+        await refresh();
       } catch (e) {
         message.value = (e as Error).message;
       }
@@ -483,6 +651,13 @@ export default defineComponent({
       info,
       devices,
       freeSlots,
+      currentPassword,
+      newPassword,
+      newPasswordConfirm,
+      newEmail,
+      emailPassword,
+      googleButton,
+      googleReady,
       isPro,
       planLabel,
       formattedPrice,
@@ -490,6 +665,9 @@ export default defineComponent({
       formatDate,
       signIn,
       createAccount,
+      forgot,
+      submitPassword,
+      submitEmail,
       signOut,
       upgrade,
       manage,
@@ -729,6 +907,44 @@ export default defineComponent({
   flex: 1;
   font-size: 0.78rem;
   color: var(--text-muted);
+}
+
+/* Un lien déguisé en bouton : « mot de passe oublié » est une action, pas une
+   navigation, mais il n'a pas le poids d'un bouton. */
+.link-btn {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--c4);
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.google-zone {
+  margin-top: 18px;
+}
+
+.separator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 14px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.separator::before,
+.separator::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border-soft);
+}
+
+.google-button {
+  display: flex;
+  justify-content: center;
 }
 
 .account-message {

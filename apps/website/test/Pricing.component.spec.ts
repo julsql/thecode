@@ -10,6 +10,7 @@ import { mount } from "@vue/test-utils";
 import { createRouter, createMemoryHistory, type Router } from "vue-router";
 import Pricing from "@/pages/Pricing.vue";
 import AccountVerify from "@/pages/AccountVerify.vue";
+import AccountReset from "@/pages/AccountReset.vue";
 
 const json = (status: number, body: unknown) =>
   Promise.resolve({ ok: status < 400, status, json: () => Promise.resolve(body) } as Response);
@@ -110,6 +111,60 @@ describe("confirmation d'adresse", () => {
     const wrapper = await mountAt(AccountVerify, "/fr/account/verify");
 
     expect(fetchMock).not.toHaveBeenCalled();
+    expect(wrapper.text()).toContain("invalide ou expiré");
+  });
+});
+
+describe("réinitialisation du mot de passe", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.unstubAllGlobals();
+  });
+
+  const fill = async (wrapper: any, password: string, confirmation: string) => {
+    await wrapper.find("#reset_password").setValue(password);
+    await wrapper.find("#reset_password_confirm").setValue(confirmation);
+    await wrapper
+      .findAll("button")
+      .find((b: any) => b.text().includes("Poser ce mot de passe"))!
+      .trigger("click");
+    await flush();
+  };
+
+  it("pose le nouveau mot de passe et ouvre la session", async () => {
+    const seen: Array<Record<string, unknown>> = [];
+    vi.stubGlobal("fetch", (url: string, init?: RequestInit) => {
+      seen.push({ url, body: JSON.parse(String(init?.body)) });
+      return json(200, { access_token: "jeton", refresh_token: "renouvellement" });
+    });
+
+    const wrapper = await mountAt(AccountReset, "/fr/account/reset?token=abc123");
+    await fill(wrapper, "UnNouveauMotDePasse1", "UnNouveauMotDePasse1");
+
+    expect(seen[0].body).toEqual({ token: "abc123", password: "UnNouveauMotDePasse1" });
+    // Sans session ouverte ici, on repartirait vers le formulaire de connexion
+    // juste après avoir prouvé son identité.
+    expect(localStorage.getItem("thecode.session")).toContain("jeton");
+    expect(wrapper.text()).toContain("Mot de passe changé");
+  });
+
+  it("refuse deux saisies différentes sans rien envoyer", async () => {
+    const fetchMock = vi.fn(() => json(200, {}));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const wrapper = await mountAt(AccountReset, "/fr/account/reset?token=abc123");
+    await fill(wrapper, "UnNouveauMotDePasse1", "UnNouveauMotDePasse2");
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(wrapper.text()).toContain("ne correspondent pas");
+  });
+
+  it("le dit clairement quand le lien est mort", async () => {
+    vi.stubGlobal("fetch", () => json(400, { detail: "Lien invalide ou expiré." }));
+
+    const wrapper = await mountAt(AccountReset, "/fr/account/reset?token=perime");
+    await fill(wrapper, "UnNouveauMotDePasse1", "UnNouveauMotDePasse1");
+
     expect(wrapper.text()).toContain("invalide ou expiré");
   });
 });

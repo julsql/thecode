@@ -111,6 +111,13 @@ export interface RegistrationState {
   needsCode: boolean;
   /** Places restantes sans code, ou null quand la notion ne s'applique pas. */
   freeSlots: number | null;
+  /**
+   * Identifiant client Google, vide quand la connexion Google n'est pas
+   * configurée. Donné par le service plutôt que recopié ici : deux copies
+   * finiraient par ne plus correspondre, et le bouton échouerait sans raison
+   * visible.
+   */
+  googleClientId?: string;
 }
 
 export async function registrationState(endpoint: string): Promise<RegistrationState> {
@@ -154,6 +161,34 @@ export async function register(
 export async function login(endpoint: string, email: string, password: string): Promise<Session> {
   const body = await request(`${endpoint}/v1/auth/login`, {
     payload: { email, password, device_label: "site web" },
+  });
+  return {
+    endpoint,
+    accessToken: body.access_token,
+    refreshToken: body.refresh_token,
+  };
+}
+
+/**
+ * Ouvre la session à partir d'un jeton Google, en créant le compte au besoin.
+ *
+ * Une seule route pour les deux : « continuer avec Google » ne distingue pas
+ * l'inscription de la connexion, et demander lequel des deux on veut
+ * reviendrait à demander de se souvenir si l'on est déjà venu.
+ */
+export async function googleSignIn(
+  endpoint: string,
+  idToken: string,
+  code = "",
+  lang = "en",
+): Promise<Session> {
+  const body = await request(`${endpoint}/v1/auth/google`, {
+    payload: {
+      id_token: idToken,
+      invite_code: code,
+      lang,
+      device_label: "site web",
+    },
   });
   return {
     endpoint,

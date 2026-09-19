@@ -9,6 +9,7 @@ import Tutorial from "./pages/Tutorial.vue";
 import Contact from "./pages/Contact.vue";
 import Account from "./pages/Account.vue";
 import AccountVerify from "./pages/AccountVerify.vue";
+import AccountReset from "./pages/AccountReset.vue";
 import Pricing from "./pages/Pricing.vue";
 import { DEFAULT_LANG } from "./i18n/translations";
 
@@ -39,6 +40,9 @@ const routes: Array<RouteRecordRaw> = [
       // Le lien de verification arrive par courrier : il doit tomber sur une
       // page qui confirme toute seule, sans demander de se connecter d'abord.
       { path: "account/verify", component: AccountVerify },
+      // Le lien de reinitialisation arrive lui aussi par courrier : il tombe
+      // sur une page qui ne demande que le nouveau mot de passe.
+      { path: "account/reset", component: AccountReset },
       { path: "pricing", component: Pricing },
     ],
   },

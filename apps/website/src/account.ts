@@ -26,6 +26,11 @@ export interface AccountInfo {
   currentPeriodEnd: string | null;
   hasPendingCoupon: boolean;
   billingAvailable: boolean;
+  /** Faux pour un compte créé par Google qui n'a pas posé de mot de passe. */
+  hasPassword: boolean;
+  googleLinked: boolean;
+  /** Adresse en attente de confirmation, vide s'il n'y en a pas. */
+  pendingEmail: string;
 }
 
 /** Les tarifs, lisibles sans compte. */
@@ -63,6 +68,9 @@ export async function fetchAccount(session: Session): Promise<AccountInfo> {
     currentPeriodEnd: body.current_period_end ?? null,
     hasPendingCoupon: body.has_pending_coupon,
     billingAvailable: body.billing_available,
+    hasPassword: body.has_password ?? true,
+    googleLinked: Boolean(body.google_linked),
+    pendingEmail: body.pending_email ?? "",
   };
 }
 
@@ -169,4 +177,60 @@ export async function refreshPlan(session: Session): Promise<string | undefined>
   } catch {
     return loadSession()?.plan;
   }
+}
+
+/**
+ * Change le mot de passe du compte.
+ *
+ * `currentPassword` est vide pour un compte créé par Google, qui n'en a pas
+ * encore : en exiger un lui interdirait d'en poser un, donc lui interdirait
+ * les applications, qui ne savent se connecter qu'ainsi.
+ */
+export async function changePassword(
+  session: Session,
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> {
+  await authorized(session, (token) =>
+    request(`${session.endpoint}/v1/account/password`, {
+      token,
+      payload: { current_password: currentPassword, new_password: newPassword },
+    }),
+  );
+}
+
+/** Demande un changement d'adresse : rien ne bouge avant le lien reçu. */
+export async function changeEmail(
+  session: Session,
+  newEmail: string,
+  password: string,
+  lang: string,
+): Promise<void> {
+  await authorized(session, (token) =>
+    request(`${session.endpoint}/v1/account/email`, {
+      token,
+      payload: { new_email: newEmail, password, lang },
+    }),
+  );
+}
+
+/** Demande un lien de réinitialisation. Pas de session : on l'a perdue. */
+export async function forgotPassword(endpoint: string, email: string, lang: string): Promise<void> {
+  await request(`${endpoint}/v1/auth/password/forgot`, { payload: { email, lang } });
+}
+
+/** Repose un mot de passe depuis le lien reçu, et ouvre une session. */
+export async function resetPassword(
+  endpoint: string,
+  token: string,
+  password: string,
+): Promise<Session> {
+  const body = await request(`${endpoint}/v1/auth/password/reset`, {
+    payload: { token, password },
+  });
+  return {
+    endpoint,
+    accessToken: body.access_token,
+    refreshToken: body.refresh_token,
+  };
 }

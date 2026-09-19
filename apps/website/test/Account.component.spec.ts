@@ -9,6 +9,22 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import { createRouter, createMemoryHistory, type Router } from "vue-router";
 import Account from "@/pages/Account.vue";
+import { renderGoogleButton } from "@/google";
+
+/**
+ * Le script de Google n'est pas chargé en test : ce qui est vérifié ici, c'est
+ * ce que la page fait du jeton, pas la façon dont Google le fabrique.
+ */
+vi.mock("@/google", () => ({
+  renderGoogleButton: vi.fn(async () => true),
+}));
+
+/** Rejoue le retour de Google, comme le ferait son bouton. */
+async function returnFromGoogle(idToken: string) {
+  const calls = vi.mocked(renderGoogleButton).mock.calls;
+  const callback = calls[calls.length - 1]?.[2];
+  await callback?.(idToken);
+}
 
 /** Ce que le faux service a reçu : c'est la vraie matière du test. */
 interface Call {
@@ -37,6 +53,9 @@ function fakeService(overrides: Record<string, unknown> = {}) {
       max_entries: 20,
       email_verified: false,
       plan_source: "none",
+      has_password: true,
+      google_linked: false,
+      pending_email: "",
       device_count: 1,
       max_devices: 2,
       current_period_end: null,
@@ -70,7 +89,22 @@ function fakeService(overrides: Record<string, unknown> = {}) {
       });
     }
     if (url.endsWith("/v1/auth/registration")) {
-      return json(200, { open: true, needsCode: false, freeSlots: 3 });
+      return json(200, {
+        open: true,
+        needsCode: false,
+        freeSlots: 3,
+        googleClientId: "client-de-test",
+      });
+    }
+    if (url.endsWith("/v1/auth/google")) {
+      state.me = { ...state.me, google_linked: true, has_password: false };
+      return json(200, { access_token: "jeton", refresh_token: "renouvellement" });
+    }
+    if (url.endsWith("/v1/auth/password/forgot")) return json(202, { sent: true });
+    if (url.endsWith("/v1/account/password")) return json(200, { changed: true });
+    if (url.endsWith("/v1/account/email")) {
+      state.me = { ...state.me, pending_email: body?.new_email };
+      return json(202, { sent: true });
     }
     if (url.endsWith("/v1/auth/register") || url.endsWith("/v1/auth/login")) {
       return json(200, { access_token: "jeton", refresh_token: "renouvellement" });
@@ -206,6 +240,63 @@ describe("page du compte", () => {
     });
   });
 
+  describe("Google", () => {
+    it("ouvre la session avec le jeton rendu par Google", async () => {
+      const service = fakeService();
+      await mountAccount();
+
+      await returnFromGoogle("jeton-google");
+      await flush();
+
+      const sent = service.calls.find((c) => c.url.endsWith("/v1/auth/google"));
+      expect(sent?.body).toMatchObject({ id_token: "jeton-google", lang: "fr" });
+      expect(localStorage.getItem("thecode.session")).toContain("jeton");
+    });
+
+    it("transmet le code de parrainage saisi", async () => {
+      const service = fakeService();
+      const wrapper = await mountAccount();
+
+      await button(wrapper, "Créer un compte")!.trigger("click");
+      await wrapper.find("#acc_code").setValue("PARRAIN");
+      await returnFromGoogle("jeton-google");
+      await flush();
+
+      expect(service.calls.find((c) => c.url.endsWith("/v1/auth/google"))?.body).toMatchObject({
+        invite_code: "PARRAIN",
+      });
+    });
+  });
+
+  describe("mot de passe oublié", () => {
+    it("demande un lien sans rien dire de l'existence du compte", async () => {
+      const service = fakeService();
+      const wrapper = await mountAccount();
+
+      await wrapper.find("#acc_email").setValue("julie@exemple.fr");
+      await button(wrapper, "Mot de passe oublié")!.trigger("click");
+      await flush();
+
+      expect(service.calls.find((c) => c.url.endsWith("/v1/auth/password/forgot"))?.body).toEqual({
+        email: "julie@exemple.fr",
+        lang: "fr",
+      });
+      // Le même message dans tous les cas : dire « adresse inconnue »
+      // transformerait la page en annuaire des comptes.
+      expect(wrapper.text()).toContain("un lien vient de partir");
+    });
+
+    it("réclame l'adresse avant d'envoyer quoi que ce soit", async () => {
+      const service = fakeService();
+      const wrapper = await mountAccount();
+
+      await button(wrapper, "Mot de passe oublié")!.trigger("click");
+      await flush();
+
+      expect(service.calls.some((c) => c.url.includes("/forgot"))).toBe(false);
+    });
+  });
+
   describe("compte connecté", () => {
     beforeEach(() => {
       localStorage.setItem(
@@ -281,6 +372,64 @@ describe("page du compte", () => {
 
       expect(button(wrapper, "Gérer mon abonnement")).toBeDefined();
       expect(button(wrapper, "Prendre l'offre complète")).toBeUndefined();
+    });
+
+    it("refuse deux nouveaux mots de passe différents", async () => {
+      const service = fakeService();
+      const wrapper = await mountAccount();
+
+      await wrapper.find("#acc_current_password").setValue("MotDePasseAssezLong1");
+      await wrapper.find("#acc_new_password").setValue("UnAutreMotDePasse42");
+      await wrapper.find("#acc_new_password_confirm").setValue("UnAutreMotDePasse43");
+      await button(wrapper, "Changer mon mot de passe")!.trigger("click");
+      await flush();
+
+      expect(wrapper.text()).toContain("ne correspondent pas");
+      expect(service.calls.some((c) => c.url.endsWith("/v1/account/password"))).toBe(false);
+    });
+
+    it("change le mot de passe", async () => {
+      const service = fakeService();
+      const wrapper = await mountAccount();
+
+      await wrapper.find("#acc_current_password").setValue("MotDePasseAssezLong1");
+      await wrapper.find("#acc_new_password").setValue("UnAutreMotDePasse42");
+      await wrapper.find("#acc_new_password_confirm").setValue("UnAutreMotDePasse42");
+      await button(wrapper, "Changer mon mot de passe")!.trigger("click");
+      await flush();
+
+      expect(service.calls.find((c) => c.url.endsWith("/v1/account/password"))?.body).toEqual({
+        current_password: "MotDePasseAssezLong1",
+        new_password: "UnAutreMotDePasse42",
+      });
+      expect(wrapper.text()).toContain("autres appareils");
+    });
+
+    it("propose de définir un mot de passe à un compte Google", async () => {
+      fakeService({ has_password: false, google_linked: true });
+      const wrapper = await mountAccount();
+
+      // C'est ce qui lui ouvre les applications, qui se connectent avec une
+      // adresse et un mot de passe.
+      expect(button(wrapper, "Définir un mot de passe")).toBeDefined();
+      expect(wrapper.find("#acc_current_password").exists()).toBe(false);
+    });
+
+    it("demande un changement d'adresse et montre l'attente", async () => {
+      const service = fakeService();
+      const wrapper = await mountAccount();
+
+      await wrapper.find("#acc_new_email").setValue("nouvelle@exemple.fr");
+      await wrapper.find("#acc_email_password").setValue("MotDePasseAssezLong1");
+      await button(wrapper, "Changer mon adresse")!.trigger("click");
+      await flush();
+
+      expect(service.calls.find((c) => c.url.endsWith("/v1/account/email"))?.body).toMatchObject({
+        new_email: "nouvelle@exemple.fr",
+      });
+      // Rien ne change avant le lien : l'écran doit le montrer, sinon on
+      // refait la demande en croyant qu'elle n'est pas passée.
+      expect(wrapper.text()).toContain("nouvelle@exemple.fr");
     });
 
     it("oublie la session à la déconnexion", async () => {
