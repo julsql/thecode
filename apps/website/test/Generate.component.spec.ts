@@ -144,7 +144,7 @@ describe("carnet et empreinte", () => {
     await renew!.trigger("click");
 
     await vi.waitFor(() => expect(wrapper.text()).toContain("Nouveau"), { timeout: 10000 });
-    expect(wrapper.text()).toContain("Actuel");
+    expect(wrapper.text()).toContain("Mot de passe actuel");
 
     // Rien n'est ecrit tant que ce n'est pas confirme : l'ancien mot de passe
     // est encore celui du site.
@@ -180,7 +180,7 @@ describe("synchronisation", () => {
   it("propose de se connecter, pas de synchroniser", async () => {
     const wrapper = await mountGenerate();
     // Sans session, proposer « Synchroniser » donnerait un bouton qui échoue.
-    expect(wrapper.text()).toContain("Connecter");
+    expect(wrapper.text()).toContain("Se connecter");
     expect(wrapper.text()).not.toContain("Déconnecter");
   });
 
@@ -189,7 +189,9 @@ describe("synchronisation", () => {
     saveSession({ endpoint: "https://x", accessToken: "a", refreshToken: "r" });
 
     const wrapper = await mountGenerate();
-    const button = wrapper.findAll("button").find((b) => b.text() === "Synchroniser");
+    const button = wrapper
+      .findAll("button")
+      .find((b) => b.text().startsWith("Synchroniser maintenant"));
     await button!.trigger("click");
     await wrapper.vm.$nextTick();
 
