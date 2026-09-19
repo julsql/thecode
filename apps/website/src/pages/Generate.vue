@@ -527,7 +527,15 @@ export default defineComponent({
       return "sec_verystrong";
     };
 
+    // Une generation v2 met plusieurs centaines de millisecondes (PBKDF2, 600
+    // 000 iterations) : si l'utilisateur bascule en v1 pendant ce temps, le
+    // resultat v1 sort en premier et la v2, en retard, l'ecraserait. Chaque
+    // generation prend un numero et n'ecrit que si elle est toujours la
+    // derniere demandee.
+    let generationCourante = 0;
+
     const genererMotDePasse = async () => {
+      const generation = ++generationCourante;
       const bits = calculateEntropyBits(
         longueur.value,
         minuscules.value,
@@ -547,6 +555,7 @@ export default defineComponent({
         motDePasse.value = "";
         return;
       }
+      if (generation !== generationCourante) return;
 
       // Canonicalise la saisie pour qu'un meme compte donne le meme mot de
       // passe que dans l'extension ou les apps : https://www.google.com/login
@@ -575,6 +584,7 @@ export default defineComponent({
               useSymbols: symboles.value,
               useNumbers: chiffres.value,
             });
+      if (generation !== generationCourante) return;
       motDePasse.value = mdp ?? "";
     };
 

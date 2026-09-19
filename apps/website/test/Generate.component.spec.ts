@@ -44,8 +44,8 @@ describe("page de generation", () => {
   let wrapper: Awaited<ReturnType<typeof mountGenerate>>;
 
   beforeEach(async () => {
-    // Le mode de generation est desormais retenu : sans ce nettoyage, un test
-    // qui passe en v1 fait generer en v1 aux suivants.
+    // Le carnet vit dans le stockage local : sans ce nettoyage, une entree
+    // enregistree par un test ferait generer les suivants depuis cette entree.
     localStorage.clear();
     wrapper = await mountGenerate();
   });
@@ -87,6 +87,27 @@ describe("page de generation", () => {
       timeout: 15000,
     });
   }, 20000);
+
+  // La v2 met plusieurs centaines de millisecondes : basculer en v1 pendant
+  // qu'elle calcule laissait la v2, en retard, ecraser le mot de passe v1
+  // deja affiche. L'ecran montrait alors un mot de passe qui ne correspondait
+  // pas au mode affiche.
+  it("ne laisse pas la v2 en retard ecraser la v1 demandee entre-temps", async () => {
+    const canonical = vectors.v1.cases.find((c: any) => c.id === "canonical");
+
+    await wrapper.find("#id_site").setValue(canonical.site);
+    await wrapper.find("#id_clef").setValue(canonical.master);
+    // Sans attendre la fin de la v2 : c'est tout l'interet du test.
+    const v1Button = wrapper.findAll("button").find((b) => b.text().includes("v1"));
+    await v1Button!.trigger("click");
+
+    await vi.waitFor(() => expect(generated(wrapper)).toBe(canonical.expected), {
+      timeout: 15000,
+    });
+    // Laisse la v2 en vol se terminer : elle ne doit plus rien ecrire.
+    await new Promise((r) => setTimeout(r, 2000));
+    expect(generated(wrapper)).toBe(canonical.expected);
+  }, 25000);
 
   it("regenere quand la longueur change", async () => {
     const short = vectors.v2.cases.find((c: any) => c.id === "v2-len-min");
