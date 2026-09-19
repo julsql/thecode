@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.4.0](https://github.com/julsql/thecode/compare/website-v2.3.0...website-v2.4.0) (2026-09-19)
+
+
+### Features
+
+* let a Google account stand on its own and drop the link ([4b59373](https://github.com/julsql/thecode/commit/4b59373de2fa560ce1176b495f4bfaf38fab71b0))
+
+
+### Bug Fixes
+
+* **tests:** write fixture passwords so they read as fixtures ([3d9efb2](https://github.com/julsql/thecode/commit/3d9efb2f544ef799764b27a458ae6e7d0f25b468))
+
 ## [2.3.0](https://github.com/julsql/thecode/compare/website-v2.2.0...website-v2.3.0) (2026-09-19)
 
 
