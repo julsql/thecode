@@ -167,6 +167,28 @@ droits peut se glisser, pour un geste qu'on fait deux fois par an.
   d'appareils sans moyen d'en déconnecter un laisserait bloqué qui l'atteint.
 - `POST /v1/account/code` — un code d'invitation, de parrainage (remise Stripe)
   ou à vie. Un code ne se rejoue pas sur le même compte.
+- `POST /v1/auth/google` — crée le compte ou ouvre la session à partir d'un
+  jeton d'identité Google. Le lien se fait sur le `sub` de Google, jamais sur
+  l'adresse : Google permet d'en changer, et une adresse réattribuée à
+  quelqu'un d'autre lui ouvrirait le compte. Un compte existant avec la même
+  adresse vérifiée est **relié**, pas dupliqué — deux comptes pour la même
+  personne couperaient son carnet en deux.
+- `POST /v1/account/password` — change le mot de passe. L'actuel est exigé, et
+  les **autres** appareils sont déconnectés : pas celui qui vient de le
+  changer. Un compte créé par Google n'a pas de mot de passe et en pose un ici,
+  ce qui lui ouvre les applications — elles ne savent se connecter qu'avec une
+  adresse et un mot de passe.
+- `POST /v1/account/email` — demande un changement d'adresse. Rien ne bouge
+  avant que le lien, envoyé à la **nouvelle** adresse, ne soit suivi.
+- `POST /v1/auth/password/forgot` et `/reset` — oubli. La demande répond la même
+  chose quelle que soit l'adresse, sinon la route serait un annuaire des
+  comptes ; la réinitialisation déconnecte **tous** les appareils, puisqu'elle
+  sert aussi à reprendre un compte dont on a perdu le contrôle.
+
+Aucun de ces changements ne touche au carnet : il est chiffré avec la clef
+maîtresse, que le service ne connaît pas. Changer la serrure du compte ne rend
+son contenu ni lisible, ni illisible.
+
 - `GET /v1/billing/plans`, `POST /v1/billing/checkout`, `POST /v1/billing/portal`,
   `POST /v1/billing/webhook`.
 
