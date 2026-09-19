@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.2.0](https://github.com/julsql/thecode/compare/extension-v3.1.0...extension-v3.2.0) (2026-09-19)
+
+
+### Features
+
+* add a shared QR encoder, byte mode, EC level L ([e4a414f](https://github.com/julsql/thecode/commit/e4a414f625c0b12a8f78edc321ccabad6a245fcd))
+* **extension:** derive from the vault entry, and renew or migrate it ([dec485e](https://github.com/julsql/thecode/commit/dec485e959256738a1b77ae048f897863f24c13d))
+* **extension:** transfer the vault by QR code or file ([9c683a1](https://github.com/julsql/thecode/commit/9c683a18c9759df3fc3beef9b09bb510f6dceef2))
+
 ## [3.1.0](https://github.com/julsql/thecode/compare/extension-v3.0.0...extension-v3.1.0) (2026-09-18)
 
 

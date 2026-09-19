@@ -1,5 +1,16 @@
 # Changelog
 
+## [3.2.0](https://github.com/julsql/thecode/compare/apple-v3.1.0...apple-v3.2.0) (2026-09-19)
+
+
+### Features
+
+* **apple:** export and import an encrypted vault ([6a15f6b](https://github.com/julsql/thecode/commit/6a15f6b5ad65a5976bb4b32d76fe2110610353c0))
+* **apple:** implement the v2 algorithm ([7ac434a](https://github.com/julsql/thecode/commit/7ac434a87c3ca2c3324bc825e65fcb6fc7de42c5))
+* **apple:** make autofill read the vault ([b920bf2](https://github.com/julsql/thecode/commit/b920bf2c4f1c7e9d9e0988f84ee5f98b62455a81))
+* **apple:** renew and migrate an entry from the vault screen ([bd81dc4](https://github.com/julsql/thecode/commit/bd81dc4211062f274e964970c494f9a31075ce99))
+* **apple:** transfer the vault by QR code ([bcfb2e9](https://github.com/julsql/thecode/commit/bcfb2e94ff56eb832bd0b1dd0e747e3d3af1d0f7))
+
 ## [3.1.0](https://github.com/julsql/thecode/compare/apple-v3.0.0...apple-v3.1.0) (2026-09-18)
 
 
