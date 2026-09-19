@@ -6,7 +6,7 @@
  * langues fait foi, et qu'une information manquante se voit au lieu de passer
  * inaperçue.
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { mount } from "@vue/test-utils";
 import { createRouter, createMemoryHistory, type Router } from "vue-router";
 import Legal from "@/pages/Legal.vue";
@@ -14,6 +14,7 @@ import Terms from "@/pages/Terms.vue";
 import Privacy from "@/pages/Privacy.vue";
 import { IDENTITY } from "@/legal/identity";
 import { legalDoc } from "@/legal";
+import { resetService } from "@/service";
 
 function makeRouter(component: unknown): Router {
   return createRouter({
@@ -30,6 +31,8 @@ async function mountAt(component: unknown, path: string) {
 }
 
 describe("pages légales", () => {
+  beforeEach(() => resetService());
+
   it("affiche les mentions légales en entier", async () => {
     const wrapper = await mountAt(Legal, "/fr/legal");
 
@@ -84,5 +87,24 @@ describe("pages légales", () => {
     // phrase juridique n'a aucune raison de pouvoir injecter du HTML.
     expect(wrapper.html()).toContain("<strong>");
     expect(wrapper.html()).not.toContain("<script");
+  });
+});
+
+describe("documents et offre payante", () => {
+  beforeEach(() => resetService());
+
+  it("prévient que les conditions de vente ne s'appliquent pas encore", async () => {
+    // Publier des conditions pour une offre qui n'existe pas tromperait sur
+    // ce que le service propose.
+    const doc = legalDoc("terms", "fr", false);
+    expect(doc.intro?.[0]).toContain("Aucune offre payante");
+
+    const open = legalDoc("terms", "fr", true);
+    expect(open.intro?.[0]).not.toContain("Aucune offre payante");
+  });
+
+  it("dit que Stripe n'intervient pas encore", async () => {
+    const doc = legalDoc("privacy", "fr", false);
+    expect(doc.intro?.join(" ")).toContain("Stripe n'intervient donc pas encore");
   });
 });

@@ -73,8 +73,8 @@
               />
             </div>
 
-            <p class="choose-plan">{{ t("acc_choose_plan") }}</p>
-            <div class="plan-choice">
+            <p v-if="plansOpen" class="choose-plan">{{ t("acc_choose_plan") }}</p>
+            <div v-if="plansOpen" class="plan-choice">
               <button
                 type="button"
                 class="plan-option"
@@ -156,11 +156,17 @@
           <dl class="usage">
             <div>
               <dt>{{ t("acc_usage_entries") }}</dt>
-              <dd>{{ info?.entryCount }} / {{ info?.maxEntries }}</dd>
+              <dd>
+                {{ info?.entryCount
+                }}<template v-if="plansOpen"> / {{ info?.maxEntries }}</template>
+              </dd>
             </div>
             <div>
               <dt>{{ t("acc_usage_devices") }}</dt>
-              <dd>{{ info?.deviceCount }} / {{ info?.maxDevices }}</dd>
+              <dd>
+                {{ info?.deviceCount
+                }}<template v-if="plansOpen"> / {{ info?.maxDevices }}</template>
+              </dd>
             </div>
             <div v-if="renewal">
               <dt>{{ t("acc_renews") }}</dt>
@@ -168,7 +174,7 @@
             </div>
           </dl>
 
-          <section class="panel">
+          <section v-if="plansOpen" class="panel">
             <h3 class="panel-title">{{ t("acc_plan") }}</h3>
             <p v-if="info?.hasPendingCoupon" class="hint">{{ t("acc_pending_coupon") }}</p>
 
@@ -371,6 +377,7 @@ import {
   type Device,
 } from "@/account";
 import { renderGoogleButton } from "@/google";
+import { loadService, service } from "@/service";
 import {
   clearSession,
   DEFAULT_ENDPOINT,
@@ -416,9 +423,15 @@ export default defineComponent({
     const currency = ref("EUR");
 
     const isPro = computed(() => info.value?.plan === "pro");
+    // Les offres s'appliquent-elles ? Le service seul le sait.
+    loadService();
+    const plansOpen = computed(() => service.plans.plansEnforced);
 
     const planLabel = computed(() => {
       if (info.value?.planSource === "lifetime") return t("acc_plan_lifetime");
+      // Annoncer « offre complète » à quelqu'un qui n'a rien pris, parce que
+      // tout est ouvert, sonnerait comme une facture à venir.
+      if (!plansOpen.value) return t("acc_plan_open");
       return isPro.value ? t("acc_plan_pro") : t("acc_plan_free");
     });
 
@@ -542,7 +555,9 @@ export default defineComponent({
         // L'offre choisie à l'inscription mène directement au paiement : la
         // choisir puis devoir la rechoisir ailleurs serait un pas de plus pour
         // rien.
-        if (chosenPlan.value === "pro" && info.value?.plan !== "pro") await upgrade();
+        if (plansOpen.value && chosenPlan.value === "pro" && info.value?.plan !== "pro") {
+          await upgrade();
+        }
       } catch (e) {
         message.value = (e as Error).message;
       }
@@ -748,6 +763,7 @@ export default defineComponent({
       googleButton,
       googleReady,
       isPro,
+      plansOpen,
       planLabel,
       formattedPrice,
       renewal,

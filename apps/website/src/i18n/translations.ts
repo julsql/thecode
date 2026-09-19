@@ -190,6 +190,9 @@ export const translations = {
     pricing_lead:
       "Generating passwords is free, forever, and works offline: there is nothing to bill for a computation that never leaves your device. What a subscription pays for is syncing your book between devices, through the server.",
     pricing_recommended: "Recommended",
+    pricing_open_title: "Everything is open",
+    pricing_open_lead:
+      "The whole service is free at the moment, syncing included. A paid plan will fund the service later on; nothing is being sold today.",
     pricing_free_name: "Free",
     pricing_free_price: "€0",
     pricing_per_month: "/month",
@@ -231,6 +234,7 @@ export const translations = {
     acc_plan_free: "Free",
     acc_plan_pro: "Complete",
     acc_plan_lifetime: "Complete, for life",
+    acc_plan_open: "Everything open",
     acc_status: "Status",
     acc_renews: "Renews on",
     acc_usage_entries: "Synced entries",
@@ -487,6 +491,9 @@ export const translations = {
     pricing_lead:
       "Générer des mots de passe est gratuit, pour toujours, et fonctionne hors ligne : il n'y a rien à facturer sur un calcul qui ne quitte pas votre appareil. Ce que l'abonnement paie, c'est la synchronisation du carnet entre vos appareils, par le serveur.",
     pricing_recommended: "Recommandé",
+    pricing_open_title: "Tout est ouvert",
+    pricing_open_lead:
+      "Le service est entièrement gratuit pour le moment, synchronisation comprise. Une offre payante financera le service plus tard ; rien n'est vendu aujourd'hui.",
     pricing_free_name: "Gratuite",
     pricing_free_price: "0 €",
     pricing_per_month: "/mois",
@@ -528,6 +535,7 @@ export const translations = {
     acc_plan_free: "Gratuite",
     acc_plan_pro: "Complète",
     acc_plan_lifetime: "Complète, à vie",
+    acc_plan_open: "Tout est ouvert",
     acc_status: "Statut",
     acc_renews: "Renouvellement le",
     acc_usage_entries: "Entrées synchronisées",

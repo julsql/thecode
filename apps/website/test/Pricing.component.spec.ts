@@ -8,6 +8,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import { createRouter, createMemoryHistory, type Router } from "vue-router";
+import { resetService } from "@/service";
 import Pricing from "@/pages/Pricing.vue";
 import AccountVerify from "@/pages/AccountVerify.vue";
 import AccountReset from "@/pages/AccountReset.vue";
@@ -45,11 +46,15 @@ async function mountAt(component: unknown, path: string) {
 }
 
 describe("page des tarifs", () => {
-  beforeEach(() => vi.unstubAllGlobals());
+  beforeEach(() => {
+    vi.unstubAllGlobals();
+    resetService();
+  });
 
   it("affiche le prix et les plafonds annoncés par le service", async () => {
     vi.stubGlobal("fetch", () =>
       json(200, {
+        plans_enforced: true,
         price_monthly_cents: 200,
         currency: "EUR",
         billing_available: true,
@@ -68,20 +73,44 @@ describe("page des tarifs", () => {
     expect(wrapper.text()).toContain("2000 entrées synchronisées");
   });
 
-  it("s'affiche quand même si le service ne répond pas", async () => {
+  it("n'annonce aucun prix quand le service ne répond pas", async () => {
     vi.stubGlobal("fetch", () => Promise.reject(new Error("injoignable")));
 
     const wrapper = await mountAt(Pricing, "/fr/pricing");
 
-    // Un prix de repli vaut mieux qu'une page vide : le visiteur vient pour
-    // savoir combien ça coûte.
-    expect(normalize(wrapper.text())).toContain("2 €");
-    expect(wrapper.text()).toContain("pas encore ouvert");
+    // Se tromper dans ce sens-là ne coûte qu'un lien absent ; annoncer un prix
+    // pour un abonnement impossible à prendre coûterait la confiance.
+    expect(wrapper.text()).toContain("Tout est ouvert");
+    expect(normalize(wrapper.text())).not.toContain("2 €");
+  });
+
+  it("dit que tout est ouvert quand rien n'est vendu", async () => {
+    vi.stubGlobal("fetch", () =>
+      json(200, {
+        plans_enforced: false,
+        price_monthly_cents: 200,
+        currency: "EUR",
+        billing_available: false,
+        free_max_entries: 20,
+        free_max_devices: 2,
+        pro_max_entries: 2000,
+        pro_max_devices: 20,
+      }),
+    );
+
+    const wrapper = await mountAt(Pricing, "/fr/pricing");
+
+    expect(wrapper.text()).toContain("Tout est ouvert");
+    expect(wrapper.text()).toContain("2000 entrées synchronisées");
+    expect(normalize(wrapper.text())).not.toContain("2 €/mois");
   });
 });
 
 describe("confirmation d'adresse", () => {
-  beforeEach(() => vi.unstubAllGlobals());
+  beforeEach(() => {
+    vi.unstubAllGlobals();
+    resetService();
+  });
 
   it("confirme l'adresse avec le jeton du lien", async () => {
     const seen: Array<Record<string, unknown>> = [];
@@ -119,6 +148,7 @@ describe("réinitialisation du mot de passe", () => {
   beforeEach(() => {
     localStorage.clear();
     vi.unstubAllGlobals();
+    resetService();
   });
 
   const fill = async (wrapper: any, password: string, confirmation: string) => {

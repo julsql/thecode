@@ -47,6 +47,7 @@ import { computed, defineComponent } from "vue";
 import { useI18n } from "@/i18n";
 import { legalDoc, type LegalKind } from "@/legal";
 import { IDENTITY } from "@/legal/identity";
+import { loadService, service } from "@/service";
 
 export default defineComponent({
   name: "LegalDocument",
@@ -55,7 +56,10 @@ export default defineComponent({
   },
   setup(props) {
     const { t, lang } = useI18n();
-    const doc = computed(() => legalDoc(props.kind, lang.value));
+    // Les conditions de vente et la politique changent selon qu'une offre
+    // payante existe : le service est seul à le savoir.
+    loadService();
+    const doc = computed(() => legalDoc(props.kind, lang.value, service.plans.plansEnforced));
 
     /**
      * Rend gras ce qui est encadré de `**`.

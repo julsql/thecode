@@ -10,6 +10,7 @@ import { mount } from "@vue/test-utils";
 import { createRouter, createMemoryHistory, type Router } from "vue-router";
 import Account from "@/pages/Account.vue";
 import { renderGoogleButton } from "@/google";
+import { resetService } from "@/service";
 
 /**
  * Le script de Google n'est pas chargé en test : ce qui est vérifié ici, c'est
@@ -61,6 +62,7 @@ function fakeService(overrides: Record<string, unknown> = {}) {
       current_period_end: null,
       has_pending_coupon: false,
       billing_available: true,
+      plans_enforced: true,
       ...overrides,
     },
   };
@@ -79,6 +81,7 @@ function fakeService(overrides: Record<string, unknown> = {}) {
 
     if (url.endsWith("/v1/billing/plans")) {
       return json(200, {
+        plans_enforced: true,
         price_monthly_cents: 200,
         currency: "EUR",
         billing_available: true,
@@ -164,6 +167,9 @@ describe("page du compte", () => {
   beforeEach(() => {
     localStorage.clear();
     vi.unstubAllGlobals();
+    // L'état du service est lu une fois par page : sans remise à zéro, la
+    // première réponse vaudrait pour tous les tests suivants.
+    resetService();
     // Le redirige vers Stripe ne doit pas faire naviguer jsdom.
     Object.defineProperty(window, "location", {
       configurable: true,

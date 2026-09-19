@@ -213,7 +213,11 @@
             <h4>{{ t("footer_links_legal") }}</h4>
             <router-link :to="localePath('privacy')">{{ t("nav_privacy") }}</router-link>
             <router-link :to="localePath('legal')">{{ t("nav_legal") }}</router-link>
-            <router-link :to="localePath('terms')">{{ t("nav_terms") }}</router-link>
+            <!-- Pas de conditions de vente affichées tant que rien n'est
+                 vendu : elles annonceraient une offre qui n'existe pas. -->
+            <router-link v-if="plansOpen" :to="localePath('terms')">
+              {{ t("nav_terms") }}
+            </router-link>
             <a
               href="https://github.com/TheCodeDevLab/thecode-website"
               target="_blank"
@@ -232,10 +236,11 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, watch } from "vue";
+import { computed, defineComponent, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import Logo from "@/assets/logo.svg";
 import { useI18n } from "@/i18n";
+import { loadService, service } from "@/service";
 
 export default defineComponent({
   name: "App",
@@ -254,7 +259,23 @@ export default defineComponent({
 
     watch(() => route.fullPath, closeMenu);
 
-    return { Logo, year, isOpen, toggleMenu, closeMenu, t, lang, switchLang, localePath };
+    // Une seule interrogation par chargement de page : le pied de page en a
+    // besoin, les pages qui suivent la réutiliseront.
+    loadService();
+    const plansOpen = computed(() => service.plans.plansEnforced);
+
+    return {
+      Logo,
+      year,
+      isOpen,
+      plansOpen,
+      toggleMenu,
+      closeMenu,
+      t,
+      lang,
+      switchLang,
+      localePath,
+    };
   },
 });
 </script>

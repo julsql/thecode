@@ -8,7 +8,22 @@
     </header>
 
     <div class="content-container fadeIn">
-      <div class="plan-grid">
+      <!-- Tant que rien n'est vendu, la page ne doit annoncer ni prix ni
+           offre : elle dit ce qui est ouvert, et c'est tout. -->
+      <section v-if="!plans.plansEnforced" class="plan-card plan-card--featured open-card">
+        <h2>{{ t("pricing_open_title") }}</h2>
+        <p class="open-lead">{{ t("pricing_open_lead") }}</p>
+        <ul class="plan-lines">
+          <li>{{ t("pricing_free_generation") }}</li>
+          <li>{{ withCount("pricing_pro_entries", plans.proMaxEntries) }}</li>
+          <li>{{ withCount("pricing_pro_devices", plans.proMaxDevices) }}</li>
+        </ul>
+        <router-link class="ghost-btn primary plan-cta" :to="localePath('account')">
+          {{ t("pricing_cta_free") }}
+        </router-link>
+      </section>
+
+      <div v-else class="plan-grid">
         <section class="plan-card">
           <h2>{{ t("pricing_free_name") }}</h2>
           <p class="plan-price">{{ t("pricing_free_price") }}</p>
@@ -43,42 +58,26 @@
       </div>
 
       <p class="plan-note">{{ t("pricing_encrypted") }}</p>
-      <p v-if="!plans.billingAvailable" class="plan-note">{{ t("pricing_unavailable") }}</p>
+      <p v-if="plans.plansEnforced && !plans.billingAvailable" class="plan-note">
+        {{ t("pricing_unavailable") }}
+      </p>
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, computed, onMounted, ref } from "vue";
+import { computed, defineComponent } from "vue";
 import { useI18n } from "@/i18n";
-import { fetchPlans, type PlanInfo } from "@/account";
-import { DEFAULT_ENDPOINT } from "@/sync";
+import { loadService, service } from "@/service";
 
 export default defineComponent({
   name: "Pricing",
   setup() {
     const { t, lang, localePath } = useI18n();
 
-    // Valeurs de repli : la page des tarifs doit s'afficher même quand le
-    // service ne répond pas. Une page blanche vaudrait moins qu'un prix.
-    const plans = ref<PlanInfo>({
-      priceMonthlyCents: 200,
-      currency: "EUR",
-      billingAvailable: false,
-      freeMaxEntries: 20,
-      freeMaxDevices: 2,
-      proMaxEntries: 2000,
-      proMaxDevices: 20,
-    });
-
-    onMounted(async () => {
-      try {
-        plans.value = await fetchPlans(DEFAULT_ENDPOINT);
-      } catch {
-        // Le repli reste affiché : les plafonds annoncés sont ceux de la
-        // configuration par défaut, et le service dira le reste.
-      }
-    });
+    // Le service dit ce qu'il applique ; la page n'a rien à décider.
+    loadService();
+    const plans = computed(() => service.plans);
 
     const formattedPrice = computed(() =>
       new Intl.NumberFormat(lang.value === "fr" ? "fr-FR" : "en-GB", {
@@ -221,6 +220,19 @@ export default defineComponent({
   padding: 12px 18px;
   text-align: center;
   text-decoration: none;
+}
+
+/* Une seule carte quand tout est ouvert : elle occupe la largeur sans se
+   retrouver étirée sur un écran large. */
+.open-card {
+  max-width: 460px;
+  margin: 0 auto;
+}
+
+.open-lead {
+  margin: 0 0 18px;
+  color: var(--text-muted);
+  line-height: 1.6;
 }
 
 .plan-note {

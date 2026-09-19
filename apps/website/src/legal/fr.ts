@@ -66,7 +66,7 @@ export const legalNotice: LegalDoc = {
   ],
 };
 
-export const terms: LegalDoc = {
+const termsDoc: LegalDoc = {
   title: "Conditions générales de vente",
   updated: UPDATED,
   intro: [
@@ -187,7 +187,7 @@ export const terms: LegalDoc = {
   ],
 };
 
-export const privacy: LegalDoc = {
+const privacyDoc: LegalDoc = {
   title: "Politique de confidentialité",
   updated: UPDATED,
   intro: [
@@ -297,3 +297,30 @@ export const privacy: LegalDoc = {
     },
   ],
 };
+
+/**
+ * Les conditions de vente, précédées d'un avertissement tant que rien n'est
+ * vendu : publier des conditions pour une offre qui n'existe pas tromperait
+ * sur ce que le service propose.
+ */
+export const terms = (plansOpen: boolean): LegalDoc =>
+  plansOpen
+    ? termsDoc
+    : {
+        ...termsDoc,
+        intro: [
+          "Aucune offre payante n'est proposée à ce jour : tout le service est gratuit. Ces conditions s'appliqueront le jour où les abonnements ouvriront.",
+          ...(termsDoc.intro || []),
+        ],
+      };
+
+export const privacy = (plansOpen: boolean): LegalDoc =>
+  plansOpen
+    ? privacyDoc
+    : {
+        ...privacyDoc,
+        intro: [
+          ...(privacyDoc.intro || []),
+          "Aucun paiement n'est proposé à ce jour : Stripe n'intervient donc pas encore, et aucune donnée ne lui est transmise.",
+        ],
+      };

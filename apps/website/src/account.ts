@@ -26,6 +26,7 @@ export interface AccountInfo {
   currentPeriodEnd: string | null;
   hasPendingCoupon: boolean;
   billingAvailable: boolean;
+  plansEnforced: boolean;
   /** Faux pour un compte créé par Google qui n'a pas posé de mot de passe. */
   hasPassword: boolean;
   googleLinked: boolean;
@@ -35,6 +36,8 @@ export interface AccountInfo {
 
 /** Les tarifs, lisibles sans compte. */
 export interface PlanInfo {
+  /** Faux : tout est ouvert, rien n'est vendu. */
+  plansEnforced: boolean;
   priceMonthlyCents: number;
   currency: string;
   billingAvailable: boolean;
@@ -68,6 +71,7 @@ export async function fetchAccount(session: Session): Promise<AccountInfo> {
     currentPeriodEnd: body.current_period_end ?? null,
     hasPendingCoupon: body.has_pending_coupon,
     billingAvailable: body.billing_available,
+    plansEnforced: Boolean(body.plans_enforced),
     hasPassword: body.has_password ?? true,
     googleLinked: Boolean(body.google_linked),
     pendingEmail: body.pending_email ?? "",
@@ -77,6 +81,7 @@ export async function fetchAccount(session: Session): Promise<AccountInfo> {
 export async function fetchPlans(endpoint: string): Promise<PlanInfo> {
   const body = await request(`${endpoint}/v1/billing/plans`);
   return {
+    plansEnforced: Boolean(body.plans_enforced),
     priceMonthlyCents: body.price_monthly_cents,
     currency: body.currency,
     billingAvailable: body.billing_available,

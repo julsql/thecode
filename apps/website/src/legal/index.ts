@@ -12,8 +12,10 @@ import type { LegalDoc } from "./types";
 
 export type LegalKind = "legalNotice" | "terms" | "privacy";
 
-export function legalDoc(kind: LegalKind, lang: string): LegalDoc {
-  return (lang === "fr" ? fr : en)[kind];
+export function legalDoc(kind: LegalKind, lang: string, plansOpen = false): LegalDoc {
+  const source = lang === "fr" ? fr : en;
+  if (kind === "legalNotice") return source.legalNotice;
+  return source[kind](plansOpen);
 }
 
 export type { LegalDoc } from "./types";
