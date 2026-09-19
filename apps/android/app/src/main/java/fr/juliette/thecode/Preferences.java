@@ -30,6 +30,7 @@ public final class Preferences {
     public static final String KEY_CHI = "chiState";
     public static final String KEY_DARK_MODE = "darkMode";
     public static final String KEY_LAST_UNLOCK_AT = "lastUnlockAt";
+    public static final String KEY_V2_NOTICE_SEEN = "v2NoticeSeen";
     public static final String KEY_SYNC_ENDPOINT = "syncEndpoint";
     public static final String KEY_SYNC_ACCESS = "syncAccessToken";
     public static final String KEY_SYNC_REFRESH = "syncRefreshToken";
@@ -117,6 +118,10 @@ public final class Preferences {
 
     public boolean getChiState() { return prefs.getBoolean(KEY_CHI, true); }
     public void setChiState(boolean v) { prefs.edit().putBoolean(KEY_CHI, v).apply(); }
+
+    /** Vrai une fois l'annonce du passage a la v2 lue et fermee. */
+    public boolean getV2NoticeSeen() { return prefs.getBoolean(KEY_V2_NOTICE_SEEN, false); }
+    public void setV2NoticeSeen() { prefs.edit().putBoolean(KEY_V2_NOTICE_SEEN, true).apply(); }
 
     public String getDarkMode() { return prefs.getString(KEY_DARK_MODE, "SYSTEM"); }
     public void setDarkMode(String v) { prefs.edit().putString(KEY_DARK_MODE, v).apply(); }
