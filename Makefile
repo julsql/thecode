@@ -46,6 +46,9 @@ test-conformance: check-shared require-setup  ## Vecteurs partages sur toutes le
 test-conformance-apple: check-shared  ## Conformance Apple (cree un simulateur iOS temporaire)
 	@./scripts/test-apple-conformance.sh
 
+pack-extension:  ## Prepare l'extension pour Chrome et Firefox (dist/extension)
+	@./scripts/pack-extension.sh
+
 test-e2e:  ## Tests de bout en bout de l'extension (Playwright)
 	@cd e2e && npx playwright test --reporter=list
 
