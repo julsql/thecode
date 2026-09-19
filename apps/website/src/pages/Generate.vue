@@ -132,6 +132,9 @@
           <p class="security-line">
             {{ t("gen_security_label") }} :
             <span :style="{ color: couleurSecurite }">{{ niveauSecurite }}</span>
+            <!-- La version en cours doit se lire sans chercher : c'est elle
+                 qui décide quel mot de passe sort. -->
+            <span class="algo-badge">{{ enV1 ? "v1" : "v2" }}</span>
           </p>
 
           <!-- La v1 n'est plus qu'un secours : le mot de passe pose sur un site
@@ -695,7 +698,11 @@ export default defineComponent({
         existing.updatedAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
         vaultMessage.value = "Entrée mise à jour.";
       } else {
-        vault.entries.push(newEntry(domain, { length: Number(longueur.value), charset }));
+        // Enregistrer un mot de passe genere en v1 sous une entree v2 donnerait
+        // un autre mot de passe a la relecture.
+        vault.entries.push(
+          newEntry(domain, { length: Number(longueur.value), charset, v: enV1.value ? 1 : 2 }),
+        );
         vaultMessage.value = "Site enregistré.";
       }
 
@@ -1129,6 +1136,16 @@ input[type="text"]:read-only {
   display: flex;
   justify-content: flex-end;
   margin-top: 16px;
+}
+
+/* La version en cours, a cote du niveau de securite. */
+.algo-badge {
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
 .algo-row {
