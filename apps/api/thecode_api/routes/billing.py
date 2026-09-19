@@ -254,3 +254,24 @@ def _as_datetime(value: object) -> datetime | None:
     if isinstance(value, int):
         return datetime.fromtimestamp(value, UTC)
     return None
+
+
+def cancel_subscription(settings: Settings, subscription_id: str) -> None:
+    """Résilie immédiatement un abonnement.
+
+    Immédiatement et non en fin de période : appelé depuis la suppression de
+    compte, où il n'y a plus personne pour profiter de la fin du mois payé.
+
+    Un abonnement déjà résilié n'est pas une erreur : Stripe le dit, et
+    refuser la suppression pour cette raison bloquerait quelqu'un qui a
+    simplement résilié avant de partir.
+    """
+    client = _stripe(settings)
+    try:
+        client.Subscription.cancel(subscription_id)
+    except stripe.InvalidRequestError as exc:
+        message = str(exc)
+        if "No such subscription" in message or "canceled" in message:
+            logger.info("Abonnement déjà résilié ou inconnu : %s", subscription_id)
+            return
+        raise

@@ -21,7 +21,13 @@ PASSWORD = "MotDePasseAssezLong1"
 @pytest.fixture
 def fake_stripe(monkeypatch):
     """Un Stripe en carton qui note ce qu'on lui demande."""
-    calls: dict[str, list] = {"customers": [], "checkout": [], "portal": [], "promos": []}
+    calls: dict[str, list] = {
+        "customers": [],
+        "checkout": [],
+        "portal": [],
+        "promos": [],
+        "cancelled": [],
+    }
     events: dict[str, object] = {}
 
     def create_customer(**kwargs):
@@ -35,6 +41,12 @@ def fake_stripe(monkeypatch):
     def create_portal(**kwargs):
         calls["portal"].append(kwargs)
         return {"url": "https://stripe.test/portal"}
+
+    def cancel_subscription(subscription_id, **kwargs):
+        calls["cancelled"].append(subscription_id)
+        if subscription_id == "sub_en_panne":
+            raise RuntimeError("Stripe injoignable")
+        return {"id": subscription_id, "status": "canceled"}
 
     def list_promos(**kwargs):
         calls["promos"].append(kwargs)
@@ -52,6 +64,8 @@ def fake_stripe(monkeypatch):
         checkout=SimpleNamespace(Session=SimpleNamespace(create=create_checkout)),
         billing_portal=SimpleNamespace(Session=SimpleNamespace(create=create_portal)),
         PromotionCode=SimpleNamespace(list=list_promos),
+        Subscription=SimpleNamespace(cancel=cancel_subscription),
+        InvalidRequestError=stripe.InvalidRequestError,
         Webhook=SimpleNamespace(construct_event=construct_event),
         SignatureVerificationError=stripe.SignatureVerificationError,
         calls=calls,
@@ -347,3 +361,50 @@ class TestWebhook:
         me = client.get("/v1/auth/me", headers=bearer(created)).json()
         assert me["plan"] == "pro"
         assert me["subscription_status"] == "past_due"
+
+
+class TestDeletionAndBilling:
+    """Supprimer un compte abonné, c'est aussi arrêter de le facturer."""
+
+    def delete(self, client, created, email="client@exemple.fr"):
+        return client.request(
+            "DELETE",
+            "/v1/account",
+            json={"password": PASSWORD, "confirm_email": email},
+            headers=bearer(created),
+        )
+
+    def test_deleting_cancels_the_subscription(
+        self, client, paid, fake_stripe, db_session, sent_emails
+    ):
+        created = register(client)
+        account = db_session.query(Account).one()
+        account.stripe_subscription_id = "sub_test"
+        db_session.commit()
+
+        assert self.delete(client, created).status_code == 204
+        assert fake_stripe.calls["cancelled"] == ["sub_test"]
+
+    def test_a_failed_cancellation_keeps_the_account(
+        self, client, paid, fake_stripe, db_session, sent_emails
+    ):
+        """Dans l'autre ordre, une panne de Stripe laisserait un prélèvement
+        mensuel sur un compte qui n'existe plus, et plus personne pour le
+        voir."""
+        created = register(client)
+        account = db_session.query(Account).one()
+        account.stripe_subscription_id = "sub_en_panne"
+        db_session.commit()
+
+        response = self.delete(client, created)
+
+        assert response.status_code == 502
+        assert db_session.query(Account).count() == 1
+
+    def test_a_free_account_needs_no_stripe(self, client, fake_stripe, db_session, sent_emails):
+        """Sans abonnement, la suppression ne parle pas à Stripe — et marche
+        donc même quand la facturation n'est pas configurée."""
+        created = register(client)
+
+        assert self.delete(client, created).status_code == 204
+        assert fake_stripe.calls["cancelled"] == []

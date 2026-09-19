@@ -10,6 +10,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
+from thecode_api import models
 from thecode_api.models import Account, Code, EmailVerification
 
 PASSWORD = "MotDePasseAssezLong1"
@@ -253,3 +254,96 @@ class TestCodes:
 
         assert register(client, "avec-code@exemple.fr", code="AVIE").status_code == 201
         assert register(client, "sans-code@exemple.fr").status_code == 403
+
+
+class TestExport:
+    def test_it_gives_back_everything_the_service_holds(self, client, sent_emails):
+        created = register(client)
+        auth = bearer(created)
+        entry = {"entry_id": "e1", "nonce": "AAAAAAAAAAAAAAAA", "blob": "AAAA", "deleted": False}
+        client.post("/v1/vault", json={"base_revision": 0, "entries": [entry]}, headers=auth)
+
+        body = client.get("/v1/account/export", headers=auth).json()
+
+        assert body["account"]["email"] == "nouveau@exemple.fr"
+        assert len(body["devices"]) == 1
+        # Le carnet en fait partie : il appartient à l'utilisateur, même si le
+        # service ne peut pas le lire.
+        assert body["vault"][0]["entry_id"] == "e1"
+        assert body["vault"][0]["blob"] == "AAAA"
+        assert "chiffrées" in body["note"]
+
+    def test_it_never_returns_a_secret(self, client, sent_emails):
+        created = register(client)
+        raw = client.get("/v1/account/export", headers=bearer(created)).text
+
+        # Ni le haché du mot de passe, ni les jetons : un export est un fichier
+        # qui traîne ensuite dans un dossier de téléchargements.
+        assert "argon2" not in raw
+        assert "password_hash" not in raw
+        assert "token" not in raw
+        assert created.json()["refresh_token"] not in raw
+
+
+class TestDeleteAccount:
+    def delete(self, client, created, email="nouveau@exemple.fr", password=PASSWORD):
+        return client.request(
+            "DELETE",
+            "/v1/account",
+            json={"password": password, "confirm_email": email},
+            headers=bearer(created),
+        )
+
+    def test_it_erases_the_account_and_its_vault(self, client, db_session, sent_emails):
+        created = register(client)
+        auth = bearer(created)
+        entry = {"entry_id": "e1", "nonce": "AAAAAAAAAAAAAAAA", "blob": "AAAA", "deleted": False}
+        client.post("/v1/vault", json={"base_revision": 0, "entries": [entry]}, headers=auth)
+
+        assert self.delete(client, created).status_code == 204
+
+        # Vraiment effacé, pas marqué comme tel : garder « au cas où » des
+        # carnets de gens partis est précisément ce qu'on reproche aux autres.
+        assert db_session.query(Account).count() == 0
+        assert db_session.query(models.VaultEntry).count() == 0
+        assert db_session.query(models.Session).count() == 0
+        assert db_session.query(EmailVerification).count() == 0
+
+    def test_the_wrong_address_stops_it(self, client, db_session, sent_emails):
+        created = register(client)
+
+        response = self.delete(client, created, email="autre@exemple.fr")
+
+        assert response.status_code == 400
+        assert db_session.query(Account).count() == 1
+
+    def test_the_wrong_password_stops_it(self, client, db_session, sent_emails):
+        created = register(client)
+
+        response = self.delete(client, created, password="pas-le-bon-du-tout")
+
+        # Un écran resté ouvert ne doit pas suffire à effacer un carnet.
+        assert response.status_code == 403
+        assert db_session.query(Account).count() == 1
+
+    def test_another_account_is_untouched(self, client, db_session, sent_emails):
+        register(client, "autre@exemple.fr")
+        created = register(client)
+
+        self.delete(client, created)
+
+        assert db_session.query(Account).one().email == "autre@exemple.fr"
+
+    def test_the_session_stops_working(self, client, sent_emails):
+        created = register(client)
+        self.delete(client, created)
+
+        assert client.get("/v1/auth/me", headers=bearer(created)).status_code == 401
+
+    def test_the_address_becomes_free_again(self, client, sent_emails):
+        created = register(client)
+        self.delete(client, created)
+
+        # Une place libérée est une place rendue : c'est aussi ce que dit le
+        # quota d'inscriptions.
+        assert register(client).status_code == 201

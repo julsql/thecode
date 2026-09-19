@@ -182,6 +182,20 @@ class ResendVerificationRequest(BaseModel):
     lang: Annotated[str, Field(max_length=5)] = "en"
 
 
+class DeleteAccountRequest(BaseModel):
+    """Deux preuves pour une suppression : l'identité et l'intention.
+
+    Le mot de passe dit que c'est bien vous ; l'adresse recopiée dit que vous
+    saviez ce que vous faisiez. Un seul des deux suffirait à effacer un carnet
+    depuis un écran resté ouvert.
+    """
+
+    #: Exigé quand le compte a un mot de passe. Un compte Google n'en a pas.
+    password: Annotated[str, Field(max_length=256)] = ""
+    #: L'adresse du compte, recopiée telle quelle.
+    confirm_email: EmailStr
+
+
 class CodeRequest(BaseModel):
     code: Annotated[str, Field(min_length=1, max_length=64)]
 
