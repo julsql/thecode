@@ -274,3 +274,43 @@ describe("transfert du carnet", () => {
     expect(rows[0].findAll("span").length).toBe(rows.length);
   });
 });
+
+describe("annonce du passage à la v2", () => {
+  beforeEach(() => localStorage.clear());
+
+  it("s'affiche tant qu'elle n'a pas été lue", async () => {
+    const wrapper = await mountGenerate();
+    expect(wrapper.find(".notice").exists()).toBe(true);
+    expect(wrapper.text()).toContain("v2");
+  });
+
+  it("ne revient plus une fois fermée", async () => {
+    const wrapper = await mountGenerate();
+
+    const close = wrapper.findAll("button").find((b) => b.text() === "J'ai compris");
+    await close!.trigger("click");
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find(".notice").exists()).toBe(false);
+
+    // Elle ne concerne que la version qui l'apporte : la reposer à chaque
+    // visite serait du harcèlement.
+    const again = await mountGenerate();
+    expect(again.find(".notice").exists()).toBe(false);
+  });
+
+  it("s'affiche quand même si le stockage est indisponible", async () => {
+    // Navigation privée, stockage bloqué : la page doit s'afficher, et
+    // l'annonce avec — mieux vaut la revoir qu'une page cassée.
+    const original = Storage.prototype.getItem;
+    Storage.prototype.getItem = () => {
+      throw new Error("stockage bloqué");
+    };
+
+    try {
+      const wrapper = await mountGenerate();
+      expect(wrapper.find(".notice").exists()).toBe(true);
+    } finally {
+      Storage.prototype.getItem = original;
+    }
+  });
+});
