@@ -374,26 +374,13 @@ export default defineComponent({
     const vaultMessage = ref("");
     const transferMessage = ref("");
     /**
-     * Mode de generation : v2 par defaut, v1 pour un site pas encore migre.
+     * Mode de generation, remis a v2 a chaque ouverture.
      *
-     * Retenu d'une visite a l'autre, comme le theme : c'est un mode, pas une
-     * action ponctuelle.
+     * Volontairement non persiste : la v1 est une exception, et une exception
+     * qui survit au rechargement se ferait oublier — on genererait en v1 sans
+     * s'en souvenir.
      */
-    const ALGO_KEY = "thecode.useV1";
     const enV1 = ref(false);
-    try {
-      enV1.value = localStorage.getItem(ALGO_KEY) === "1";
-    } catch {
-      // Stockage indisponible : on repart de la v2, qui est la regle.
-    }
-
-    watch(enV1, (value) => {
-      try {
-        localStorage.setItem(ALGO_KEY, value ? "1" : "0");
-      } catch {
-        // Le mode ne survivra pas au rechargement, la page fonctionne quand meme.
-      }
-    });
 
     /**
      * Annonce du passage a la v2, en fenetre modale a l'ouverture.
