@@ -130,4 +130,9 @@
     <string name="v2_notice_title">Nouvel algorithme</string>
     <string name="v2_notice_never_again">Ne plus afficher</string>
     <string name="v2_notice_close">Fermer</string>
+    <!-- Verrouillage du carnet. -->
+    <string name="vault_locked_title">Déverrouiller le carnet</string>
+    <string name="vault_locked_subtitle">Le carnet indique sur quels sites vous avez un compte et sous quel identifiant. Il est aussi sensible qu\'un coffre de mots de passe.</string>
+    <!-- La version en cours, lisible sans ouvrir de menu. -->
+    <string name="security_with_algo">Sécurité : %1$s — v%2$d</string>
 </resources>

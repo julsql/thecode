@@ -12,7 +12,13 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import android.os.Build;
+
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.biometric.BiometricManager;
+import androidx.biometric.BiometricPrompt;
+import androidx.core.content.ContextCompat;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -45,6 +51,10 @@ public class VaultActivity extends AppCompatActivity {
     private final Handler main = new Handler(Looper.getMainLooper());
 
     private Preferences preferences;
+    private SessionLock sessionLock;
+    /** Vrai une fois la session authentifiée : rien n'est rendu avant. */
+    private boolean unlocked = false;
+    private boolean authInFlight = false;
     /** Le carnet affiché : les actions le modifient et le réenregistrent. */
     private Vault vault = new Vault();
 
@@ -54,20 +64,105 @@ public class VaultActivity extends AppCompatActivity {
         setContentView(R.layout.activity_vault);
 
         preferences = new Preferences(this);
+        sessionLock = new SessionLock(preferences);
 
         MaterialToolbar toolbar = findViewById(R.id.vaultToolbar);
         toolbar.setNavigationOnClickListener(v -> finish());
         toolbar.inflateMenu(R.menu.menu_vault);
         toolbar.setOnMenuItemClickListener(this::onMenuItem);
 
-        render(Vault.load(this));
+        // Rien n'est affiché avant l'authentification : le carnet dit sur
+        // quels sites on a un compte et sous quel identifiant. C'est aussi
+        // sensible qu'un coffre de mots de passe.
+        applyLockState();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        // Un transfert a pu fusionner des entrees pendant qu'on etait ailleurs.
-        render(Vault.load(this));
+        applyLockState();
+    }
+
+    @Override
+    protected void onPause() {
+        // La fenêtre de grâce court à partir de la mise en arrière-plan, comme
+        // pour la clef : revenir tout de suite ne redemande pas l'auth.
+        if (unlocked) sessionLock.stamp();
+        super.onPause();
+    }
+
+    /**
+     * Affiche le carnet si la session est valide, demande l'auth sinon.
+     *
+     * Le contenu n'est jamais rendu avant : une capture d'écran du sélecteur
+     * d'applications suffirait à le révéler.
+     */
+    private void applyLockState() {
+        if (sessionLock.isValid()) {
+            unlocked = true;
+            findViewById(R.id.vaultLocked).setVisibility(View.GONE);
+            render(Vault.load(this));
+            return;
+        }
+
+        unlocked = false;
+        ((LinearLayout) findViewById(R.id.vaultList)).removeAllViews();
+        findViewById(R.id.vaultEmpty).setVisibility(View.GONE);
+        findViewById(R.id.vaultLocked).setVisibility(View.VISIBLE);
+        promptUnlock();
+    }
+
+    /**
+     * Demande l'authentification de l'appareil.
+     *
+     * Sans matériel d'auth disponible — rare — on considère le terminal déjà
+     * déverrouillé : refuser l'accès rendrait le carnet inutilisable sur un
+     * appareil sans code.
+     */
+    private void promptUnlock() {
+        if (authInFlight) return;
+
+        int authenticators = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
+                ? (BiometricManager.Authenticators.BIOMETRIC_WEAK
+                    | BiometricManager.Authenticators.DEVICE_CREDENTIAL)
+                : BiometricManager.Authenticators.BIOMETRIC_WEAK;
+
+        BiometricManager manager = BiometricManager.from(this);
+        if (manager.canAuthenticate(authenticators) != BiometricManager.BIOMETRIC_SUCCESS) {
+            sessionLock.stamp();
+            applyLockState();
+            return;
+        }
+
+        authInFlight = true;
+        BiometricPrompt prompt = new BiometricPrompt(this,
+                ContextCompat.getMainExecutor(this),
+                new BiometricPrompt.AuthenticationCallback() {
+                    @Override
+                    public void onAuthenticationSucceeded(
+                            @NonNull BiometricPrompt.AuthenticationResult result) {
+                        authInFlight = false;
+                        sessionLock.stamp();
+                        applyLockState();
+                    }
+
+                    @Override
+                    public void onAuthenticationError(int code, @NonNull CharSequence message) {
+                        authInFlight = false;
+                        // Refuser l'auth ferme l'écran : rester dessus laisserait
+                        // croire que le carnet est vide.
+                        finish();
+                    }
+                });
+
+        BiometricPrompt.PromptInfo.Builder info = new BiometricPrompt.PromptInfo.Builder()
+                .setTitle(getString(R.string.vault_locked_title))
+                .setSubtitle(getString(R.string.vault_locked_subtitle))
+                .setAllowedAuthenticators(authenticators);
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            info.setNegativeButtonText(getString(android.R.string.cancel));
+        }
+        prompt.authenticate(info.build());
     }
 
     @Override
@@ -79,6 +174,10 @@ public class VaultActivity extends AppCompatActivity {
     // ------------------------------------------------------- synchronisation
 
     private boolean onMenuItem(MenuItem item) {
+        // Synchroniser ou transférer depuis un écran verrouillé contournerait
+        // l'authentification.
+        if (!unlocked) return true;
+
         int id = item.getItemId();
         if (id == R.id.action_transfer) {
             // Le QR transporte le carnet sans serveur : c'est l'option qui
