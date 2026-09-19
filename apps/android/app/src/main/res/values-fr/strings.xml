@@ -96,6 +96,7 @@
     <string name="vault_save_needs_site">Saisissez d\'abord un site.</string>
     <string name="vault_entry_actions">Que faire de « %1$s » ?</string>
     <string name="vault_renew">Renouveler ce mot de passe</string>
+    <string name="vault_renew_paid">Renouveler un mot de passe sans changer de clef maîtresse fait partie de l\'offre complète : https://thecode.julsql.fr/fr/account</string>
     <string name="vault_migrate">Passer cette entrée en v2</string>
     <string name="vault_renew_title">Renouveler « %1$s »</string>
     <string name="vault_migrate_title">Passer « %1$s » en v2</string>

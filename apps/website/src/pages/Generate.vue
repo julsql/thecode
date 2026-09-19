@@ -193,12 +193,22 @@
                 <button
                   type="button"
                   class="ghost-btn small"
+                  :disabled="entry.v >= 2 && !renewAllowed"
                   @click="proposeChange(entry, entry.v >= 2)"
                 >
                   {{ entry.v >= 2 ? "Renouveler" : "Passer en v2" }}
                 </button>
               </li>
             </ul>
+
+            <!-- Le compteur est ce qui permet de changer un mot de passe sans
+                 changer sa clef maitresse : il fait partie de l'offre
+                 complete. La migration v1 vers v2, elle, reste ouverte a
+                 tous — c'est une mise a niveau, pas un service. -->
+            <p v-if="!renewAllowed && vaultEntries.some((e) => e.v >= 2)" class="hint">
+              {{ t("gen_renew_paid") }}
+              <router-link :to="localePath('pricing')">{{ t("nav_pricing") }}</router-link>
+            </p>
 
             <!-- Les deux cote a cote : le nouveau ne sert a rien tant qu'il n'a
                  pas ete pose sur le site, et l'ancien reste celui qui connecte. -->
@@ -317,6 +327,7 @@ import { generatePassword, calculateEntropyBits, getSecurityLevel } from "@/util
 import { canonicalSite, loadPublicSuffixList } from "@/canonicalSite";
 import { keyFingerprint, type Fingerprint } from "@/fingerprint";
 import { clearSession, loadSession, saveSession, syncVault, SyncError } from "@/sync";
+import { isPaidPlan, refreshPlan } from "@/account";
 import {
   emptyVault,
   findAllByDomain,
@@ -339,6 +350,9 @@ export default defineComponent({
     // La PSL est servie depuis public/ : on la charge une fois au montage, puis
     // on regenere, car la canonicalisation change le resultat.
     onMounted(async () => {
+      const session = loadSession();
+      if (session) refreshPlan(session).then((plan) => (renewAllowed.value = isPaidPlan(plan)));
+
       try {
         const res = await fetch("/public_suffix_list.dat");
         if (res.ok) {
@@ -416,6 +430,13 @@ export default defineComponent({
     } | null>(null);
     const syncConnected = ref(Boolean(loadSession()));
     const syncMessage = ref("");
+    /**
+     * Le renouvellement demande l'offre complète.
+     *
+     * Décidé sur l'appareil, forcément : le compteur voyage à l'intérieur du
+     * bloc chiffré, le serveur ne le voit pas et ne peut donc rien en dire.
+     */
+    const renewAllowed = ref(isPaidPlan(loadSession()?.plan));
 
     const scoreSecurite = ref(0);
     const couleurSecurite = ref("");
@@ -540,6 +561,10 @@ export default defineComponent({
     async function proposeChange(entry: VaultEntry, renew: boolean) {
       if (!clef.value) {
         vaultMessage.value = "Renseignez d'abord votre clef.";
+        return;
+      }
+      if (renew && !renewAllowed.value) {
+        vaultMessage.value = t("gen_renew_paid");
         return;
       }
       vaultMessage.value = "Calcul en cours…";
@@ -737,6 +762,8 @@ export default defineComponent({
         const result = await syncVault(loadVault(), clef.value, session);
         saveVault(result.vault);
         saveSession(result.session);
+        // Un abonnement pris entre-temps doit se voir sans recharger la page.
+        refreshPlan(result.session).then((plan) => (renewAllowed.value = isPaidPlan(plan)));
         refreshVault();
         const conflicts = result.conflicts.length
           ? ` (${result.conflicts.length} conflit(s) signalé(s))`
@@ -780,6 +807,7 @@ export default defineComponent({
       importFile,
       syncConnected,
       syncMessage,
+      renewAllowed,
       runSync,
       disconnectSync,
       clef,

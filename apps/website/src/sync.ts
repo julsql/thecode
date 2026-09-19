@@ -22,6 +22,14 @@ export interface Session {
   endpoint: string;
   accessToken: string;
   refreshToken: string;
+  /**
+   * Offre du compte, telle que le service l'a dite la dernière fois.
+   *
+   * Gardée avec la session parce que la génération se fait hors ligne : sans
+   * cette trace, l'écran ne saurait pas quoi proposer tant que le service
+   * n'a pas répondu, et proposerait donc tout.
+   */
+  plan?: string;
 }
 
 function b64e(bytes: ArrayBuffer | Uint8Array): string {

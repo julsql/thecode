@@ -10,6 +10,7 @@ import pytest
 
 from thecode.cli import main
 from thecode.core import generate_password_v2
+from thecode.sync import Credentials
 from thecode.vault import load, new_entry, save
 
 
@@ -121,7 +122,21 @@ def _v2_entry(tmp_path, counter=1):
     return vault_path
 
 
-def test_renew_increments_the_counter_after_confirmation(tmp_path, monkeypatch):
+@pytest.fixture
+def paid_account(tmp_path, monkeypatch):
+    """Une session dont l'offre donne droit au compteur.
+
+    Le renouvellement — changer de mot de passe sans changer de clef — fait
+    partie de l'offre complète, et l'offre connue vit avec les jetons : la
+    génération se fait hors ligne, il n'y a personne à interroger au moment du
+    renouvellement.
+    """
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
+    Credentials("https://exemple.test", "jeton", "renouvellement", "pro").save()
+    return tmp_path
+
+
+def test_renew_increments_the_counter_after_confirmation(tmp_path, monkeypatch, paid_account):
     vault_path = _v2_entry(tmp_path)
     monkeypatch.setattr("builtins.input", lambda _: "o")
 
@@ -131,7 +146,9 @@ def test_renew_increments_the_counter_after_confirmation(tmp_path, monkeypatch):
     assert load(vault_path)["entries"][0]["counter"] == 2
 
 
-def test_renew_shows_both_passwords_before_confirming(tmp_path, monkeypatch, capsys):
+def test_renew_shows_both_passwords_before_confirming(
+    tmp_path, monkeypatch, capsys, paid_account
+):
     """Le nouveau ne sert à rien tant qu'il n'est pas posé sur le site.
 
     Et l'ancien reste nécessaire pour s'y connecter : les deux doivent être
@@ -152,7 +169,7 @@ def test_renew_shows_both_passwords_before_confirming(tmp_path, monkeypatch, cap
     assert before != after
 
 
-def test_renew_leaves_the_counter_alone_when_refused(tmp_path, monkeypatch):
+def test_renew_leaves_the_counter_alone_when_refused(tmp_path, monkeypatch, paid_account):
     vault_path = _v2_entry(tmp_path)
     monkeypatch.setattr("builtins.input", lambda _: "n")
 
@@ -200,3 +217,19 @@ def test_renew_restamps_the_entry(tmp_path, monkeypatch):
     # Sans réhorodatage, la fusion ferait gagner l'autre appareil et le
     # renouvellement serait perdu.
     assert load(vault_path)["entries"][0]["updatedAt"] >= before
+
+
+def test_renew_needs_the_complete_plan(tmp_path, monkeypatch, capsys):
+    """Sans compte payant, le compteur ne bouge pas.
+
+    Vérifié sur l'appareil parce qu'il ne peut pas l'être ailleurs : le
+    compteur voyage à l'intérieur du bloc chiffré, le serveur ne le voit pas.
+    """
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
+    vault_path = _v2_entry(tmp_path)
+
+    code = main(["-p", "clef", "google.com", "--renew", "--vault", str(vault_path)])
+
+    assert code == 1
+    assert "offre complète" in capsys.readouterr().err
+    assert load(vault_path)["entries"][0]["counter"] == 1

@@ -279,6 +279,8 @@ export const translations = {
     acc_pending_coupon: "A referral discount is waiting: it applies when you subscribe.",
     acc_sync_hint: "Syncing itself happens on the generator page.",
     gen_account_link: "Sign in or create an account",
+    gen_renew_paid:
+      "Renewing a password without changing your master key is part of the complete plan.",
   },
   fr: {
     nav_home: "Accueil",
@@ -565,6 +567,8 @@ export const translations = {
     acc_pending_coupon: "Une remise de parrainage vous attend : elle s'appliquera à l'abonnement.",
     acc_sync_hint: "La synchronisation elle-même se lance depuis la page du générateur.",
     gen_account_link: "Se connecter ou créer un compte",
+    gen_renew_paid:
+      "Renouveler un mot de passe sans changer de clef maîtresse fait partie de l'offre complète.",
   },
 } as const;
 

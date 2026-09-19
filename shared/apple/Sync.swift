@@ -36,18 +36,55 @@ public struct SyncCredentials: Codable, Equatable {
     public let endpoint: String
     public let accessToken: String
     public let refreshToken: String
+    /// Offre du compte, telle que le service l'a dite la dernière fois.
+    ///
+    /// Gardée avec les jetons parce que la génération se fait hors ligne :
+    /// sans cette trace, l'écran ne saurait pas quoi proposer tant que le
+    /// service n'a pas répondu, et proposerait donc tout.
+    public let plan: String
 
-    public init(endpoint: String, accessToken: String, refreshToken: String) {
+    public init(
+        endpoint: String, accessToken: String, refreshToken: String,
+        plan: String = SyncPlan.free
+    ) {
         self.endpoint = endpoint
         self.accessToken = accessToken
         self.refreshToken = refreshToken
+        self.plan = plan
+    }
+
+    /// Les mêmes jetons, avec une offre relue.
+    public func withPlan(_ plan: String) -> SyncCredentials {
+        SyncCredentials(
+            endpoint: endpoint, accessToken: accessToken, refreshToken: refreshToken, plan: plan)
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        endpoint = try container.decode(String.self, forKey: .endpoint)
+        accessToken = try container.decode(String.self, forKey: .accessToken)
+        refreshToken = try container.decode(String.self, forKey: .refreshToken)
+        // Absent des trousseaux écrits avant l'arrivée des offres : décoder
+        // strictement ferait perdre la session de tout le monde à la mise à
+        // jour, ce qui coûterait bien plus qu'une relecture de l'offre.
+        plan = try container.decodeIfPresent(String.self, forKey: .plan) ?? SyncPlan.free
     }
 
     private enum CodingKeys: String, CodingKey {
         case endpoint
         case accessToken = "access_token"
         case refreshToken = "refresh_token"
+        case plan
     }
+}
+
+/// Les offres, et ce qu'elles ouvrent.
+public enum SyncPlan {
+    public static let free = "free"
+    public static let pro = "pro"
+
+    /// Vrai quand l'offre donne droit au compteur.
+    public static func isPaid(_ plan: String?) -> Bool { plan == pro }
 }
 
 /// Une réponse HTTP brute, corps compris même en cas d'erreur.
@@ -142,6 +179,24 @@ public struct Sync {
             "\(endpoint)/v1/auth/login", method: "POST",
             payload: ["email": email, "password": password, "device_label": deviceLabel])
         return try credentials(from: body, endpoint: endpoint)
+    }
+
+    /// Relit l'offre du compte, en renouvelant le jeton s'il a expiré.
+    ///
+    /// Rend les identifiants mis à jour : l'appelant doit les réenregistrer,
+    /// sans quoi l'offre relue serait oubliée au prochain démarrage.
+    public func accountPlan(credentials creds: SyncCredentials) async throws -> SyncCredentials {
+        var current = creds
+        var body: [String: Any]
+        do {
+            body = try await call(
+                "\(creds.endpoint)/v1/auth/me", method: "GET", bearer: creds.accessToken)
+        } catch let error as SyncError where error.status == 401 {
+            current = try await refresh(creds)
+            body = try await call(
+                "\(current.endpoint)/v1/auth/me", method: "GET", bearer: current.accessToken)
+        }
+        return current.withPlan(body["plan"] as? String ?? SyncPlan.free)
     }
 
     private func refresh(_ creds: SyncCredentials) async throws -> SyncCredentials {

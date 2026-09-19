@@ -181,6 +181,24 @@ function isFromExtensionPage(sender) {
   return sender.tab === undefined;
 }
 
+/**
+ * Le renouvellement demande l'offre complete.
+ *
+ * Verifie ici, dans le service worker, et pas seulement dans la popup :
+ * celle-ci ne fait qu'afficher, et c'est ici que le compteur s'ecrit.
+ *
+ * Decide sur l'appareil, forcement : le compteur voyage a l'interieur du bloc
+ * chiffre, le serveur ne le voit pas et ne peut donc rien en dire.
+ */
+async function renewAllowed() {
+  const session = await loadSession(browser?.storage?.local);
+  return isPaidPlan(session?.plan);
+}
+
+const RENEW_IS_PAID =
+  "Renouveler un mot de passe sans changer de clef maitresse fait partie de " +
+  "l'offre complete : https://thecode.julsql.fr/fr/account";
+
 browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
   (async () => {
     if (PRIVILEGED_ACTIONS.has(request.action) && !isFromExtensionPage(sender)) {
@@ -262,6 +280,8 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
           sendResponse({ ok: false, error: "entree introuvable" });
         } else if (!encodingKey) {
           sendResponse({ ok: false, error: "aucune clef definie" });
+        } else if (request.renew && !(await renewAllowed())) {
+          sendResponse({ ok: false, error: RENEW_IS_PAID });
         } else {
           sendResponse({
             ok: true,
@@ -282,6 +302,8 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
         const entry = vault.entries.find((e) => e.id === request.id && !e.deleted);
         if (!entry) {
           sendResponse({ ok: false, error: "entree introuvable" });
+        } else if (request.renew && !(await renewAllowed())) {
+          sendResponse({ ok: false, error: RENEW_IS_PAID });
         } else {
           if (request.renew) entry.counter += 1;
           else entry.v = 2;
@@ -311,7 +333,12 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
       }
     } else if (request.action === "syncStatus") {
       const session = await loadSession(browser?.storage?.local);
-      sendResponse({ ok: true, connected: Boolean(session), endpoint: session?.endpoint || "" });
+      sendResponse({
+        ok: true,
+        connected: Boolean(session),
+        endpoint: session?.endpoint || "",
+        canRenew: isPaidPlan(session?.plan),
+      });
     } else if (request.action === "syncLogin") {
       try {
         const session = await syncLogin(
@@ -319,7 +346,11 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
           request.email,
           request.password,
         );
-        await saveSession(browser?.storage?.local, session);
+        const withPlan = await syncAccountPlan(session);
+        await saveSession(browser?.storage?.local, {
+          ...withPlan.session,
+          plan: withPlan.plan,
+        });
         sendResponse({ ok: true });
       } catch (e) {
         sendResponse({ ok: false, error: e.message });
@@ -343,7 +374,12 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
         const vault = await loadVault(browser?.storage?.local);
         const result = await syncVault(vault, encodingKey, session);
         await saveVault(browser?.storage?.local, result.vault);
-        await saveSession(browser?.storage?.local, result.session);
+        // Un abonnement pris entre-temps doit se voir sans se reconnecter.
+        const withPlan = await syncAccountPlan(result.session);
+        await saveSession(browser?.storage?.local, {
+          ...withPlan.session,
+          plan: withPlan.plan,
+        });
         sendResponse({
           ok: true,
           entries: result.vault.entries.filter((e) => !e.deleted).length,

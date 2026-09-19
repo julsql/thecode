@@ -34,6 +34,7 @@ public final class Preferences {
     public static final String KEY_SYNC_ENDPOINT = "syncEndpoint";
     public static final String KEY_SYNC_ACCESS = "syncAccessToken";
     public static final String KEY_SYNC_REFRESH = "syncRefreshToken";
+    public static final String KEY_SYNC_PLAN = "syncPlan";
 
     private static final String TAG = "TheCode";
     /** Fichier chiffré, distinct de l'ancien pour permettre la migration. */
@@ -143,8 +144,9 @@ public final class Preferences {
         String endpoint = securePrefs.getString(KEY_SYNC_ENDPOINT, "");
         String access = securePrefs.getString(KEY_SYNC_ACCESS, "");
         String refresh = securePrefs.getString(KEY_SYNC_REFRESH, "");
+        String plan = securePrefs.getString(KEY_SYNC_PLAN, Sync.PLAN_FREE);
         if (endpoint.isEmpty() || access.isEmpty() || refresh.isEmpty()) return null;
-        return new Sync.Credentials(endpoint, access, refresh);
+        return new Sync.Credentials(endpoint, access, refresh, plan);
     }
 
     public void setSyncCredentials(@NonNull Sync.Credentials credentials) {
@@ -153,6 +155,7 @@ public final class Preferences {
                 .putString(KEY_SYNC_ENDPOINT, credentials.endpoint)
                 .putString(KEY_SYNC_ACCESS, credentials.accessToken)
                 .putString(KEY_SYNC_REFRESH, credentials.refreshToken)
+                .putString(KEY_SYNC_PLAN, credentials.plan)
                 .apply();
     }
 
@@ -162,6 +165,7 @@ public final class Preferences {
                 .remove(KEY_SYNC_ENDPOINT)
                 .remove(KEY_SYNC_ACCESS)
                 .remove(KEY_SYNC_REFRESH)
+                .remove(KEY_SYNC_PLAN)
                 .apply();
     }
 

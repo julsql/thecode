@@ -147,3 +147,86 @@ describe("persistance des parametres", () => {
     expect(JSON.stringify(store)).not.toContain("tres-secret");
   });
 });
+
+/**
+ * Le compteur — renouveler un mot de passe sans changer de clef maitresse —
+ * fait partie de l'offre payante.
+ *
+ * La verification vit dans le service worker et pas seulement dans la popup :
+ * c'est ici que le compteur s'ecrit. Et elle vit sur l'appareil parce qu'elle
+ * ne peut pas vivre ailleurs : le compteur voyage dans le bloc chiffre, le
+ * serveur ne le voit pas.
+ */
+describe("renouvellement reserve a l'offre complete", () => {
+  const ENTRY = {
+    id: "e1",
+    siteKey: "example.com",
+    domains: ["example.com"],
+    login: "",
+    length: 20,
+    charset: "luds",
+    counter: 1,
+    v: 2,
+    updatedAt: "2026-09-01T10:00:00Z",
+  };
+
+  const vaultWith = (entry) => ({ schema: 1, updatedAt: "2026-09-01T10:00:00Z", entries: [entry] });
+
+  const session = (plan) => ({
+    endpoint: "https://exemple.test",
+    accessToken: "jeton",
+    refreshToken: "renouvellement",
+    plan,
+  });
+
+  it("refuse d'incrementer le compteur sans offre complete", async () => {
+    const { send, store } = loadWorker({
+      storage: { vault: vaultWith(ENTRY), syncSession: session("free") },
+    });
+    await send({ action: "setEncodingKey", encodingKey: "clef" }, FROM_POPUP);
+
+    const response = await send({ action: "applyChange", id: "e1", renew: true }, FROM_POPUP);
+
+    expect(response.ok).toBe(false);
+    expect(response.error).toContain("offre complete");
+    expect(store.vault.entries[0].counter).toBe(1);
+  });
+
+  it("laisse renouveler avec l'offre complete", async () => {
+    const { send, store } = loadWorker({
+      storage: { vault: vaultWith(ENTRY), syncSession: session("pro") },
+    });
+    await send({ action: "setEncodingKey", encodingKey: "clef" }, FROM_POPUP);
+
+    const response = await send({ action: "applyChange", id: "e1", renew: true }, FROM_POPUP);
+
+    expect(response.ok).toBe(true);
+    expect(store.vault.entries[0].counter).toBe(2);
+  });
+
+  it("laisse migrer une entree v1 sans compte", async () => {
+    const { send, store } = loadWorker({
+      storage: { vault: vaultWith({ ...ENTRY, v: 1 }) },
+    });
+    await send({ action: "setEncodingKey", encodingKey: "clef" }, FROM_POPUP);
+
+    // Passer en v2 est une mise a niveau, pas un service : la brider
+    // laisserait des comptes sur l'ancien algorithme par question de prix.
+    const response = await send({ action: "applyChange", id: "e1", renew: false }, FROM_POPUP);
+
+    expect(response.ok).toBe(true);
+    expect(store.vault.entries[0].v).toBe(2);
+  });
+
+  it("ne calcule meme pas l'apercu d'un renouvellement interdit", async () => {
+    const { send } = loadWorker({
+      storage: { vault: vaultWith(ENTRY), syncSession: session("free") },
+    });
+    await send({ action: "setEncodingKey", encodingKey: "clef" }, FROM_POPUP);
+
+    const response = await send({ action: "previewChange", id: "e1", renew: true }, FROM_POPUP);
+
+    expect(response.ok).toBe(false);
+    expect(response.error).toContain("offre complete");
+  });
+});

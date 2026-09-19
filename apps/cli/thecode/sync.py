@@ -30,6 +30,15 @@ class SyncError(Exception):
     """Échec de synchronisation : réseau, authentification, ou conflit."""
 
 
+PLAN_FREE = "free"
+PLAN_PRO = "pro"
+
+
+def is_paid_plan(plan: str | None) -> bool:
+    """Vrai quand l'offre donne droit au compteur."""
+    return plan == PLAN_PRO
+
+
 @dataclass
 class Credentials:
     """Jetons de session. Stockés à part du carnet, et jamais dans le carnet."""
@@ -37,6 +46,12 @@ class Credentials:
     endpoint: str
     access_token: str
     refresh_token: str
+    #: Offre du compte, telle que le service l'a dite la dernière fois.
+    #:
+    #: Gardée avec les jetons parce que la génération se fait hors ligne : sans
+    #: cette trace, la commande ne saurait pas quoi autoriser tant que le
+    #: service n'a pas répondu, et autoriserait donc tout.
+    plan: str = PLAN_FREE
 
     @staticmethod
     def path() -> Path:
@@ -101,7 +116,7 @@ def register(endpoint: str, email: str, password: str, invite_code: str = "") ->
     )
     creds = Credentials(endpoint, body["access_token"], body["refresh_token"])
     creds.save()
-    return creds
+    return account_plan(creds)
 
 
 def login(endpoint: str, email: str, password: str, device_label: str = "") -> Credentials:
@@ -114,9 +129,32 @@ def login(endpoint: str, email: str, password: str, device_label: str = "") -> C
     return creds
 
 
+def account_plan(creds: Credentials) -> Credentials:
+    """Relit l'offre du compte et la garde avec les jetons.
+
+    Silencieux en cas d'échec : le carnet local marche hors ligne, et un
+    service injoignable ne doit pas empêcher de le lire. L'offre connue reste
+    alors celle de la dernière fois.
+    """
+    try:
+        body, creds = _authorised(
+            creds, lambda token: _request(f"{creds.endpoint}/v1/auth/me", token=token)
+        )
+    except SyncError:
+        return creds
+
+    updated = Credentials(
+        creds.endpoint, creds.access_token, creds.refresh_token, body.get("plan", PLAN_FREE)
+    )
+    updated.save()
+    return updated
+
+
 def _refresh(creds: Credentials) -> Credentials:
     body = _request(f"{creds.endpoint}/v1/auth/refresh", {"refresh_token": creds.refresh_token})
-    refreshed = Credentials(creds.endpoint, body["access_token"], body["refresh_token"])
+    refreshed = Credentials(
+        creds.endpoint, body["access_token"], body["refresh_token"], creds.plan
+    )
     refreshed.save()
     return refreshed
 

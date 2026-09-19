@@ -297,14 +297,29 @@ function refreshVault(domain) {
       : "Enregistrer ce site";
 
     // Rien a renouveler ni a migrer tant que le site n'est pas dans le carnet.
-    const target = currentMatches[0];
-    changeEntryBtn.hidden = !target;
-    if (target) {
-      changeEntryBtn.textContent = target.v >= 2 ? "Renouveler" : "Passer en v2";
-    }
+    refreshChangeButton();
     changePreview.hidden = true;
     pendingChange = null;
   });
+}
+
+/**
+ * Le compteur — renouveler sans changer de clef — fait partie de l'offre
+ * complete. La migration v1 vers v2 reste ouverte a tous : c'est une mise a
+ * niveau, pas un service.
+ */
+let canRenew = false;
+
+function refreshChangeButton() {
+  const target = currentMatches[0];
+  changeEntryBtn.hidden = !target;
+  if (!target) return;
+
+  const renew = target.v >= 2;
+  changeEntryBtn.textContent = renew ? "Renouveler" : "Passer en v2";
+  changeEntryBtn.disabled = renew && !canRenew;
+  changeEntryBtn.title =
+    renew && !canRenew ? "Offre complete requise : https://thecode.julsql.fr/fr/account" : "";
 }
 
 /** L'entree visee : celle choisie quand il y en a plusieurs. */
@@ -409,6 +424,8 @@ function refreshSyncState() {
     syncLoggedOut.hidden = connected;
     syncLoggedIn.hidden = !connected;
     if (!connected) syncStatus.textContent = "";
+    canRenew = Boolean(resp?.canRenew);
+    refreshChangeButton();
   });
 }
 

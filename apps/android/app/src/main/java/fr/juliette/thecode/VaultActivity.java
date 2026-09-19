@@ -260,6 +260,9 @@ public class VaultActivity extends AppCompatActivity {
             try {
                 Sync sync = new Sync();
                 Sync.Result result = sync.syncRenewing(Vault.load(this), masterKey, credentials);
+                // Un abonnement pris entre-temps doit se voir sans se
+                // reconnecter ; un abonnement arrêté aussi.
+                Sync.Credentials withPlan = sync.accountPlan(result.credentials);
                 // Écriture disque ici et non sur le fil principal : la
                 // synchronisation peut rapporter des centaines d'entrées.
                 result.vault.save(this);
@@ -267,7 +270,7 @@ public class VaultActivity extends AppCompatActivity {
                 main.post(() -> {
                     // Les jetons peuvent avoir été renouvelés pendant l'appel :
                     // ne pas les réenregistrer forcerait une reconnexion.
-                    preferences.setSyncCredentials(result.credentials);
+                    preferences.setSyncCredentials(withPlan);
                     render(result.vault);
 
                     int kept = 0;
@@ -339,6 +342,10 @@ public class VaultActivity extends AppCompatActivity {
             com.google.android.material.button.MaterialButton action =
                     card.findViewById(R.id.entryAction);
             action.setText(isV2 ? R.string.vault_renew : R.string.vault_migrate);
+            // Le compteur — changer de mot de passe sans changer de clef — fait
+            // partie de l'offre complète. La migration v1 vers v2 reste ouverte
+            // à tous : c'est une mise à niveau, pas un service.
+            action.setEnabled(!isV2 || renewAllowed());
             action.setOnClickListener(v -> proposeChange(entry, isV2));
 
             card.setOnClickListener(v -> proposeChange(entry, isV2));
@@ -347,6 +354,19 @@ public class VaultActivity extends AppCompatActivity {
     }
 
     // --------------------------------------------- renouvellement et migration
+
+    /**
+     * Le renouvellement demande l'offre complète.
+     *
+     * Décidé sur l'appareil, forcément : le compteur voyage à l'intérieur du
+     * bloc chiffré, le serveur ne le voit pas et ne peut donc rien en dire.
+     * L'offre connue est celle de la dernière synchronisation.
+     */
+    private boolean renewAllowed() {
+        Sync.Credentials credentials = preferences.getSyncCredentials();
+        return credentials != null && Sync.isPaidPlan(credentials.plan);
+    }
+
 
     /**
      * Affiche l'ancien et le nouveau mot de passe, puis n'écrit qu'après
@@ -359,6 +379,10 @@ public class VaultActivity extends AppCompatActivity {
         String masterKey = preferences.getEncodingKey();
         if (masterKey.isEmpty()) {
             toast(getString(R.string.vault_needs_key));
+            return;
+        }
+        if (renew && !renewAllowed()) {
+            toast(getString(R.string.vault_renew_paid));
             return;
         }
 

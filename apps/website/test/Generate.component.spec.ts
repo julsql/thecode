@@ -171,12 +171,30 @@ describe("carnet et empreinte", () => {
     expect(wrapper.text()).not.toContain("Renouveler");
   });
 
+  /**
+   * Le renouvellement passe par le compteur, qui fait partie de l'offre
+   * complète. L'offre connue vit avec la session : la génération se fait hors
+   * ligne, il n'y a personne à interroger au moment du clic.
+   */
+  function signInAs(plan: string) {
+    localStorage.setItem(
+      "thecode.session",
+      JSON.stringify({
+        endpoint: "https://thecode-api.julsql.fr",
+        accessToken: "jeton",
+        refreshToken: "renouvellement",
+        plan,
+      }),
+    );
+  }
+
   it("montre les deux mots de passe avant d'ecrire quoi que ce soit", async () => {
     const { saveVault, emptyVault, newEntry, loadVault, findAllByDomain } = await import("@/vault");
 
     const vault = emptyVault();
     vault.entries.push(newEntry("google.com", { domains: ["google.com"], v: 2 }));
     saveVault(vault);
+    signInAs("pro");
 
     const wrapper = await mountGenerate();
     await wrapper.find("#id_clef").setValue("clef");
@@ -199,6 +217,43 @@ describe("carnet et empreinte", () => {
 
     expect(findAllByDomain(loadVault(), "google.com")[0].counter).toBe(2);
   });
+
+  it("refuse le renouvellement a l'offre gratuite", async () => {
+    const { saveVault, emptyVault, newEntry } = await import("@/vault");
+
+    const vault = emptyVault();
+    vault.entries.push(newEntry("google.com", { domains: ["google.com"], v: 2 }));
+    saveVault(vault);
+    // Sans compte, donc offre gratuite : le compteur est ce qui permet de
+    // changer un mot de passe sans changer sa clef, et c'est ce qui se paie.
+    const wrapper = await mountGenerate();
+
+    await wrapper.find("#id_clef").setValue("clef");
+    await wrapper.find("#id_site").setValue("google.com");
+    await wrapper.vm.$nextTick();
+
+    const renew = wrapper.findAll("button").find((b) => b.text() === "Renouveler");
+    expect(renew!.attributes("disabled")).toBeDefined();
+    expect(wrapper.text()).toContain("offre complète");
+  }, 20000);
+
+  it("laisse migrer une entree v1 sans compte", async () => {
+    const { saveVault, emptyVault, newEntry } = await import("@/vault");
+
+    const vault = emptyVault();
+    vault.entries.push(newEntry("google.com", { domains: ["google.com"], v: 1 }));
+    saveVault(vault);
+
+    const wrapper = await mountGenerate();
+    await wrapper.find("#id_clef").setValue("clef");
+    await wrapper.find("#id_site").setValue("google.com");
+    await wrapper.vm.$nextTick();
+
+    // Passer en v2 est une mise a niveau, pas un service : la brider
+    // laisserait des comptes sur l'ancien algorithme pour une question de prix.
+    const migrate = wrapper.findAll("button").find((b) => b.text() === "Passer en v2");
+    expect(migrate!.attributes("disabled")).toBeUndefined();
+  }, 20000);
 
   it("enregistre les reglages et les retrouve", async () => {
     const wrapper = await mountGenerate();

@@ -94,6 +94,29 @@ async function syncRegister(endpoint, email, password, inviteCode = "") {
 }
 
 /**
+ * Relit l'offre du compte.
+ *
+ * Gardee avec la session : la generation se fait hors ligne, et l'extension
+ * doit savoir quoi proposer sans attendre une reponse du service. Un echec
+ * laisse l'offre connue en place plutot que de tout interdire.
+ */
+async function syncAccountPlan(session) {
+  try {
+    const { result, session: fresh } = await withFreshToken(session, (token) =>
+      syncRequest(`${session.endpoint}/v1/auth/me`, { token }),
+    );
+    return { plan: result.plan, session: fresh };
+  } catch {
+    return { plan: session.plan, session };
+  }
+}
+
+/** Vrai quand l'offre donne droit au compteur. */
+function isPaidPlan(plan) {
+  return plan === "pro";
+}
+
+/**
  * Execute un appel en renouvelant le jeton s'il a expire.
  *
  * Le jeton d'acces dure quinze minutes : sur un usage normal il expire entre
@@ -197,5 +220,7 @@ if (typeof module !== "undefined") {
     syncLogin,
     syncRegister,
     syncVault,
+    syncAccountPlan,
+    isPaidPlan,
   };
 }

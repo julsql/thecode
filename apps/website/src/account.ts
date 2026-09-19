@@ -10,7 +10,7 @@
  * moyens de paiement restent chez Stripe.
  */
 
-import { authorized, request, type Session } from "@/sync";
+import { authorized, loadSession, request, saveSession, type Session } from "@/sync";
 
 /** Ce que la page du compte affiche. */
 export interface AccountInfo {
@@ -146,4 +146,27 @@ export async function resendVerification(session: Session, lang: string): Promis
   await authorized(session, (token) =>
     request(`${session.endpoint}/v1/auth/verify/resend`, { token, payload: { lang } }),
   );
+}
+
+/** Vrai quand l'offre donne droit au compteur et aux plafonds larges. */
+export function isPaidPlan(plan: string | undefined): boolean {
+  return plan === "pro";
+}
+
+/**
+ * Relit l'offre du compte et la garde avec la session.
+ *
+ * Silencieux en cas d'échec : la génération marche hors ligne, et un service
+ * injoignable ne doit pas empêcher d'ouvrir son carnet. L'offre connue reste
+ * alors celle de la dernière fois.
+ */
+export async function refreshPlan(session: Session): Promise<string | undefined> {
+  try {
+    const info = await fetchAccount(session);
+    const current = loadSession();
+    if (current) saveSession({ ...current, plan: info.plan });
+    return info.plan;
+  } catch {
+    return loadSession()?.plan;
+  }
 }

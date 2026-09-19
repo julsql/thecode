@@ -198,12 +198,34 @@ struct VaultScreen: View {
         }
     }
 
+
+    /// Le renouvellement demande l'offre complète.
+    ///
+    /// Décidé sur l'appareil, forcément : le compteur voyage à l'intérieur du
+    /// bloc chiffré, le serveur ne le voit pas et ne peut donc rien en dire.
+    /// L'offre connue est celle de la dernière synchronisation.
+    private var renewAllowed: Bool {
+        SyncPlan.isPaid(SyncCredentialsStore.load()?.plan)
+    }
+
     private func propose(_ entry: VaultEntry) {
         guard !masterKey.isEmpty else {
             status = L10n.t(
                 "Définissez d'abord votre clef maîtresse : c'est elle qui calcule les mots "
                     + "de passe.",
                 "Set your master key first: it is what computes the passwords.")
+            return
+        }
+
+        // Le compteur — changer de mot de passe sans changer de clef — fait
+        // partie de l'offre complète. La migration v1 vers v2 reste ouverte à
+        // tous : c'est une mise à niveau, pas un service.
+        if entry.v >= 2 && !renewAllowed {
+            status = L10n.t(
+                "Renouveler un mot de passe sans changer de clef maîtresse fait partie de "
+                    + "l'offre complète : thecode.julsql.fr",
+                "Renewing a password without changing your master key is part of the "
+                    + "complete plan: thecode.julsql.fr")
             return
         }
 
@@ -326,7 +348,12 @@ struct VaultScreen: View {
                 let result = try await operation()
                 // Les jetons peuvent avoir été renouvelés pendant l'appel : ne
                 // pas les réenregistrer forcerait une reconnexion.
-                SyncCredentialsStore.save(result.credentials)
+                // Un abonnement pris entre-temps doit se voir sans se
+                // reconnecter ; un abonnement arrêté aussi.
+                let refreshed =
+                    (try? await Sync().accountPlan(credentials: result.credentials))
+                    ?? result.credentials
+                SyncCredentialsStore.save(refreshed)
                 try VaultStore.save(result.vault, to: VaultStore.url())
 
                 await MainActor.run {

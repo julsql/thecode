@@ -13,6 +13,7 @@ from .sync import (
     DEFAULT_ENDPOINT,
     Credentials,
     SyncError,
+    is_paid_plan,
 )
 from .sync import (
     login as sync_login,
@@ -427,6 +428,20 @@ def main(argv: list[str] | None = None) -> int:
             print(
                 f"« {entry['label']} » est en v1, où le compteur n'a aucun effet. "
                 "Passez l'entrée en v2 avec --migrate pour pouvoir la renouveler.",
+                file=sys.stderr,
+            )
+            return 1
+
+        # Le compteur — changer de mot de passe sans changer de clef — fait
+        # partie de l'offre complète. Décidé ici, sur l'appareil : le compteur
+        # voyage dans le bloc chiffré, le serveur ne le voit pas et ne peut
+        # donc rien en dire.
+        stored = Credentials.load()
+        if not is_paid_plan(stored.plan if stored else None):
+            print(
+                "Renouveler un mot de passe sans changer de clef maîtresse fait partie "
+                "de l'offre complète.\n"
+                "  Votre offre : https://thecode.julsql.fr/fr/account",
                 file=sys.stderr,
             )
             return 1

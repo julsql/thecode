@@ -96,6 +96,7 @@
     <string name="vault_save_needs_site">Type a site first.</string>
     <string name="vault_entry_actions">What do you want to do with "%1$s"?</string>
     <string name="vault_renew">Renew this password</string>
+    <string name="vault_renew_paid">Renewing a password without changing your master key is part of the complete plan: https://thecode.julsql.fr/en/account</string>
     <string name="vault_migrate">Upgrade to v2</string>
     <string name="vault_renew_title">Renew "%1$s"</string>
     <string name="vault_migrate_title">Move "%1$s" to v2</string>

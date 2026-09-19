@@ -139,6 +139,16 @@ distinguer « vous n'avez pas le droit » de « il faut s'abonner », et ne prop
 l'abonnement que dans le second cas. Le carnet local, lui, n'est jamais bridé :
 les entrées au-delà du plafond restent sur l'appareil.
 
+Le **compteur** — renouveler un mot de passe sans changer de clef maîtresse —
+fait partie de l'offre complète. La migration v1 vers v2 reste ouverte à tous :
+c'est une mise à niveau, pas un service.
+
+Ce contrôle-là vit sur l'appareil, et ne peut pas vivre ailleurs : le compteur
+voyage à l'intérieur du bloc chiffré, le serveur ne le voit pas et ne peut donc
+rien en dire. Chaque client garde l'offre à côté de ses jetons, relue à la
+connexion et à chaque synchronisation, et s'en sert pour proposer ou refuser le
+renouvellement. Sans compte, l'offre est la gratuite.
+
 Les plafonds sont dans `apps/api/thecode_api/plans.py`, et nulle part ailleurs.
 Une limite écrite deux fois finit par dire deux choses différentes, et la
 divergence se découvre en s'y cognant.

@@ -59,18 +59,45 @@ public final class Sync {
         public final String endpoint;
         public final String accessToken;
         public final String refreshToken;
+        /**
+         * Offre du compte, telle que le service l'a dite la dernière fois.
+         *
+         * Gardée avec les jetons parce que la génération se fait hors ligne :
+         * sans cette trace, l'écran ne saurait pas quoi proposer tant que le
+         * service n'a pas répondu, et proposerait donc tout.
+         */
+        public final String plan;
 
         public Credentials(@NonNull String endpoint, @NonNull String accessToken,
                            @NonNull String refreshToken) {
+            this(endpoint, accessToken, refreshToken, PLAN_FREE);
+        }
+
+        public Credentials(@NonNull String endpoint, @NonNull String accessToken,
+                           @NonNull String refreshToken, @NonNull String plan) {
             this.endpoint = endpoint;
             this.accessToken = accessToken;
             this.refreshToken = refreshToken;
+            this.plan = plan;
+        }
+
+        /** Les mêmes jetons, avec une offre relue. */
+        public Credentials withPlan(@NonNull String plan) {
+            return new Credentials(endpoint, accessToken, refreshToken, plan);
         }
 
         static Credentials from(String endpoint, JSONObject body) throws JSONException {
             return new Credentials(endpoint,
                     body.getString("access_token"), body.getString("refresh_token"));
         }
+    }
+
+    public static final String PLAN_FREE = "free";
+    public static final String PLAN_PRO = "pro";
+
+    /** Vrai quand l'offre donne droit au compteur. */
+    public static boolean isPaidPlan(String plan) {
+        return PLAN_PRO.equals(plan);
     }
 
     /** Ce que la synchronisation rend : le carnet fusionné et ses désaccords. */
@@ -176,6 +203,25 @@ public final class Sync {
         } catch (JSONException e) {
             throw new SyncException("Réponse inattendue à la connexion");
         }
+    }
+
+    /**
+     * Relit l'offre du compte, en renouvelant le jeton s'il a expiré.
+     *
+     * Rend les identifiants mis à jour : l'appelant doit les réenregistrer,
+     * sans quoi l'offre relue serait oubliée au prochain démarrage.
+     */
+    public Credentials accountPlan(@NonNull Credentials creds) throws SyncException {
+        JSONObject body;
+        Credentials current = creds;
+        try {
+            body = call(creds.endpoint + "/v1/auth/me", "GET", null, creds.accessToken);
+        } catch (SyncException e) {
+            if (e.status != 401) throw e;
+            current = refresh(creds);
+            body = call(current.endpoint + "/v1/auth/me", "GET", null, current.accessToken);
+        }
+        return current.withPlan(body.optString("plan", PLAN_FREE));
     }
 
     private Credentials refresh(Credentials creds) throws SyncException {
