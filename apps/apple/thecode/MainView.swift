@@ -104,34 +104,67 @@ struct MainView: View {
             "Passwords are now computed with a new algorithm (v2). The ones already set on "
                 + "your sites came from the old one and have not changed.")
         let detail = L10n.t(
-            "Le remplissage automatique utilise le nouveau : pour un site que vous n'avez "
-                + "pas encore mis à jour, générez avec l'ancien (v1) depuis la barre "
-                + "d'outils, ou passez l'entrée en v2 depuis le carnet après avoir changé le "
-                + "mot de passe sur le site.",
-            "Autofill uses the new one: for a site you have not updated yet, generate with "
+            "Le remplissage automatique utilise le nouveau. Pour un site que vous n'avez pas "
+                + "encore mis à jour, générez avec l'ancien (v1) depuis la barre d'outils, ou "
+                + "passez l'entrée en v2 depuis le carnet après avoir changé le mot de passe "
+                + "sur le site.",
+            "Autofill uses the new one. For a site you have not updated yet, generate with "
                 + "the old algorithm (v1) from the toolbar, or move the entry to v2 from the "
                 + "vault once you have changed the password on the site.")
 
-        return VStack(alignment: .leading, spacing: 14) {
-            Text(L10n.t("Nouvel algorithme", "New algorithm")).font(.headline)
-            Text(intro).font(.footnote)
-            Text(detail).font(.footnote)
+        return VStack(spacing: 0) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    // L'icône donne le ton avant le texte : c'est une nouvelle,
+                    // pas une erreur.
+                    HStack(spacing: 12) {
+                        Image(systemName: "sparkles")
+                            .font(.title2)
+                            .foregroundColor(.accentColor)
 
-            Toggle(isOn: $v2NoticeNeverAgain) {
-                Text(L10n.t("Ne plus afficher", "Don't show again")).font(.footnote)
+                        Text(L10n.t("Nouvel algorithme", "New algorithm"))
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                    }
+
+                    Text(intro)
+                        .font(.callout)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text(detail)
+                        .font(.callout)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(24)
             }
 
-            HStack {
-                Spacer()
-                Button(L10n.t("Fermer", "Close")) {
+            Divider()
+
+            VStack(spacing: 14) {
+                Toggle(isOn: $v2NoticeNeverAgain) {
+                    Text(L10n.t("Ne plus afficher", "Don't show again"))
+                        .font(.callout)
+                }
+
+                Button {
                     // Seule la case retire l'annonce pour de bon.
                     if v2NoticeNeverAgain { v2NoticeSeen = true }
                     showV2Notice = false
+                } label: {
+                    Text(L10n.t("Fermer", "Close"))
+                        .fontWeight(.semibold)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 6)
                 }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
             }
+            .padding(24)
         }
-        .padding(20)
-        .frame(maxWidth: 460)
+        .modifier(V2NoticeSizing())
     }
 
 
@@ -617,6 +650,22 @@ TheCode follows you everywhere: browser extensions (Chrome, Firefox, Safari, Edg
                     Button("OK") { isPresented = false }
                 }
             }
+        }
+    }
+}
+
+/// Borne la hauteur de la feuille d'annonce.
+///
+/// Une feuille iOS occupe tout l'écran par défaut, ce qui est beaucoup pour
+/// trois phrases. `presentationDetents` n'existe qu'à partir d'iOS 16, et la
+/// cible de déploiement est iOS 15 : sans ce garde, l'app ne compilerait pas
+/// pour les appareils les plus anciens.
+private struct V2NoticeSizing: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 16.0, *) {
+            content.presentationDetents([.medium, .large])
+        } else {
+            content
         }
     }
 }
