@@ -27,6 +27,13 @@ final class AutofillModel: ObservableObject {
     @Published var accounts: [SiteResolution] = []
     @Published var chosen: SiteResolution? = nil
 
+    /// Vrai quand le carnet ne connaît pas encore ce site : c'est le seul cas
+    /// où proposer de l'enregistrer apporte quelque chose.
+    @Published var canSave = false
+    /// Réponse de l'utilisatrice. macOS n'a pas d'équivalent au dialogue que
+    /// le système Android pose après coup : on demande avant de remplir.
+    @Published var saveToVault = false
+
     var mustChoose: Bool { accounts.count > 1 && chosen == nil }
     @Published var busy: Bool = false
 
@@ -85,7 +92,8 @@ final class AutofillModel: ObservableObject {
                     // completeFill, dans l'extension, après auth.
                     self.controller?.completeFill(
                         domain: self.domain,
-                        resolution: self.chosen ?? self.accounts.first)
+                        resolution: self.chosen ?? self.accounts.first,
+                        saveToVault: self.canSave && self.saveToVault)
                 } else {
                     // Annulation / échec de l'auth : on annule la requête pour
                     // ne pas laisser le navigateur en attente.

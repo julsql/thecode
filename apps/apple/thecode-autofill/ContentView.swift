@@ -95,6 +95,17 @@ struct ContentView: View {
                 }
             }
 
+            // Demandé avant de remplir, faute de moment après : l'extension
+            // disparaît une fois le mot de passe rendu.
+            if model.canSave {
+                Toggle(isOn: $model.saveToVault) {
+                    Text(L10n.t("Enregistrer ce site dans le carnet",
+                                "Save this site to the vault"))
+                        .font(.footnote)
+                }
+                .padding(.horizontal, 24)
+            }
+
             Button {
                 model.startBiometric()
             } label: {
