@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.0](https://github.com/julsql/thecode/compare/cli-v2.2.0...cli-v2.3.0) (2026-09-19)
+
+
+### Features
+
+* **cli:** default to v2, keep --algo 1 as the way back ([9e33fd1](https://github.com/julsql/thecode/commit/9e33fd12c5f2e03f927eba8db5769d443e4d5a57))
+
 ## [2.2.0](https://github.com/julsql/thecode/compare/cli-v2.1.0...cli-v2.2.0) (2026-09-19)
 
 
