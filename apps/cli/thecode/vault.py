@@ -71,7 +71,7 @@ def new_entry(
     login: str = "",
     length: int = DEFAULT_LENGTH,
     charset: dict[str, bool] | None = None,
-    version: int = 1,
+    version: int = 2,
 ) -> dict[str, Any]:
     """Crée une entrée.
 
