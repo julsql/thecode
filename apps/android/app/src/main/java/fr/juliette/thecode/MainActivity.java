@@ -81,6 +81,32 @@ public class MainActivity extends AppCompatActivity {
      * n'est pas écoulée.
      */
     private boolean sessionUnlocked = false;
+
+    /**
+     * Bascule explicite vers l'ancien algorithme.
+     *
+     * La v2 est la règle ; la v1 ne sert qu'à retrouver un mot de passe posé
+     * sur un site avant qu'elle n'existe.
+     */
+    private boolean useV1 = false;
+
+    /**
+     * Clef maîtresse déjà dérivée, et la clef dont elle vient.
+     *
+     * PBKDF2 à 600 000 itérations coûte quelques centaines de millisecondes :
+     * la refaire à chaque frappe rendrait l'écran inutilisable. On la garde
+     * tant que la clef saisie ne change pas.
+     */
+    private byte[] masterV2;
+    private String masterV2For;
+
+    /** Générations hors du fil qui dessine l'écran. */
+    private final java.util.concurrent.ExecutorService worker =
+            java.util.concurrent.Executors.newSingleThreadExecutor();
+    private final android.os.Handler main =
+            new android.os.Handler(android.os.Looper.getMainLooper());
+    /** Numéro de la dernière demande : une réponse en retard est ignorée. */
+    private int generation = 0;
     /** Garde contre les prompts multiples si l'utilisateur tape vite. */
     private boolean authInFlight = false;
     /** Évite la boucle slider → champ → slider lors de la synchronisation. */
@@ -540,12 +566,42 @@ public class MainActivity extends AppCompatActivity {
         code.setLength((int) lengthSlider.getValue());
         code.updateSafetyAndColor();
 
-        String result = code.getCode(key, site);
-        passwordEditText.setText(result);
         securityLabelTextView.setText(getString(R.string.security_with_value,
                 getString(safetyLabelRes(code.getSafetyLevel()))));
         securityLabelTextView.setTextColor(code.getColor());
         resultCard.setVisibility(View.VISIBLE);
+
+        if (useV1) {
+            // La v1 est un simple SHA-256 : instantané, rien à déporter.
+            passwordEditText.setText(code.getCode(key, site));
+            return;
+        }
+
+        final int ticket = ++generation;
+        worker.execute(() -> {
+            try {
+                if (masterV2 == null || !key.equals(masterV2For)) {
+                    masterV2 = CodeV2.deriveMasterKey(key);
+                    masterV2For = key;
+                }
+                String result = CodeV2.getCode(code, key, site, "", 1, masterV2);
+                // Une réponse arrivée après une frappe plus récente
+                // afficherait le mot de passe d'un autre site.
+                main.post(() -> {
+                    if (ticket == generation) passwordEditText.setText(result);
+                });
+            } catch (java.security.GeneralSecurityException e) {
+                main.post(() -> {
+                    if (ticket == generation) passwordEditText.setText("");
+                });
+            }
+        });
+    }
+
+    @Override
+    protected void onDestroy() {
+        worker.shutdownNow();
+        super.onDestroy();
     }
 
     private static int safetyLabelRes(Code.SafetyLevel level) {
@@ -625,7 +681,15 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         int id = item.getItemId();
-        if (id == R.id.action_save_to_vault) {
+        if (id == R.id.action_algo) {
+            useV1 = !useV1;
+            item.setTitle(useV1 ? R.string.algo_back_to_v2 : R.string.algo_use_v1);
+            Snackbar.make(findViewById(android.R.id.content),
+                    useV1 ? R.string.algo_now_v1 : R.string.algo_now_v2,
+                    Snackbar.LENGTH_LONG).show();
+            regenerate();
+            return true;
+        } else if (id == R.id.action_save_to_vault) {
             saveToVault();
             return true;
         } else if (id == R.id.action_vault) {

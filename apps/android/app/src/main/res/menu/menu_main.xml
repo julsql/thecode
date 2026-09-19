@@ -20,6 +20,12 @@
         android:title="@string/vault_save"
         app:showAsAction="never" />
 
+    <!-- La v1 n'est qu'un secours : retrouver un mot de passe pose avant la v2. -->
+    <item
+        android:id="@+id/action_algo"
+        android:title="@string/algo_use_v1"
+        app:showAsAction="never" />
+
     <item
         android:id="@+id/action_dark_mode"
         android:icon="@drawable/ic_dark_mode"

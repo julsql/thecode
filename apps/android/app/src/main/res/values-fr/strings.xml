@@ -120,4 +120,9 @@
     <string name="transfer_merged_conflicts">Carnet fusionné : %1$d entrées, %2$d à vérifier.</string>
     <string name="transfer_unreadable">Lecture impossible : ce code vient-il d\'une autre clef maîtresse ?</string>
     <string name="transfer_no_camera">Caméra indisponible. Sans elle, on peut afficher un code mais pas en lire.</string>
+    <!-- Bascule vers l'ancien algorithme. -->
+    <string name="algo_use_v1">Générer avec l\'ancien algorithme (v1)</string>
+    <string name="algo_back_to_v2">Revenir à l\'algorithme actuel (v2)</string>
+    <string name="algo_now_v1">Ancien algorithme. Pour un site dont le mot de passe n\'a pas encore été changé.</string>
+    <string name="algo_now_v2">Algorithme actuel.</string>
 </resources>
