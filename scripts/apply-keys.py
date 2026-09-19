@@ -30,9 +30,15 @@ MAPPING = {
     "THECODE_GOOGLE_CLIENT_ID": "OAuth_Client.ID_client",
     "THECODE_MAIL_USER": "Email.Host_User",
     "THECODE_MAIL_PASSWORD": "Email.Host_Password",
+    # Facultatif : l'adresse affichée aux destinataires, quand elle diffère du
+    # compte qui s'authentifie. Gmail ne l'accepte que si elle est déclarée
+    # comme alias vérifié dans ses réglages — sinon il la réécrit en silence.
+    "THECODE_MAIL_FROM": "Email.From",
+    "THECODE_MAIL_HOST": "Email.Host",
 }
 
-#: Ce qui va avec, et qui n'est pas un secret.
+#: Ce qui va avec, et qui n'est pas un secret. Ce que `keys.yml` précise
+#: l'emporte : c'est lui que l'on modifie à la main.
 FIXED = {
     "THECODE_MAIL_TRANSPORT": "smtp",
     "THECODE_MAIL_HOST": "smtp.gmail.com",
@@ -86,7 +92,7 @@ def collect() -> dict[str, str]:
 
 def command_check() -> None:
     found = collect()
-    for target in list(MAPPING) + list(FIXED):
+    for target in dict.fromkeys([*MAPPING, *FIXED]):
         state = "présent" if target in found else "MANQUANT"
         print(f"{target:<32} {state}")
 
