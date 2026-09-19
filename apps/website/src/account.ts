@@ -271,3 +271,15 @@ export async function deleteAccount(
     }),
   );
 }
+
+/**
+ * Détache le compte Google.
+ *
+ * Le service refuse tant qu'aucun mot de passe n'est défini : ce serait
+ * fermer la seule porte d'entrée du compte.
+ */
+export async function unlinkGoogle(session: Session): Promise<void> {
+  await authorized(session, (token) =>
+    request(`${session.endpoint}/v1/account/google`, { token, method: "DELETE" }),
+  );
+}

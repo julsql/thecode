@@ -303,3 +303,32 @@ def delete_account(
     # le compte : les clefs étrangères sont en ON DELETE CASCADE.
     db.delete(account)
     db.commit()
+
+
+@router.delete("/google", status_code=status.HTTP_204_NO_CONTENT)
+def unlink_google(
+    account: Account = Depends(current_account), db: DbSession = Depends(get_db)
+) -> None:
+    """Détache le compte Google, pour ne plus passer par lui.
+
+    Refusé tant qu'aucun mot de passe n'est défini : ce serait couper la seule
+    porte d'entrée du compte, et personne — pas même nous — ne pourrait la
+    rouvrir. Le message le dit et indique quoi faire avant.
+
+    Le carnet n'est pas concerné : il est chiffré avec la clef maîtresse, que
+    le service ne connaît pas. Changer la façon d'ouvrir le compte ne change
+    rien à ce qu'il contient.
+    """
+    if not account.google_sub:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "Aucun compte Google n'est lié à ce compte."
+        )
+    if not account.password_hash:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Définissez d'abord un mot de passe : sans lui, délier Google "
+            "fermerait la seule porte d'entrée de ce compte.",
+        )
+
+    account.google_sub = ""
+    db.commit()

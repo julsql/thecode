@@ -122,6 +122,10 @@ function fakeService(overrides: Record<string, unknown> = {}) {
     if (url.endsWith("/v1/account/export")) {
       return json(200, { account: { email: "julie@exemple.fr" }, vault: [] });
     }
+    if (url.endsWith("/v1/account/google") && method === "DELETE") {
+      state.me = { ...state.me, google_linked: false };
+      return json(204, null);
+    }
     if (url.endsWith("/v1/account") && method === "DELETE") return json(204, null);
     if (url.endsWith("/v1/account/code")) {
       state.me = { ...state.me, plan: "pro", plan_source: "lifetime" };
@@ -489,6 +493,40 @@ describe("page du compte", () => {
 
       expect(service.calls.some((c) => c.url.endsWith("/v1/account/export"))).toBe(true);
       expect(created).toHaveBeenCalled();
+    });
+
+    it("propose de délier Google une fois un mot de passe défini", async () => {
+      const service = fakeService({ google_linked: true, has_password: true });
+      const wrapper = await mountAccount();
+
+      const unlink = button(wrapper, "Délier Google")!;
+      expect(unlink.attributes("disabled")).toBeUndefined();
+
+      await unlink.trigger("click");
+      await flush();
+
+      expect(
+        service.calls.some((c) => c.method === "DELETE" && c.url.endsWith("/v1/account/google")),
+      ).toBe(true);
+      expect(wrapper.text()).toContain("Aucun compte Google lié");
+    });
+
+    it("interdit de délier Google tant qu'il n'y a pas de mot de passe", async () => {
+      const service = fakeService({ google_linked: true, has_password: false });
+      const wrapper = await mountAccount();
+
+      // Ce serait fermer la seule porte d'entrée du compte.
+      expect(button(wrapper, "Délier Google")!.attributes("disabled")).toBeDefined();
+      expect(wrapper.text()).toContain("Définissez d'abord un mot de passe");
+      expect(service.calls.some((c) => c.url.endsWith("/v1/account/google"))).toBe(false);
+    });
+
+    it("montre les deux portes d'entrée du compte", async () => {
+      fakeService({ google_linked: true, has_password: true });
+      const wrapper = await mountAccount();
+
+      expect(wrapper.text()).toContain("Mot de passe défini");
+      expect(wrapper.text()).toContain("Compte Google lié");
     });
 
     it("oublie la session à la déconnexion", async () => {

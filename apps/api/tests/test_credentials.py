@@ -199,6 +199,65 @@ class TestChangePassword:
         assert login(client, password=NEW_PASSWORD).status_code == 200
 
 
+class TestUnlinkGoogle:
+    """Garder son compte, cesser de passer par Google."""
+
+    def unlink(self, client, created):
+        return client.request("DELETE", "/v1/account/google", headers=bearer(created))
+
+    def test_a_password_account_takes_over(self, client, google):
+        google["jeton"] = GoogleIdentity(sub="google-123", email="julie@exemple.fr")
+        created = client.post("/v1/auth/google", json={"id_token": "jeton"})
+        client.post(
+            "/v1/account/password",
+            json={"new_password": NEW_PASSWORD},
+            headers=bearer(created),
+        )
+
+        assert self.unlink(client, created).status_code == 204
+
+        me = client.get("/v1/auth/me", headers=bearer(created)).json()
+        assert me["google_linked"] is False
+        # Le compte reste ouvrable, par l'autre porte.
+        assert login(client, password=NEW_PASSWORD).status_code == 200
+
+    def test_without_a_password_it_is_refused(self, client, google):
+        """Ce serait couper la seule porte d'entrée, et personne — pas même
+        nous — ne pourrait la rouvrir."""
+        google["jeton"] = GoogleIdentity(sub="google-123", email="julie@exemple.fr")
+        created = client.post("/v1/auth/google", json={"id_token": "jeton"})
+
+        response = self.unlink(client, created)
+
+        assert response.status_code == 409
+        assert "mot de passe" in response.json()["detail"]
+        assert client.get("/v1/auth/me", headers=bearer(created)).json()["google_linked"] is True
+
+    def test_google_no_longer_opens_that_account(self, client, google, db_session):
+        """Délier veut dire délier : se reconnecter avec Google crée un compte
+        neuf plutôt que de rouvrir l'ancien."""
+        google["jeton"] = GoogleIdentity(sub="google-123", email="julie@exemple.fr")
+        created = client.post("/v1/auth/google", json={"id_token": "jeton"})
+        client.post(
+            "/v1/account/password",
+            json={"new_password": NEW_PASSWORD},
+            headers=bearer(created),
+        )
+        self.unlink(client, created)
+
+        # L'adresse est la même : le compte est retrouvé et relié à nouveau.
+        # C'est volontaire — Google a vérifié cette adresse, et refuser
+        # obligerait à en changer pour se reconnecter.
+        again = client.post("/v1/auth/google", json={"id_token": "jeton"})
+        assert again.status_code == 200
+        assert db_session.query(Account).count() == 1
+
+    def test_an_account_without_google_has_nothing_to_unlink(self, client, sent_emails):
+        created = register(client)
+
+        assert self.unlink(client, created).status_code == 409
+
+
 class TestChangeEmail:
     def test_nothing_moves_before_the_link_is_followed(self, client, sent_emails):
         created = register(client)

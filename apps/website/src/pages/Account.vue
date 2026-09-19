@@ -210,6 +210,33 @@
           </section>
 
           <section class="panel">
+            <h3 class="panel-title">{{ t("acc_sign_in_title") }}</h3>
+            <!-- Les deux portes d'entrée du compte, côte à côte : on ne ferme
+                 pas la dernière sans le savoir. -->
+            <p class="account-badges">
+              <span class="badge" :class="info?.hasPassword ? 'badge--ok' : 'badge--warn'">
+                {{ info?.hasPassword ? t("acc_password_set_yes") : t("acc_password_set_no") }}
+              </span>
+              <span class="badge" :class="info?.googleLinked ? 'badge--ok' : ''">
+                {{ info?.googleLinked ? t("acc_google_linked") : t("acc_google_none") }}
+              </span>
+            </p>
+            <div v-if="info?.googleLinked" class="panel-actions unlink-actions">
+              <button
+                type="button"
+                class="ghost-btn small"
+                :disabled="!info?.hasPassword"
+                @click="unlink"
+              >
+                {{ t("acc_google_unlink") }}
+              </button>
+            </div>
+            <p v-if="info?.googleLinked && !info?.hasPassword" class="hint">
+              {{ t("acc_google_needs_password") }}
+            </p>
+          </section>
+
+          <section class="panel">
             <h3 class="panel-title">{{ t("acc_password_title") }}</h3>
             <!-- Un compte créé par Google n'a pas de mot de passe : il en pose
                  un ici, et c'est ce qui lui ouvre les applications. -->
@@ -376,6 +403,7 @@ import {
   resendVerification,
   revokeDevice,
   startCheckout,
+  unlinkGoogle,
   type AccountInfo,
   type Device,
 } from "@/account";
@@ -635,6 +663,18 @@ export default defineComponent({
       }
     }
 
+    async function unlink() {
+      const session = loadSession();
+      if (!session) return;
+      try {
+        await unlinkGoogle(session);
+        message.value = t("acc_google_unlinked");
+        await refresh();
+      } catch (e) {
+        message.value = (e as Error).message;
+      }
+    }
+
     async function downloadData() {
       const session = loadSession();
       if (!session) return;
@@ -780,6 +820,7 @@ export default defineComponent({
       forgot,
       submitPassword,
       submitEmail,
+      unlink,
       downloadData,
       removeAccount,
       signOut,
@@ -1075,6 +1116,11 @@ export default defineComponent({
 .ghost-btn.danger:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Le déliement se range sous les deux pastilles qu'il concerne. */
+.unlink-actions {
+  margin-top: 12px;
 }
 
 .danger-title {
