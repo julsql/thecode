@@ -124,6 +124,8 @@ public class MainActivity extends AppCompatActivity {
         bindViews();
         loadFromPreferences();
         wireListeners();
+        showV2NoticeIfNeeded();
+
         regenerate();
     }
 
@@ -536,6 +538,25 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e) {
             startActivity(new Intent(Settings.ACTION_SETTINGS));
         }
+    }
+
+    /**
+     * Affiche l'annonce du passage a la v2, une fois.
+     *
+     * Elle ne concerne que la version qui l'apporte : une fois lue, on ne la
+     * repose plus.
+     */
+    private void showV2NoticeIfNeeded() {
+        View notice = findViewById(R.id.v2Notice);
+        if (preferences.getV2NoticeSeen()) {
+            notice.setVisibility(View.GONE);
+            return;
+        }
+        notice.setVisibility(View.VISIBLE);
+        findViewById(R.id.v2NoticeClose).setOnClickListener(v -> {
+            preferences.setV2NoticeSeen();
+            notice.setVisibility(View.GONE);
+        });
     }
 
     private void regenerate() {
