@@ -150,6 +150,19 @@
             <span class="algo-badge">{{ enV1 ? "v1" : "v2" }}</span>
           </p>
 
+          <!-- Barre de force du mot de passe. Elle etait posee tout en bas de
+               la carte, apres la synchronisation : on la prenait pour un
+               reglage de celle-ci. -->
+          <input
+            class="strength-bar"
+            type="range"
+            :value="scoreSecurite"
+            min="0"
+            max="252"
+            disabled
+            :aria-label="t('gen_security_label')"
+          />
+
           <!-- Le carnet retient les reglages par site : plus besoin de se souvenir
                qu'un compte avait ete cree sans symboles. -->
           <section class="panel">
@@ -302,8 +315,6 @@
 
             <p v-if="syncMessage" class="hint">{{ syncMessage }}</p>
           </section>
-
-          <input type="range" :value="scoreSecurite" min="0" max="252" disabled />
         </div>
       </div>
     </div>
@@ -1053,7 +1064,9 @@ input[type="text"]:read-only {
 
 .ghost-btn.primary {
   background: var(--accent-gradient);
-  border-color: transparent;
+  /* Sans bordure : le degrade porte deja le bouton, un liseré par-dessus
+     l'alourdit. */
+  border: 0;
 }
 
 .ghost-btn.primary:hover {
@@ -1379,6 +1392,23 @@ input[type="range"]:disabled {
 #password {
   text-align: center;
   font-size: 1.05rem;
+}
+
+/* Barre de force : lecture seule, elle illustre la ligne au-dessus. */
+.strength-bar {
+  width: 100%;
+  margin: 0 0 8px;
+  accent-color: var(--c4);
+  /* Rien a regler : le curseur laisserait croire le contraire. */
+  pointer-events: none;
+}
+
+.strength-bar::-webkit-slider-thumb {
+  opacity: 0;
+}
+
+.strength-bar::-moz-range-thumb {
+  opacity: 0;
 }
 
 .security-line {
