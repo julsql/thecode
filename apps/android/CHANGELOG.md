@@ -1,5 +1,16 @@
 # Changelog
 
+## [3.2.0](https://github.com/julsql/thecode/compare/android-v3.1.0...android-v3.2.0) (2026-09-19)
+
+
+### Features
+
+* **android:** export and import an encrypted vault ([8ae9050](https://github.com/julsql/thecode/commit/8ae90502f5e534b13bd880f71daf1a4d6a79bccf))
+* **android:** implement the v2 algorithm ([a26a0ec](https://github.com/julsql/thecode/commit/a26a0ec7b0e44b25447f5da874899abeb6337765))
+* **android:** make autofill read the vault ([537e23b](https://github.com/julsql/thecode/commit/537e23bfdbbe97aa349ddbf938fbd40c1e02bae7))
+* **android:** renew and migrate an entry from the vault screen ([a954321](https://github.com/julsql/thecode/commit/a9543217705ad9c0a33c9228b39c70c6517acb46))
+* **android:** transfer the vault by QR code ([aa7d8f7](https://github.com/julsql/thecode/commit/aa7d8f781d947baf5e7ab2133b7ab46d8ada6309))
+
 ## [3.1.0](https://github.com/julsql/thecode/compare/android-v3.0.0...android-v3.1.0) (2026-09-18)
 
 
