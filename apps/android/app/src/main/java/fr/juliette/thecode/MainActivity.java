@@ -546,17 +546,28 @@ public class MainActivity extends AppCompatActivity {
      * Elle ne concerne que la version qui l'apporte : une fois lue, on ne la
      * repose plus.
      */
+    /**
+     * Annonce du passage a la v2, en boite de dialogue a l'ouverture.
+     *
+     * Fermer la fait revenir la prochaine fois : une annonce qu'on n'a pas eu
+     * le temps de lire ne doit pas disparaitre pour toujours.
+     */
     private void showV2NoticeIfNeeded() {
-        View notice = findViewById(R.id.v2Notice);
-        if (preferences.getV2NoticeSeen()) {
-            notice.setVisibility(View.GONE);
-            return;
-        }
-        notice.setVisibility(View.VISIBLE);
-        findViewById(R.id.v2NoticeClose).setOnClickListener(v -> {
-            preferences.setV2NoticeSeen();
-            notice.setVisibility(View.GONE);
-        });
+        if (preferences.getV2NoticeSeen()) return;
+
+        View content = getLayoutInflater().inflate(R.layout.dialog_v2_notice, null);
+        com.google.android.material.checkbox.MaterialCheckBox neverAgain =
+                content.findViewById(R.id.v2NoticeNeverAgain);
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.v2_notice_title)
+                .setView(content)
+                // Fermer suffit a la faire partir ; seule la case la retire
+                // pour de bon.
+                .setPositiveButton(R.string.v2_notice_close, (dialog, which) -> {
+                    if (neverAgain.isChecked()) preferences.setV2NoticeSeen();
+                })
+                .show();
     }
 
     private void regenerate() {

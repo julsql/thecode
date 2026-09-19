@@ -86,41 +86,54 @@ struct MainView: View {
     /// La v2 est la règle ; la v1 ne sert qu'à retrouver un mot de passe posé
     /// sur un site avant qu'elle n'existe.
     @State private var useV1 = false
-
-    /// Annonce du passage à la v2.
+    /// Annonce du passage à la v2, en feuille modale à l'ouverture.
     ///
-    /// Elle ne concerne que la version qui l'apporte : une fois lue, on ne la
-    /// repose plus. Le drapeau vit dans les réglages partagés, donc il survit
-    /// à un redémarrage.
+    /// Fermer la fait revenir la prochaine fois : seule la case à cocher la
+    /// retire pour de bon. Une annonce qu'on n'a pas eu le temps de lire ne
+    /// doit pas disparaître pour toujours.
     @AppStorage("v2NoticeSeen", store: UserDefaults(suiteName: appGroupID))
     var v2NoticeSeen: Bool = false
 
-    private var v2Notice: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(
-                L10n.t(
-                    "Les mots de passe se calculent désormais avec un nouvel algorithme "
-                        + "(v2). Ceux déjà posés sur vos sites viennent de l'ancien et n'ont "
-                        + "pas changé. Le remplissage automatique utilise le nouveau : pour "
-                        + "un site que vous n'avez pas encore mis à jour, générez avec "
-                        + "l'ancien (v1) depuis la barre d'outils, ou passez l'entrée en v2 "
-                        + "depuis le carnet après avoir changé le mot de passe sur le site.",
-                    "Passwords are now computed with a new algorithm (v2). The ones already "
-                        + "set on your sites came from the old one and have not changed. "
-                        + "Autofill uses the new one: for a site you have not updated yet, "
-                        + "generate with the old algorithm (v1) from the toolbar, or move the "
-                        + "entry to v2 from the vault once you have changed the password on "
-                        + "the site.")
-            )
-            .font(.footnote)
+    @State private var showV2Notice = false
+    @State private var v2NoticeNeverAgain = false
 
-            Button(L10n.t("J'ai compris", "Got it")) { v2NoticeSeen = true }
-                .font(.footnote)
+    private var v2NoticeSheet: some View {
+        let intro = L10n.t(
+            "Les mots de passe se calculent désormais avec un nouvel algorithme (v2). Ceux "
+                + "déjà posés sur vos sites viennent de l'ancien et n'ont pas changé.",
+            "Passwords are now computed with a new algorithm (v2). The ones already set on "
+                + "your sites came from the old one and have not changed.")
+        let detail = L10n.t(
+            "Le remplissage automatique utilise le nouveau : pour un site que vous n'avez "
+                + "pas encore mis à jour, générez avec l'ancien (v1) depuis la barre "
+                + "d'outils, ou passez l'entrée en v2 depuis le carnet après avoir changé le "
+                + "mot de passe sur le site.",
+            "Autofill uses the new one: for a site you have not updated yet, generate with "
+                + "the old algorithm (v1) from the toolbar, or move the entry to v2 from the "
+                + "vault once you have changed the password on the site.")
+
+        return VStack(alignment: .leading, spacing: 14) {
+            Text(L10n.t("Nouvel algorithme", "New algorithm")).font(.headline)
+            Text(intro).font(.footnote)
+            Text(detail).font(.footnote)
+
+            Toggle(isOn: $v2NoticeNeverAgain) {
+                Text(L10n.t("Ne plus afficher", "Don't show again")).font(.footnote)
+            }
+
+            HStack {
+                Spacer()
+                Button(L10n.t("Fermer", "Close")) {
+                    // Seule la case retire l'annonce pour de bon.
+                    if v2NoticeNeverAgain { v2NoticeSeen = true }
+                    showV2Notice = false
+                }
+            }
         }
-        .padding(12)
-        .background(Color.secondary.opacity(0.12))
-        .cornerRadius(12)
+        .padding(20)
+        .frame(maxWidth: 460)
     }
+
 
 
 
@@ -130,10 +143,6 @@ struct MainView: View {
     var body: some View {
         NavigationView {
             Form {
-                if !v2NoticeSeen {
-                    Section { v2Notice }
-                }
-
                 // Paramètres globaux existants
                 Section(header: Text(L10n.t("Paramètres de l'application", "App settings"))) {
                     
@@ -275,6 +284,7 @@ struct MainView: View {
                 }
             }
             .onAppear {
+                if !v2NoticeSeen { showV2Notice = true }
                 // Le trousseau peut n'avoir rien rendu au moment où la vue a
                 // été construite ; on retente plutôt que de laisser un champ
                 // vide qui effacerait la clef à la première frappe.
@@ -304,7 +314,8 @@ struct MainView: View {
             .sheet(isPresented: $showInfoSheet) {
                 InfoSheet(isPresented: $showInfoSheet)
             }
-            .sheet(isPresented: $showVault) {
+            .sheet(isPresented: $showV2Notice) { v2NoticeSheet }
+        .sheet(isPresented: $showVault) {
                 VaultScreen(masterKey: encodingKey, isPresented: $showVault)
             }
             .alert(L10n.t("Aucun mot de passe à partager", "No password to share"), isPresented: $showNoPasswordAlert) {

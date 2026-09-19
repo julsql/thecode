@@ -1,4 +1,28 @@
 <template>
+  <!-- Annonce du passage à la v2, à l'ouverture. Fermer la fait revenir la
+       prochaine fois ; seule la case à cocher la retire pour de bon. -->
+  <div v-if="showV2Notice" class="modal-backdrop" @click.self="closeV2Notice">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="v2NoticeTitle">
+      <h3 id="v2NoticeTitle">Nouvel algorithme</h3>
+      <p>
+        Les mots de passe se calculent désormais avec un nouvel algorithme (v2). Ceux déjà posés sur
+        vos sites viennent de l'ancien et n'ont pas changé.
+      </p>
+      <p>
+        Le remplissage automatique utilise le nouveau : pour un site que vous n'avez pas encore mis
+        à jour, utilisez « Générer en v1 (ancien) », ou passez l'entrée en v2 depuis le carnet après
+        avoir changé le mot de passe sur le site.
+      </p>
+      <label class="modal-check">
+        <input v-model="v2NoticeNeverAgain" type="checkbox" />
+        Ne plus afficher
+      </label>
+      <div class="modal-actions">
+        <button type="button" class="ghost-btn primary" @click="closeV2Notice">Fermer</button>
+      </div>
+    </div>
+  </div>
+
   <div class="page-wrapper">
     <header class="page-hero">
       <div class="page-hero-inner">
@@ -109,22 +133,6 @@
             {{ t("gen_security_label") }} :
             <span :style="{ color: couleurSecurite }">{{ niveauSecurite }}</span>
           </p>
-
-          <!-- Annonce du passage à la v2. Sur cette page seulement : c'est la
-               seule où l'on génère, donc la seule que le changement concerne.
-               Affichée une fois, puis oubliée. -->
-          <div v-if="!v2NoticeSeen" class="notice">
-            <p>
-              Les mots de passe se calculent désormais avec un nouvel algorithme (v2). Ceux déjà
-              posés sur vos sites viennent de l'ancien et n'ont pas changé. Le remplissage
-              automatique utilise le nouveau : pour un site que vous n'avez pas encore mis à jour,
-              utilisez « Générer en v1 (ancien) » ci-dessous, ou passez l'entrée en v2 depuis le
-              carnet après avoir changé le mot de passe sur le site.
-            </p>
-            <button type="button" class="ghost-btn small" @click="dismissV2Notice">
-              J'ai compris
-            </button>
-          </div>
 
           <!-- La v1 n'est plus qu'un secours : le mot de passe pose sur un site
                avant la v2 ne se retrouve que comme ca. -->
@@ -364,22 +372,28 @@ export default defineComponent({
     const enV1 = ref(false);
 
     /**
-     * Annonce du passage a la v2.
+     * Annonce du passage a la v2, en fenetre modale a l'ouverture.
      *
-     * Elle ne concerne que la version qui l'apporte : une fois lue, on ne la
-     * repose plus. localStorage peut lever en navigation privee, d'ou le
-     * try/catch — la page doit s'afficher meme sans stockage.
+     * Fermer la fait revenir la prochaine fois : seule la case a cocher la
+     * retire pour de bon. Une annonce qu'on n'a pas eu le temps de lire ne
+     * doit pas disparaitre pour toujours.
+     *
+     * localStorage peut lever en navigation privee, d'ou le try/catch — la
+     * page doit s'afficher meme sans stockage.
      */
     const V2_NOTICE_KEY = "thecode.v2NoticeSeen";
-    const v2NoticeSeen = ref(true);
+    const showV2Notice = ref(false);
+    const v2NoticeNeverAgain = ref(false);
+
     try {
-      v2NoticeSeen.value = localStorage.getItem(V2_NOTICE_KEY) === "1";
+      showV2Notice.value = localStorage.getItem(V2_NOTICE_KEY) !== "1";
     } catch {
-      v2NoticeSeen.value = false;
+      showV2Notice.value = true;
     }
 
-    function dismissV2Notice() {
-      v2NoticeSeen.value = true;
+    function closeV2Notice() {
+      showV2Notice.value = false;
+      if (!v2NoticeNeverAgain.value) return;
       try {
         localStorage.setItem(V2_NOTICE_KEY, "1");
       } catch {
@@ -756,8 +770,9 @@ export default defineComponent({
       proposeChange,
       applyChange,
       enV1,
-      v2NoticeSeen,
-      dismissV2Notice,
+      showV2Notice,
+      v2NoticeNeverAgain,
+      closeV2Notice,
       transferMessage,
       qrRows,
       showTransfer,
@@ -1067,21 +1082,53 @@ input[type="text"]:read-only {
   color: var(--text-muted);
 }
 
-/* Annonce du passage a la v2. Assez visible pour etre lue, assez discrete
-   pour ne pas masquer ce que la page sert a faire. */
-.notice {
-  margin-top: 20px;
-  padding: 14px 16px;
-  border-radius: 14px;
-  border: 1px solid var(--border-strong);
-  background: var(--surface-elevated);
+/* Annonce du passage a la v2, en fenetre modale a l'ouverture. */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.6);
 }
 
-.notice p {
-  margin: 0 0 10px;
-  font-size: 0.85rem;
-  line-height: 1.5;
+.modal {
+  max-width: 460px;
+  width: 100%;
+  padding: 22px;
+  border-radius: 18px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  box-shadow: var(--shadow-strong);
+}
+
+.modal h3 {
+  margin: 0 0 12px;
+  font-size: 1.05rem;
+}
+
+.modal p {
+  margin: 0 0 12px;
+  font-size: 0.88rem;
+  line-height: 1.55;
   color: var(--text-muted);
+}
+
+.modal-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
 }
 
 .algo-row {

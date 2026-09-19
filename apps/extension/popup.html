@@ -17,16 +17,28 @@
   <body>
     <h3>TheCode</h3>
 
-    <!-- Annonce du passage a la v2. Affichee une fois, puis oubliee : elle ne
-         concerne que la version qui l'apporte. -->
-    <div id="v2Notice" class="notice" hidden>
-      <p>
-        Les mots de passe se calculent désormais avec un nouvel algorithme (v2). Ceux déjà posés sur
-        vos sites viennent de l'ancien et n'ont pas changé. Le remplissage automatique utilise le
-        nouveau : pour un site que vous n'avez pas encore mis à jour, générez avec l'ancien (v1), ou
-        passez l'entrée en v2 depuis le carnet après avoir changé le mot de passe sur le site.
-      </p>
-      <button id="v2NoticeClose" type="button">J'ai compris</button>
+    <!-- Annonce du passage a la v2, a l'ouverture. Fermer la fait revenir la
+         prochaine fois ; seule la case a cocher la retire pour de bon. -->
+    <div id="v2Notice" class="modal-backdrop" hidden>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="v2NoticeTitle">
+        <h4 id="v2NoticeTitle">Nouvel algorithme</h4>
+        <p>
+          Les mots de passe se calculent désormais avec un nouvel algorithme (v2). Ceux déjà posés
+          sur vos sites viennent de l'ancien et n'ont pas changé.
+        </p>
+        <p>
+          Le remplissage automatique utilise le nouveau : pour un site que vous n'avez pas encore
+          mis à jour, générez-le depuis le site ou l'application avec l'ancien algorithme, ou passez
+          l'entrée en v2 depuis le carnet après avoir changé le mot de passe sur le site.
+        </p>
+        <label class="modal-check">
+          <input id="v2NoticeNeverAgain" type="checkbox" />
+          Ne plus afficher
+        </label>
+        <div class="modal-actions">
+          <button id="v2NoticeClose" type="button">Fermer</button>
+        </div>
+      </div>
     </div>
 
     <!-- Clef -->

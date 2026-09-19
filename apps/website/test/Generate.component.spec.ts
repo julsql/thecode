@@ -278,24 +278,37 @@ describe("transfert du carnet", () => {
 describe("annonce du passage à la v2", () => {
   beforeEach(() => localStorage.clear());
 
-  it("s'affiche tant qu'elle n'a pas été lue", async () => {
+  it("s'ouvre en fenêtre modale", async () => {
     const wrapper = await mountGenerate();
-    expect(wrapper.find(".notice").exists()).toBe(true);
-    expect(wrapper.text()).toContain("v2");
+
+    expect(wrapper.find(".modal-backdrop").exists()).toBe(true);
+    expect(wrapper.text()).toContain("Nouvel algorithme");
   });
 
-  it("ne revient plus une fois fermée", async () => {
+  it("revient la prochaine fois si on ferme sans cocher", async () => {
     const wrapper = await mountGenerate();
 
-    const close = wrapper.findAll("button").find((b) => b.text() === "J'ai compris");
+    const close = wrapper.findAll("button").find((b) => b.text() === "Fermer");
     await close!.trigger("click");
     await wrapper.vm.$nextTick();
-    expect(wrapper.find(".notice").exists()).toBe(false);
+    expect(wrapper.find(".modal-backdrop").exists()).toBe(false);
 
-    // Elle ne concerne que la version qui l'apporte : la reposer à chaque
-    // visite serait du harcèlement.
+    // Une annonce qu'on n'a pas eu le temps de lire ne doit pas disparaître
+    // pour toujours.
     const again = await mountGenerate();
-    expect(again.find(".notice").exists()).toBe(false);
+    expect(again.find(".modal-backdrop").exists()).toBe(true);
+  });
+
+  it("ne revient plus si on coche avant de fermer", async () => {
+    const wrapper = await mountGenerate();
+
+    await wrapper.find(".modal-check input").setValue(true);
+    const close = wrapper.findAll("button").find((b) => b.text() === "Fermer");
+    await close!.trigger("click");
+    await wrapper.vm.$nextTick();
+
+    const again = await mountGenerate();
+    expect(again.find(".modal-backdrop").exists()).toBe(false);
   });
 
   it("s'affiche quand même si le stockage est indisponible", async () => {
@@ -308,7 +321,7 @@ describe("annonce du passage à la v2", () => {
 
     try {
       const wrapper = await mountGenerate();
-      expect(wrapper.find(".notice").exists()).toBe(true);
+      expect(wrapper.find(".modal-backdrop").exists()).toBe(true);
     } finally {
       Storage.prototype.getItem = original;
     }
