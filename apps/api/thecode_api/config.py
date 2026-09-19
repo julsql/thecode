@@ -86,10 +86,16 @@ class Settings(BaseSettings):
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     settings = Settings()
-    if settings.registration_mode not in ("open", "invite", "closed"):
+    if settings.registration_mode not in ("open", "quota", "invite", "closed"):
         raise RuntimeError(
             f"THECODE_REGISTRATION_MODE invalide : {settings.registration_mode!r}. "
-            "Attendu open, invite ou closed."
+            "Attendu open, quota, invite ou closed."
+        )
+    if settings.registration_mode == "quota" and not settings.invite_code:
+        raise RuntimeError(
+            "THECODE_REGISTRATION_MODE vaut quota mais THECODE_INVITE_CODE est vide : "
+            "une fois les places libres prises, plus personne ne pourrait s'inscrire, "
+            "et l'erreur ne se verrait qu'à ce moment-là."
         )
     if settings.registration_mode == "invite" and not settings.invite_code:
         raise RuntimeError(
