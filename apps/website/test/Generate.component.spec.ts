@@ -44,6 +44,9 @@ describe("page de generation", () => {
   let wrapper: Awaited<ReturnType<typeof mountGenerate>>;
 
   beforeEach(async () => {
+    // Le mode de generation est desormais retenu : sans ce nettoyage, un test
+    // qui passe en v1 fait generer en v1 aux suivants.
+    localStorage.clear();
     wrapper = await mountGenerate();
   });
 
