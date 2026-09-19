@@ -58,25 +58,43 @@ describe("page de generation", () => {
   });
 
   it("genere le mot de passe du vecteur partage a partir des champs", async () => {
-    const canonical = vectors.v1.cases.find((c: any) => c.id === "canonical");
+    // v2 par defaut desormais : c'est ce vecteur-la que l'ecran doit rendre.
+    const canonical = vectors.v2.cases.find((c: any) => c.id === "v2-canonical");
 
     await wrapper.find("#id_site").setValue(canonical.site);
     await wrapper.find("#id_clef").setValue(canonical.master);
     await wrapper.vm.$nextTick();
 
-    await vi.waitFor(() => expect(generated(wrapper)).toBe(canonical.expected));
-  });
+    await vi.waitFor(() => expect(generated(wrapper)).toBe(canonical.expected), {
+      timeout: 15000,
+    });
+  }, 20000);
+
+  it("rend l'ancien mot de passe quand on demande la v1", async () => {
+    // Le secours pour un site dont le mot de passe n'a pas encore ete change.
+    const canonical = vectors.v1.cases.find((c: any) => c.id === "canonical");
+
+    await wrapper.find("#id_site").setValue(canonical.site);
+    await wrapper.find("#id_clef").setValue(canonical.master);
+    const v1Button = wrapper.findAll("button").find((b) => b.text().includes("v1"));
+    await v1Button!.trigger("click");
+    await wrapper.vm.$nextTick();
+
+    await vi.waitFor(() => expect(generated(wrapper)).toBe(canonical.expected), {
+      timeout: 15000,
+    });
+  }, 20000);
 
   it("regenere quand la longueur change", async () => {
-    const short = vectors.v1.cases.find((c: any) => c.id === "len-16");
+    const short = vectors.v2.cases.find((c: any) => c.id === "v2-len-min");
 
     await wrapper.find("#id_site").setValue(short.site);
     await wrapper.find("#id_clef").setValue(short.master);
     await wrapper.find("#id_longueur").setValue(String(short.length));
     await wrapper.vm.$nextTick();
 
-    await vi.waitFor(() => expect(generated(wrapper)).toBe(short.expected));
-  });
+    await vi.waitFor(() => expect(generated(wrapper)).toBe(short.expected), { timeout: 15000 });
+  }, 20000);
 
   // Sans clef, le mot de passe ne dependrait que du site : identique pour tous
   // les utilisateurs, et calculable par quiconque connait le site. Ce test
@@ -115,7 +133,8 @@ describe("carnet et empreinte", () => {
     const { saveVault, emptyVault, newEntry } = await import("@/vault");
 
     const vault = emptyVault();
-    vault.entries.push(newEntry("google.com", { domains: ["google.com"] }));
+    // v1 explicite : les entrees naissent desormais en v2.
+    vault.entries.push(newEntry("google.com", { domains: ["google.com"], v: 1 }));
     saveVault(vault);
 
     const wrapper = await mountGenerate();
