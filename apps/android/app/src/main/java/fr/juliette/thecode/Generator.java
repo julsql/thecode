@@ -25,6 +25,18 @@ public final class Generator {
      */
     public static String generate(@NonNull SiteResolution resolution, @NonNull String masterKey,
                                   @Nullable byte[] masterV2) {
+        return generate(resolution, masterKey, masterV2, resolution.v);
+    }
+
+    /**
+     * Comme ci-dessus, en imposant la version.
+     *
+     * Le remplissage automatique dérive toujours en v2 : il ne propose aucun
+     * choix, il doit donc être prévisible. L'écran de génération, lui, offre
+     * la v1 en secours pour un site pas encore migré.
+     */
+    public static String generate(@NonNull SiteResolution resolution, @NonNull String masterKey,
+                                  @Nullable byte[] masterV2, int version) {
         Code code = new Code();
         code.setMinState(resolution.lower);
         code.setMajState(resolution.upper);
@@ -32,7 +44,7 @@ public final class Generator {
         code.setChiState(resolution.numbers);
         code.setLength(resolution.length);
 
-        if (resolution.v >= 2) {
+        if (version >= 2) {
             return CodeV2.getCode(code, masterKey, resolution.siteKey,
                     resolution.login, resolution.counter, masterV2);
         }

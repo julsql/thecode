@@ -203,7 +203,9 @@ struct RenewAndMigrateTests {
     func migratingChangesThePassword() {
         // C'est pourquoi la migration s'affiche avec les deux mots de passe :
         // il faudra aller changer celui du site.
-        let entry = VaultEntry(siteKey: "google.com")
+        // v1 explicite : les entrées naissent désormais en v2, seules les
+        // anciennes sont concernées par la migration.
+        let entry = VaultEntry(siteKey: "google.com", v: 1)
 
         var migrated = entry
         migrated.v = 2
@@ -215,7 +217,7 @@ struct RenewAndMigrateTests {
     func theCounterDoesNothingInV1() {
         // D'où le fait de ne proposer que la migration sur une entrée v1 :
         // incrémenter ne changerait rien, et le laisser croire serait pire.
-        let entry = VaultEntry(siteKey: "google.com")
+        let entry = VaultEntry(siteKey: "google.com", v: 1)
 
         var bumped = entry
         bumped.counter = 5

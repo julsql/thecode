@@ -53,6 +53,7 @@ public class RenewAndMigrateTest {
         // C'est pourquoi la migration s'affiche avec les deux mots de passe :
         // il faudra aller changer celui du site.
         VaultEntry entry = VaultEntry.create("google.com", null);
+        entry.v = 1; // les entrees naissent desormais en v2
 
         VaultEntry migrated = VaultEntry.copyOf(entry);
         migrated.v = 2;
@@ -65,6 +66,7 @@ public class RenewAndMigrateTest {
         // D'où le refus de renouveler une entrée v1 : l'incrémenter ne
         // changerait rien, et le laisser croire serait pire.
         VaultEntry entry = VaultEntry.create("google.com", null);
+        entry.v = 1; // les entrees naissent desormais en v2
 
         VaultEntry bumped = VaultEntry.copyOf(entry);
         bumped.counter = 5;

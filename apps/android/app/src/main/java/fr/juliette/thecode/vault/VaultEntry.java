@@ -38,7 +38,8 @@ public final class VaultEntry {
     public boolean upper = true;
     public boolean symbols = true;
     public boolean numbers = true;
-    public int v = 1;
+    /** Les entrées naissent en v2 ; la v1 reste lisible pour les anciennes. */
+    public int v = 2;
     public String updatedAt;
     public boolean deleted = false;
 
