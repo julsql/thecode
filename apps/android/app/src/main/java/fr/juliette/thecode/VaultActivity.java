@@ -326,6 +326,19 @@ public class VaultActivity extends AppCompatActivity {
         // Une liste vide sans explication laisse croire à une panne.
         empty.setVisibility(entries.isEmpty() ? View.VISIBLE : View.GONE);
 
+        // La synchronisation est la principale raison de créer un compte, et
+        // rien ne le disait tant qu'aucun n'était lié. Le bouton ouvre la
+        // page de création sur le site ; il ne dit rien d'une offre payante,
+        // ce que les règles des magasins d'applications interdisent.
+        View pitch = findViewById(R.id.vaultSyncPitch);
+        boolean linked = preferences.getSyncCredentials() != null;
+        pitch.setVisibility(linked ? View.GONE : View.VISIBLE);
+        if (!linked) {
+            findViewById(R.id.vaultSyncPitchAction).setOnClickListener(v -> startActivity(
+                    new android.content.Intent(android.content.Intent.ACTION_VIEW,
+                            android.net.Uri.parse(getString(R.string.sync_account_url)))));
+        }
+
         LayoutInflater inflater = LayoutInflater.from(this);
         for (VaultEntry entry : entries) {
             View card = inflater.inflate(R.layout.vault_item, list, false);

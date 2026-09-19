@@ -42,6 +42,37 @@ struct VaultScreen: View {
                         .padding(.vertical, 8)
                 }
 
+                // La synchronisation est la principale raison de créer un
+                // compte, et rien ne le disait tant qu'aucun n'était lié.
+                // Aucune mention d'offre ni de prix : les règles de l'App
+                // Store interdisent d'orienter vers un paiement.
+                if !isLinked {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(L10n.t("Synchronisez votre carnet", "Sync your vault"))
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+
+                        Text(
+                            L10n.t(
+                                "Gardez votre carnet à jour entre vos appareils. Il est "
+                                    + "chiffré sur cet appareil avant d'être envoyé : le "
+                                    + "serveur ne peut lire ni vos sites, ni vos identifiants.",
+                                "Keep your vault up to date across your devices. It is "
+                                    + "encrypted on this device before it is sent: the server "
+                                    + "can read neither your sites nor your logins.")
+                        )
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                        Link(L10n.t("Créer un compte", "Create an account"), destination: accountURL)
+                            .font(.footnote)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal)
+                    .padding(.vertical, 10)
+                }
+
                 VaultView(vault: vault, onSelect: propose)
             }
             .navigationBarTitle(L10n.t("Carnet", "Vault"), displayMode: .inline)

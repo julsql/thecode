@@ -82,6 +82,10 @@
     <string name="sync_password">Account password</string>
     <string name="sync_connect">Sign in</string>
     <string name="sync_no_account">No account yet? Create one at https://thecode.julsql.fr/en/account</string>
+    <string name="sync_pitch_title">Sync your vault</string>
+    <string name="sync_pitch_body">Keep your vault up to date across your devices. It is encrypted on this device before it is sent: the server can read neither your sites nor your logins.</string>
+    <string name="sync_pitch_action">Create an account</string>
+    <string name="sync_account_url" translatable="false">https://thecode.julsql.fr/en/account</string>
     <string name="sync_running">Syncing…</string>
     <string name="sync_done">Vault synced: %1$d entries.</string>
     <string name="sync_done_conflicts">Vault synced: %1$d entries, %2$d need your attention.</string>

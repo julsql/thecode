@@ -54,6 +54,47 @@
                 android:textAppearance="?attr/textAppearanceBodyMedium"
                 android:visibility="gone" />
 
+            <!-- Affiche tant qu'aucun compte n'est lie : la synchronisation
+                 est la principale raison d'en creer un, et rien ne le disait.
+                 Aucune mention d'offre ni de prix : les regles des magasins
+                 d'applications interdisent d'y orienter vers un paiement. -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/vaultSyncPitch"
+                style="?attr/materialCardViewOutlinedStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/sync_pitch_title"
+                        android:textAppearance="?attr/textAppearanceTitleSmall" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:paddingTop="4dp"
+                        android:text="@string/sync_pitch_body"
+                        android:textAppearance="?attr/textAppearanceBodySmall" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/vaultSyncPitchAction"
+                        style="?attr/materialButtonOutlinedStyle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:text="@string/sync_pitch_action" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
             <LinearLayout
                 android:id="@+id/vaultList"
                 android:layout_width="match_parent"
