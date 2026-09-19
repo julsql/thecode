@@ -484,14 +484,15 @@ document.getElementById("openTransfer").addEventListener("click", () => {
 });
 
 /**
- * Annonce du passage a la v2.
+ * Annonce du passage a la v2, en fenetre modale a l'ouverture.
  *
- * Elle ne concerne que la version qui l'apporte : une fois lue, on ne la
- * repose plus. Le drapeau vit dans le stockage de l'extension, donc il
- * survit a la fermeture du popup.
+ * Fermer la fait revenir la prochaine fois : seule la case a cocher la retire
+ * pour de bon. Une annonce qu'on n'a pas eu le temps de lire ne doit pas
+ * disparaitre pour toujours.
  */
 const V2_NOTICE_KEY = "v2NoticeSeen";
 const v2Notice = document.getElementById("v2Notice");
+const v2NeverAgain = document.getElementById("v2NoticeNeverAgain");
 
 browser.storage?.local?.get([V2_NOTICE_KEY], (stored) => {
   if (!stored?.[V2_NOTICE_KEY]) v2Notice.hidden = false;
@@ -499,5 +500,5 @@ browser.storage?.local?.get([V2_NOTICE_KEY], (stored) => {
 
 document.getElementById("v2NoticeClose").addEventListener("click", () => {
   v2Notice.hidden = true;
-  browser.storage?.local?.set({ [V2_NOTICE_KEY]: true });
+  if (v2NeverAgain.checked) browser.storage?.local?.set({ [V2_NOTICE_KEY]: true });
 });
