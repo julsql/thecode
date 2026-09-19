@@ -19,10 +19,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
-import thecode_api.auth as auth_module
+import thecode_api
 import thecode_api.routes.auth as auth_routes
-import thecode_api.routes.billing as billing_routes
-import thecode_api.routes.vault as vault_routes
 from thecode_api import models
 from thecode_api.config import Settings, get_settings
 from thecode_api.db import get_db
@@ -59,6 +57,23 @@ def engine(postgres_url):
     engine.dispose()
 
 
+def _modules_reading_settings():
+    """Les modules du service qui ont importé `get_settings`."""
+    import importlib
+    import pkgutil
+
+    found = []
+    for info in pkgutil.walk_packages(thecode_api.__path__, f"{thecode_api.__name__}."):
+        # Sauf le module qui la définit : y substituer une lambda enlèverait
+        # `cache_clear`, dont les tests de configuration ont besoin.
+        if info.name == "thecode_api.config":
+            continue
+        module = importlib.import_module(info.name)
+        if hasattr(module, "get_settings"):
+            found.append(module)
+    return found
+
+
 @pytest.fixture(autouse=True)
 def settings(postgres_url):
     """Réglages de test, avec un secret explicite et des quotas bas."""
@@ -78,7 +93,11 @@ def settings(postgres_url):
         free_max_entries=50,
         free_max_devices=10,
     )
-    for module in (auth_module, auth_routes, billing_routes, vault_routes):
+    # Tous les modules du paquet, pas une liste tenue à la main : chacun
+    # importe `get_settings` par valeur, et un module oublié dans la liste
+    # lisait la vraie configuration — ce qui se voyait sous la forme de
+    # cinquante tests rouges pour une raison sans rapport.
+    for module in _modules_reading_settings():
         module.get_settings = lambda: test_settings
 
     yield test_settings
@@ -135,15 +154,24 @@ def auth(account):
 
 @pytest.fixture
 def sent_emails(monkeypatch):
-    """Capture les liens de vérification au lieu de les envoyer.
+    """Capture les courriers au lieu de les envoyer.
 
-    Le jeton n'est stocké que haché : sans cette capture, aucun test ne
-    pourrait suivre le lien, c'est-à-dire tester ce qui compte.
+    Les trois : confirmation d'adresse, changement d'adresse,
+    réinitialisation. Le jeton n'est stocké que haché — sans cette capture,
+    aucun test ne pourrait suivre un lien, c'est-à-dire tester ce qui compte.
+
+    L'adresse enregistrée est celle **visée** par l'envoi : un changement
+    d'adresse doit partir vers la nouvelle, et c'est précisément ce qu'un test
+    vérifie.
     """
+    import thecode_api.routes.account as account_routes
+
     sent: list[dict[str, str]] = []
 
     def capture(settings, email, token, lang="en"):
         sent.append({"email": email, "token": token, "lang": lang})
 
     monkeypatch.setattr(auth_routes, "send_verification_email", capture)
+    monkeypatch.setattr(auth_routes, "send_password_reset_email", capture)
+    monkeypatch.setattr(account_routes, "send_email_change_email", capture)
     return sent

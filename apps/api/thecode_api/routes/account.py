@@ -15,10 +15,19 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session as DbSession
 
 from .. import codes as code_rules
-from ..auth import current_account
+from ..auth import current_account, current_session_id, hash_password, verify_password
+from ..config import get_settings
 from ..db import get_db
+from ..links import new_link
+from ..mailer import send_email_change_email
 from ..models import Account, Session
-from ..schemas import CodeRequest, CodeResponse, DeviceResponse
+from ..schemas import (
+    ChangeEmailRequest,
+    ChangePasswordRequest,
+    CodeRequest,
+    CodeResponse,
+    DeviceResponse,
+)
 
 router = APIRouter(prefix="/v1/account", tags=["account"])
 
@@ -85,3 +94,71 @@ def use_code(
     message = code_rules.redeem(db, account, code)
     db.commit()
     return CodeResponse(kind=code.kind, message=message)
+
+
+@router.post("/password", status_code=status.HTTP_200_OK)
+def change_password(
+    payload: ChangePasswordRequest,
+    account: Account = Depends(current_account),
+    session_id: uuid.UUID | None = Depends(current_session_id),
+    db: DbSession = Depends(get_db),
+) -> dict[str, bool]:
+    """Change le mot de passe du compte et déconnecte les autres appareils.
+
+    Le mot de passe actuel est exigé : un compte laissé ouvert sur un écran
+    non verrouillé ne doit pas suffire à en verrouiller le propriétaire dehors.
+    Un compte créé par Google n'en a pas encore — il en pose un ici, et c'est
+    ce qui lui ouvre les applications, qui ne savent se connecter qu'ainsi.
+
+    Le carnet n'est pas touché : il est chiffré avec la clef maîtresse, que le
+    service ne connaît pas. Ce mot de passe-ci ne garde que la
+    synchronisation.
+    """
+    if account.password_hash and not verify_password(payload.current_password, account.password_hash):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Mot de passe actuel incorrect.")
+
+    account.password_hash = hash_password(payload.new_password)
+
+    # Les autres appareils, pas celui-ci : déconnecter aussi celui qui vient de
+    # changer son mot de passe serait une punition pour avoir bien fait.
+    others = db.query(Session).filter(
+        Session.account_id == account.id, Session.revoked.is_(False)
+    )
+    if session_id is not None:
+        others = others.filter(Session.id != session_id)
+    others.update({"revoked": True}, synchronize_session=False)
+
+    db.commit()
+    return {"changed": True}
+
+
+@router.post("/email", status_code=status.HTTP_202_ACCEPTED)
+def change_email(
+    payload: ChangeEmailRequest,
+    account: Account = Depends(current_account),
+    db: DbSession = Depends(get_db),
+) -> dict[str, bool]:
+    """Demande un changement d'adresse, confirmé par la nouvelle boîte.
+
+    Rien ne change tant que le lien n'est pas suivi : l'adresse du compte
+    reste celle qui marche, et une demande abandonnée ne laisse rien derrière
+    elle. Le lien part vers la nouvelle adresse, jamais vers l'ancienne — c'est
+    la nouvelle qu'il s'agit de prouver.
+    """
+    new_email = payload.new_email.lower()
+    if new_email == account.email:
+        raise HTTPException(status.HTTP_409_CONFLICT, "C'est déjà votre adresse.")
+
+    if account.password_hash and not verify_password(payload.password, account.password_hash):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Mot de passe incorrect.")
+
+    # Contrôle indicatif : l'adresse peut être prise entre-temps, et la
+    # confirmation refait le test. Le faire ici évite d'envoyer un courrier
+    # dont on sait déjà qu'il ne mènera nulle part.
+    taken = db.scalars(select(Account).where(Account.email == new_email)).one_or_none()
+    if taken is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Cette adresse est déjà utilisée.")
+
+    token = new_link(db, account, "change", new_email=new_email)
+    send_email_change_email(get_settings(), new_email, token, payload.lang)
+    return {"sent": True}

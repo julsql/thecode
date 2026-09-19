@@ -62,7 +62,14 @@ def hash_refresh_token(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 
-def create_access_token(account_id: uuid.UUID) -> str:
+def create_access_token(account_id: uuid.UUID, session_id: uuid.UUID | None = None) -> str:
+    """Jeton d'accès, éventuellement rattaché à une session.
+
+    `sid` dit de quel appareil vient la requête. Sans lui, « déconnecter les
+    autres appareils » serait impossible à tenir : on ne saurait pas lequel
+    épargner, et changer de mot de passe déconnecterait aussi celui qui vient
+    de le changer.
+    """
     settings = get_settings()
     now = datetime.now(UTC)
     payload = {
@@ -70,19 +77,20 @@ def create_access_token(account_id: uuid.UUID) -> str:
         "iat": now,
         "exp": now + timedelta(minutes=settings.access_token_minutes),
     }
+    if session_id is not None:
+        payload["sid"] = str(session_id)
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 
-def current_account(
+def _decode_access_token(
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
-    db: DbSession = Depends(get_db),
-) -> Account:
+) -> dict:
     if credentials is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Authentification requise")
 
     settings = get_settings()
     try:
-        payload = jwt.decode(
+        return jwt.decode(
             credentials.credentials, settings.jwt_secret, algorithms=[settings.jwt_algorithm]
         )
     except jwt.ExpiredSignatureError:
@@ -90,10 +98,31 @@ def current_account(
     except jwt.InvalidTokenError:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Jeton invalide") from None
 
+
+def current_account(
+    payload: dict = Depends(_decode_access_token),
+    db: DbSession = Depends(get_db),
+) -> Account:
     account = db.get(Account, uuid.UUID(payload["sub"]))
     if account is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Compte introuvable")
     return account
+
+
+def current_session_id(payload: dict = Depends(_decode_access_token)) -> uuid.UUID | None:
+    """La session d'où vient la requête, quand le jeton le dit.
+
+    Nul pour un jeton émis avant l'arrivée de `sid` : les jetons d'accès durent
+    quinze minutes, ce cas disparaît tout seul, et le traiter comme « session
+    inconnue » est plus sûr que de deviner.
+    """
+    raw = payload.get("sid")
+    if not raw:
+        return None
+    try:
+        return uuid.UUID(str(raw))
+    except ValueError:
+        return None
 
 
 def _as_utc(value: datetime) -> datetime:

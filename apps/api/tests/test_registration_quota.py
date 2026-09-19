@@ -66,7 +66,15 @@ def test_a_wrong_code_is_refused(client, quota):
 
 def test_the_state_says_what_the_form_must_ask(client, quota):
     state = client.get("/v1/auth/registration").json()
-    assert state == {"open": True, "needsCode": False, "freeSlots": 3}
+    assert state == {
+        "open": True,
+        "needsCode": False,
+        "freeSlots": 3,
+        # Vide : la connexion Google n'est pas configurée dans les tests, et le
+        # site doit alors ne pas proposer le bouton plutôt que d'en afficher un
+        # qui échouerait.
+        "googleClientId": "",
+    }
 
     register(client, "libre0@exemple.fr")
     assert client.get("/v1/auth/registration").json()["freeSlots"] == 2

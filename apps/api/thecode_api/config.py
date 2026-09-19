@@ -72,11 +72,22 @@ class Settings(BaseSettings):
     #: d'adresse. Le compte se gère uniquement là.
     site_url: str = "https://thecode.julsql.fr"
 
+    #: Identifiant client Google, pour « continuer avec Google ». Vide : le
+    #: bouton n'apparaît pas, et le service refuse les jetons Google.
+    #:
+    #: Il sert d'audience à la vérification : sans lui, un jeton émis pour une
+    #: toute autre application serait accepté ici.
+    google_client_id: str = ""
+
     #: Vérification d'adresse. Par défaut la vérification est proposée mais pas
     #: exigée : tant que l'envoi d'e-mail n'est pas branché, l'exiger
     #: enfermerait tout le monde dehors.
     require_email_verification: bool = False
     email_verification_hours: int = 24
+    #: Un lien de réinitialisation ouvre le compte : il doit vivre moins
+    #: longtemps qu'un lien de confirmation, qui ne donne rien de plus que ce
+    #: que son destinataire a déjà.
+    password_reset_hours: int = 2
     #: log — le lien part dans les journaux du service (développement)
     mail_transport: str = "log"
     mail_from: str = "contact@thecode.julsql.fr"
@@ -101,6 +112,10 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @property
+    def google_enabled(self) -> bool:
+        return bool(self.google_client_id)
 
     @property
     def billing_enabled(self) -> bool:

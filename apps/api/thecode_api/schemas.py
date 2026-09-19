@@ -125,6 +125,11 @@ class AccountResponse(BaseModel):
     max_devices: int = 0
     current_period_end: datetime | None = None
     has_pending_coupon: bool = False
+    #: Faux pour un compte créé par Google et qui n'a pas posé de mot de passe.
+    has_password: bool = True
+    google_linked: bool = False
+    #: Adresse en attente de confirmation, vide s'il n'y en a pas.
+    pending_email: str = ""
     #: Faux quand le paiement n'est pas configuré : le site doit alors dire
     #: que l'abonnement est indisponible plutôt que d'ouvrir un lien mort.
     billing_available: bool = False
@@ -132,6 +137,45 @@ class AccountResponse(BaseModel):
 
 class VerifyRequest(BaseModel):
     token: Annotated[str, Field(min_length=1, max_length=256)]
+
+
+class GoogleRequest(BaseModel):
+    """Le jeton d'identité rendu par Google au navigateur."""
+
+    id_token: Annotated[str, Field(min_length=1, max_length=4096)]
+    device_label: Annotated[str, Field(max_length=120)] = ""
+    invite_code: Annotated[str, Field(max_length=128)] = ""
+    lang: Annotated[str, Field(max_length=5)] = "en"
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+    lang: Annotated[str, Field(max_length=5)] = "en"
+
+
+class ResetPasswordRequest(BaseModel):
+    token: Annotated[str, Field(min_length=1, max_length=256)]
+    password: Annotated[str, Field(min_length=12, max_length=256)]
+
+
+class ChangePasswordRequest(BaseModel):
+    """Le mot de passe actuel, sauf quand le compte n'en a pas encore.
+
+    Un compte créé par Google n'a pas de mot de passe : en exiger un
+    reviendrait à lui interdire d'en poser un, donc à lui interdire les
+    applications, qui ne savent se connecter que comme ça.
+    """
+
+    current_password: Annotated[str, Field(max_length=256)] = ""
+    new_password: Annotated[str, Field(min_length=12, max_length=256)]
+
+
+class ChangeEmailRequest(BaseModel):
+    new_email: EmailStr
+    #: Exigé quand le compte a un mot de passe : changer l'adresse d'un compte
+    #: ouvert sur un écran resté déverrouillé serait sinon un jeu d'enfant.
+    password: Annotated[str, Field(max_length=256)] = ""
+    lang: Annotated[str, Field(max_length=5)] = "en"
 
 
 class ResendVerificationRequest(BaseModel):

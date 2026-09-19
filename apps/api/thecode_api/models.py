@@ -81,6 +81,12 @@ class Account(Base):
     #: remise s'applique au moment de l'abonnement, qui vient plus tard.
     pending_coupon: Mapped[str] = mapped_column(String(64), default="")
 
+    #: Identifiant Google du compte (`sub`), vide quand il n'est pas lié.
+    #:
+    #: `sub` et non l'adresse : Google permet d'en changer, et une adresse
+    #: réattribuée à quelqu'un d'autre lui ouvrirait le compte.
+    google_sub: Mapped[str] = mapped_column(String(64), default="", index=True)
+
     entries: Mapped[list[VaultEntry]] = relationship(back_populates="account", cascade="all, delete-orphan")
     sessions: Mapped[list[Session]] = relationship(back_populates="account", cascade="all, delete-orphan")
 
@@ -142,10 +148,19 @@ class Session(Base):
 
 
 class EmailVerification(Base):
-    """Un lien de vérification d'adresse.
+    """Un lien envoyé par courrier, à usage unique.
+
+    Trois usages dans la même table parce que c'est trois fois le même objet :
+    un jeton haché, une expiration, une consommation.
+
+    - ``verify``   : confirmer l'adresse du compte
+    - ``change``   : confirmer une nouvelle adresse, gardée dans `new_email`
+    - ``reset``    : reprendre la main sur un compte dont le mot de passe est
+      oublié
 
     Stocké haché, comme les jetons de renouvellement : lire la base ne doit pas
-    suffire à confirmer l'adresse de quelqu'un d'autre.
+    suffire à confirmer l'adresse de quelqu'un d'autre, ni à s'emparer d'un
+    compte.
     """
 
     __tablename__ = "email_verifications"
@@ -155,6 +170,13 @@ class EmailVerification(Base):
         PgUUID(as_uuid=True), ForeignKey("accounts.id", ondelete="CASCADE"), index=True
     )
     token_hash: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    purpose: Mapped[str] = mapped_column(String(16), default="verify")
+    #: Adresse visée par un changement. Vide pour les autres usages.
+    #:
+    #: Gardée ici et pas sur le compte : tant que le lien n'est pas suivi,
+    #: l'adresse du compte reste celle qui marche, et une demande abandonnée ne
+    #: laisse rien derrière elle.
+    new_email: Mapped[str] = mapped_column(String(320), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     used_at: Mapped[datetime | None] = mapped_column(

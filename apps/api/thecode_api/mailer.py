@@ -1,6 +1,7 @@
 """Envoi des e-mails du service.
 
-Un seul e-mail pour l'instant : le lien de vérification d'adresse.
+Trois courriers : confirmer une adresse, confirmer un changement d'adresse,
+reprendre la main sur un compte dont le mot de passe est oublié.
 
 Le transport est une couture explicite. Aujourd'hui le lien part dans les
 journaux du service (`mail_transport = "log"`), ce qui suffit pour développer
@@ -23,17 +24,42 @@ from .config import Settings
 logger = logging.getLogger("thecode.mail")
 
 
-def verification_url(settings: Settings, token: str, lang: str = "en") -> str:
+def _url(settings: Settings, page: str, token: str, lang: str) -> str:
     lang = lang if lang in ("en", "fr") else "en"
-    return f"{settings.site_url.rstrip('/')}/{lang}/account/verify?token={quote(token)}"
+    return f"{settings.site_url.rstrip('/')}/{lang}/account/{page}?token={quote(token)}"
 
 
-def send_verification_email(settings: Settings, email: str, token: str, lang: str = "en") -> None:
-    url = verification_url(settings, token, lang)
+def verification_url(settings: Settings, token: str, lang: str = "en") -> str:
+    return _url(settings, "verify", token, lang)
+
+
+def reset_url(settings: Settings, token: str, lang: str = "en") -> str:
+    return _url(settings, "reset", token, lang)
+
+
+def _send(settings: Settings, what: str, email: str, url: str) -> None:
     if settings.mail_transport == "log":
         # Volontairement en clair : c'est le seul moyen de finir une
         # vérification tant qu'aucun envoi n'est branché, et ces journaux ne
         # sortent pas du cluster.
-        logger.info("Lien de vérification pour %s : %s", email, url)
+        logger.info("%s pour %s : %s", what, email, url)
         return
     raise RuntimeError(f"Transport de courrier inconnu : {settings.mail_transport!r}")
+
+
+def send_verification_email(settings: Settings, email: str, token: str, lang: str = "en") -> None:
+    _send(settings, "Lien de vérification", email, verification_url(settings, token, lang))
+
+
+def send_email_change_email(settings: Settings, email: str, token: str, lang: str = "en") -> None:
+    """Part vers la **nouvelle** adresse, jamais vers l'ancienne.
+
+    C'est la nouvelle qu'il s'agit de prouver : l'envoyer à l'ancienne
+    laisserait changer l'adresse du compte vers une boîte qu'on ne possède pas.
+    """
+    _send(settings, "Confirmation de changement d'adresse", email,
+          verification_url(settings, token, lang))
+
+
+def send_password_reset_email(settings: Settings, email: str, token: str, lang: str = "en") -> None:
+    _send(settings, "Lien de réinitialisation", email, reset_url(settings, token, lang))
