@@ -107,6 +107,10 @@ public class MainActivity extends AppCompatActivity {
             new android.os.Handler(android.os.Looper.getMainLooper());
     /** Numéro de la dernière demande : une réponse en retard est ignorée. */
     private int generation = 0;
+
+    /** Pause a attendre avant de relancer un calcul coûteux. */
+    private static final long KEY_DEBOUNCE_MS = 400;
+    private Runnable pendingKeyWork;
     /** Garde contre les prompts multiples si l'utilisateur tape vite. */
     private boolean authInFlight = false;
     /** Évite la boucle slider → champ → slider lors de la synchronisation. */
@@ -124,6 +128,10 @@ public class MainActivity extends AppCompatActivity {
         bindViews();
         loadFromPreferences();
         wireListeners();
+        // La clef restaurée ne passe pas par le watcher : sans cet appel,
+        // l'empreinte ne s'affiche que si on la retape.
+        updateFingerprint(preferences.getEncodingKey());
+
         showV2NoticeIfNeeded();
 
         regenerate();
@@ -210,8 +218,10 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void afterTextChanged(Editable s) {
                 preferences.setEncodingKey(s.toString());
-                updateFingerprint(s.toString());
-                regenerate();
+                // Empreinte et v2 passent chacune par PBKDF2 a 600 000
+                // iterations : les lancer a chaque frappe fige la saisie. On
+                // attend une pause avant de calculer.
+                scheduleKeyWork(s.toString());
             }
         });
 
@@ -482,6 +492,21 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
+     * Repousse le calcul jusqu'a une pause dans la frappe.
+     *
+     * Chaque frappe annule la demande precedente : seule la derniere, celle
+     * qui suit la pause, va au bout.
+     */
+    private void scheduleKeyWork(String masterKey) {
+        if (pendingKeyWork != null) main.removeCallbacks(pendingKeyWork);
+        pendingKeyWork = () -> {
+            updateFingerprint(masterKey);
+            regenerate();
+        };
+        main.postDelayed(pendingKeyWork, KEY_DEBOUNCE_MS);
+    }
+
+    /**
      * Affiche l'empreinte de la clef.
      *
      * Le calcul passe par PBKDF2 à 600 000 itérations : volontairement coûteux,
@@ -635,6 +660,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
+        if (pendingKeyWork != null) main.removeCallbacks(pendingKeyWork);
         worker.shutdownNow();
         super.onDestroy();
     }
