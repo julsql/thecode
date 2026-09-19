@@ -108,7 +108,13 @@ if (typeof browser === "undefined") {
         input.value = response.password;
         input.dispatchEvent(new Event("input", { bubbles: true }));
         input.dispatchEvent(new Event("change", { bubbles: true }));
-        removeMenu(input);
+
+        // Le carnet connait deja ce site : le reproposer serait du bruit.
+        if (response.known) {
+          removeMenu(input);
+          return;
+        }
+        offerToSave(menu, input);
       });
 
       container.addEventListener("mouseover", () => {
@@ -179,18 +185,113 @@ if (typeof browser === "undefined") {
       menu.appendChild(container);
       menu.appendChild(copyBtn);
 
-      // Disparition quand input perd le focus
+      // Disparition quand input perd le focus — sauf pendant la question :
+      // cliquer « Oui » fait justement perdre le focus au champ.
       input.addEventListener(
         "blur",
         () => {
-          setTimeout(() => removeMenu(input), 150);
+          setTimeout(() => {
+            if (!input.__pwAsking) removeMenu(input);
+          }, 150);
         },
         { once: true },
       );
     });
   }
 
+  /**
+   * Cherche l'identifiant saisi a cote du champ de mot de passe.
+   *
+   * Il fait partie de ce qu'on ne devrait plus avoir a retenir. On regarde
+   * d'abord le formulaire du champ, puis la page : hors formulaire, un site
+   * peut poser les deux champs cote a cote sans les rattacher.
+   */
+  function findLogin(input) {
+    const scope = input.form || document;
+    const candidates = scope.querySelectorAll(
+      'input[type="email"], input[autocomplete="username"], input[type="text"], input[type="tel"]',
+    );
+
+    let best = "";
+    for (const field of candidates) {
+      const value = (field.value || "").trim();
+      if (!value || value.length > 120) continue;
+      // Le dernier champ rempli avant le mot de passe est le bon candidat :
+      // une page peut en contenir d'autres, un champ de recherche par exemple.
+      if (field.compareDocumentPosition(input) & Node.DOCUMENT_POSITION_FOLLOWING) {
+        best = value;
+      }
+    }
+    return best;
+  }
+
+  /**
+   * Propose d'enregistrer le site dans le carnet, une fois le mot de passe
+   * pose dans le champ.
+   *
+   * Rien n'est ecrit sans reponse : le carnet est ce qui dit quels reglages
+   * appliquer a quel site, une entree posee par erreur se paie plus tard.
+   */
+  function offerToSave(menu, input) {
+    input.__pwAsking = true;
+    const login = findLogin(input);
+
+    const ask = document.createElement("div");
+    ask.style.display = "flex";
+    ask.style.alignItems = "center";
+    ask.style.gap = "8px";
+    ask.style.padding = "4px 8px";
+    ask.style.color = "white";
+    ask.style.fontSize = "13px";
+    ask.style.whiteSpace = "nowrap";
+
+    const label = document.createElement("span");
+    label.innerText = login
+      ? `Enregistrer ce site (${login}) dans le carnet ?`
+      : "Enregistrer ce site dans le carnet ?";
+    ask.appendChild(label);
+
+    const answer = (yes) => {
+      if (!yes) {
+        removeMenu(input);
+        return;
+      }
+      browser.runtime.sendMessage({ action: "saveCurrentSite", login }, (resp) => {
+        label.innerText = resp?.ok ? "Enregistré." : `Échec : ${resp?.error || "inconnu"}`;
+        yesBtn.remove();
+        noBtn.remove();
+        setTimeout(() => removeMenu(input), 1500);
+      });
+    };
+
+    const button = (text, onClick) => {
+      const b = document.createElement("button");
+      b.innerText = text;
+      b.style.cursor = "pointer";
+      b.style.border = "1px solid rgba(255,255,255,0.4)";
+      b.style.background = "transparent";
+      b.style.color = "white";
+      b.style.borderRadius = "4px";
+      b.style.padding = "2px 10px";
+      b.style.fontSize = "13px";
+      b.addEventListener("click", (e) => {
+        e.stopPropagation();
+        onClick();
+      });
+      return b;
+    };
+
+    const yesBtn = button("Oui", () => answer(true));
+    const noBtn = button("Non", () => answer(false));
+    ask.appendChild(yesBtn);
+    ask.appendChild(noBtn);
+
+    menu.innerHTML = "";
+    menu.appendChild(ask);
+  }
+
   function removeMenu(input) {
+    delete input.__pwAsking;
     const menu = input.__pwSuggesterMenu;
     if (menu && menu.parentNode) menu.parentNode.removeChild(menu);
     delete input.__pwSuggesterMenu;

@@ -232,6 +232,12 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
       } catch (e) {
         sendResponse({ ok: false, error: e.message });
       }
+    } else if (request.action === "saveCurrentSite") {
+      try {
+        sendResponse(await saveCurrentSite(sender, request.login));
+      } catch (e) {
+        sendResponse({ ok: false, error: e.message });
+      }
     } else if (request.action === "exportVault") {
       // Le chiffrement se fait ici : la clef maitresse ne descend jamais
       // jusqu'a la page de transfert.
@@ -403,6 +409,65 @@ async function passwordForEntry(entry, counter, version) {
   return mdp;
 }
 
+/**
+ * Enregistre le site de l'onglet courant dans le carnet.
+ *
+ * Seule ecriture du carnet ouverte a un script de page, et volontairement
+ * etroite : le domaine vient de `sender.tab.url`, jamais du message. Une page
+ * hostile ne peut donc pas faire enregistrer une entree pour un autre site
+ * qu'elle-meme — ce qui ne lui apporterait rien, et demande de toute facon un
+ * clic de l'utilisateur.
+ *
+ * Le login, lui, vient de la page : c'est le champ que l'utilisateur vient de
+ * remplir. Il est borne, et affiche avant confirmation.
+ */
+async function saveCurrentSite(sender, login) {
+  const url = sender?.tab?.url;
+  if (!url) return { ok: false, error: "aucun onglet" };
+  if (!encodingKey) return { ok: false, error: "aucune clef definie" };
+
+  await pslReady;
+  let domain;
+  try {
+    domain = getRegistrableDomain(new URL(url).hostname);
+  } catch {
+    return { ok: false, error: "adresse illisible" };
+  }
+  if (!domain) return { ok: false, error: "domaine illisible" };
+
+  const vault = await loadVault(browser?.storage?.local);
+  const existing = findAllByDomain(vault, domain)[0];
+  const { lengthNumber, minState, majState, symState, chiState } = await loadParams();
+  const charset = {
+    lower: minState,
+    upper: majState,
+    symbols: symState,
+    numbers: chiState,
+  };
+
+  if (existing) {
+    // siteKey n'est jamais reecrit : il produit le mot de passe, le modifier
+    // en changerait un deja en service.
+    existing.length = lengthNumber;
+    existing.charset = charset;
+    existing.updatedAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+    await saveVault(browser?.storage?.local, vault);
+    return { ok: true, updated: true, site: domain };
+  }
+
+  vault.entries.push(
+    newEntry(domain, {
+      domains: [domain],
+      length: lengthNumber,
+      charset,
+      // Borne : un champ de page peut contenir n'importe quoi.
+      login: typeof login === "string" ? login.slice(0, 120) : "",
+    }),
+  );
+  await saveVault(browser?.storage?.local, vault);
+  return { ok: true, updated: false, site: domain };
+}
+
 /** Chiffre le carnet courant. Rend la meme forme que l'action du meme nom. */
 async function exportVaultPayload() {
   const vault = await loadVault(browser?.storage?.local);
@@ -467,7 +532,7 @@ async function generatePasswordForUrl(url) {
         symState,
         chiState,
       );
-      return { password: mdp, site: domain, security, bits, color };
+      return { password: mdp, site: domain, security, bits, color, known: false };
     }
 
     const { security, bits, color } = await generatePassword(
@@ -482,7 +547,15 @@ async function generatePasswordForUrl(url) {
 
     const mdp = await passwordForEntry(entry);
 
-    return { password: mdp, site: domain, login: entry.login || "", security, bits, color };
+    return {
+      password: mdp,
+      site: domain,
+      login: entry.login || "",
+      security,
+      bits,
+      color,
+      known: true,
+    };
   } catch (err) {
     return { error: err.message };
   }
@@ -673,6 +746,7 @@ if (typeof module !== "undefined") {
     passwordForEntry,
     exportVaultPayload,
     importVaultPayload,
+    saveCurrentSite,
     setEncodingKeyForTests,
     getRegistrableDomain,
     registrableDomain,
