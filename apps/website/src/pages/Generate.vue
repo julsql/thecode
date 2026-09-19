@@ -110,6 +110,22 @@
             <span :style="{ color: couleurSecurite }">{{ niveauSecurite }}</span>
           </p>
 
+          <!-- Annonce du passage à la v2. Sur cette page seulement : c'est la
+               seule où l'on génère, donc la seule que le changement concerne.
+               Affichée une fois, puis oubliée. -->
+          <div v-if="!v2NoticeSeen" class="notice">
+            <p>
+              Les mots de passe se calculent désormais avec un nouvel algorithme (v2). Ceux déjà
+              posés sur vos sites viennent de l'ancien et n'ont pas changé. Le remplissage
+              automatique utilise le nouveau : pour un site que vous n'avez pas encore mis à jour,
+              utilisez « Générer en v1 (ancien) » ci-dessous, ou passez l'entrée en v2 depuis le
+              carnet après avoir changé le mot de passe sur le site.
+            </p>
+            <button type="button" class="ghost-btn small" @click="dismissV2Notice">
+              J'ai compris
+            </button>
+          </div>
+
           <!-- La v1 n'est plus qu'un secours : le mot de passe pose sur un site
                avant la v2 ne se retrouve que comme ca. -->
           <div class="algo-row">
@@ -346,6 +362,31 @@ export default defineComponent({
     const transferMessage = ref("");
     /** Bascule explicite vers l'ancien algorithme. */
     const enV1 = ref(false);
+
+    /**
+     * Annonce du passage a la v2.
+     *
+     * Elle ne concerne que la version qui l'apporte : une fois lue, on ne la
+     * repose plus. localStorage peut lever en navigation privee, d'ou le
+     * try/catch — la page doit s'afficher meme sans stockage.
+     */
+    const V2_NOTICE_KEY = "thecode.v2NoticeSeen";
+    const v2NoticeSeen = ref(true);
+    try {
+      v2NoticeSeen.value = localStorage.getItem(V2_NOTICE_KEY) === "1";
+    } catch {
+      v2NoticeSeen.value = false;
+    }
+
+    function dismissV2Notice() {
+      v2NoticeSeen.value = true;
+      try {
+        localStorage.setItem(V2_NOTICE_KEY, "1");
+      } catch {
+        // Stockage indisponible : l'annonce reviendra, c'est preferable a une
+        // page qui casse.
+      }
+    }
     /** Modules du QR affiché, vide tant qu'on n'en demande pas. */
     const qrRows = ref<number[][]>([]);
     /** Changement propose, en attente de confirmation. */
@@ -715,6 +756,8 @@ export default defineComponent({
       proposeChange,
       applyChange,
       enV1,
+      v2NoticeSeen,
+      dismissV2Notice,
       transferMessage,
       qrRows,
       showTransfer,
@@ -1021,6 +1064,23 @@ input[type="text"]:read-only {
 }
 
 .field-row input::placeholder {
+  color: var(--text-muted);
+}
+
+/* Annonce du passage a la v2. Assez visible pour etre lue, assez discrete
+   pour ne pas masquer ce que la page sert a faire. */
+.notice {
+  margin-top: 20px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-elevated);
+}
+
+.notice p {
+  margin: 0 0 10px;
+  font-size: 0.85rem;
+  line-height: 1.5;
   color: var(--text-muted);
 }
 
