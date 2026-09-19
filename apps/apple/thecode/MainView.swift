@@ -85,7 +85,8 @@ struct MainView: View {
     ///
     /// La v2 est la règle ; la v1 ne sert qu'à retrouver un mot de passe posé
     /// sur un site avant qu'elle n'existe.
-    @State private var useV1 = false
+    @AppStorage("useV1", store: UserDefaults(suiteName: appGroupID))
+    var useV1: Bool = false
     /// Annonce du passage à la v2, en feuille modale à l'ouverture.
     ///
     /// Fermer la fait revenir la prochaine fois : seule la case à cocher la
@@ -378,15 +379,25 @@ struct MainView: View {
                     .accessibilityLabel(L10n.t("Carnet", "Vault"))
                     .disabled(!unlocked)
 
-                    // La v1 n'est qu'un secours : retrouver un mot de passe
-                    // pose sur un site avant que la v2 n'existe.
+                    // Le mode en cours se lit dans la barre, comme le thème :
+                    // c'est lui qui décide quel mot de passe sort.
                     Button(action: { useV1.toggle() }) {
-                        Image(systemName: useV1 ? "clock.arrow.circlepath" : "bolt.shield")
+                        Text(useV1 ? "v1" : "v2")
+                            .font(.footnote.weight(.bold))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(useV1 ? Color.orange.opacity(0.25) : Color.clear)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(Color.accentColor.opacity(0.6), lineWidth: 1))
+                            .cornerRadius(6)
                     }
                     .accessibilityLabel(
                         useV1
-                            ? L10n.t("Algorithme actuel", "Current algorithm")
-                            : L10n.t("Ancien algorithme", "Old algorithm"))
+                            ? L10n.t("Ancien algorithme — revenir à la v2",
+                                     "Old algorithm — back to v2")
+                            : L10n.t("Algorithme actuel — passer en v1",
+                                     "Current algorithm — switch to v1"))
 
                     Button(action: { showInfoSheet = true }) {
                         Image(systemName: "info.circle")
