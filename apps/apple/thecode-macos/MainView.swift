@@ -177,11 +177,15 @@ struct MainView: View {
                 .buttonStyle(.borderless)
                 .help(L10n.t("Partager", "Share"))
 
-                Button(action: { showVault = true }) {
+                // Le carnet dit sur quels sites on a un compte et sous quel
+                // identifiant : aussi sensible qu'un coffre de mots de passe,
+                // donc jamais accessible sans authentification.
+                Button(action: { if unlocked { showVault = true } }) {
                     Image(systemName: "list.bullet.rectangle")
                 }
                 .buttonStyle(.borderless)
                 .help(L10n.t("Carnet", "Vault"))
+                .disabled(!unlocked)
 
                 // La v1 n'est qu'un secours : retrouver un mot de passe pose
                 // sur un site avant que la v2 n'existe.
@@ -275,7 +279,13 @@ struct MainView: View {
                                     .buttonStyle(BorderlessButtonStyle())
                                     .padding(.leading, 8)
                                 }
-                                Text(L10n.t("Sécurité : ", "Security: ") + localizedSecurityLabel(securityLabel))
+                                // La version en cours doit se lire sans ouvrir
+                                // de menu : c'est elle qui décide quel mot de
+                                // passe sort.
+                                Text(
+                                    L10n.t("Sécurité : ", "Security: ")
+                                        + localizedSecurityLabel(securityLabel)
+                                        + (useV1 ? "  ·  v1" : "  ·  v2"))
                                     .foregroundColor(securityColor)
 
                                 Button(action: saveToVault) {
@@ -458,10 +468,17 @@ struct MainView: View {
         guard !site.isEmpty else { return }
 
         var vault = VaultStore.load()
-        let entry = vault.upsert(
+        var entry = vault.upsert(
             site: site, length: lengthNumber,
             charset: Charset(
                 lower: minState, upper: majState, symbols: symState, numbers: chiState))
+
+        // Enregistrer un mot de passe généré en v1 sous une entrée v2 donnerait
+        // un autre mot de passe à la relecture.
+        if let index = vault.entries.firstIndex(where: { $0.id == entry.id }) {
+            vault.entries[index].v = useV1 ? 1 : 2
+            entry = vault.entries[index]
+        }
 
         do {
             try VaultStore.save(vault)
