@@ -21,6 +21,7 @@ from sqlalchemy.orm import sessionmaker
 
 import thecode_api.auth as auth_module
 import thecode_api.routes.auth as auth_routes
+import thecode_api.routes.billing as billing_routes
 import thecode_api.routes.vault as vault_routes
 from thecode_api import models
 from thecode_api.config import Settings, get_settings
@@ -68,8 +69,16 @@ def settings(postgres_url):
         environment="test",
         max_entries_per_account=50,
         max_blob_bytes=1024,
+        # Explicite : le mode par défaut est `invite`, et un test qui s'inscrit
+        # sans code doit le faire parce que le service est ouvert, pas parce
+        # que le code attendu se trouve être vide.
+        registration_mode="open",
+        # Les plafonds de l'offre gratuite ne doivent pas gêner les tests qui
+        # parlent d'autre chose ; ceux qui les visent les abaissent eux-mêmes.
+        free_max_entries=50,
+        free_max_devices=10,
     )
-    for module in (auth_module, auth_routes, vault_routes):
+    for module in (auth_module, auth_routes, billing_routes, vault_routes):
         module.get_settings = lambda: test_settings
 
     yield test_settings
@@ -85,7 +94,12 @@ def db_session(engine):
     """
     with engine.begin() as connection:
         connection.execute(
-            text("TRUNCATE accounts, vault_entries, sessions RESTART IDENTITY CASCADE")
+            # `codes` figure explicitement : CASCADE ne vide que les tables qui
+            # référencent celles citées, et les codes ne référencent aucun compte.
+            text(
+                "TRUNCATE accounts, vault_entries, sessions, codes "
+                "RESTART IDENTITY CASCADE"
+            )
         )
 
     session = sessionmaker(bind=engine, expire_on_commit=False)()
@@ -117,3 +131,19 @@ def account(client):
 @pytest.fixture
 def auth(account):
     return {"Authorization": f"Bearer {account['access_token']}"}
+
+
+@pytest.fixture
+def sent_emails(monkeypatch):
+    """Capture les liens de vérification au lieu de les envoyer.
+
+    Le jeton n'est stocké que haché : sans cette capture, aucun test ne
+    pourrait suivre le lien, c'est-à-dire tester ce qui compte.
+    """
+    sent: list[dict[str, str]] = []
+
+    def capture(settings, email, token, lang="en"):
+        sent.append({"email": email, "token": token, "lang": lang})
+
+    monkeypatch.setattr(auth_routes, "send_verification_email", capture)
+    return sent

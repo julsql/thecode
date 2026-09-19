@@ -15,6 +15,7 @@ from ..auth import current_account
 from ..config import get_settings
 from ..db import get_db
 from ..models import Account, VaultEntry
+from ..plans import limits_for
 from ..schemas import (
     EntryResponse,
     PullResponse,
@@ -95,12 +96,24 @@ def push(
         ).all()
     }
 
+    limits = limits_for(account, settings)
     incoming_new = [e for e in payload.entries if e.entry_id not in existing and not e.deleted]
     live = len([r for r in existing.values() if not r.deleted])
-    if live + len(incoming_new) > settings.max_entries_per_account:
+    if live + len(incoming_new) > limits.max_entries:
+        # 402 et non 403 quand c'est l'offre qui borne : le client doit
+        # pouvoir distinguer « vous n'avez pas le droit » de « il faut
+        # s'abonner », et proposer la bonne suite.
+        if limits.plan == "free":
+            site = settings.site_url.rstrip("/")
+            raise HTTPException(
+                status.HTTP_402_PAYMENT_REQUIRED,
+                f"Offre gratuite : {limits.max_entries} entrées synchronisées au "
+                f"maximum. Les autres restent sur cet appareil. "
+                f"Pour tout synchroniser, passez à l'offre complète sur {site}.",
+            )
         raise HTTPException(
             status.HTTP_403_FORBIDDEN,
-            f"Limite de {settings.max_entries_per_account} entrées atteinte.",
+            f"Limite de {limits.max_entries} entrées atteinte.",
         )
 
     account.revision += 1

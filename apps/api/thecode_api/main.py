@@ -12,7 +12,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import Settings, get_settings
-from .routes import auth, health, vault
+from .routes import account, auth, billing, health, vault
 
 # Settings() et non get_settings() : celui-ci refuse de rendre une
 # configuration incohérente, et le faire à l'import empêcherait les tests de
@@ -47,6 +47,8 @@ app.add_middleware(
 
 app.include_router(health.router)
 app.include_router(auth.router)
+app.include_router(account.router)
+app.include_router(billing.router)
 app.include_router(vault.router)
 
 

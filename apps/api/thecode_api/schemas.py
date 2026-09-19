@@ -7,6 +7,8 @@ l'encodage sans padding évite les surprises dans les URL et les logs.
 from __future__ import annotations
 
 import base64
+import uuid
+from datetime import datetime
 from typing import Annotated
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
@@ -34,8 +36,12 @@ class RegisterRequest(BaseModel):
     # 12 caractères minimum : ce mot de passe protège la synchronisation, pas
     # les mots de passe eux-mêmes, mais il reste la porte d'entrée du compte.
     password: Annotated[str, Field(min_length=12, max_length=256)]
-    #: Requis quand le service tourne en mode invitation.
+    #: Code d'invitation, de parrainage ou à vie. Requis quand le service
+    #: tourne en mode invitation, ou quand les places gratuites sont prises.
     invite_code: Annotated[str, Field(max_length=128)] = ""
+    device_label: Annotated[str, Field(max_length=120)] = ""
+    #: Langue du lien de vérification : il mène au site, qui est traduit.
+    lang: Annotated[str, Field(max_length=5)] = "en"
 
 
 class LoginRequest(BaseModel):
@@ -104,9 +110,78 @@ class PushResponse(BaseModel):
 
 
 class AccountResponse(BaseModel):
+    """Ce que la page du compte a besoin de savoir, et rien de plus."""
+
     email: EmailStr
     plan: str
     subscription_status: str
     revision: int
     entry_count: int
     max_entries: int
+    #: Nul tant que l'adresse n'est pas confirmée.
+    email_verified: bool = False
+    plan_source: str = "none"
+    device_count: int = 0
+    max_devices: int = 0
+    current_period_end: datetime | None = None
+    has_pending_coupon: bool = False
+    #: Faux quand le paiement n'est pas configuré : le site doit alors dire
+    #: que l'abonnement est indisponible plutôt que d'ouvrir un lien mort.
+    billing_available: bool = False
+
+
+class VerifyRequest(BaseModel):
+    token: Annotated[str, Field(min_length=1, max_length=256)]
+
+
+class ResendVerificationRequest(BaseModel):
+    lang: Annotated[str, Field(max_length=5)] = "en"
+
+
+class CodeRequest(BaseModel):
+    code: Annotated[str, Field(min_length=1, max_length=64)]
+
+
+class CodeResponse(BaseModel):
+    kind: str
+    message: str
+
+
+class CheckoutRequest(BaseModel):
+    #: Code promotionnel Stripe saisi sur le site, facultatif.
+    promo_code: Annotated[str, Field(max_length=64)] = ""
+    #: Chemin du site où revenir après le paiement, langue comprise. Vérifié
+    #: côté serveur : une URL complète permettrait de renvoyer l'utilisateur
+    #: n'importe où après un passage par Stripe.
+    return_path: Annotated[str, Field(max_length=200)] = "/en/account"
+
+
+class CheckoutResponse(BaseModel):
+    url: str
+
+
+class DeviceResponse(BaseModel):
+    """Une session vivante, donc un appareil connecté.
+
+    Rien ne dit lequel est celui qui regarde : le jeton d'accès ne porte que le
+    compte. Se déconnecter soi-même depuis cette liste revient à se
+    déconnecter, ce qui est récupérable — l'inverse (cacher une session) ne le
+    serait pas.
+    """
+
+    id: uuid.UUID
+    label: str
+    created_at: datetime
+    expires_at: datetime
+
+
+class PlansResponse(BaseModel):
+    """Tarifs publics, lus par la page des offres sans être connecté."""
+
+    price_monthly_cents: int
+    currency: str
+    billing_available: bool
+    free_max_entries: int
+    free_max_devices: int
+    pro_max_entries: int
+    pro_max_devices: int

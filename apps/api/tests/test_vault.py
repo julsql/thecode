@@ -6,6 +6,8 @@ import base64
 
 import pytest
 
+from thecode_api import models
+
 
 def b64(raw: bytes) -> str:
     return base64.urlsafe_b64encode(raw).decode().rstrip("=")
@@ -74,6 +76,26 @@ class TestQuotas:
         assert "volumineuse" in response.json()["detail"]
 
     def test_entry_limit_is_enforced(self, client, auth, settings):
+        """Un compte gratuit qui dépasse son plafond se voit répondre 402.
+
+        402 et non 403 : le client doit pouvoir distinguer « c'est interdit »
+        de « il faut s'abonner », et ne proposer l'abonnement que dans le
+        second cas.
+        """
+        batch = [entry(f"e{i}") for i in range(settings.free_max_entries + 1)]
+        response = push(client, auth, batch)
+        assert response.status_code == 402
+        assert "offre complète" in response.json()["detail"]
+
+    def test_the_absolute_limit_applies_to_a_paid_account(
+        self, client, auth, settings, db_session
+    ):
+        """L'offre payante n'est pas sans fond : le carnet reste un carnet."""
+        account = db_session.query(models.Account).one()
+        account.plan = "pro"
+        account.subscription_status = "active"
+        db_session.commit()
+
         batch = [entry(f"e{i}") for i in range(settings.max_entries_per_account + 1)]
         assert push(client, auth, batch).status_code == 403
 

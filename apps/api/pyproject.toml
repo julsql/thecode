@@ -18,6 +18,7 @@ dependencies = [
     "pydantic-settings>=2.6",
     "argon2-cffi>=23.1",
     "pyjwt>=2.10",
+    "stripe>=11.4",
 ]
 
 [project.optional-dependencies]

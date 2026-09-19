@@ -1,0 +1,255 @@
+"""Vérification d'adresse, appareils connectés et codes.
+
+Ces trois sujets tiennent dans le même fichier parce qu'ils décrivent la même
+chose : ce qu'un compte a le droit de faire, et comment il le prouve.
+"""
+
+from __future__ import annotations
+
+from datetime import UTC, datetime, timedelta
+
+import pytest
+
+from thecode_api.models import Account, Code, EmailVerification
+
+PASSWORD = "MotDePasseAssezLong1"
+
+
+def register(client, email="nouveau@exemple.fr", code="", lang="fr"):
+    return client.post(
+        "/v1/auth/register",
+        json={"email": email, "password": PASSWORD, "invite_code": code, "lang": lang},
+    )
+
+
+def login(client, email="nouveau@exemple.fr", label=""):
+    return client.post(
+        "/v1/auth/login",
+        json={"email": email, "password": PASSWORD, "device_label": label},
+    )
+
+
+def bearer(response):
+    return {"Authorization": f"Bearer {response.json()['access_token']}"}
+
+
+class TestEmailVerification:
+    def test_a_new_account_is_not_verified(self, client, sent_emails):
+        response = register(client)
+        assert response.status_code == 201
+
+        me = client.get("/v1/auth/me", headers=bearer(response)).json()
+        assert me["email_verified"] is False
+
+    def test_the_link_confirms_the_address(self, client, sent_emails):
+        created = register(client)
+        assert len(sent_emails) == 1
+        assert sent_emails[0]["lang"] == "fr"
+
+        confirmed = client.post("/v1/auth/verify", json={"token": sent_emails[0]["token"]})
+        assert confirmed.status_code == 200
+
+        me = client.get("/v1/auth/me", headers=bearer(created)).json()
+        assert me["email_verified"] is True
+
+    def test_the_link_only_works_once(self, client, sent_emails):
+        register(client)
+        token = sent_emails[0]["token"]
+        assert client.post("/v1/auth/verify", json={"token": token}).status_code == 200
+        # Rejouable, un lien intercepté resterait utilisable indéfiniment.
+        assert client.post("/v1/auth/verify", json={"token": token}).status_code == 400
+
+    def test_an_unknown_token_is_refused(self, client):
+        assert client.post("/v1/auth/verify", json={"token": "n-importe-quoi"}).status_code == 400
+
+    def test_an_expired_link_is_refused(self, client, sent_emails, db_session):
+        register(client)
+        row = db_session.query(EmailVerification).one()
+        row.expires_at = datetime.now(UTC) - timedelta(minutes=1)
+        db_session.commit()
+
+        assert (
+            client.post("/v1/auth/verify", json={"token": sent_emails[0]["token"]}).status_code
+            == 400
+        )
+
+    def test_resending_invalidates_the_previous_link(self, client, sent_emails):
+        created = register(client)
+        first = sent_emails[0]["token"]
+
+        again = client.post("/v1/auth/verify/resend", json={"lang": "fr"}, headers=bearer(created))
+        assert again.status_code == 202
+        second = sent_emails[-1]["token"]
+        assert second != first
+
+        # Deux liens vivants pour une même adresse, c'est une porte de plus
+        # sans aucun bénéfice.
+        assert client.post("/v1/auth/verify", json={"token": first}).status_code == 400
+        assert client.post("/v1/auth/verify", json={"token": second}).status_code == 200
+
+
+class TestDevices:
+    def test_the_account_lists_its_devices(self, client, sent_emails):
+        created = register(client)
+        login(client, label="téléphone")
+
+        devices = client.get("/v1/account/devices", headers=bearer(created)).json()
+        assert len(devices) == 2
+        assert "téléphone" in [d["label"] for d in devices]
+
+    def test_a_device_can_be_disconnected(self, client, sent_emails):
+        created = register(client)
+        second = login(client, label="téléphone")
+
+        devices = client.get("/v1/account/devices", headers=bearer(created)).json()
+        phone = next(d for d in devices if d["label"] == "téléphone")
+        assert (
+            client.delete(f"/v1/account/devices/{phone['id']}", headers=bearer(created)).status_code
+            == 204
+        )
+
+        # Le jeton de renouvellement de l'appareil déconnecté ne vaut plus rien.
+        refused = client.post(
+            "/v1/auth/refresh", json={"refresh_token": second.json()["refresh_token"]}
+        )
+        assert refused.status_code == 401
+
+    def test_another_account_cannot_disconnect_it(self, client, sent_emails):
+        mine = register(client, "moi@exemple.fr")
+        other = register(client, "autre@exemple.fr")
+
+        device = client.get("/v1/account/devices", headers=bearer(mine)).json()[0]
+        assert (
+            client.delete(f"/v1/account/devices/{device['id']}", headers=bearer(other)).status_code
+            == 404
+        )
+
+    def test_the_free_plan_caps_connected_devices(self, client, settings, sent_emails):
+        settings.free_max_devices = 2
+        register(client)
+        login(client, label="téléphone")
+
+        refused = login(client, label="tablette")
+        assert refused.status_code == 402
+        assert "appareils" in refused.json()["detail"]
+
+    def test_disconnecting_frees_a_slot(self, client, settings, sent_emails):
+        settings.free_max_devices = 2
+        created = register(client)
+        login(client, label="téléphone")
+        assert login(client, label="tablette").status_code == 402
+
+        device = client.get("/v1/account/devices", headers=bearer(created)).json()[0]
+        client.delete(f"/v1/account/devices/{device['id']}", headers=bearer(created))
+
+        assert login(client, label="tablette").status_code == 200
+
+    def test_a_paid_account_gets_the_larger_cap(self, client, settings, db_session, sent_emails):
+        settings.free_max_devices = 1
+        settings.pro_max_devices = 5
+        register(client)
+
+        account = db_session.query(Account).one()
+        account.plan = "pro"
+        account.subscription_status = "active"
+        db_session.commit()
+
+        assert login(client, label="téléphone").status_code == 200
+
+
+@pytest.fixture
+def lifetime_code(db_session):
+    code = Code(code="AVIE", kind="lifetime", note="ami de la première heure")
+    db_session.add(code)
+    db_session.commit()
+    return code
+
+
+@pytest.fixture
+def referral_code(db_session):
+    code = Code(code="PARRAIN", kind="referral", stripe_coupon_id="coupon_test")
+    db_session.add(code)
+    db_session.commit()
+    return code
+
+
+class TestCodes:
+    def test_a_lifetime_code_gives_the_full_plan(
+        self, client, lifetime_code, db_session, sent_emails
+    ):
+        created = register(client, code="avie")  # la casse ne doit pas compter
+        me = client.get("/v1/auth/me", headers=bearer(created)).json()
+
+        assert me["plan"] == "pro"
+        assert me["subscription_status"] == "lifetime"
+        assert me["plan_source"] == "lifetime"
+        db_session.expire_all()
+        assert db_session.query(Code).one().used_count == 1
+
+    def test_a_referral_code_keeps_the_discount_for_later(
+        self, client, referral_code, sent_emails
+    ):
+        created = register(client, code="PARRAIN")
+        me = client.get("/v1/auth/me", headers=bearer(created)).json()
+
+        # La remise s'applique à l'abonnement, qui vient plus tard : le compte
+        # reste gratuit en attendant.
+        assert me["plan"] == "free"
+        assert me["has_pending_coupon"] is True
+
+    def test_a_code_can_be_used_after_the_fact(self, client, lifetime_code, sent_emails):
+        created = register(client)
+        response = client.post("/v1/account/code", json={"code": "AVIE"}, headers=bearer(created))
+
+        assert response.status_code == 200
+        assert response.json()["kind"] == "lifetime"
+        assert client.get("/v1/auth/me", headers=bearer(created)).json()["plan"] == "pro"
+
+    def test_the_same_code_cannot_be_replayed(self, client, lifetime_code, sent_emails):
+        created = register(client)
+        client.post("/v1/account/code", json={"code": "AVIE"}, headers=bearer(created))
+
+        again = client.post("/v1/account/code", json={"code": "AVIE"}, headers=bearer(created))
+        assert again.status_code == 409
+
+    def test_an_unknown_code_is_refused(self, client, sent_emails):
+        created = register(client)
+        response = client.post(
+            "/v1/account/code", json={"code": "INVENTE"}, headers=bearer(created)
+        )
+        assert response.status_code == 404
+
+    def test_an_exhausted_code_is_refused(self, client, db_session, sent_emails):
+        db_session.add(Code(code="UNEFOIS", kind="lifetime", max_uses=1, used_count=1))
+        db_session.commit()
+
+        created = register(client)
+        response = client.post(
+            "/v1/account/code", json={"code": "UNEFOIS"}, headers=bearer(created)
+        )
+        assert response.status_code == 404
+
+    def test_an_expired_code_is_refused(self, client, db_session, sent_emails):
+        db_session.add(
+            Code(
+                code="PERIME",
+                kind="lifetime",
+                expires_at=datetime.now(UTC) - timedelta(days=1),
+            )
+        )
+        db_session.commit()
+
+        created = register(client)
+        response = client.post("/v1/account/code", json={"code": "PERIME"}, headers=bearer(created))
+        assert response.status_code == 404
+
+    def test_a_stored_code_opens_a_closed_registration(
+        self, client, settings, lifetime_code, sent_emails
+    ):
+        """Un code en base vaut invitation : sinon le code à vie d'un nouveau
+        venu ne servirait qu'à ceux qui ont déjà un compte."""
+        settings.registration_mode = "invite"
+        settings.invite_code = "le-code-de-la-config"
+
+        assert register(client, "avec-code@exemple.fr", code="AVIE").status_code == 201
+        assert register(client, "sans-code@exemple.fr").status_code == 403

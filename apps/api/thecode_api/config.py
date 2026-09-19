@@ -45,6 +45,42 @@ class Settings(BaseSettings):
     free_accounts: int = 5
     invite_code: str = ""
 
+    #: Plafonds de l'offre gratuite. La synchronisation reste utilisable pour
+    #: en juger sur pièces : deux appareils, c'est le minimum pour que « ça se
+    #: synchronise » veuille dire quelque chose. Au-delà, c'est l'abonnement.
+    free_max_entries: int = 20
+    free_max_devices: int = 2
+    #: L'offre payante n'est pas illimitée mais très large : sans borne, un
+    #: compte compromis pourrait ouvrir des sessions sans fin.
+    pro_max_devices: int = 20
+
+    #: Prix affiché par le site. Stripe reste la source de vérité de ce qui est
+    #: facturé ; ces deux valeurs ne servent qu'à l'affichage, pour éviter un
+    #: appel à Stripe sur une page publique.
+    price_monthly_cents: int = 200
+    price_currency: str = "EUR"
+
+    #: Facturation. Sans ces trois valeurs, le service tourne sans paiement :
+    #: les pages existent, le bouton d'abonnement répond que c'est indisponible.
+    stripe_secret_key: str = ""
+    stripe_price_id: str = ""
+    #: Signature des webhooks. Sans elle, n'importe qui pourrait s'offrir un
+    #: abonnement en appelant l'URL du webhook.
+    stripe_webhook_secret: str = ""
+
+    #: Site public : liens de retour après paiement et lien de vérification
+    #: d'adresse. Le compte se gère uniquement là.
+    site_url: str = "https://thecode.julsql.fr"
+
+    #: Vérification d'adresse. Par défaut la vérification est proposée mais pas
+    #: exigée : tant que l'envoi d'e-mail n'est pas branché, l'exiger
+    #: enfermerait tout le monde dehors.
+    require_email_verification: bool = False
+    email_verification_hours: int = 24
+    #: log — le lien part dans les journaux du service (développement)
+    mail_transport: str = "log"
+    mail_from: str = "contact@thecode.julsql.fr"
+
     environment: str = "development"
 
     #: Préfixe sous lequel le service est exposé. Vide : il a son propre
@@ -65,6 +101,10 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @property
+    def billing_enabled(self) -> bool:
+        return bool(self.stripe_secret_key and self.stripe_price_id)
 
     @property
     def is_production(self) -> bool:
@@ -101,6 +141,35 @@ def get_settings() -> Settings:
         raise RuntimeError(
             "THECODE_REGISTRATION_MODE vaut invite mais THECODE_INVITE_CODE est vide : "
             "personne ne pourrait s'inscrire, et l'erreur ne se verrait qu'à l'usage."
+        )
+    if settings.mail_transport not in ("log",):
+        raise RuntimeError(
+            f"THECODE_MAIL_TRANSPORT invalide : {settings.mail_transport!r}. Attendu log."
+        )
+    # Une facturation à moitié configurée est pire que pas de facturation : le
+    # bouton mène à Stripe, le paiement passe, et le webhook non signé ne
+    # remonte jamais l'abonnement.
+    stripe_set = [
+        name
+        for name, value in (
+            ("THECODE_STRIPE_SECRET_KEY", settings.stripe_secret_key),
+            ("THECODE_STRIPE_PRICE_ID", settings.stripe_price_id),
+            ("THECODE_STRIPE_WEBHOOK_SECRET", settings.stripe_webhook_secret),
+        )
+        if value
+    ]
+    if stripe_set and len(stripe_set) != 3:
+        raise RuntimeError(
+            "Configuration Stripe incomplète : "
+            + ", ".join(stripe_set)
+            + " défini(s), il faut les trois (clef, prix, secret de webhook) "
+            "ou aucun."
+        )
+    if settings.require_email_verification and settings.mail_transport == "log":
+        raise RuntimeError(
+            "THECODE_REQUIRE_EMAIL_VERIFICATION est actif alors que les e-mails "
+            "ne sont qu'écrits dans les journaux : personne ne recevrait son "
+            "lien de vérification, et plus aucun compte ne pourrait servir."
         )
     if settings.is_production and not settings.jwt_secret:
         raise RuntimeError(
