@@ -12,7 +12,7 @@ import { createRouter, createMemoryHistory, type Router } from "vue-router";
 import Legal from "@/pages/Legal.vue";
 import Terms from "@/pages/Terms.vue";
 import Privacy from "@/pages/Privacy.vue";
-import { IDENTITY } from "@/legal/identity";
+import { IDENTITY, identityPublished } from "@/legal/identity";
 import { legalDoc } from "@/legal";
 import { resetService } from "@/service";
 
@@ -69,9 +69,24 @@ describe("pages légales", () => {
     const wrapper = await mountAt(Legal, "/fr/legal");
 
     // Tant qu'un champ est vide, la page le dit : une mention légale inventée
-    // serait pire qu'une mention manquante.
+    // serait pire qu'une mention manquante. Elle n'est simplement pas publiée
+    // dans cet état — voir le test suivant.
     const expected = IDENTITY.siret ? IDENTITY.siret : "à compléter";
     expect(wrapper.text()).toContain(expected);
+  });
+
+  it("garde les mentions légales hors du site tant que l'identité manque", () => {
+    // Le lien du pied de page et l'URL directe dépendent de la même valeur :
+    // un seul endroit à remplir, pas d'interrupteur séparé à oublier.
+    expect(identityPublished()).toBe(Boolean(IDENTITY.editor && IDENTITY.address));
+  });
+
+  it("n'affiche jamais « à compléter » dans la politique de confidentialité", async () => {
+    // Celle-là reste publiée : elle ne peut donc pas montrer de trous.
+    const wrapper = await mountAt(Privacy, "/fr/privacy");
+
+    expect(wrapper.text()).not.toContain("à compléter");
+    expect(wrapper.text()).toContain(IDENTITY.email);
   });
 
   it("annonce que la version française fait foi", async () => {

@@ -212,7 +212,12 @@
           <div class="footer-col">
             <h4>{{ t("footer_links_legal") }}</h4>
             <router-link :to="localePath('privacy')">{{ t("nav_privacy") }}</router-link>
-            <router-link :to="localePath('legal')">{{ t("nav_legal") }}</router-link>
+            <!-- Les mentions légales attendent l'identité de l'éditrice : une
+                 page pleine de « à compléter » ne renseigne personne. Remplir
+                 `src/legal/identity.ts` la remet en ligne, lien compris. -->
+            <router-link v-if="legalReady" :to="localePath('legal')">
+              {{ t("nav_legal") }}
+            </router-link>
             <!-- Pas de conditions de vente affichées tant que rien n'est
                  vendu : elles annonceraient une offre qui n'existe pas. -->
             <router-link v-if="plansOpen" :to="localePath('terms')">
@@ -241,6 +246,7 @@ import { useRoute } from "vue-router";
 import Logo from "@/assets/logo.svg";
 import { useI18n } from "@/i18n";
 import { loadService, service } from "@/service";
+import { identityPublished } from "@/legal/identity";
 
 export default defineComponent({
   name: "App",
@@ -263,12 +269,14 @@ export default defineComponent({
     // besoin, les pages qui suivent la réutiliseront.
     loadService();
     const plansOpen = computed(() => service.plans.billingAvailable);
+    const legalReady = identityPublished();
 
     return {
       Logo,
       year,
       isOpen,
       plansOpen,
+      legalReady,
       toggleMenu,
       closeMenu,
       t,

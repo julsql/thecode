@@ -12,6 +12,7 @@ import AccountVerify from "./pages/AccountVerify.vue";
 import AccountReset from "./pages/AccountReset.vue";
 import Pricing from "./pages/Pricing.vue";
 import Legal from "./pages/Legal.vue";
+import { identityPublished } from "@/legal/identity";
 import Terms from "./pages/Terms.vue";
 import { DEFAULT_LANG } from "./i18n/translations";
 
@@ -48,7 +49,15 @@ const routes: Array<RouteRecordRaw> = [
       // sur une page qui ne demande que le nouveau mot de passe.
       { path: "account/reset", component: AccountReset },
       { path: "pricing", component: Pricing },
-      { path: "legal", component: Legal },
+      // Tant que l'identité de l'éditrice n'est pas renseignée, l'URL directe
+      // mène à la politique de confidentialité plutôt qu'à une page à trous.
+      // La page et son composant restent : une seule valeur les rallume.
+      {
+        path: "legal",
+        component: Legal,
+        beforeEnter: (to) =>
+          identityPublished() ? true : { path: `/${to.params.lang || "en"}/privacy` },
+      },
       { path: "terms", component: Terms },
     ],
   },

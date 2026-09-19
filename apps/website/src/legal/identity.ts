@@ -46,5 +46,20 @@ export const IDENTITY: Identity = {
   mediator: "",
 };
 
+/**
+ * L'identité de l'éditeur est-elle publiable ?
+ *
+ * Tant que non, la page des mentions légales reste hors du site : une page
+ * remplie de « à compléter » ne renseigne personne et donne l'impression d'un
+ * service bâclé. Le code reste, et il suffit de remplir `editor` et `address`
+ * pour que la page et son lien réapparaissent — pas de second interrupteur à
+ * penser à basculer.
+ *
+ * Rappel utile : un particulier qui ne vend rien n'est pas tenu aux mêmes
+ * mentions qu'un professionnel. Publier l'hébergeur et un contact suffit,
+ * l'identité personnelle restant chez l'hébergeur.
+ */
+export const identityPublished = (): boolean => Boolean(IDENTITY.editor && IDENTITY.address);
+
 /** Ce que le prix affiché vaut, en centimes, et sa devise. */
 export const PRICE = { cents: 200, currency: "EUR" };

@@ -186,7 +186,11 @@ const privacyDoc: LegalDoc = {
   sections: [
     {
       heading: "Data controller",
-      paragraphs: [`${f(IDENTITY.editor)}, ${f(IDENTITY.address)}. Contact: ${IDENTITY.email}.`],
+      paragraphs: [
+        IDENTITY.editor
+          ? `${IDENTITY.editor}, ${IDENTITY.address}. Contact: ${IDENTITY.email}.`
+          : `The data controller can be reached at ${IDENTITY.email}.`,
+      ],
     },
     {
       heading: "What we collect, if you create an account",
@@ -228,7 +232,9 @@ const privacyDoc: LegalDoc = {
         "Stripe Payments Europe, Ltd. — payment and invoicing. Stripe receives your email " +
           "address and your payment details, which we never see.",
         'Google Ireland Ltd. — only if you choose "Continue with Google".',
-        `Our host, ${f(IDENTITY.host)}, running the server in the European Union.`,
+        IDENTITY.host
+          ? `Our host, ${IDENTITY.host}, running the server in the European Union.`
+          : "Our host, running the server in the European Union.",
       ],
       paragraphs: [
         "Your data is never sold, rented or passed on for advertising. There is no tracker, " +
