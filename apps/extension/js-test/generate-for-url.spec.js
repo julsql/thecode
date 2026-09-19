@@ -44,13 +44,15 @@ function loadWorker() {
 }
 
 describe("generation pour une page", () => {
-  it("retombe sur les reglages generaux pour un site inconnu", async () => {
+  it("retombe sur les reglages generaux pour un site inconnu, en v2", async () => {
     const { worker } = loadWorker();
+    const { generatePasswordV2 } = require("../core-v2");
 
     const res = await worker.generatePasswordForUrl("https://inconnu.fr/login");
-    const { mdp } = await worker.generatePassword("inconnu.fr", "clef", 20, true, true, true, true);
 
-    expect(res.password).toBe(mdp);
+    // v2 meme sans entree : c'est la version que produisent desormais toutes
+    // les generations automatiques.
+    expect(res.password).toBe(await generatePasswordV2("inconnu.fr", "clef", 20));
   });
 
   it("applique les reglages enregistres pour le site", async () => {
@@ -89,6 +91,21 @@ describe("generation pour une page", () => {
     const direct = await worker.generatePasswordForUrl("https://google.com/login");
 
     expect(viaAlias.password).toBe(direct.password);
+  });
+
+  it("derive en v2 meme quand l'entree est notee v1", async () => {
+    // Le remplissage automatique ne propose pas de choix : il doit etre
+    // previsible. Un site encore en v1 se genere depuis la popup.
+    const { worker, storage } = loadWorker();
+    const { emptyVault, newEntry, saveVault } = require("../vault");
+    const { generatePasswordV2 } = require("../core-v2");
+
+    const vault = emptyVault();
+    vault.entries.push(newEntry("vieux.fr", { domains: ["vieux.fr"], v: 1 }));
+    await saveVault(storage, vault);
+
+    const res = await worker.generatePasswordForUrl("https://vieux.fr/login");
+    expect(res.password).toBe(await generatePasswordV2("vieux.fr", "clef", 20));
   });
 
   it("derive en v2 quand l'entree est en v2", async () => {

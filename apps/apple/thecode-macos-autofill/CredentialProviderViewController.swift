@@ -193,6 +193,10 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
                     lower: settings.minState, upper: settings.majState,
                     symbols: settings.symState, numbers: settings.chiState))
 
-        return PasswordUtils().generatePassword(for: chosen, masterKey: encodingKey).code
+        // Toujours en v2, quelle que soit la version notée dans le carnet : le
+        // remplissage ne propose aucun choix, il doit être prévisible. Un site
+        // encore en v1 se génère depuis l'application.
+        return PasswordUtils()
+            .generatePassword(for: chosen, masterKey: encodingKey, forcing: 2).code
     }
 }

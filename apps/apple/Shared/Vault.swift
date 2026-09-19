@@ -46,7 +46,7 @@ public struct VaultEntry: Codable, Equatable {
 
     public init(siteKey: String, domains: [String]? = nil, label: String? = nil,
                 login: String? = nil, length: Int = 20,
-                charset: Charset = Charset(), v: Int = 1) {
+                charset: Charset = Charset(), v: Int = 2) {
         self.id = UUID().uuidString.lowercased()
         self.label = label
         self.siteKey = siteKey

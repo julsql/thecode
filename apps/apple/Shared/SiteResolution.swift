@@ -102,8 +102,13 @@ extension PasswordUtils {
     ///
     /// - Parameter master: clef maîtresse déjà dérivée, ou `nil`. La dérivation
     ///   v2 coûte volontairement cher : la réutiliser évite de la repayer.
+    /// - Parameter forcing: impose une version. Le remplissage automatique
+    ///   dérive toujours en v2 : il ne propose aucun choix, il doit donc être
+    ///   prévisible. L'écran de génération, lui, offre la v1 en secours pour
+    ///   un site pas encore migré.
     public func generatePassword(
-        for resolution: SiteResolution, masterKey: String, master: Data? = nil
+        for resolution: SiteResolution, masterKey: String, master: Data? = nil,
+        forcing version: Int? = nil
     ) -> PasswordResult {
         longueur = resolution.length
         minState = resolution.charset.lower
@@ -111,7 +116,7 @@ extension PasswordUtils {
         symState = resolution.charset.symbols
         chiState = resolution.charset.numbers
 
-        if resolution.v >= 2 {
+        if (version ?? resolution.v) >= 2 {
             return generatePasswordV2(
                 masterKey: masterKey, siteKey: resolution.siteKey,
                 login: resolution.login, counter: resolution.counter, master: master)

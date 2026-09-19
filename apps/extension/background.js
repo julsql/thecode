@@ -379,10 +379,11 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
 // Code
 
 /**
- * Derive le mot de passe d'une entree, dans sa version a elle.
+ * Derive le mot de passe d'une entree.
  *
- * Les deux versions coexistent entree par entree : une entree existante reste
- * en v1 et son mot de passe ne doit pas changer.
+ * `version` permet de forcer : l'autoremplissage derive toujours en v2, et
+ * l'ecran de generation propose la v1 en secours pour un site pas encore
+ * migre. Sans elle, on suit ce que le carnet a enregistre.
  */
 async function passwordForEntry(entry, counter, version) {
   const v = version ?? entry.v;
@@ -460,6 +461,8 @@ async function saveCurrentSite(sender, login) {
       domains: [domain],
       length: lengthNumber,
       charset,
+      // Les entrees naissent en v2 : la v1 n'est plus qu'un secours explicite.
+      v: 2,
       // Borne : un champ de page peut contenir n'importe quoi.
       login: typeof login === "string" ? login.slice(0, 120) : "",
     }),
@@ -523,7 +526,8 @@ async function generatePasswordForUrl(url) {
     const entry = findAllByDomain(vault, domain)[0];
 
     if (!entry) {
-      const { mdp, security, bits, color } = await generatePassword(
+      // Site inconnu : v2 aussi, c'est la version des entrees qui naissent.
+      const { security, bits, color } = await generatePassword(
         domain,
         encodingKey,
         lengthNumber,
@@ -532,6 +536,12 @@ async function generatePasswordForUrl(url) {
         symState,
         chiState,
       );
+      const mdp = await generatePasswordV2(domain, encodingKey, lengthNumber, {
+        useLower: minState,
+        useUpper: majState,
+        useSymbols: symState,
+        useNumbers: chiState,
+      });
       return { password: mdp, site: domain, security, bits, color, known: false };
     }
 
@@ -545,7 +555,10 @@ async function generatePasswordForUrl(url) {
       entry.charset.numbers,
     );
 
-    const mdp = await passwordForEntry(entry);
+    // Toujours en v2, quelle que soit la version notee dans le carnet : le
+    // remplissage automatique ne propose pas de choix, il doit donc etre
+    // previsible. Un site encore en v1 se genere depuis la popup.
+    const mdp = await passwordForEntry(entry, entry.counter, 2);
 
     return {
       password: mdp,
