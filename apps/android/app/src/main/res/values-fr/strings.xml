@@ -70,7 +70,7 @@
     <string name="fingerprint_label">Empreinte</string>
     <string name="vault_title">Carnet</string>
     <string name="vault_empty">Aucun site enregistré. Enregistrez-en un depuis l\'écran principal pour ne plus avoir à retenir ses réglages.</string>
-    <string name="vault_entry_settings">%1$d caractères, %2$s — v%3$d</string>
+    <string name="vault_entry_settings">%1$d caractères, %2$s — v%3$d, compteur %4$d</string>
 
     <!-- Synchronisation chiffrée (facultative). -->
     <string name="sync_action">Synchroniser</string>
@@ -94,8 +94,8 @@
     <string name="vault_saved_other_key">« %1$s » enregistré. Attention : cette entrée génère son mot de passe depuis « %2$s », pas depuis ce que vous avez saisi.</string>
     <string name="vault_save_needs_site">Saisissez d\'abord un site.</string>
     <string name="vault_entry_actions">Que faire de « %1$s » ?</string>
-    <string name="vault_renew">Renouveler le mot de passe</string>
-    <string name="vault_migrate">Passer en v2</string>
+    <string name="vault_renew">Renouveler ce mot de passe</string>
+    <string name="vault_migrate">Passer cette entrée en v2</string>
     <string name="vault_renew_title">Renouveler « %1$s »</string>
     <string name="vault_migrate_title">Passer « %1$s » en v2</string>
     <string name="vault_password_pair">Actuel\n%1$s\n\nNouveau\n%2$s\n\nChangez-le sur le site, puis confirmez. Le nouveau ne sert à rien tant que ce n\'est pas fait, et l\'ancien reste celui qui vous connecte.</string>
