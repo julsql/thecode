@@ -198,3 +198,35 @@ describe("réinitialisation du mot de passe", () => {
     expect(wrapper.text()).toContain("invalide ou expiré");
   });
 });
+
+describe("offres sans paiement ouvert", () => {
+  beforeEach(() => {
+    vi.unstubAllGlobals();
+    resetService();
+  });
+
+  it("annonce le déblocage par code plutôt qu'un prix", async () => {
+    vi.stubGlobal("fetch", () =>
+      json(200, {
+        plans_enforced: true,
+        price_monthly_cents: 200,
+        currency: "EUR",
+        billing_available: false,
+        free_max_entries: 5,
+        free_max_devices: 20,
+        pro_max_entries: 2000,
+        pro_max_devices: 20,
+      }),
+    );
+
+    const wrapper = await mountAt(Pricing, "/fr/pricing");
+    const text = normalize(wrapper.text());
+
+    // Les plafonds comptent, donc ils s'affichent…
+    expect(text).toContain("5 entrées synchronisées");
+    // …mais rien ne se vend : annoncer un tarif enverrait vers une impasse.
+    expect(text).toContain("Se débloque avec un code");
+    expect(text).not.toContain("2 €/mois");
+    expect(text).toContain("J'ai un code");
+  });
+});

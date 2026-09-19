@@ -73,8 +73,8 @@
               />
             </div>
 
-            <p v-if="plansOpen" class="choose-plan">{{ t("acc_choose_plan") }}</p>
-            <div v-if="plansOpen" class="plan-choice">
+            <p v-if="billingOpen" class="choose-plan">{{ t("acc_choose_plan") }}</p>
+            <div v-if="billingOpen" class="plan-choice">
               <button
                 type="button"
                 class="plan-option"
@@ -174,7 +174,7 @@
             </div>
           </dl>
 
-          <section v-if="plansOpen" class="panel">
+          <section v-if="billingOpen" class="panel">
             <h3 class="panel-title">{{ t("acc_plan") }}</h3>
             <p v-if="info?.hasPendingCoupon" class="hint">{{ t("acc_pending_coupon") }}</p>
 
@@ -277,6 +277,9 @@
 
           <section class="panel">
             <h3 class="panel-title">{{ t("acc_code_title") }}</h3>
+            <p v-if="plansOpen && !billingOpen && !isPro" class="panel-lead">
+              {{ t("acc_code_unlocks") }}
+            </p>
             <div class="field-row">
               <input
                 id="acc_redeem"
@@ -426,6 +429,9 @@ export default defineComponent({
     // Les offres s'appliquent-elles ? Le service seul le sait.
     loadService();
     const plansOpen = computed(() => service.plans.plansEnforced);
+    // Peut-on payer ? Autre question : aujourd'hui le déblocage passe par un
+    // code, et proposer un abonnement mènerait à une impasse.
+    const billingOpen = computed(() => service.plans.billingAvailable);
 
     const planLabel = computed(() => {
       if (info.value?.planSource === "lifetime") return t("acc_plan_lifetime");
@@ -555,7 +561,7 @@ export default defineComponent({
         // L'offre choisie à l'inscription mène directement au paiement : la
         // choisir puis devoir la rechoisir ailleurs serait un pas de plus pour
         // rien.
-        if (plansOpen.value && chosenPlan.value === "pro" && info.value?.plan !== "pro") {
+        if (billingOpen.value && chosenPlan.value === "pro" && info.value?.plan !== "pro") {
           await upgrade();
         }
       } catch (e) {
@@ -764,6 +770,7 @@ export default defineComponent({
       googleReady,
       isPro,
       plansOpen,
+      billingOpen,
       planLabel,
       formattedPrice,
       renewal,

@@ -206,6 +206,8 @@ export const translations = {
     pricing_encrypted: "Encrypted before it leaves your device, on both plans",
     pricing_cta_free: "Create a free account",
     pricing_cta_pro: "Get the complete plan",
+    pricing_by_code: "Unlocked with a code",
+    pricing_cta_code: "I have a code",
     pricing_unavailable: "Subscriptions are not open yet.",
     pricing_cancel_note: "Monthly, cancel whenever you like.",
 
@@ -252,6 +254,7 @@ export const translations = {
     acc_device_since: "connected on",
     acc_device_none: "No device connected.",
     acc_code_title: "Use a code",
+    acc_code_unlocks: "A code lifts the sync limits on this account.",
     acc_code_apply: "Apply",
     acc_upgrade: "Get the complete plan",
     acc_manage: "Manage my subscription",
@@ -507,6 +510,8 @@ export const translations = {
     pricing_encrypted: "Chiffré avant de quitter votre appareil, dans les deux offres",
     pricing_cta_free: "Créer un compte gratuit",
     pricing_cta_pro: "Prendre l'offre complète",
+    pricing_by_code: "Se débloque avec un code",
+    pricing_cta_code: "J'ai un code",
     pricing_unavailable: "L'abonnement n'est pas encore ouvert.",
     pricing_cancel_note: "Sans engagement, résiliable à tout moment.",
 
@@ -554,6 +559,7 @@ export const translations = {
     acc_device_since: "connecté le",
     acc_device_none: "Aucun appareil connecté.",
     acc_code_title: "Utiliser un code",
+    acc_code_unlocks: "Un code lève les limites de synchronisation sur ce compte.",
     acc_code_apply: "Appliquer",
     acc_upgrade: "Prendre l'offre complète",
     acc_manage: "Gérer mon abonnement",

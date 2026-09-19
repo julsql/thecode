@@ -105,11 +105,18 @@ def push(
         # s'abonner », et proposer la bonne suite.
         if limits.plan == "free":
             site = settings.site_url.rstrip("/")
+            # Deux suites possibles selon qu'on peut payer ou non : envoyer
+            # quelqu'un s'abonner à un abonnement qui n'existe pas encore
+            # serait une impasse.
+            suite = (
+                f"Pour tout synchroniser, passez à l'offre complète sur {site}."
+                if settings.billing_enabled
+                else f"Pour lever la limite, utilisez un code de déblocage sur {site}."
+            )
             raise HTTPException(
                 status.HTTP_402_PAYMENT_REQUIRED,
                 f"Offre gratuite : {limits.max_entries} entrées synchronisées au "
-                f"maximum. Les autres restent sur cet appareil. "
-                f"Pour tout synchroniser, passez à l'offre complète sur {site}.",
+                f"maximum. Les autres restent sur cet appareil. {suite}",
             )
         raise HTTPException(
             status.HTTP_403_FORBIDDEN,

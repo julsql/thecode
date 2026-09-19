@@ -20,7 +20,7 @@ from ..auth import current_account, current_session_id, hash_password, verify_pa
 from ..config import get_settings
 from ..db import get_db
 from ..links import new_link
-from ..mailer import send_email_change_email
+from ..mailer import MailError, send_email_change_email
 from ..models import (
     Account,
     Code,
@@ -172,7 +172,14 @@ def change_email(
         raise HTTPException(status.HTTP_409_CONFLICT, "Cette adresse est déjà utilisée.")
 
     token = new_link(db, account, "change", new_email=new_email)
-    send_email_change_email(get_settings(), new_email, token, payload.lang)
+    try:
+        send_email_change_email(get_settings(), new_email, token, payload.lang)
+    except MailError:
+        raise HTTPException(
+            status.HTTP_502_BAD_GATEWAY,
+            "L'envoi du courrier a échoué. Votre adresse actuelle reste en place ; "
+            "réessayez dans un moment.",
+        ) from None
     return {"sent": True}
 
 

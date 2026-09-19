@@ -262,7 +262,7 @@ export default defineComponent({
     // Une seule interrogation par chargement de page : le pied de page en a
     // besoin, les pages qui suivent la réutiliseront.
     loadService();
-    const plansOpen = computed(() => service.plans.plansEnforced);
+    const plansOpen = computed(() => service.plans.billingAvailable);
 
     return {
       Logo,

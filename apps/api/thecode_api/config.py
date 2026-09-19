@@ -45,23 +45,29 @@ class Settings(BaseSettings):
     free_accounts: int = 5
     invite_code: str = ""
 
-    #: Les offres s'appliquent-elles ?
+    #: Les plafonds de l'offre gratuite s'appliquent-ils ?
     #:
-    #: Faux par défaut, et c'est l'état voulu tant qu'aucune entreprise ne
-    #: vend quoi que ce soit : tout le monde a tout, l'abonnement est dormant,
-    #: et personne ne se retrouve bloqué devant un bouton de paiement qui ne
-    #: mène nulle part.
+    #: Vrai par défaut : le carnet local reste illimité, mais ce qui est
+    #: *synchronisé* est borné tant que le compte n'est pas débloqué. Faux
+    #: ouvre tout à tout le monde, pour un service qui ne veut rien distinguer.
     #:
-    #: Vrai : les plafonds ci-dessous s'appliquent et l'offre complète se
-    #: prend par abonnement ou par code. Une seule variable à changer le jour
-    #: où la question se pose.
-    plans_enabled: bool = False
+    #: Indépendant de `billing_enabled` : débloquer se fait aujourd'hui par
+    #: code, et se fera demain par abonnement. Ce sont deux questions séparées,
+    #: et les confondre revient à annoncer un prix pour quelque chose qui ne se
+    #: vend pas encore.
+    plans_enabled: bool = True
 
-    #: Plafonds de l'offre gratuite. La synchronisation reste utilisable pour
-    #: en juger sur pièces : deux appareils, c'est le minimum pour que « ça se
-    #: synchronise » veuille dire quelque chose. Au-delà, c'est l'abonnement.
-    free_max_entries: int = 20
-    free_max_devices: int = 2
+    #: Plafond de l'offre gratuite : ce qu'un compte peut *synchroniser*.
+    #:
+    #: Le carnet local n'est jamais bridé — les entrées au-delà restent sur
+    #: l'appareil et les mots de passe continuent de se calculer. Ce qui est
+    #: borné, c'est le service rendu par le serveur.
+    free_max_entries: int = 5
+    #: Pas de limite d'appareils sur l'offre gratuite : synchroniser entre deux
+    #: appareils est le minimum pour que le mot veuille dire quelque chose, et
+    #: en compter trois plutôt que deux ne distingue rien d'utile. Le garde-fou
+    #: anti-abus reste, commun aux deux offres.
+    free_max_devices: int = 20
     #: L'offre payante n'est pas illimitée mais très large : sans borne, un
     #: compte compromis pourrait ouvrir des sessions sans fin.
     pro_max_devices: int = 20
@@ -100,9 +106,21 @@ class Settings(BaseSettings):
     #: longtemps qu'un lien de confirmation, qui ne donne rien de plus que ce
     #: que son destinataire a déjà.
     password_reset_hours: int = 2
-    #: log — le lien part dans les journaux du service (développement)
+    #: log  — le lien part dans les journaux du service (développement)
+    #: smtp — envoi réel
     mail_transport: str = "log"
+    #: Adresse d'expédition. Avec Gmail, elle doit être celle du compte
+    #: authentifié ou un alias vérifié dans ses réglages : Gmail réécrit
+    #: l'expéditeur sinon, et le courrier part d'une adresse inattendue.
     mail_from: str = "contact@thecode.julsql.fr"
+    mail_host: str = "smtp.gmail.com"
+    mail_port: int = 587
+    mail_user: str = ""
+    mail_password: str = ""
+    #: STARTTLS sur le port 587 ; à désactiver seulement pour un serveur
+    #: implicitement chiffré sur 465, auquel cas la connexion est en TLS dès
+    #: le départ.
+    mail_starttls: bool = True
 
     environment: str = "development"
 
@@ -131,11 +149,15 @@ class Settings(BaseSettings):
 
     @property
     def billing_enabled(self) -> bool:
-        """Peut-on souscrire ?
+        """Peut-on souscrire, c'est-à-dire payer ?
 
-        Il faut Stripe *et* des offres qui s'appliquent : facturer alors que
-        tout est ouvert reviendrait à faire payer ce que les autres ont
-        gratuitement.
+        Il faut Stripe *et* des offres qui distinguent quelque chose : facturer
+        alors que tout est ouvert reviendrait à faire payer ce que les autres
+        ont gratuitement.
+
+        Faux ne veut pas dire « tout est ouvert » : aujourd'hui les plafonds
+        s'appliquent et se lèvent par code. C'est ce que le site doit dire,
+        plutôt que d'afficher un prix.
         """
         return self.plans_enabled and bool(self.stripe_secret_key and self.stripe_price_id)
 
@@ -175,9 +197,18 @@ def get_settings() -> Settings:
             "THECODE_REGISTRATION_MODE vaut invite mais THECODE_INVITE_CODE est vide : "
             "personne ne pourrait s'inscrire, et l'erreur ne se verrait qu'à l'usage."
         )
-    if settings.mail_transport not in ("log",):
+    if settings.mail_transport not in ("log", "smtp"):
         raise RuntimeError(
-            f"THECODE_MAIL_TRANSPORT invalide : {settings.mail_transport!r}. Attendu log."
+            f"THECODE_MAIL_TRANSPORT invalide : {settings.mail_transport!r}. "
+            "Attendu log ou smtp."
+        )
+    if settings.mail_transport == "smtp" and not (
+        settings.mail_host and settings.mail_user and settings.mail_password
+    ):
+        raise RuntimeError(
+            "THECODE_MAIL_TRANSPORT vaut smtp mais l'hôte, l'utilisateur ou le mot "
+            "de passe manque : aucun courrier ne partirait, et l'erreur ne se "
+            "verrait qu'à la première inscription."
         )
     # Une facturation à moitié configurée est pire que pas de facturation : le
     # bouton mène à Stripe, le paiement passe, et le webhook non signé ne

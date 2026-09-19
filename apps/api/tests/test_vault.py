@@ -85,7 +85,19 @@ class TestQuotas:
         batch = [entry(f"e{i}") for i in range(settings.free_max_entries + 1)]
         response = push(client, auth, batch)
         assert response.status_code == 402
-        assert "offre complète" in response.json()["detail"]
+        # Sans paiement ouvert, la suite proposée est le code, pas
+        # l'abonnement : envoyer quelqu'un souscrire à ce qui n'existe pas
+        # encore serait une impasse.
+        assert "code de déblocage" in response.json()["detail"]
+
+    def test_the_refusal_points_to_the_subscription_when_it_exists(
+        self, client, auth, settings
+    ):
+        settings.stripe_secret_key = "sk_test"
+        settings.stripe_price_id = "price_test"
+
+        batch = [entry(f"e{i}") for i in range(settings.free_max_entries + 1)]
+        assert "offre complète" in push(client, auth, batch).json()["detail"]
 
     def test_the_absolute_limit_applies_to_a_paid_account(
         self, client, auth, settings, db_session

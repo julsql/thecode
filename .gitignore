@@ -4,6 +4,10 @@
 # possible, de facon irreversible.
 # ─────────────────────────────────────────────────────────────
 keys/
+# Identifiants d'API et de courrier, edites a la main a la racine. Jamais
+# commis : ils ouvrent une boite d'envoi et un projet Google.
+keys.yml
+keys.yaml
 *.jks
 *.keystore
 *.p12

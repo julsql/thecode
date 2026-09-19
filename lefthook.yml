@@ -28,8 +28,8 @@ pre-commit:
     # attrape un fichier renomme ou un contenu colle par megarde.
     pas-de-secret:
       run: |
-        if git diff --cached --name-only | grep -qiE '\.(jks|keystore|p12|pem|p8|mobileprovision)$|^keys/'; then
-          echo "Fichier de signature dans le commit. Refus." >&2
+        if git diff --cached --name-only | grep -qiE '\.(jks|keystore|p12|pem|p8|mobileprovision)$|^keys/|^keys\.ya?ml$'; then
+          echo "Fichier de signature ou d'identifiants dans le commit. Refus." >&2
           exit 1
         fi
 

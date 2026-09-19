@@ -42,18 +42,21 @@
         <section class="plan-card plan-card--featured">
           <span class="plan-badge">{{ t("pricing_recommended") }}</span>
           <h2>{{ t("pricing_pro_name") }}</h2>
-          <p class="plan-price">
+          <p v-if="plans.billingAvailable" class="plan-price">
             {{ formattedPrice }}<span class="plan-period">{{ t("pricing_per_month") }}</span>
           </p>
+          <!-- Pas de prix tant que rien ne se vend : le déblocage se fait par
+               code, et annoncer un tarif enverrait vers une impasse. -->
+          <p v-else class="plan-by-code">{{ t("pricing_by_code") }}</p>
           <ul class="plan-lines">
             <li>{{ withCount("pricing_pro_entries", plans.proMaxEntries) }}</li>
             <li>{{ withCount("pricing_pro_devices", plans.proMaxDevices) }}</li>
             <li>{{ t("pricing_pro_support") }}</li>
           </ul>
           <router-link class="ghost-btn primary plan-cta" :to="localePath('account')">
-            {{ t("pricing_cta_pro") }}
+            {{ plans.billingAvailable ? t("pricing_cta_pro") : t("pricing_cta_code") }}
           </router-link>
-          <p class="hint">{{ t("pricing_cancel_note") }}</p>
+          <p v-if="plans.billingAvailable" class="hint">{{ t("pricing_cancel_note") }}</p>
         </section>
       </div>
 
@@ -183,6 +186,13 @@ export default defineComponent({
 .plan-card h2 {
   margin: 0 0 6px;
   font-size: 1.15rem;
+}
+
+.plan-by-code {
+  margin: 0 0 16px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--c4);
 }
 
 .plan-price {
