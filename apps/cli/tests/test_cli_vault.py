@@ -169,7 +169,8 @@ def test_renew_refuses_a_v1_entry(tmp_path, capsys):
         {
             "schema": 1,
             "updatedAt": "2026-01-01T00:00:00Z",
-            "entries": [new_entry("google.com", domains=["google.com"])],
+            # v1 explicite : les entrees naissent desormais en v2.
+            "entries": [new_entry("google.com", domains=["google.com"], version=1)],
         },
         vault_path,
     )

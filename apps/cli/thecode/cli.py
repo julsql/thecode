@@ -88,9 +88,9 @@ def build_parser() -> argparse.ArgumentParser:
         "--algo",
         type=int,
         choices=(1, 2),
-        default=1,
-        help="Version de l'algorithme pour une nouvelle entrée (défaut: 1, "
-        "pour rester compatible avec les mots de passe existants)",
+        default=2,
+        help="Version de l'algorithme (défaut: 2). --algo 1 retrouve un mot de "
+        "passe posé sur un site avant la v2",
     )
     parser.add_argument(
         "--migrate",
@@ -485,16 +485,10 @@ def main(argv: list[str] | None = None) -> int:
             vault_data["entries"].append(entry)
             action = "ajoutée au"
             if entry["siteKey"] != params["site"]:
-                # Le mot de passe affiché doit être celui de la nouvelle entrée.
-                pwd = generate_password(
-                    site=entry["siteKey"],
-                    key=args.password,
-                    length=params["length"],
-                    use_lower=params["lower"],
-                    use_upper=params["upper"],
-                    use_symbols=params["symbols"],
-                    use_numbers=params["numbers"],
-                )
+                # Le mot de passe affiché doit être celui de la nouvelle entrée,
+                # dans sa version à elle. Dériver en v1 en dur ici rendait un
+                # mot de passe que la lecture suivante ne retrouvait pas.
+                pwd = _derive(args, {**params, "site": entry["siteKey"]}, entry)
         else:
             # siteKey n'est jamais réécrit : il produit le mot de passe, le
             # modifier en changerait un déjà en service.
