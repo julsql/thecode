@@ -21,10 +21,13 @@
         app:showAsAction="never" />
 
     <!-- La v1 n'est qu'un secours : retrouver un mot de passe pose avant la v2. -->
+    <!-- Visible dans la barre, comme le theme : c'est un mode, pas une option
+         enfouie — il decide quel mot de passe sort. -->
     <item
         android:id="@+id/action_algo"
-        android:title="@string/algo_use_v1"
-        app:showAsAction="never" />
+        android:title="@string/algo_mode_v2"
+        app:actionViewClass="com.google.android.material.button.MaterialButton"
+        app:showAsAction="always" />
 
     <item
         android:id="@+id/action_dark_mode"
