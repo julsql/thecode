@@ -1,5 +1,22 @@
 # Changelog
 
+## [3.3.0](https://github.com/julsql/thecode/compare/extension-v3.2.0...extension-v3.3.0) (2026-09-19)
+
+
+### Features
+
+* **clients:** point to the site for creating and managing an account ([9bce2bd](https://github.com/julsql/thecode/commit/9bce2bd25b7ad9334786a75185f5f80582da8141))
+* derive v2 in autofill regardless of the entry's version ([7ec9665](https://github.com/julsql/thecode/commit/7ec9665c9f4559f335171e7431810d64c89878b0))
+* **extension:** announce the move to v2, once ([f777bfb](https://github.com/julsql/thecode/commit/f777bfb101b0d84b2edca0ada94f8c216b2cd588))
+* **extension:** offer to save the site after filling a password ([8b2575c](https://github.com/julsql/thecode/commit/8b2575cdd1f99e735f86d8827ea038501d4fe9c7))
+* show the v2 notice as a dialog, dismissed only by the checkbox ([33af5c9](https://github.com/julsql/thecode/commit/33af5c900511f324facb973c2aa30f97df8baee8))
+* the counter becomes part of the complete plan ([e21b66c](https://github.com/julsql/thecode/commit/e21b66ca1131a54558d18047c1d416ebc99209b2))
+
+
+### Bug Fixes
+
+* **extension:** drop the "license" key both browsers reject ([0521839](https://github.com/julsql/thecode/commit/05218391bf797c3a4d897d8c22bd06bb1d88abce))
+
 ## [3.2.0](https://github.com/julsql/thecode/compare/extension-v3.1.0...extension-v3.2.0) (2026-09-19)
 
 

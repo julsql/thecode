@@ -1,5 +1,29 @@
 # Changelog
 
+## [3.3.0](https://github.com/julsql/thecode/compare/android-v3.2.0...android-v3.3.0) (2026-09-19)
+
+
+### Features
+
+* **android:** announce the move to v2, once ([25129f9](https://github.com/julsql/thecode/commit/25129f9e7cfbe7951a9f2772d1aa48c3cebdef62))
+* **android:** generate in v2 by default, with a way back to v1 ([6f8a226](https://github.com/julsql/thecode/commit/6f8a226ae18eeaf7e0e4e551e7d3ee27aeaf870d))
+* **android:** make the algorithm a mode shown in the top bar ([c89688d](https://github.com/julsql/thecode/commit/c89688dfd59aaaca5db166c2a71fcec5de610920))
+* **android:** offer to save the site after autofill ([544ccea](https://github.com/julsql/thecode/commit/544ccea0633d9560c1be73d525da3cce24aaa964))
+* **clients:** point to the site for creating and managing an account ([9bce2bd](https://github.com/julsql/thecode/commit/9bce2bd25b7ad9334786a75185f5f80582da8141))
+* derive v2 in autofill regardless of the entry's version ([7ec9665](https://github.com/julsql/thecode/commit/7ec9665c9f4559f335171e7431810d64c89878b0))
+* show the v2 notice as a dialog, dismissed only by the checkbox ([33af5c9](https://github.com/julsql/thecode/commit/33af5c900511f324facb973c2aa30f97df8baee8))
+* the counter becomes part of the complete plan ([e21b66c](https://github.com/julsql/thecode/commit/e21b66ca1131a54558d18047c1d416ebc99209b2))
+
+
+### Bug Fixes
+
+* **android:** keep the vault and transfer screens below the status bar ([fbe433f](https://github.com/julsql/thecode/commit/fbe433f3eeb97db01091094fc40f6b8664633538))
+* **android:** require authentication to open the vault ([75cb129](https://github.com/julsql/thecode/commit/75cb129b366ae0b616b5e3d3d652a1ae42b987ab))
+* compute the fingerprint after a pause, not on every keystroke ([594f744](https://github.com/julsql/thecode/commit/594f744314512e9cac772a9110dfbc6827566f97))
+* reset the algorithm mode to v2 on every launch ([49e1648](https://github.com/julsql/thecode/commit/49e1648e2af068f9dfcbd8ba7e67b2d3e82708b3))
+* **tests:** a tamper test that sometimes tampered with nothing ([2927ee5](https://github.com/julsql/thecode/commit/2927ee5a80744b488c6d34cf66f88e1f6406c6af))
+* **tests:** tamper with four characters, not one ([94e5643](https://github.com/julsql/thecode/commit/94e56433579e9b4af74bfc2a5704437f69a18cc6))
+
 ## [3.2.0](https://github.com/julsql/thecode/compare/android-v3.1.0...android-v3.2.0) (2026-09-19)
 
 
