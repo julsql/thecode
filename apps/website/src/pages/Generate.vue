@@ -119,7 +119,7 @@
               été créé sans symboles, ni sous quel identifiant.
             </p>
 
-            <div class="panel-actions">
+            <div class="panel-actions centered">
               <button type="button" class="ghost-btn" @click="saveEntry">
                 {{ vaultEntries.length ? "Mettre à jour l'entrée" : "Enregistrer ce site" }}
               </button>
@@ -182,7 +182,7 @@
               chiffré : une photo de l'écran, ou le fichier seul, ne révèlent rien.
             </p>
 
-            <div class="panel-actions">
+            <div class="panel-actions fill">
               <button type="button" class="ghost-btn" @click="showTransfer">
                 Afficher un QR code
                 <small>à scanner depuis le téléphone</small>
@@ -920,6 +920,23 @@ input[type="text"]:read-only {
   flex-wrap: wrap;
   gap: 10px;
   align-items: stretch;
+}
+
+.panel-actions.centered {
+  justify-content: center;
+}
+
+/* Une seule ligne, a largeur egale : les trois actions de transfert sont de
+   meme rang, rien ne justifie qu'une prenne plus de place qu'une autre. */
+.panel-actions.fill {
+  flex-wrap: nowrap;
+}
+
+.panel-actions.fill > * {
+  /* base 0 : la largeur se partage a parts egales, sans tenir compte de la
+     longueur du libelle. */
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 /* Les boutons de ces panneaux portent une legende : ils ne peuvent donc pas
