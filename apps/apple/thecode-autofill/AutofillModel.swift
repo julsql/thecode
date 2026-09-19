@@ -28,6 +28,13 @@ final class AutofillModel: ObservableObject {
     @Published var accounts: [SiteResolution] = []
     @Published var chosen: SiteResolution? = nil
 
+    /// Vrai quand le carnet ne connaît pas encore ce site : c'est le seul cas
+    /// où proposer de l'enregistrer apporte quelque chose.
+    @Published var canSave = false
+    /// Réponse de l'utilisatrice. iOS n'a pas d'équivalent au dialogue que le
+    /// système Android pose après coup : on demande donc avant de remplir.
+    @Published var saveToVault = false
+
     var mustChoose: Bool { accounts.count > 1 && chosen == nil }
 
     /// Le ViewController s'enregistre ici pour recevoir les ordres d'achever
@@ -88,7 +95,8 @@ final class AutofillModel: ObservableObject {
                     // de completeFill, dans l'extension, après auth.
                     self.controller?.completeFill(
                         domain: self.domain,
-                        resolution: self.chosen ?? self.accounts.first)
+                        resolution: self.chosen ?? self.accounts.first,
+                        saveToVault: self.canSave && self.saveToVault)
                 } else {
                     self.errorMessage = evalError?.localizedDescription
                         ?? L10n.t("Authentification annulée.", "Authentication cancelled.")

@@ -56,6 +56,8 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
         Task { @MainActor in
             model.domain = domain
             model.accounts = accounts
+            // Une entrée sans identifiant est un repli, pas une entrée connue.
+            model.canSave = accounts.first?.entryId.isEmpty ?? false
             model.startBiometricIfNeeded()
         }
     }
@@ -70,14 +72,23 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
         Task { @MainActor in
             model.domain = domain
             model.accounts = accounts
+            // Une entrée sans identifiant est un repli, pas une entrée connue.
+            model.canSave = accounts.first?.entryId.isEmpty ?? false
             model.startBiometricIfNeeded()
         }
     }
 
     // MARK: – Appelé par AutofillModel après auth
 
-    func completeFill(domain: String, resolution: SiteResolution?) {
+    func completeFill(domain: String, resolution: SiteResolution?, saveToVault: Bool) {
         let password = generatePassword(domainName: domain, resolution: resolution)
+
+        // Le mot de passe n'est pas stocké — il se recalcule. Ce qu'on retient,
+        // ce sont les réglages qui ont servi et le domaine : sans eux, un autre
+        // appareil ne saurait pas les rejouer.
+        if saveToVault, !password.isEmpty {
+            rememberSite(domain)
+        }
         guard !password.isEmpty else {
             // Cas pathologique : clé absente ou aucun charset coché dans l'app.
             extensionContext.cancelRequest(withError: NSError(
@@ -104,6 +115,18 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
     }
 
     // MARK: – Génération
+
+    /// Enregistre le site avec les réglages en vigueur.
+    private func rememberSite(_ domain: String) {
+        let settings = PasswordSettings.load(from: UserDefaults(suiteName: appGroupID))
+        var vault = VaultStore.load()
+        vault.upsert(
+            site: domain, length: settings.length,
+            charset: Charset(
+                lower: settings.minState, upper: settings.majState,
+                symbols: settings.symState, numbers: settings.chiState))
+        try? VaultStore.save(vault)
+    }
 
     /// Ce que le carnet sait de ce domaine, réglages généraux en repli.
     private func resolutions(for domain: String) -> [SiteResolution] {
