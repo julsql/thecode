@@ -31,6 +31,8 @@ import androidx.autofill.inline.v1.InlineSuggestionUi;
 
 import java.util.List;
 
+import android.service.autofill.SaveInfo;
+
 import fr.juliette.thecode.Preferences;
 import fr.juliette.thecode.vault.SiteResolution;
 import fr.juliette.thecode.vault.Vault;
@@ -105,9 +107,42 @@ public class TheCodeAutofillService extends AutofillService {
         callback.onSuccess(buildAuthenticatedResponse(request, domain, resolutions, ids));
     }
 
+    /**
+     * Enregistre le site dans le carnet quand l'utilisateur accepte.
+     *
+     * Le mot de passe lui-même n'est pas stocké — il se recalcule. Ce qu'on
+     * retient, ce sont les réglages qui ont servi, et le domaine : sans eux,
+     * un autre appareil ne saurait pas les rejouer. C'est exactement ce que
+     * la boîte de dialogue du système propose.
+     */
     @Override
     public void onSaveRequest(@NonNull SaveRequest request, @NonNull SaveCallback callback) {
-        // Aucune sauvegarde : les mots de passe sont entièrement déterministes.
+        List<FillContext> contexts = request.getFillContexts();
+        if (contexts.isEmpty()) {
+            callback.onSuccess();
+            return;
+        }
+
+        AssistStructure structure = contexts.get(contexts.size() - 1).getStructure();
+        String activityPackage = structure.getActivityComponent() != null
+                ? structure.getActivityComponent().getPackageName()
+                : getPackageName();
+        ParsedStructure parsed = StructureParser.parse(structure, activityPackage);
+        String domain = DomainNormalizer.normalize(parsed.domain, parsed.isPackage);
+
+        if (domain.isEmpty()) {
+            callback.onSuccess();
+            return;
+        }
+
+        Preferences prefs = new Preferences(this);
+        Vault vault = Vault.load(this);
+        // Le siteKey n'est jamais réécrit : il produit le mot de passe, le
+        // modifier en changerait un déjà en service.
+        vault.upsert(domain, prefs.getLength(), prefs.getMinState(), prefs.getMajState(),
+                prefs.getSymState(), prefs.getChiState());
+        vault.save(this);
+
         callback.onSuccess();
     }
 
@@ -118,6 +153,15 @@ public class TheCodeAutofillService extends AutofillService {
         for (int i = 0; i < resolutions.size(); i++) {
             response.addDataset(buildDataset(request, domain, resolutions.get(i), i, passwordIds));
         }
+
+        // Le carnet ne connaît pas encore ce site : on demande au système de
+        // proposer de l'enregistrer. Déjà connu, la question serait du bruit.
+        boolean known = resolutions.isEmpty() || !resolutions.get(0).entryId.isEmpty();
+        if (!known) {
+            response.setSaveInfo(new SaveInfo.Builder(
+                    SaveInfo.SAVE_DATA_TYPE_PASSWORD, passwordIds).build());
+        }
+
         return response.build();
     }
 
