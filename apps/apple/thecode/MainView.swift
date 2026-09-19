@@ -87,6 +87,42 @@ struct MainView: View {
     /// sur un site avant qu'elle n'existe.
     @State private var useV1 = false
 
+    /// Annonce du passage à la v2.
+    ///
+    /// Elle ne concerne que la version qui l'apporte : une fois lue, on ne la
+    /// repose plus. Le drapeau vit dans les réglages partagés, donc il survit
+    /// à un redémarrage.
+    @AppStorage("v2NoticeSeen", store: UserDefaults(suiteName: appGroupID))
+    var v2NoticeSeen: Bool = false
+
+    private var v2Notice: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(
+                L10n.t(
+                    "Les mots de passe se calculent désormais avec un nouvel algorithme "
+                        + "(v2). Ceux déjà posés sur vos sites viennent de l'ancien et n'ont "
+                        + "pas changé. Le remplissage automatique utilise le nouveau : pour "
+                        + "un site que vous n'avez pas encore mis à jour, générez avec "
+                        + "l'ancien (v1) depuis la barre d'outils, ou passez l'entrée en v2 "
+                        + "depuis le carnet après avoir changé le mot de passe sur le site.",
+                    "Passwords are now computed with a new algorithm (v2). The ones already "
+                        + "set on your sites came from the old one and have not changed. "
+                        + "Autofill uses the new one: for a site you have not updated yet, "
+                        + "generate with the old algorithm (v1) from the toolbar, or move the "
+                        + "entry to v2 from the vault once you have changed the password on "
+                        + "the site.")
+            )
+            .font(.footnote)
+
+            Button(L10n.t("J'ai compris", "Got it")) { v2NoticeSeen = true }
+                .font(.footnote)
+        }
+        .padding(12)
+        .background(Color.secondary.opacity(0.12))
+        .cornerRadius(12)
+    }
+
+
 
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.colorScheme) private var colorScheme
@@ -94,6 +130,10 @@ struct MainView: View {
     var body: some View {
         NavigationView {
             Form {
+                if !v2NoticeSeen {
+                    Section { v2Notice }
+                }
+
                 // Paramètres globaux existants
                 Section(header: Text(L10n.t("Paramètres de l'application", "App settings"))) {
                     
