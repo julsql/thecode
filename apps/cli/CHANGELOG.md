@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.0](https://github.com/julsql/thecode/compare/cli-v2.1.0...cli-v2.2.0) (2026-09-19)
+
+
+### Features
+
+* **cli:** renew an entry's password with --renew ([79fba24](https://github.com/julsql/thecode/commit/79fba242b4f937a27b2e9341f75b55b15faeb64e))
+
 ## [2.1.0](https://github.com/julsql/thecode/compare/cli-v2.0.0...cli-v2.1.0) (2026-09-18)
 
 
