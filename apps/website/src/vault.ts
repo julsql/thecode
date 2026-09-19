@@ -74,7 +74,8 @@ export function newEntry(
     counter: 1,
     length: options.length ?? DEFAULT_LENGTH,
     charset: { ...DEFAULT_CHARSET, ...(options.charset ?? {}) },
-    v: options.v ?? 1,
+    // Les entrées naissent en v2 ; la v1 reste lisible pour les anciennes.
+    v: options.v ?? 2,
     updatedAt: nowIso(),
   };
 }

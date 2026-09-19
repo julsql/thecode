@@ -110,6 +110,17 @@
             <span :style="{ color: couleurSecurite }">{{ niveauSecurite }}</span>
           </p>
 
+          <!-- La v1 n'est plus qu'un secours : le mot de passe pose sur un site
+               avant la v2 ne se retrouve que comme ca. -->
+          <div class="algo-row">
+            <button type="button" class="ghost-btn small" @click="enV1 = !enV1">
+              {{ enV1 ? "Revenir à la v2" : "Générer en v1 (ancien)" }}
+            </button>
+            <span v-if="enV1" class="hint algo-note">
+              Ancien algorithme, pour un site dont le mot de passe n'a pas encore été changé.
+            </span>
+          </div>
+
           <!-- Le carnet retient les reglages par site : plus besoin de se souvenir
                qu'un compte avait ete cree sans symboles. -->
           <section class="panel">
@@ -333,6 +344,8 @@ export default defineComponent({
     const vaultEntries = ref<VaultEntry[]>([]);
     const vaultMessage = ref("");
     const transferMessage = ref("");
+    /** Bascule explicite vers l'ancien algorithme. */
+    const enV1 = ref(false);
     /** Modules du QR affiché, vide tant qu'on n'en demande pas. */
     const qrRows = ref<number[][]>([]);
     /** Changement propose, en attente de confirmation. */
@@ -391,21 +404,28 @@ export default defineComponent({
       // et google.com doivent converger.
       const domain = canonicalSite(site.value);
 
-      // Une entree du carnet dit sous quelle clef derivee et en quelle version.
-      // L'ignorer rendrait un mot de passe v1 pour une entree v2 : faux, sans
-      // que rien ne le signale.
+      // v2 par defaut, partout. La v1 ne sort que sur demande explicite, pour
+      // un site dont le mot de passe n'a pas encore ete change.
+      const version = enV1.value ? 1 : 2;
       const entry = vaultEntries.value[0];
       const mdp = entry
-        ? await passwordForEntry(entry)
-        : await generatePassword(
-            domain,
-            clef.value,
-            longueur.value,
-            minuscules.value,
-            majuscules.value,
-            symboles.value,
-            chiffres.value,
-          );
+        ? await passwordForEntry(entry, entry.counter, version)
+        : version === 1
+          ? await generatePassword(
+              domain,
+              clef.value,
+              longueur.value,
+              minuscules.value,
+              majuscules.value,
+              symboles.value,
+              chiffres.value,
+            )
+          : await generatePasswordV2(domain, clef.value, longueur.value, {
+              useLower: minuscules.value,
+              useUpper: majuscules.value,
+              useSymbols: symboles.value,
+              useNumbers: chiffres.value,
+            });
       motDePasse.value = mdp ?? "";
     };
 
@@ -590,6 +610,7 @@ export default defineComponent({
     }
 
     watch(site, refreshVault, { immediate: true });
+    watch(enV1, () => genererMotDePasse());
 
     /**
      * Enregistre le site et ses reglages.
@@ -693,6 +714,7 @@ export default defineComponent({
       pending,
       proposeChange,
       applyChange,
+      enV1,
       transferMessage,
       qrRows,
       showTransfer,
@@ -1000,6 +1022,18 @@ input[type="text"]:read-only {
 
 .field-row input::placeholder {
   color: var(--text-muted);
+}
+
+.algo-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.algo-note {
+  flex: 1 1 220px;
 }
 
 .entry-list {
