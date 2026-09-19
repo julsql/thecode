@@ -120,4 +120,9 @@
     <string name="transfer_merged_conflicts">Vault merged: %1$d entries, %2$d to check.</string>
     <string name="transfer_unreadable">Cannot read: does this code come from another master key?</string>
     <string name="transfer_no_camera">Camera unavailable. Without it, a code can only be shown, not read.</string>
+    <!-- Bascule vers l'ancien algorithme. -->
+    <string name="algo_use_v1">Generate with the old algorithm (v1)</string>
+    <string name="algo_back_to_v2">Back to the current algorithm (v2)</string>
+    <string name="algo_now_v1">Old algorithm. For a site whose password has not been changed yet.</string>
+    <string name="algo_now_v2">Current algorithm.</string>
 </resources>
