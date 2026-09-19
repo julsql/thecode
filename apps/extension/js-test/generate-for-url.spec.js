@@ -218,3 +218,73 @@ describe("transfert du carnet par le service worker", () => {
     expect(merged.entries.map((e) => e.siteKey).sort()).toStrictEqual(["github.com", "google.com"]);
   });
 });
+
+describe("enregistrement propose depuis la page", () => {
+  it("dit si le site est deja connu", async () => {
+    const { worker, storage } = loadWorker();
+    const { emptyVault, newEntry, saveVault } = require("../vault");
+
+    // Inconnu : il y a quelque chose a proposer.
+    expect((await worker.generatePasswordForUrl("https://inconnu.fr/x")).known).toBe(false);
+
+    const vault = emptyVault();
+    vault.entries.push(newEntry("google.com", { domains: ["google.com"] }));
+    await saveVault(storage, vault);
+
+    // Connu : le reproposer serait du bruit.
+    expect((await worker.generatePasswordForUrl("https://google.com/x")).known).toBe(true);
+  });
+
+  it("prend le domaine de l'onglet, pas celui que la page annonce", async () => {
+    // C'est la garde qui rend cette action ouverte aux scripts de page : une
+    // page hostile ne peut faire enregistrer qu'elle-meme.
+    const { worker, storage } = loadWorker();
+    const { loadVault } = require("../vault");
+
+    const resp = await worker.saveCurrentSite(
+      { tab: { url: "https://banque.fr/login" } },
+      "moi@example.fr",
+    );
+
+    expect(resp.ok).toBe(true);
+    const entry = (await loadVault(storage)).entries[0];
+    expect(entry.siteKey).toBe("banque.fr");
+    expect(entry.login).toBe("moi@example.fr");
+  });
+
+  it("refuse sans onglet", async () => {
+    const { worker } = loadWorker();
+    // Un message sans onglet ne vient pas d'une page : rien a enregistrer.
+    expect(await worker.saveCurrentSite({}, "")).toMatchObject({ ok: false });
+  });
+
+  it("met a jour sans jamais reecrire le siteKey", async () => {
+    const { worker, storage } = loadWorker();
+    const { emptyVault, newEntry, saveVault, loadVault } = require("../vault");
+
+    const vault = emptyVault();
+    vault.entries.push(
+      newEntry("google.com", { domains: ["google.com", "google.fr"], length: 32 }),
+    );
+    await saveVault(storage, vault);
+
+    const resp = await worker.saveCurrentSite({ tab: { url: "https://google.fr/login" } }, "");
+
+    expect(resp.updated).toBe(true);
+    const entries = (await loadVault(storage)).entries;
+    // Une seule entree, et sa clef de derivation intacte : la reecrire
+    // changerait un mot de passe deja en service.
+    expect(entries).toHaveLength(1);
+    expect(entries[0].siteKey).toBe("google.com");
+  });
+
+  it("borne un login venu de la page", async () => {
+    const { worker, storage } = loadWorker();
+    const { loadVault } = require("../vault");
+
+    await worker.saveCurrentSite({ tab: { url: "https://x.fr/login" } }, "a".repeat(500));
+
+    // Un champ de page peut contenir n'importe quoi.
+    expect((await loadVault(storage)).entries[0].login).toHaveLength(120);
+  });
+});
