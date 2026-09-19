@@ -88,6 +88,13 @@ public class MainActivity extends AppCompatActivity {
      * La v2 est la règle ; la v1 ne sert qu'à retrouver un mot de passe posé
      * sur un site avant qu'elle n'existe.
      */
+    /**
+     * Mode de génération, remis à v2 à chaque lancement.
+     *
+     * Volontairement non persisté : la v1 est une exception, et une exception
+     * qui survit à la fermeture se ferait oublier — on générerait en v1 sans
+     * s'en souvenir.
+     */
     private boolean useV1 = false;
     private MenuItem algoItem;
 
@@ -124,7 +131,6 @@ public class MainActivity extends AppCompatActivity {
         setSupportActionBar(findViewById(R.id.topAppBar));
 
         preferences = new Preferences(this);
-        useV1 = preferences.getUseV1();
         sessionLock = new SessionLock(preferences);
 
         bindViews();
@@ -754,7 +760,6 @@ public class MainActivity extends AppCompatActivity {
     /** Bascule entre les deux algorithmes et le fait savoir. */
     private void toggleAlgo() {
         useV1 = !useV1;
-        preferences.setUseV1(useV1);
         applyAlgoLabel();
         Snackbar.make(findViewById(android.R.id.content),
                 useV1 ? R.string.algo_now_v1 : R.string.algo_now_v2,

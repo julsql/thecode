@@ -30,7 +30,6 @@ public final class Preferences {
     public static final String KEY_CHI = "chiState";
     public static final String KEY_DARK_MODE = "darkMode";
     public static final String KEY_LAST_UNLOCK_AT = "lastUnlockAt";
-    public static final String KEY_USE_V1 = "useV1";
     public static final String KEY_V2_NOTICE_SEEN = "v2NoticeSeen";
     public static final String KEY_SYNC_ENDPOINT = "syncEndpoint";
     public static final String KEY_SYNC_ACCESS = "syncAccessToken";
@@ -123,15 +122,6 @@ public final class Preferences {
     /** Vrai une fois l'annonce du passage a la v2 lue et fermee. */
     public boolean getV2NoticeSeen() { return prefs.getBoolean(KEY_V2_NOTICE_SEEN, false); }
     public void setV2NoticeSeen() { prefs.edit().putBoolean(KEY_V2_NOTICE_SEEN, true).apply(); }
-
-    /**
-     * Mode de generation : v2 par defaut, v1 pour un site pas encore migre.
-     *
-     * Retenu d'une session a l'autre, comme le theme : c'est un mode, pas une
-     * action ponctuelle.
-     */
-    public boolean getUseV1() { return prefs.getBoolean(KEY_USE_V1, false); }
-    public void setUseV1(boolean v) { prefs.edit().putBoolean(KEY_USE_V1, v).apply(); }
 
     public String getDarkMode() { return prefs.getString(KEY_DARK_MODE, "SYSTEM"); }
     public void setDarkMode(String v) { prefs.edit().putString(KEY_DARK_MODE, v).apply(); }
