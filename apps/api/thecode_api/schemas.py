@@ -133,6 +133,9 @@ class AccountResponse(BaseModel):
     #: Faux quand le paiement n'est pas configuré : le site doit alors dire
     #: que l'abonnement est indisponible plutôt que d'ouvrir un lien mort.
     billing_available: bool = False
+    #: Faux tant que les offres ne s'appliquent pas : le compte n'a alors ni
+    #: plafond à afficher, ni offre à prendre.
+    plans_enforced: bool = False
 
 
 class VerifyRequest(BaseModel):
@@ -236,6 +239,9 @@ class DeviceResponse(BaseModel):
 class PlansResponse(BaseModel):
     """Tarifs publics, lus par la page des offres sans être connecté."""
 
+    #: Faux : tout est ouvert, rien n'est vendu, et le site ne doit annoncer
+    #: ni prix ni conditions de vente.
+    plans_enforced: bool
     price_monthly_cents: int
     currency: str
     billing_available: bool

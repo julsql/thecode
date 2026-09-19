@@ -33,6 +33,12 @@ logger = logging.getLogger("thecode.billing")
 
 
 def _stripe(settings: Settings):
+    if not settings.plans_enabled:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Toutes les fonctions sont ouvertes gratuitement : il n'y a rien à "
+            "souscrire pour le moment.",
+        )
     if not settings.billing_enabled:
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -60,6 +66,7 @@ def plans() -> PlansResponse:
     """Les tarifs, lisibles sans compte : c'est une page publique."""
     settings = get_settings()
     return PlansResponse(
+        plans_enforced=settings.plans_enabled,
         price_monthly_cents=settings.price_monthly_cents,
         currency=settings.price_currency,
         billing_available=settings.billing_enabled,

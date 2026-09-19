@@ -45,6 +45,18 @@ class Settings(BaseSettings):
     free_accounts: int = 5
     invite_code: str = ""
 
+    #: Les offres s'appliquent-elles ?
+    #:
+    #: Faux par défaut, et c'est l'état voulu tant qu'aucune entreprise ne
+    #: vend quoi que ce soit : tout le monde a tout, l'abonnement est dormant,
+    #: et personne ne se retrouve bloqué devant un bouton de paiement qui ne
+    #: mène nulle part.
+    #:
+    #: Vrai : les plafonds ci-dessous s'appliquent et l'offre complète se
+    #: prend par abonnement ou par code. Une seule variable à changer le jour
+    #: où la question se pose.
+    plans_enabled: bool = False
+
     #: Plafonds de l'offre gratuite. La synchronisation reste utilisable pour
     #: en juger sur pièces : deux appareils, c'est le minimum pour que « ça se
     #: synchronise » veuille dire quelque chose. Au-delà, c'est l'abonnement.
@@ -119,7 +131,13 @@ class Settings(BaseSettings):
 
     @property
     def billing_enabled(self) -> bool:
-        return bool(self.stripe_secret_key and self.stripe_price_id)
+        """Peut-on souscrire ?
+
+        Il faut Stripe *et* des offres qui s'appliquent : facturer alors que
+        tout est ouvert reviendrait à faire payer ce que les autres ont
+        gratuitement.
+        """
+        return self.plans_enabled and bool(self.stripe_secret_key and self.stripe_price_id)
 
     @property
     def is_production(self) -> bool:

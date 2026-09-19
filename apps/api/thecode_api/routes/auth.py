@@ -68,6 +68,7 @@ def account_response(db: DbSession, account: Account) -> AccountResponse:
         current_period_end=account.current_period_end,
         has_pending_coupon=bool(account.pending_coupon),
         billing_available=settings.billing_enabled,
+        plans_enforced=settings.plans_enabled,
         has_password=bool(account.password_hash),
         google_linked=bool(account.google_sub),
         pending_email=pending_email(db, account),

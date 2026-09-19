@@ -88,6 +88,10 @@ def settings(postgres_url):
         # sans code doit le faire parce que le service est ouvert, pas parce
         # que le code attendu se trouve être vide.
         registration_mode="open",
+        # Les offres s'appliquent : la plupart des tests décrivent ce qui se
+        # passe quand elles comptent. Le défaut du service est l'inverse —
+        # tout ouvert — et les tests qui visent ce cas le posent eux-mêmes.
+        plans_enabled=True,
         # Les plafonds de l'offre gratuite ne doivent pas gêner les tests qui
         # parlent d'autre chose ; ceux qui les visent les abaissent eux-mêmes.
         free_max_entries=50,

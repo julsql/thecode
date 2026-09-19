@@ -31,9 +31,23 @@ def test_a_complete_stripe_configuration_is_accepted(monkeypatch):
     monkeypatch.setenv("THECODE_STRIPE_SECRET_KEY", "sk_test")
     monkeypatch.setenv("THECODE_STRIPE_PRICE_ID", "price_test")
     monkeypatch.setenv("THECODE_STRIPE_WEBHOOK_SECRET", "whsec_test")
+    monkeypatch.setenv("THECODE_PLANS_ENABLED", "true")
     get_settings.cache_clear()
 
     assert get_settings().billing_enabled is True
+
+
+def test_stripe_alone_does_not_open_the_billing(monkeypatch):
+    """Facturer alors que tout est ouvert reviendrait à faire payer ce que les
+    autres ont gratuitement."""
+    monkeypatch.setenv("THECODE_STRIPE_SECRET_KEY", "sk_test")
+    monkeypatch.setenv("THECODE_STRIPE_PRICE_ID", "price_test")
+    monkeypatch.setenv("THECODE_STRIPE_WEBHOOK_SECRET", "whsec_test")
+    get_settings.cache_clear()
+
+    settings = get_settings()
+    assert settings.plans_enabled is False
+    assert settings.billing_enabled is False
 
 
 def test_a_half_configured_stripe_is_refused(monkeypatch):

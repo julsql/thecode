@@ -42,13 +42,27 @@ def is_pro(account: Account) -> bool:
     return account.plan == PRO and account.subscription_status in ACTIVE_STATUSES
 
 
+def _full(settings: Settings) -> Limits:
+    return Limits(
+        plan=PRO,
+        max_entries=settings.max_entries_per_account,
+        max_devices=settings.pro_max_devices,
+    )
+
+
 def limits_for(account: Account, settings: Settings) -> Limits:
+    """Ce à quoi ce compte a droit.
+
+    Tant que les offres ne s'appliquent pas, tout le monde a tout : rien n'est
+    vendu, donc rien n'est retenu. Les clients lisent l'offre rendue ici pour
+    décider ce qu'ils proposent — ils obtiennent donc `pro`, et le compteur
+    fonctionne pour tout le monde, sans qu'aucun d'eux ait à connaître la
+    raison.
+    """
+    if not settings.plans_enabled:
+        return _full(settings)
     if is_pro(account):
-        return Limits(
-            plan=PRO,
-            max_entries=settings.max_entries_per_account,
-            max_devices=settings.pro_max_devices,
-        )
+        return _full(settings)
     return Limits(
         plan=FREE,
         max_entries=min(settings.free_max_entries, settings.max_entries_per_account),
