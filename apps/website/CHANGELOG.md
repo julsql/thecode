@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.3.0](https://github.com/julsql/thecode/compare/website-v2.2.0...website-v2.3.0) (2026-09-19)
+
+
+### Features
+
+* show the v2 notice as a dialog, dismissed only by the checkbox ([33af5c9](https://github.com/julsql/thecode/commit/33af5c900511f324facb973c2aa30f97df8baee8))
+* **website:** announce the move to v2 on the generator page ([0b46d91](https://github.com/julsql/thecode/commit/0b46d91104ec2195a89c697df2cd16a3090bcd87))
+* **website:** generate in v2 by default, with a way back to v1 ([c1ad058](https://github.com/julsql/thecode/commit/c1ad05879196bc91241ccf299a6b0133af937953))
+* **website:** make the algorithm a mode at the top of the card ([dba8819](https://github.com/julsql/thecode/commit/dba88194059a7d6241a38e0014140174e024b272))
+* **website:** show which algorithm is in force, and record it ([a9db00e](https://github.com/julsql/thecode/commit/a9db00e22e22ddb3052e6e68ee8660ef99cfadd4))
+
+
+### Bug Fixes
+
+* reset the algorithm mode to v2 on every launch ([49e1648](https://github.com/julsql/thecode/commit/49e1648e2af068f9dfcbd8ba7e67b2d3e82708b3))
+
 ## [2.2.0](https://github.com/julsql/thecode/compare/website-v2.1.0...website-v2.2.0) (2026-09-19)
 
 
