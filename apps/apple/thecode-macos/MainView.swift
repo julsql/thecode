@@ -73,8 +73,9 @@ struct MainView: View {
     ///
     /// La v2 est la règle ; la v1 ne sert qu'à retrouver un mot de passe posé
     /// sur un site avant qu'elle n'existe.
-    @AppStorage("useV1", store: UserDefaults(suiteName: appGroupID))
-    var useV1: Bool = false
+    /// Remis à v2 à chaque lancement : la v1 est une exception, et une
+    /// exception qui survit à la fermeture se ferait oublier.
+    @State private var useV1 = false
     /// Annonce du passage à la v2, en feuille modale à l'ouverture.
     ///
     /// Fermer la fait revenir la prochaine fois : seule la case à cocher la

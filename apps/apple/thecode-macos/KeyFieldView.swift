@@ -32,7 +32,11 @@ struct KeyFieldView: View {
             field
                 .contentShape(Rectangle())
                 .onTapGesture {
-                    if !unlocked {
+                    if unlocked {
+                        // Le champ masqué n'est pas éditable : il faut lui
+                        // donner le focus pour faire apparaître la saisie.
+                        focused = true
+                    } else {
                         authenticate(thenReveal: false)
                     }
                 }
@@ -56,24 +60,33 @@ struct KeyFieldView: View {
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .autocorrectionDisabled()
                 .focused($focused)
-        } else if unlocked {
+        } else if unlocked && focused {
+            // Pendant la frappe seulement : il faut bien que la saisie aille
+            // quelque part. Hors frappe, on repasse au rendu neutre.
             SecureField(placeholder, text: $encodingKey)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .focused($focused)
         } else {
-            // TextField (et non SecureField) : on n'affiche que des
-            // points synthétiques jamais corrélés à la vraie clé, donc le
-            // masquage du SecureField n'apporte rien. Surtout, en
-            // pratique sur macOS le SecureField désactivé avec un
-            // contenu constant retombe sur le placeholder (« Aucune
-            // clef… ») au lieu d'afficher les points.
-            TextField(placeholder,
-                      text: .constant(encodingKey.isEmpty
-                                      ? ""
-                                      : String(repeating: "•", count: 10)))
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-                .disabled(true)
+            maskedField
         }
+    }
+
+    /// Rendu masqué, identique qu'on soit verrouillé ou non.
+    ///
+    /// Toujours le même nombre de points, jamais corrélé à la vraie clef : le
+    /// `SecureField` en affiche autant que de caractères saisis, ce qui
+    /// révélait la longueur de la clef dès qu'on la masquait après
+    /// déverrouillage.
+    ///
+    /// Le `SecureField` ne sert donc que pendant la frappe, quand le champ a
+    /// le focus : il faut bien que la saisie aille quelque part.
+    private var maskedField: some View {
+        TextField(
+            L10n.t("Aucune clef renseignée", "No key set"),
+            text: .constant(encodingKey.isEmpty ? "" : String(repeating: "•", count: 10))
+        )
+        .textFieldStyle(RoundedBorderTextFieldStyle())
+        .disabled(true)
     }
 
     private func handleEye() {
