@@ -1,5 +1,30 @@
 # Changelog
 
+## [3.3.0](https://github.com/julsql/thecode/compare/apple-v3.2.0...apple-v3.3.0) (2026-09-19)
+
+
+### Features
+
+* **apple:** announce the move to v2, once ([4f96f1f](https://github.com/julsql/thecode/commit/4f96f1fd3e824d3a55e3424e112f8a73caa22805))
+* **apple:** generate in v2 by default, with a way back to v1 ([f332a65](https://github.com/julsql/thecode/commit/f332a65809cdc3b5b79755ca8388817dcab524e9))
+* **apple:** make the algorithm a mode shown in the toolbar ([11e7f56](https://github.com/julsql/thecode/commit/11e7f56e712e3ad7a086c0f90cc4ebae4874f8e4))
+* **apple:** offer to save the site when filling an unknown one ([21a9f9a](https://github.com/julsql/thecode/commit/21a9f9a87132b8a619f99e30a69c47f6618483dc))
+* **clients:** point to the site for creating and managing an account ([9bce2bd](https://github.com/julsql/thecode/commit/9bce2bd25b7ad9334786a75185f5f80582da8141))
+* derive v2 in autofill regardless of the entry's version ([7ec9665](https://github.com/julsql/thecode/commit/7ec9665c9f4559f335171e7431810d64c89878b0))
+* show the v2 notice as a dialog, dismissed only by the checkbox ([33af5c9](https://github.com/julsql/thecode/commit/33af5c900511f324facb973c2aa30f97df8baee8))
+* the counter becomes part of the complete plan ([e21b66c](https://github.com/julsql/thecode/commit/e21b66ca1131a54558d18047c1d416ebc99209b2))
+
+
+### Bug Fixes
+
+* **apple:** mask the key the same way whether locked or not ([6e598c8](https://github.com/julsql/thecode/commit/6e598c82d5e6582bedcdd376bbeb034d2565a85a))
+* **apple:** match Android's session handling, and show the fingerprint ([52a6838](https://github.com/julsql/thecode/commit/52a68380c1030a9e86608bfa41ce33c270a6e3f6))
+* **apple:** require authentication to open the vault ([b5929c3](https://github.com/julsql/thecode/commit/b5929c38dbed0fac2f87b0db57d42fde7f11d1cc))
+* **apple:** show the v2 notice on macOS, and lay it out properly ([d672711](https://github.com/julsql/thecode/commit/d67271108856eddb6599f337ceaa9a90560c7512))
+* compute the fingerprint after a pause, not on every keystroke ([594f744](https://github.com/julsql/thecode/commit/594f744314512e9cac772a9110dfbc6827566f97))
+* **tests:** a tamper test that sometimes tampered with nothing ([2927ee5](https://github.com/julsql/thecode/commit/2927ee5a80744b488c6d34cf66f88e1f6406c6af))
+* **tests:** tamper with four characters, not one ([94e5643](https://github.com/julsql/thecode/commit/94e56433579e9b4af74bfc2a5704437f69a18cc6))
+
 ## [3.2.0](https://github.com/julsql/thecode/compare/apple-v3.1.0...apple-v3.2.0) (2026-09-19)
 
 

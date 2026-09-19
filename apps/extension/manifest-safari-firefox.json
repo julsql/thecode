@@ -3,7 +3,7 @@
   "default_locale": "fr",
   "name": "__MSG_extension_name__",
   "description": "__MSG_extension_description__",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "browser_specific_settings": {
     "gecko": {
       "id": "thecode@monnom.com",
