@@ -13,7 +13,7 @@ import pytest
 from thecode_api import models
 from thecode_api.models import Account, Code, EmailVerification
 
-PASSWORD = "MotDePasseAssezLong1"
+PASSWORD = "mot-de-passe-de-test"
 
 
 def register(client, email="nouveau@exemple.fr", code="", lang="fr"):

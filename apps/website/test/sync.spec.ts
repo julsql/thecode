@@ -258,7 +258,7 @@ describe("inscription", () => {
     const session = await register(
       "https://example.test/api",
       "moi@example.fr",
-      "MotDePasseAssezLong1",
+      "mot-de-passe-de-test",
       "parrainage",
     );
 

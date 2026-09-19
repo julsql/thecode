@@ -18,8 +18,8 @@ import thecode_api.routes.auth as auth_routes
 from thecode_api.google import GoogleError, GoogleIdentity
 from thecode_api.models import Account, EmailVerification, Session
 
-PASSWORD = "MotDePasseAssezLong1"
-NEW_PASSWORD = "UnAutreMotDePasse42"
+PASSWORD = "mot-de-passe-de-test"
+NEW_PASSWORD = "nouveau-mot-de-passe-de-test"
 
 
 def register(client, email="julie@exemple.fr", password=PASSWORD):
@@ -325,7 +325,7 @@ class TestForgotPassword:
 
         client.post("/v1/auth/password/reset", json={"token": token, "password": NEW_PASSWORD})
         again = client.post(
-            "/v1/auth/password/reset", json={"token": token, "password": "EncoreUnAutre12345"}
+            "/v1/auth/password/reset", json={"token": token, "password": "encore-un-autre-mot-de-passe"}
         )
 
         assert again.status_code == 400

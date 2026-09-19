@@ -184,8 +184,8 @@ describe("page du compte", () => {
 
       await button(wrapper, "Créer un compte")!.trigger("click");
       await wrapper.find("#acc_email").setValue("julie@exemple.fr");
-      await wrapper.find("#acc_password").setValue("MotDePasseAssezLong1");
-      await wrapper.find("#acc_password_confirm").setValue("MotDePasseAssezLong2");
+      await wrapper.find("#acc_password").setValue("mot-de-passe-de-test");
+      await wrapper.find("#acc_password_confirm").setValue("mot-de-passe-different");
       await button(wrapper, "Créer mon compte")!.trigger("click");
       await flush();
 
@@ -214,8 +214,8 @@ describe("page du compte", () => {
 
       await button(wrapper, "Créer un compte")!.trigger("click");
       await wrapper.find("#acc_email").setValue("julie@exemple.fr");
-      await wrapper.find("#acc_password").setValue("MotDePasseAssezLong1");
-      await wrapper.find("#acc_password_confirm").setValue("MotDePasseAssezLong1");
+      await wrapper.find("#acc_password").setValue("mot-de-passe-de-test");
+      await wrapper.find("#acc_password_confirm").setValue("mot-de-passe-de-test");
       await wrapper.find("#acc_code").setValue("PARRAIN");
       // L'offre gratuite, pour rester sur la page plutôt que partir chez Stripe.
       await button(wrapper, "Gratuite")!.trigger("click");
@@ -238,8 +238,8 @@ describe("page du compte", () => {
 
       await button(wrapper, "Créer un compte")!.trigger("click");
       await wrapper.find("#acc_email").setValue("julie@exemple.fr");
-      await wrapper.find("#acc_password").setValue("MotDePasseAssezLong1");
-      await wrapper.find("#acc_password_confirm").setValue("MotDePasseAssezLong1");
+      await wrapper.find("#acc_password").setValue("mot-de-passe-de-test");
+      await wrapper.find("#acc_password_confirm").setValue("mot-de-passe-de-test");
       await button(wrapper, "Créer mon compte")!.trigger("click");
       await flush();
 
@@ -388,9 +388,9 @@ describe("page du compte", () => {
       const service = fakeService();
       const wrapper = await mountAccount();
 
-      await wrapper.find("#acc_current_password").setValue("MotDePasseAssezLong1");
-      await wrapper.find("#acc_new_password").setValue("UnAutreMotDePasse42");
-      await wrapper.find("#acc_new_password_confirm").setValue("UnAutreMotDePasse43");
+      await wrapper.find("#acc_current_password").setValue("mot-de-passe-de-test");
+      await wrapper.find("#acc_new_password").setValue("nouveau-mot-de-passe-de-test");
+      await wrapper.find("#acc_new_password_confirm").setValue("nouveau-mot-de-passe-autre");
       await button(wrapper, "Changer mon mot de passe")!.trigger("click");
       await flush();
 
@@ -402,15 +402,15 @@ describe("page du compte", () => {
       const service = fakeService();
       const wrapper = await mountAccount();
 
-      await wrapper.find("#acc_current_password").setValue("MotDePasseAssezLong1");
-      await wrapper.find("#acc_new_password").setValue("UnAutreMotDePasse42");
-      await wrapper.find("#acc_new_password_confirm").setValue("UnAutreMotDePasse42");
+      await wrapper.find("#acc_current_password").setValue("mot-de-passe-de-test");
+      await wrapper.find("#acc_new_password").setValue("nouveau-mot-de-passe-de-test");
+      await wrapper.find("#acc_new_password_confirm").setValue("nouveau-mot-de-passe-de-test");
       await button(wrapper, "Changer mon mot de passe")!.trigger("click");
       await flush();
 
       expect(service.calls.find((c) => c.url.endsWith("/v1/account/password"))?.body).toEqual({
-        current_password: "MotDePasseAssezLong1",
-        new_password: "UnAutreMotDePasse42",
+        current_password: "mot-de-passe-de-test",
+        new_password: "nouveau-mot-de-passe-de-test",
       });
       expect(wrapper.text()).toContain("autres appareils");
     });
@@ -430,7 +430,7 @@ describe("page du compte", () => {
       const wrapper = await mountAccount();
 
       await wrapper.find("#acc_new_email").setValue("nouvelle@exemple.fr");
-      await wrapper.find("#acc_email_password").setValue("MotDePasseAssezLong1");
+      await wrapper.find("#acc_email_password").setValue("mot-de-passe-de-test");
       await button(wrapper, "Changer mon adresse")!.trigger("click");
       await flush();
 
@@ -462,7 +462,7 @@ describe("page du compte", () => {
       const wrapper = await mountAccount();
 
       await wrapper.find("#acc_delete_email").setValue("julie@exemple.fr");
-      await wrapper.find("#acc_delete_password").setValue("MotDePasseAssezLong1");
+      await wrapper.find("#acc_delete_password").setValue("mot-de-passe-de-test");
       await button(wrapper, "Supprimer mon compte")!.trigger("click");
       await flush();
 
@@ -470,7 +470,7 @@ describe("page du compte", () => {
         (c) => c.method === "DELETE" && c.url.endsWith("/v1/account"),
       );
       expect(sent?.body).toEqual({
-        password: "MotDePasseAssezLong1",
+        password: "mot-de-passe-de-test",
         confirm_email: "julie@exemple.fr",
       });
       expect(localStorage.getItem("thecode.session")).toBeNull();

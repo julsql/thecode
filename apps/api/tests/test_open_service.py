@@ -18,7 +18,7 @@ import pytest
 
 from thecode_api.models import Account, Code
 
-PASSWORD = "MotDePasseAssezLong1"
+PASSWORD = "mot-de-passe-de-test"
 
 
 @pytest.fixture

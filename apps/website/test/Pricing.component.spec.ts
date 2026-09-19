@@ -169,9 +169,9 @@ describe("réinitialisation du mot de passe", () => {
     });
 
     const wrapper = await mountAt(AccountReset, "/fr/account/reset?token=abc123");
-    await fill(wrapper, "UnNouveauMotDePasse1", "UnNouveauMotDePasse1");
+    await fill(wrapper, "nouveau-mot-de-passe-de-test", "nouveau-mot-de-passe-de-test");
 
-    expect(seen[0].body).toEqual({ token: "abc123", password: "UnNouveauMotDePasse1" });
+    expect(seen[0].body).toEqual({ token: "abc123", password: "nouveau-mot-de-passe-de-test" });
     // Sans session ouverte ici, on repartirait vers le formulaire de connexion
     // juste après avoir prouvé son identité.
     expect(localStorage.getItem("thecode.session")).toContain("jeton");
@@ -183,7 +183,7 @@ describe("réinitialisation du mot de passe", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const wrapper = await mountAt(AccountReset, "/fr/account/reset?token=abc123");
-    await fill(wrapper, "UnNouveauMotDePasse1", "UnNouveauMotDePasse2");
+    await fill(wrapper, "nouveau-mot-de-passe-de-test", "nouveau-mot-de-passe-autre");
 
     expect(fetchMock).not.toHaveBeenCalled();
     expect(wrapper.text()).toContain("ne correspondent pas");
@@ -193,7 +193,7 @@ describe("réinitialisation du mot de passe", () => {
     vi.stubGlobal("fetch", () => json(400, { detail: "Lien invalide ou expiré." }));
 
     const wrapper = await mountAt(AccountReset, "/fr/account/reset?token=perime");
-    await fill(wrapper, "UnNouveauMotDePasse1", "UnNouveauMotDePasse1");
+    await fill(wrapper, "nouveau-mot-de-passe-de-test", "nouveau-mot-de-passe-de-test");
 
     expect(wrapper.text()).toContain("invalide ou expiré");
   });

@@ -30,7 +30,7 @@ def quota(settings):
 def register(client, email, code=""):
     return client.post(
         "/v1/auth/register",
-        json={"email": email, "password": "MotDePasseAssezLong1", "invite_code": code},
+        json={"email": email, "password": "mot-de-passe-de-test", "invite_code": code},
     )
 
 

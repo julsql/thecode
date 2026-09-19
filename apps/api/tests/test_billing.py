@@ -15,7 +15,7 @@ import stripe
 import thecode_api.routes.billing as billing_routes
 from thecode_api.models import Account
 
-PASSWORD = "MotDePasseAssezLong1"
+PASSWORD = "mot-de-passe-de-test"
 
 
 @pytest.fixture
