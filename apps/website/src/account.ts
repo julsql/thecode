@@ -234,3 +234,35 @@ export async function resetPassword(
     refreshToken: body.refresh_token,
   };
 }
+
+/**
+ * Télécharge tout ce que le service garde du compte.
+ *
+ * Le fichier est fabriqué dans le navigateur à partir de la réponse : rien
+ * n'est déposé quelque part au passage.
+ */
+export async function exportAccount(session: Session): Promise<unknown> {
+  return authorized(session, (token) =>
+    request(`${session.endpoint}/v1/account/export`, { token }),
+  );
+}
+
+/**
+ * Efface le compte, son carnet et ses sessions.
+ *
+ * L'adresse est recopiée et le mot de passe demandé : l'un dit que c'est bien
+ * vous, l'autre que vous saviez ce que vous faisiez.
+ */
+export async function deleteAccount(
+  session: Session,
+  password: string,
+  confirmEmail: string,
+): Promise<void> {
+  await authorized(session, (token) =>
+    request(`${session.endpoint}/v1/account`, {
+      token,
+      method: "DELETE",
+      payload: { password, confirm_email: confirmEmail },
+    }),
+  );
+}

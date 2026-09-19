@@ -212,6 +212,8 @@
           <div class="footer-col">
             <h4>{{ t("footer_links_legal") }}</h4>
             <router-link :to="localePath('privacy')">{{ t("nav_privacy") }}</router-link>
+            <router-link :to="localePath('legal')">{{ t("nav_legal") }}</router-link>
+            <router-link :to="localePath('terms')">{{ t("nav_terms") }}</router-link>
             <a
               href="https://github.com/TheCodeDevLab/thecode-website"
               target="_blank"

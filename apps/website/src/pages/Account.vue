@@ -286,6 +286,46 @@
           </section>
 
           <section class="panel">
+            <h3 class="panel-title">{{ t("acc_danger_title") }}</h3>
+            <p class="panel-lead">{{ t("acc_export_lead") }}</p>
+            <div class="panel-actions">
+              <button type="button" class="ghost-btn" @click="downloadData">
+                {{ t("acc_export") }}
+              </button>
+            </div>
+
+            <h3 class="panel-title danger-title">{{ t("acc_delete_title") }}</h3>
+            <p class="panel-lead">{{ t("acc_delete_lead") }}</p>
+            <div class="field-row">
+              <input
+                id="acc_delete_email"
+                v-model="deleteEmail"
+                type="email"
+                :placeholder="t('acc_delete_confirm')"
+                autocomplete="off"
+              />
+              <input
+                v-if="info && info.hasPassword"
+                id="acc_delete_password"
+                v-model="deletePassword"
+                type="password"
+                :placeholder="t('acc_password')"
+                autocomplete="current-password"
+              />
+            </div>
+            <div class="panel-actions">
+              <button
+                type="button"
+                class="ghost-btn danger"
+                :disabled="deleteEmail !== info?.email"
+                @click="removeAccount"
+              >
+                {{ t("acc_delete_btn") }}
+              </button>
+            </div>
+          </section>
+
+          <section class="panel">
             <h3 class="panel-title">{{ t("acc_devices_title") }}</h3>
             <p v-if="devices.length === 0" class="hint">{{ t("acc_device_none") }}</p>
             <ul v-else class="device-list">
@@ -316,6 +356,8 @@ import { useI18n } from "@/i18n";
 import {
   changeEmail,
   changePassword,
+  deleteAccount,
+  exportAccount,
   fetchAccount,
   fetchDevices,
   fetchPlans,
@@ -366,6 +408,8 @@ export default defineComponent({
     const newPasswordConfirm = ref("");
     const newEmail = ref("");
     const emailPassword = ref("");
+    const deleteEmail = ref("");
+    const deletePassword = ref("");
     const googleButton = ref<HTMLElement | null>(null);
     const googleReady = ref(false);
     const priceCents = ref(200);
@@ -570,6 +614,49 @@ export default defineComponent({
       }
     }
 
+    async function downloadData() {
+      const session = loadSession();
+      if (!session) return;
+      try {
+        const data = await exportAccount(session);
+        // Fabriqué et libéré dans le navigateur : le fichier ne passe par
+        // aucun serveur, et l'URL temporaire ne survit pas au clic.
+        const url = URL.createObjectURL(
+          new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }),
+        );
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "thecode-compte.json";
+        link.click();
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        message.value = (e as Error).message;
+      }
+    }
+
+    async function removeAccount() {
+      const session = loadSession();
+      if (!session || !info.value) return;
+      if (deleteEmail.value !== info.value.email) {
+        message.value = t("acc_fill");
+        return;
+      }
+      try {
+        await deleteAccount(session, deletePassword.value, deleteEmail.value);
+        // Le carnet local n'est pas touché : les mots de passe se calculent
+        // depuis la clef maîtresse, la synchronisation n'était qu'un service.
+        clearSession();
+        connected.value = false;
+        info.value = null;
+        devices.value = [];
+        deleteEmail.value = "";
+        deletePassword.value = "";
+        message.value = t("acc_delete_done");
+      } catch (e) {
+        message.value = (e as Error).message;
+      }
+    }
+
     function signOut() {
       clearSession();
       connected.value = false;
@@ -656,6 +743,8 @@ export default defineComponent({
       newPasswordConfirm,
       newEmail,
       emailPassword,
+      deleteEmail,
+      deletePassword,
       googleButton,
       googleReady,
       isPro,
@@ -668,6 +757,8 @@ export default defineComponent({
       forgot,
       submitPassword,
       submitEmail,
+      downloadData,
+      removeAccount,
       signOut,
       upgrade,
       manage,
@@ -945,6 +1036,26 @@ export default defineComponent({
 .google-button {
   display: flex;
   justify-content: center;
+}
+
+/* Une action qui ne se rattrape pas : elle ne doit pas ressembler aux autres. */
+.ghost-btn.danger {
+  border-color: rgba(230, 120, 120, 0.5);
+  color: #f0a0a0;
+}
+
+.ghost-btn.danger:hover:not(:disabled) {
+  background: rgba(230, 120, 120, 0.15);
+  border-color: #e67878;
+}
+
+.ghost-btn.danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.danger-title {
+  margin-top: 26px;
 }
 
 .account-message {

@@ -116,6 +116,10 @@ function fakeService(overrides: Record<string, unknown> = {}) {
       state.me = { ...state.me, device_count: 0 };
       return json(204, null);
     }
+    if (url.endsWith("/v1/account/export")) {
+      return json(200, { account: { email: "julie@exemple.fr" }, vault: [] });
+    }
+    if (url.endsWith("/v1/account") && method === "DELETE") return json(204, null);
     if (url.endsWith("/v1/account/code")) {
       state.me = { ...state.me, plan: "pro", plan_source: "lifetime" };
       return json(200, { kind: "lifetime", message: "Offre complète activée à vie." });
@@ -430,6 +434,55 @@ describe("page du compte", () => {
       // Rien ne change avant le lien : l'écran doit le montrer, sinon on
       // refait la demande en croyant qu'elle n'est pas passée.
       expect(wrapper.text()).toContain("nouvelle@exemple.fr");
+    });
+
+    it("refuse la suppression tant que l'adresse n'est pas recopiée", async () => {
+      const service = fakeService();
+      const wrapper = await mountAccount();
+
+      const remove = button(wrapper, "Supprimer mon compte")!;
+      expect(remove.attributes("disabled")).toBeDefined();
+
+      await wrapper.find("#acc_delete_email").setValue("julie@exemple.fr");
+      await flush();
+      expect(button(wrapper, "Supprimer mon compte")!.attributes("disabled")).toBeUndefined();
+      expect(
+        service.calls.some((c) => c.method === "DELETE" && c.url.endsWith("/v1/account")),
+      ).toBe(false);
+    });
+
+    it("supprime le compte et oublie la session", async () => {
+      const service = fakeService();
+      const wrapper = await mountAccount();
+
+      await wrapper.find("#acc_delete_email").setValue("julie@exemple.fr");
+      await wrapper.find("#acc_delete_password").setValue("MotDePasseAssezLong1");
+      await button(wrapper, "Supprimer mon compte")!.trigger("click");
+      await flush();
+
+      const sent = service.calls.find(
+        (c) => c.method === "DELETE" && c.url.endsWith("/v1/account"),
+      );
+      expect(sent?.body).toEqual({
+        password: "MotDePasseAssezLong1",
+        confirm_email: "julie@exemple.fr",
+      });
+      expect(localStorage.getItem("thecode.session")).toBeNull();
+      expect(wrapper.find("#acc_email").exists()).toBe(true);
+    });
+
+    it("télécharge les données du compte", async () => {
+      const service = fakeService();
+      // jsdom ne sait pas fabriquer d'URL d'objet : seule compte la demande.
+      const created = vi.fn(() => "blob:test");
+      vi.stubGlobal("URL", { createObjectURL: created, revokeObjectURL: vi.fn() });
+
+      const wrapper = await mountAccount();
+      await button(wrapper, "Télécharger mes données")!.trigger("click");
+      await flush();
+
+      expect(service.calls.some((c) => c.url.endsWith("/v1/account/export"))).toBe(true);
+      expect(created).toHaveBeenCalled();
     });
 
     it("oublie la session à la déconnexion", async () => {

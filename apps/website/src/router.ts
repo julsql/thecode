@@ -11,6 +11,8 @@ import Account from "./pages/Account.vue";
 import AccountVerify from "./pages/AccountVerify.vue";
 import AccountReset from "./pages/AccountReset.vue";
 import Pricing from "./pages/Pricing.vue";
+import Legal from "./pages/Legal.vue";
+import Terms from "./pages/Terms.vue";
 import { DEFAULT_LANG } from "./i18n/translations";
 
 const routes: Array<RouteRecordRaw> = [
@@ -22,6 +24,8 @@ const routes: Array<RouteRecordRaw> = [
   { path: "/contact", redirect: `/${DEFAULT_LANG}/contact` },
   { path: "/account", redirect: `/${DEFAULT_LANG}/account` },
   { path: "/pricing", redirect: `/${DEFAULT_LANG}/pricing` },
+  { path: "/legal", redirect: `/${DEFAULT_LANG}/legal` },
+  { path: "/terms", redirect: `/${DEFAULT_LANG}/terms` },
   // Page de secours pour l'ancien algorithme. Volontairement accessible sans
   // prefixe de langue : elle doit rester atteignable par une URL notee il y a
   // des annees.
@@ -44,6 +48,8 @@ const routes: Array<RouteRecordRaw> = [
       // sur une page qui ne demande que le nouveau mot de passe.
       { path: "account/reset", component: AccountReset },
       { path: "pricing", component: Pricing },
+      { path: "legal", component: Legal },
+      { path: "terms", component: Terms },
     ],
   },
   { path: "/:pathMatch(.*)*", redirect: `/${DEFAULT_LANG}` },

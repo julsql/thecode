@@ -171,31 +171,6 @@ export const translations = {
     sec_strong: "Strong",
     sec_verystrong: "Very strong",
 
-    privacy_title: "Privacy policy",
-    privacy_last_update: "Last updated: 11/25/2025",
-    privacy_thanks_pre: "Thank you for using ",
-    privacy_thanks_post: ".",
-    privacy_intro:
-      "We place great importance on the privacy of our users. This application is designed to respect your privacy.",
-    privacy_thats_why: "That is why:",
-    privacy_highlight_1: "We do not collect, store, or share any personal data.",
-    privacy_highlight_2:
-      "The application requires no access to your contacts, camera, microphone, location, or files.",
-    privacy_highlight_3: "No personal identifier or usage behavior is recorded or analyzed.",
-    privacy_section_data: "Data collected",
-    privacy_section_data_p:
-      "None. The application collects no personally identifiable information, nor any technical data.",
-    privacy_section_share: "Information sharing",
-    privacy_section_share_p: "Since we collect no data, we share no data with any third party.",
-    privacy_section_cookies: "Cookies and similar technologies",
-    privacy_section_cookies_p: "The application contains no cookies or similar technologies.",
-    privacy_section_third: "Third-party services",
-    privacy_section_third_p:
-      "The application uses no third-party services that could collect data (for example: Google Analytics, Firebase, etc.).",
-    privacy_section_contact: "Contact",
-    privacy_section_contact_p:
-      "If you have any questions about this privacy policy, you can contact us at:",
-
     footer_tagline: "Security and reliability",
     footer_icons: "Icons by Icons8",
     footer_org: "TheCode GitHub organization:",
@@ -207,6 +182,9 @@ export const translations = {
     // --- Compte, offres et abonnement -------------------------------------
     nav_account: "Account",
     nav_pricing: "Pricing",
+    nav_legal: "Legal notice",
+    nav_terms: "Terms of sale",
+    legal_updated: "Last updated:",
 
     pricing_title: "Plans",
     pricing_lead:
@@ -304,6 +282,16 @@ export const translations = {
     acc_email_change: "Change my address",
     acc_email_sent: "Check the new mailbox: nothing changes until the link is followed.",
     acc_email_pending: "Waiting for confirmation:",
+    acc_danger_title: "Your data",
+    acc_export: "Download my data",
+    acc_export_lead:
+      "Everything the service holds about you, vault included. The entries come out encrypted: the service has never had your master key.",
+    acc_delete_title: "Delete my account",
+    acc_delete_lead:
+      "The account, its vault and its devices are erased for good, and the subscription is cancelled. Your vault stays on your devices, and your passwords keep working: they are computed from your master key, not stored here.",
+    acc_delete_confirm: "Type your address to confirm",
+    acc_delete_btn: "Delete my account",
+    acc_delete_done: "Account deleted.",
     gen_account_link: "Sign in or create an account",
     gen_renew_paid:
       "Renewing a password without changing your master key is part of the complete plan.",
@@ -480,35 +468,6 @@ export const translations = {
     sec_strong: "Forte",
     sec_verystrong: "Très forte",
 
-    privacy_title: "Politique de confidentialité",
-    privacy_last_update: "Dernière mise à jour : 25/11/2025",
-    privacy_thanks_pre: "Merci d’utiliser ",
-    privacy_thanks_post: ".",
-    privacy_intro:
-      "Nous accordons une grande importance à la confidentialité de nos utilisateurs. Cette application est conçue pour respecter votre vie privée.",
-    privacy_thats_why: "C’est pourquoi :",
-    privacy_highlight_1:
-      "Nous ne collectons, ne stockons, ni ne partageons aucune donnée personnelle.",
-    privacy_highlight_2:
-      "L’application ne demande aucun accès à vos contacts, caméra, microphone, position ou fichiers.",
-    privacy_highlight_3:
-      "Aucun identifiant personnel ou comportement d’utilisation n’est enregistré ou analysé.",
-    privacy_section_data: "Données collectées",
-    privacy_section_data_p:
-      "Aucune. L’application ne collecte aucune information personnelle identifiable, ni aucune donnée technique.",
-    privacy_section_share: "Partage d’informations",
-    privacy_section_share_p:
-      "Puisque nous ne collectons aucune donnée, nous ne partageons aucune donnée avec des tiers.",
-    privacy_section_cookies: "Cookies et technologies similaires",
-    privacy_section_cookies_p:
-      "L’application ne contient pas de cookies ou technologies similaires.",
-    privacy_section_third: "Services tiers",
-    privacy_section_third_p:
-      "L’application n’utilise aucun service tiers susceptible de collecter des données (par exemple : Google Analytics, Firebase, etc.).",
-    privacy_section_contact: "Contact",
-    privacy_section_contact_p:
-      "Si vous avez des questions concernant cette politique de confidentialité, vous pouvez nous contacter à :",
-
     footer_tagline: "Sécurité et fiabilité",
     footer_icons: "Icons by Icons8",
     footer_org: "Organisation GitHub TheCode :",
@@ -520,6 +479,9 @@ export const translations = {
     // --- Compte, offres et abonnement -------------------------------------
     nav_account: "Compte",
     nav_pricing: "Tarifs",
+    nav_legal: "Mentions légales",
+    nav_terms: "Conditions de vente",
+    legal_updated: "Dernière mise à jour :",
 
     pricing_title: "Offres",
     pricing_lead:
@@ -619,6 +581,16 @@ export const translations = {
     acc_email_change: "Changer mon adresse",
     acc_email_sent: "Regardez la nouvelle boîte : rien ne change tant que le lien n'est pas suivi.",
     acc_email_pending: "En attente de confirmation :",
+    acc_danger_title: "Vos données",
+    acc_export: "Télécharger mes données",
+    acc_export_lead:
+      "Tout ce que le service garde de vous, carnet compris. Les entrées sortent chiffrées : le service n'a jamais eu votre clef maîtresse.",
+    acc_delete_title: "Supprimer mon compte",
+    acc_delete_lead:
+      "Le compte, son carnet et ses appareils sont effacés définitivement, et l'abonnement est résilié. Votre carnet reste sur vos appareils, et vos mots de passe continuent de fonctionner : ils se calculent depuis votre clef maîtresse, ils ne sont pas stockés ici.",
+    acc_delete_confirm: "Recopiez votre adresse pour confirmer",
+    acc_delete_btn: "Supprimer mon compte",
+    acc_delete_done: "Compte supprimé.",
     gen_account_link: "Se connecter ou créer un compte",
     gen_renew_paid:
       "Renouveler un mot de passe sans changer de clef maîtresse fait partie de l'offre complète.",
