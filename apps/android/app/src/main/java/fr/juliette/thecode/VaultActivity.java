@@ -232,39 +232,22 @@ public class VaultActivity extends AppCompatActivity {
             ((TextView) card.findViewById(R.id.entryDomains)).setText(domains.toString());
             ((TextView) card.findViewById(R.id.entrySettings)).setText(
                     getString(R.string.vault_entry_settings,
-                            entry.length, charsetSummary(entry), entry.v));
+                            entry.length, charsetSummary(entry), entry.v, entry.counter));
 
-            card.setOnClickListener(v -> showActions(entry));
+            // Le libelle dit l'action : une entree v1 n'a que la migration, le
+            // compteur n'entrant pas dans sa derivation.
+            boolean isV2 = entry.v >= 2;
+            com.google.android.material.button.MaterialButton action =
+                    card.findViewById(R.id.entryAction);
+            action.setText(isV2 ? R.string.vault_renew : R.string.vault_migrate);
+            action.setOnClickListener(v -> proposeChange(entry, isV2));
+
+            card.setOnClickListener(v -> proposeChange(entry, isV2));
             list.addView(card);
         }
     }
 
     // --------------------------------------------- renouvellement et migration
-
-    /**
-     * Les deux actions qui changent un mot de passe déjà en service.
-     *
-     * Elles ne sont pas offertes à la fois : le compteur n'entre pas dans la
-     * dérivation v1, et une entrée v2 n'a plus rien à migrer.
-     */
-    private void showActions(VaultEntry entry) {
-        String label = label(entry);
-        boolean isV2 = entry.v >= 2;
-
-        new MaterialAlertDialogBuilder(this)
-                .setTitle(getString(R.string.vault_entry_actions, label))
-                .setItems(new CharSequence[]{
-                        getString(isV2 ? R.string.vault_renew : R.string.vault_migrate)
-                }, (dialog, which) -> {
-                    if (isV2) {
-                        proposeChange(entry, true);
-                    } else {
-                        proposeChange(entry, false);
-                    }
-                })
-                .setNegativeButton(android.R.string.cancel, null)
-                .show();
-    }
 
     /**
      * Affiche l'ancien et le nouveau mot de passe, puis n'écrit qu'après

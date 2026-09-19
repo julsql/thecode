@@ -39,6 +39,16 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:textAppearance="?attr/textAppearanceBodySmall"
-            tools:text="20 caractères, aA#1 — v1" />
+            tools:text="20 caractères, aA#1 — v1, compteur 1" />
+
+        <!-- L'action etait cachee derriere un appui sur la carte : rien ne le
+             disait. Elle s'affiche maintenant, avec son nom. -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/entryAction"
+            style="?attr/materialButtonOutlinedStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            tools:text="Renouveler le mot de passe" />
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>
