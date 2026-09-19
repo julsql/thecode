@@ -283,7 +283,13 @@ public class VaultActivity extends AppCompatActivity {
                                     result.conflicts.size()));
                 });
             } catch (Sync.SyncException e) {
-                main.post(() -> toast(getString(R.string.sync_failed, e.getMessage())));
+                // 402 : le serveur explique comment lever la limite, ce qu'une
+                // app du Store n'a pas le droit de relayer. On garde le fait,
+                // pas l'invitation.
+                String message = e.status == 402
+                        ? getString(R.string.sync_limit_reached)
+                        : getString(R.string.sync_failed, e.getMessage());
+                main.post(() -> toast(message));
             }
         });
     }
@@ -342,10 +348,9 @@ public class VaultActivity extends AppCompatActivity {
             com.google.android.material.button.MaterialButton action =
                     card.findViewById(R.id.entryAction);
             action.setText(isV2 ? R.string.vault_renew : R.string.vault_migrate);
-            // Le compteur — changer de mot de passe sans changer de clef — fait
-            // partie de l'offre complète. La migration v1 vers v2 reste ouverte
-            // à tous : c'est une mise à niveau, pas un service.
-            action.setEnabled(!isV2 || renewAllowed());
+            // Jamais désactivé : un bouton éteint n'explique rien et ne
+            // propose rien. C'est le clic qui dit ce que l'offre complète
+            // apporte — la migration v1 vers v2, elle, reste ouverte à tous.
             action.setOnClickListener(v -> proposeChange(entry, isV2));
 
             card.setOnClickListener(v -> proposeChange(entry, isV2));

@@ -232,9 +232,17 @@ describe("carnet et empreinte", () => {
     await wrapper.find("#id_site").setValue("google.com");
     await wrapper.vm.$nextTick();
 
+    // Le bouton reste cliquable : un bouton éteint n'explique rien et ne
+    // propose rien. C'est le refus qui dit ce que l'offre complète apporte.
     const renew = wrapper.findAll("button").find((b) => b.text() === "Renouveler");
-    expect(renew!.attributes("disabled")).toBeDefined();
+    expect(renew!.attributes("disabled")).toBeUndefined();
+
+    await renew!.trigger("click");
+    await wrapper.vm.$nextTick();
+
     expect(wrapper.text()).toContain("offre complète");
+    // Et rien n'a été calculé ni écrit.
+    expect(wrapper.text()).not.toContain("Nouveau mot de passe");
   }, 20000);
 
   it("laisse migrer une entree v1 sans compte", async () => {

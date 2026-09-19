@@ -36,6 +36,7 @@ const syncLoginBtn = document.getElementById("syncLoginBtn");
 const syncNowBtn = document.getElementById("syncNowBtn");
 const syncLogoutBtn = document.getElementById("syncLogoutBtn");
 const syncStatus = document.getElementById("syncStatus");
+const renewPitch = document.getElementById("renewPitch");
 
 const lengthInput = document.getElementById("length");
 // Bornes lues sur le champ lui-même, pour ne pas les redéclarer ici en plus
@@ -307,6 +308,9 @@ function refreshVault(domain) {
  * Le compteur — renouveler sans changer de clef — fait partie de l'offre
  * complete. La migration v1 vers v2 reste ouverte a tous : c'est une mise a
  * niveau, pas un service.
+ *
+ * L'etat sert a annoncer l'offre avant le clic ; c'est le service worker qui
+ * refuse, puisque c'est lui qui ecrit le compteur.
  */
 let canRenew = false;
 
@@ -317,9 +321,10 @@ function refreshChangeButton() {
 
   const renew = target.v >= 2;
   changeEntryBtn.textContent = renew ? "Renouveler" : "Passer en v2";
-  changeEntryBtn.disabled = renew && !canRenew;
-  changeEntryBtn.title =
-    renew && !canRenew ? "Offre complete requise : https://thecode.julsql.fr/fr/account" : "";
+  // Jamais desactive : un bouton eteint n'explique rien et ne propose rien.
+  // Le service worker refuse et rend le message, qui dit ce que l'offre
+  // complete apporte et ou l'obtenir.
+  renewPitch.hidden = !(renew && !canRenew);
 }
 
 /** L'entree visee : celle choisie quand il y en a plusieurs. */

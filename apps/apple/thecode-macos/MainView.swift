@@ -166,9 +166,11 @@ struct MainView: View {
                 + "the old algorithm (v1) from the toolbar, or move the entry to v2 from the "
                 + "vault once you have changed the password on the site.")
 
+        // Pas de ScrollView : elle n'a pas de hauteur propre, ce qui obligeait à
+        // fixer celle de la fenêtre — d'où un grand vide sous un texte court.
+        // La pile, elle, prend exactement la place de son contenu.
         return VStack(spacing: 0) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 16) {
                     // L'icône donne le ton avant le texte : c'est une nouvelle,
                     // pas une erreur.
                     HStack(spacing: 12) {
@@ -190,10 +192,9 @@ struct MainView: View {
                         .font(.callout)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(24)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(24)
 
             Divider()
 
@@ -218,7 +219,9 @@ struct MainView: View {
             }
             .padding(24)
         }
-        .frame(width: 460, height: 420)
+        // Largeur fixe, hauteur libre : la fenêtre suit le texte, y compris
+        // quand il est traduit ou agrandi par les réglages d'accessibilité.
+        .frame(width: 460)
     }
 
 

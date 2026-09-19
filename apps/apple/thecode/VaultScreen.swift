@@ -150,9 +150,9 @@ struct VaultScreen: View {
                         text: $password)
                 }
 
-                // Le compte, l'offre et les appareils se gèrent sur le site,
-                // et nulle part ailleurs. Sans ce lien, un nouveau venu reste
-                // devant un formulaire de connexion sans compte à y mettre.
+                // Sans ce lien, un nouveau venu reste devant un formulaire de
+                // connexion sans compte à y mettre. Le lien mène à la création
+                // de compte, et ne dit rien d'une offre payante.
                 Section {
                     Link(
                         L10n.t("Créer un compte sur le site", "Create an account on the site"),
@@ -197,7 +197,7 @@ struct VaultScreen: View {
     }
 
 
-    /// Le renouvellement demande l'offre complète.
+    /// Le renouvellement demande un compte débloqué.
     ///
     /// Décidé sur l'appareil, forcément : le compteur voyage à l'intérieur du
     /// bloc chiffré, le serveur ne le voit pas et ne peut donc rien en dire.
@@ -215,15 +215,14 @@ struct VaultScreen: View {
             return
         }
 
-        // Le compteur — changer de mot de passe sans changer de clef — fait
-        // partie de l'offre complète. La migration v1 vers v2 reste ouverte à
-        // tous : c'est une mise à niveau, pas un service.
+        // Le renouvellement demande un compte débloqué. Le message constate,
+        // il ne renvoie nulle part : les règles de l'App Store interdisent
+        // d'orienter vers un paiement hors de leur système, et une app qui
+        // vend depuis un écran de carnet se ferait refuser.
         if entry.v >= 2 && !renewAllowed {
             status = L10n.t(
-                "Renouveler un mot de passe sans changer de clef maîtresse fait partie de "
-                    + "l'offre complète : thecode.julsql.fr",
-                "Renewing a password without changing your master key is part of the "
-                    + "complete plan: thecode.julsql.fr")
+                "Le renouvellement n'est pas activé sur ce compte.",
+                "Renewal is not enabled on this account.")
             return
         }
 
@@ -344,8 +343,9 @@ struct VaultScreen: View {
                 let result = try await operation()
                 // Les jetons peuvent avoir été renouvelés pendant l'appel : ne
                 // pas les réenregistrer forcerait une reconnexion.
-                // Un abonnement pris entre-temps doit se voir sans se
-                // reconnecter ; un abonnement arrêté aussi.
+                // L'offre du compte peut avoir changé depuis la dernière
+                // fois : elle est relue ici, sans quoi l'app resterait sur son
+                // ancienne idée jusqu'à la reconnexion.
                 let refreshed =
                     (try? await Sync().accountPlan(credentials: result.credentials))
                     ?? result.credentials
@@ -369,11 +369,21 @@ struct VaultScreen: View {
                     isWorking = false
                 }
             } catch {
-                let message = (error as? SyncError)?.message ?? error.localizedDescription
+                // 402 : le serveur explique comment lever la limite, ce qu'une
+                // app du Store n'a pas le droit de relayer. On garde le fait,
+                // pas l'invitation.
+                let syncError = error as? SyncError
+                let message =
+                    syncError?.status == 402
+                    ? L10n.t(
+                        "Limite de synchronisation atteinte : les entrées en trop restent "
+                            + "sur cet appareil.",
+                        "Sync limit reached: the extra entries stay on this device.")
+                    : L10n.t(
+                        "Échec de la synchronisation : \(syncError?.message ?? error.localizedDescription)",
+                        "Sync failed: \(syncError?.message ?? error.localizedDescription)")
                 await MainActor.run {
-                    status = L10n.t(
-                        "Échec de la synchronisation : \(message)",
-                        "Sync failed: \(message)")
+                    status = message
                     isWorking = false
                 }
             }

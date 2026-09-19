@@ -190,10 +190,12 @@
             <ul v-if="vaultEntries.length && !pending" class="entry-list">
               <li v-for="entry in vaultEntries" :key="entry.id">
                 <span class="entry-name">{{ entry.label || entry.siteKey }}</span>
+                <!-- Jamais désactivé : un bouton éteint n'explique rien et ne
+                     propose rien. C'est le clic qui dit ce que l'offre
+                     complète apporte, et où l'obtenir. -->
                 <button
                   type="button"
                   class="ghost-btn small"
-                  :disabled="entry.v >= 2 && !renewAllowed"
                   @click="proposeChange(entry, entry.v >= 2)"
                 >
                   {{ entry.v >= 2 ? "Renouveler" : "Passer en v2" }}

@@ -81,7 +81,7 @@
     <string name="sync_email">Adresse e-mail</string>
     <string name="sync_password">Mot de passe du compte</string>
     <string name="sync_connect">Se connecter</string>
-    <string name="sync_no_account">Pas encore de compte ? Créez-le sur https://thecode.julsql.fr/fr/account — l\'offre et les appareils s\'y gèrent aussi.</string>
+    <string name="sync_no_account">Pas encore de compte ? Créez-le sur https://thecode.julsql.fr/fr/account</string>
     <string name="sync_running">Synchronisation…</string>
     <string name="sync_done">Carnet synchronisé : %1$d entrées.</string>
     <string name="sync_done_conflicts">Carnet synchronisé : %1$d entrées, %2$d demandent votre attention.</string>
@@ -96,7 +96,8 @@
     <string name="vault_save_needs_site">Saisissez d\'abord un site.</string>
     <string name="vault_entry_actions">Que faire de « %1$s » ?</string>
     <string name="vault_renew">Renouveler ce mot de passe</string>
-    <string name="vault_renew_paid">Renouveler un mot de passe sans changer de clef maîtresse fait partie de l\'offre complète : https://thecode.julsql.fr/fr/account</string>
+    <string name="vault_renew_paid">Le renouvellement n\'est pas activé sur ce compte.</string>
+    <string name="sync_limit_reached">Limite de synchronisation atteinte : les entrées en trop restent sur cet appareil.</string>
     <string name="vault_migrate">Passer cette entrée en v2</string>
     <string name="vault_renew_title">Renouveler « %1$s »</string>
     <string name="vault_migrate_title">Passer « %1$s » en v2</string>
