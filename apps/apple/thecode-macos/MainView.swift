@@ -60,6 +60,22 @@ struct MainView: View {
     @State private var showVault: Bool = false
     @State private var vaultSaveMessage: String?
 
+    /// Clef maîtresse déjà dérivée, et la clef dont elle vient.
+    ///
+    /// PBKDF2 à 600 000 itérations coûte quelques centaines de millisecondes :
+    /// la refaire à chaque frappe rendrait l'écran inutilisable.
+    @State private var masterV2: Data? = nil
+    @State private var masterV2For: String = ""
+    /// Numéro de la dernière demande : une réponse en retard est ignorée.
+    @State private var generationTicket = 0
+
+    /// Bascule explicite vers l'ancien algorithme.
+    ///
+    /// La v2 est la règle ; la v1 ne sert qu'à retrouver un mot de passe posé
+    /// sur un site avant qu'elle n'existe.
+    @State private var useV1 = false
+
+
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
@@ -88,6 +104,19 @@ struct MainView: View {
                 }
                 .buttonStyle(.borderless)
                 .help(L10n.t("Carnet", "Vault"))
+
+                // La v1 n'est qu'un secours : retrouver un mot de passe pose
+                // sur un site avant que la v2 n'existe.
+                Button(action: { useV1.toggle() }) {
+                    Image(systemName: useV1 ? "clock.arrow.circlepath" : "bolt.shield")
+                }
+                .buttonStyle(.borderless)
+                .help(
+                    useV1
+                        ? L10n.t("Ancien algorithme (v1) — revenir à la v2",
+                                 "Old algorithm (v1) — back to v2")
+                        : L10n.t("Générer avec l'ancien algorithme (v1)",
+                                 "Generate with the old algorithm (v1)"))
 
                 Button(action: { showInfoSheet = true }) {
                     Image(systemName: "info.circle")
@@ -222,6 +251,7 @@ struct MainView: View {
             restoreSession()
         }
         .onChange(of: darkMode) { _ in applyAppAppearance() }
+        .onChange(of: useV1) { _ in generatePassword() }
         .onChange(of: encodingKey) { newValue in
             SecureKeyStore.write(newValue)
             generatePassword()
@@ -459,10 +489,39 @@ struct MainView: View {
         utils.chiState = chiState
         utils.longueur = lengthNumber
 
-        let result = utils.generatePassword(input: siteName + encodingKey)
-        generatedValue = result.code
-        securityLabel = result.label
-        securityColor = result.color
+        if useV1 {
+            // La v1 est un simple SHA-256 : instantané, rien à déporter.
+            let result = utils.generatePassword(input: siteName + encodingKey)
+            generatedValue = result.code
+            securityLabel = result.label
+            securityColor = result.color
+            return
+        }
+
+        generationTicket += 1
+        let ticket = generationTicket
+        let site = siteName
+        let key = encodingKey
+        let reuse = masterV2For == key ? masterV2 : nil
+
+        Task.detached {
+            let derived = reuse ?? (try? CoreV2.deriveMasterKey(key))
+            let result = utils.generatePasswordV2(
+                masterKey: key, siteKey: site, master: derived)
+
+            await MainActor.run {
+                // Une réponse arrivée après une frappe plus récente
+                // afficherait le mot de passe d'un autre site.
+                guard ticket == generationTicket else { return }
+                if let derived {
+                    masterV2 = derived
+                    masterV2For = key
+                }
+                generatedValue = result.code
+                securityLabel = result.label
+                securityColor = result.color
+            }
+        }
     }
 }
 
