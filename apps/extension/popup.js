@@ -482,3 +482,22 @@ function showResult() {
 document.getElementById("openTransfer").addEventListener("click", () => {
   browser.tabs.create({ url: browser.runtime.getURL("transfer-page.html") });
 });
+
+/**
+ * Annonce du passage a la v2.
+ *
+ * Elle ne concerne que la version qui l'apporte : une fois lue, on ne la
+ * repose plus. Le drapeau vit dans le stockage de l'extension, donc il
+ * survit a la fermeture du popup.
+ */
+const V2_NOTICE_KEY = "v2NoticeSeen";
+const v2Notice = document.getElementById("v2Notice");
+
+browser.storage?.local?.get([V2_NOTICE_KEY], (stored) => {
+  if (!stored?.[V2_NOTICE_KEY]) v2Notice.hidden = false;
+});
+
+document.getElementById("v2NoticeClose").addEventListener("click", () => {
+  v2Notice.hidden = true;
+  browser.storage?.local?.set({ [V2_NOTICE_KEY]: true });
+});

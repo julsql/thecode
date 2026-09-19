@@ -156,3 +156,26 @@ button {
 #accountRow select {
   max-width: 12rem;
 }
+
+/* Annonce du passage a la v2. Assez visible pour etre lue, assez discrete
+   pour ne pas masquer ce que le popup sert a faire. */
+.notice {
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.notice p {
+  margin: 0 0 8px;
+}
+
+.notice button {
+  font-size: 12px;
+}
+
+[hidden] {
+  display: none !important;
+}
