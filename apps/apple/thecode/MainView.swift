@@ -105,6 +105,8 @@ struct MainView: View {
     /// Le calcul passe par un KDF coûteux : il se fait hors du fil principal,
     /// et seulement quand la clef change.
     @State private var fingerprint: Fingerprint.Result? = nil
+    /// Calcul en attente : chaque frappe annule le précédent.
+    @State private var fingerprintWork: Task<Void, Never>? = nil
 
     private var fingerprintRow: some View {
         HStack(spacing: 8) {
@@ -127,16 +129,27 @@ struct MainView: View {
         }
     }
 
-    /// Recalcule l'empreinte pour la clef donnée.
+    /// Recalcule l'empreinte, après une pause dans la frappe.
+    ///
+    /// Le calcul passe par PBKDF2 à 600 000 itérations : le lancer à chaque
+    /// frappe fige la saisie. Chaque frappe annule la demande précédente ;
+    /// seule la dernière, celle qui suit la pause, va au bout.
     private func refreshFingerprint(_ key: String) {
+        fingerprintWork?.cancel()
+
         guard !key.isEmpty else {
             fingerprint = nil
             return
         }
         fingerprint = nil
 
-        Task.detached {
-            let computed = Fingerprint.of(key)
+        fingerprintWork = Task {
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            guard !Task.isCancelled else { return }
+
+            let computed = await Task.detached { Fingerprint.of(key) }.value
+            guard !Task.isCancelled else { return }
+
             await MainActor.run {
                 // La clef a pu changer pendant le calcul : une empreinte en
                 // retard désignerait une autre clef que celle affichée.
