@@ -39,6 +39,19 @@
 
     <div class="generator-container fadeIn">
       <div class="generator-card">
+        <!-- Le mode de génération, en haut : c'est lui qui décide quel mot de
+             passe sort, il doit se lire sans chercher. -->
+        <div class="mode-bar">
+          <span class="mode-label">Algorithme</span>
+          <div class="mode-switch" role="group">
+            <button type="button" :class="{ active: !enV1 }" @click="enV1 = false">v2</button>
+            <button type="button" :class="{ active: enV1 }" @click="enV1 = true">v1</button>
+          </div>
+        </div>
+        <p v-if="enV1" class="hint mode-note">
+          Ancien algorithme, pour un site dont le mot de passe n'a pas encore été changé.
+        </p>
+
         <!-- Données -->
         <fieldset>
           <h2>{{ t("gen_section_data") }}</h2>
@@ -136,17 +149,6 @@
                  qui décide quel mot de passe sort. -->
             <span class="algo-badge">{{ enV1 ? "v1" : "v2" }}</span>
           </p>
-
-          <!-- La v1 n'est plus qu'un secours : le mot de passe pose sur un site
-               avant la v2 ne se retrouve que comme ca. -->
-          <div class="algo-row">
-            <button type="button" class="ghost-btn small" @click="enV1 = !enV1">
-              {{ enV1 ? "Revenir à la v2" : "Générer en v1 (ancien)" }}
-            </button>
-            <span v-if="enV1" class="hint algo-note">
-              Ancien algorithme, pour un site dont le mot de passe n'a pas encore été changé.
-            </span>
-          </div>
 
           <!-- Le carnet retient les reglages par site : plus besoin de se souvenir
                qu'un compte avait ete cree sans symboles. -->
@@ -371,8 +373,27 @@ export default defineComponent({
     const vaultEntries = ref<VaultEntry[]>([]);
     const vaultMessage = ref("");
     const transferMessage = ref("");
-    /** Bascule explicite vers l'ancien algorithme. */
+    /**
+     * Mode de generation : v2 par defaut, v1 pour un site pas encore migre.
+     *
+     * Retenu d'une visite a l'autre, comme le theme : c'est un mode, pas une
+     * action ponctuelle.
+     */
+    const ALGO_KEY = "thecode.useV1";
     const enV1 = ref(false);
+    try {
+      enV1.value = localStorage.getItem(ALGO_KEY) === "1";
+    } catch {
+      // Stockage indisponible : on repart de la v2, qui est la regle.
+    }
+
+    watch(enV1, (value) => {
+      try {
+        localStorage.setItem(ALGO_KEY, value ? "1" : "0");
+      } catch {
+        // Le mode ne survivra pas au rechargement, la page fonctionne quand meme.
+      }
+    });
 
     /**
      * Annonce du passage a la v2, en fenetre modale a l'ouverture.
@@ -1148,16 +1169,47 @@ input[type="text"]:read-only {
   font-weight: 600;
 }
 
-.algo-row {
+/* Le mode de generation, en haut de la carte : lisible d'un coup d'oeil. */
+.mode-bar {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-  margin-top: 16px;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-soft);
 }
 
-.algo-note {
-  flex: 1 1 220px;
+.mode-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.mode-switch {
+  display: inline-flex;
+  border-radius: 999px;
+  border: 1px solid var(--border-soft);
+  overflow: hidden;
+}
+
+.mode-switch button {
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  padding: 5px 16px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mode-switch button.active {
+  background: var(--accent-gradient);
+  color: var(--text);
+}
+
+.mode-note {
+  margin-top: -8px;
+  margin-bottom: 16px;
 }
 
 .entry-list {
