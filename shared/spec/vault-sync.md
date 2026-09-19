@@ -127,7 +127,16 @@ Le serveur refuse une entrée dépassant `max_blob_bytes` et un compte dépassan
 ## Offres
 
 La génération ne passe par aucun serveur : elle est gratuite, hors ligne, sans
-compte. Ce que l'abonnement paie, c'est la synchronisation.
+compte. Ce que l'abonnement paierait, c'est la synchronisation.
+
+**Les offres sont dormantes** (`THECODE_PLANS_ENABLED` à faux, la valeur par
+défaut) : tout le monde a les plafonds les plus larges, le compte est annoncé
+en offre complète — les clients lisent cette valeur pour décider ce qu'ils
+proposent — et la souscription répond qu'il n'y a rien à prendre. Un code reste
+le seul moyen de marquer un compte, ce qui permet d'éprouver le comportement
+payant sans demander d'argent à personne.
+
+Le tableau ci-dessous décrit l'état où elles s'appliquent.
 
 | Offre               | Entrées synchronisées     | Appareils connectés |
 | ------------------- | ------------------------- | ------------------- |
