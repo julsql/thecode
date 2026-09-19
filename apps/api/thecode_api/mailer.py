@@ -162,6 +162,8 @@ def _send(settings: Settings, mail: Mail, to: str, url: str) -> None:
     name, address = parseaddr(settings.mail_from)
     message["From"] = formataddr((name or "TheCode", address or settings.mail_from))
     message["To"] = to
+    if settings.mail_reply_to:
+        message["Reply-To"] = settings.mail_reply_to
     # Un message automatique doit se déclarer comme tel : les répondeurs
     # d'absence ne doivent pas lui répondre, et les filtres le classent mieux.
     message["Auto-Submitted"] = "auto-generated"

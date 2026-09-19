@@ -35,6 +35,9 @@ MAPPING = {
     # comme alias vérifié dans ses réglages — sinon il la réécrit en silence.
     "THECODE_MAIL_FROM": "Email.From",
     "THECODE_MAIL_HOST": "Email.Host",
+    # Ne change rien à l'authentification : c'est là que partent les réponses
+    # des humains, et cela garde l'adresse du domaine visible.
+    "THECODE_MAIL_REPLY_TO": "Email.Reply_To",
 }
 
 #: Ce qui va avec, et qui n'est pas un secret. Ce que `keys.yml` précise

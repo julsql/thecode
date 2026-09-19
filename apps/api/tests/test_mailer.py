@@ -31,6 +31,7 @@ def smtp_settings():
         mail_user="expediteur@exemple.fr",
         mail_password="abcd efgh ijkl mnop",
         mail_from="TheCode <expediteur@exemple.fr>",
+        mail_reply_to="contact@exemple.fr",
         site_url="https://thecode.julsql.fr",
     )
 
@@ -102,6 +103,13 @@ class TestSmtp:
 
         login = next(e for e in sent if "login" in e)
         assert login["password"] == "abcdefghijklmnop"
+
+    def test_replies_go_where_they_are_read(self, smtp_settings, sent):
+        """L'adresse de réponse n'entre dans aucune vérification : elle ne sert
+        qu'aux humains, dont certains répondent aux courriers automatiques."""
+        mailer.send_verification_email(smtp_settings, "julie@exemple.fr", "jeton")
+
+        assert message_of(sent)["Reply-To"] == "contact@exemple.fr"
 
     def test_it_announces_itself_as_automatic(self, smtp_settings, sent):
         mailer.send_verification_email(smtp_settings, "julie@exemple.fr", "jeton")

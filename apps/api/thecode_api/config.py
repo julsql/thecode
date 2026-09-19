@@ -113,6 +113,12 @@ class Settings(BaseSettings):
     #: authentifié ou un alias vérifié dans ses réglages : Gmail réécrit
     #: l'expéditeur sinon, et le courrier part d'une adresse inattendue.
     mail_from: str = "contact@thecode.julsql.fr"
+    #: Adresse de réponse, quand elle diffère de l'expéditeur.
+    #:
+    #: N'entre dans aucune vérification anti-usurpation : elle ne sert qu'aux
+    #: humains, dont certains répondent aux courriers automatiques. Elle permet
+    #: de garder l'adresse du domaine visible sans sacrifier l'acheminement.
+    mail_reply_to: str = ""
     mail_host: str = "smtp.gmail.com"
     mail_port: int = 587
     mail_user: str = ""
