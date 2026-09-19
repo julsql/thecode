@@ -12,7 +12,7 @@ changement, serait inutilisable sans qu'aucune erreur ne se voie.
 from __future__ import annotations
 
 import smtplib
-from email import message_from_string
+from email.message import EmailMessage
 
 import pytest
 
@@ -63,7 +63,7 @@ def sent(monkeypatch):
     return envois
 
 
-def message_of(sent) -> "message_from_string":
+def message_of(sent) -> EmailMessage:
     return next(e["message"] for e in sent if "message" in e)
 
 
