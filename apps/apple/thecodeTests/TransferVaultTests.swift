@@ -66,12 +66,14 @@ struct TransferVaultTests {
     @Test("Une altération est détectée")
     func detectsTampering() throws {
         let parts = try Transfer.exportVault(filled(), masterKey: "clef").split(separator: ".")
-        // Une autre lettre, pas une lettre fixe : un chiffré qui finissait
-        // déjà par « A » serait recopié à l'identique, et le test passerait
-        // sans rien altérer, une fois sur soixante-quatre.
+        // Quatre caractères, pas un seul : en base64url le dernier caractère
+        // ne porte parfois que des bits ignorés au décodage — « Aw » et « Ax »
+        // donnent le même octet. Changer ce seul caractère laissait le chiffré
+        // intact, l'import réussissait, et le test échouait sans que rien
+        // n'ait été altéré.
         let cipher = parts[2]
-        let tail = cipher.hasSuffix("A") ? "B" : "A"
-        let tampered = "\(parts[0]).\(parts[1]).\(cipher.dropLast())\(tail)"
+        let tail = cipher.hasSuffix("AAAA") ? "BBBB" : "AAAA"
+        let tampered = "\(parts[0]).\(parts[1]).\(cipher.dropLast(4))\(tail)"
 
         #expect(throws: (any Error).self) {
             _ = try Transfer.importVault(tampered, masterKey: "clef")

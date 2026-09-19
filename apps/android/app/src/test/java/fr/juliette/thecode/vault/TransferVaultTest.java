@@ -68,13 +68,15 @@ public class TransferVaultTest {
     @Test
     public void detectsTampering() throws Exception {
         String[] parts = Transfer.exportVault(filled(), "clef").split("\\.");
-        // Remplacer par une autre lettre, pas par une lettre fixe : un
-        // chiffre qui finissait deja par « A » serait recopie a l'identique et
-        // le test passerait sans rien alterer, une fois sur soixante-quatre.
+        // Quatre caracteres, pas un seul : en base64url le dernier caractere
+        // ne porte parfois que des bits ignores au decodage — « Aw » et « Ax »
+        // donnent le meme octet. Changer ce seul caractere laissait le chiffre
+        // intact, l'import reussissait, et le test echouait sans que rien
+        // n'ait ete altere.
         String cipher = parts[2];
-        String tail = cipher.endsWith("A") ? "B" : "A";
+        String tail = cipher.endsWith("AAAA") ? "BBBB" : "AAAA";
         String tampered = parts[0] + "." + parts[1] + "."
-                + cipher.substring(0, cipher.length() - 1) + tail;
+                + cipher.substring(0, cipher.length() - 4) + tail;
 
         assertThrows(Transfer.TransferException.class,
                 () -> Transfer.importVault(tampered, "clef"));

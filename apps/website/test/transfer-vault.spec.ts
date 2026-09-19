@@ -54,11 +54,14 @@ describe("transfert d'un carnet", () => {
   it("détecte une altération", async () => {
     const payload = await exportVault(filled(), "clef");
     const parts = payload.split(".");
-    // Une autre lettre, pas une lettre fixe : un chiffré qui finissait déjà
-    // par « A » serait recopié à l'identique, et le test passerait sans rien
-    // altérer, une fois sur soixante-quatre.
+    // Quatre caractères, pas un seul : en base64url, le dernier caractère ne
+    // porte parfois que des bits ignorés au décodage — « Aw » et « Ax »
+    // donnent le même octet. Changer ce seul caractère laissait donc le
+    // chiffré intact, l'import réussissait, et le test échouait sans que rien
+    // n'ait été altéré.
     const cipher = parts[2];
-    const tampered = `${parts[0]}.${parts[1]}.${cipher.slice(0, -1)}${cipher.endsWith("A") ? "B" : "A"}`;
+    const tail = cipher.slice(-4) === "AAAA" ? "BBBB" : "AAAA";
+    const tampered = `${parts[0]}.${parts[1]}.${cipher.slice(0, -4)}${tail}`;
 
     await expect(importVault(tampered, "clef")).rejects.toThrow(TransferError);
   });
