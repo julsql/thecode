@@ -1,0 +1,22 @@
+# Configuration gitleaks du depot.
+#
+# TheCode ne stocke aucun mot de passe : ceux qui apparaissent dans le depot
+# sont soit des sorties d'algorithme figees (les vecteurs de conformite, que
+# n'importe qui recalcule depuis la clef et le site publies a cote), soit des
+# valeurs de fixture inventees pour les tests. La regle generique de gitleaks
+# les prend pour des secrets a cause de leur entropie ; sans cette liste, le
+# controle echoue a chaque poussee et finit par etre ignore, ce qui est
+# exactement ce qu'on ne veut pas d'un controle de secrets.
+title = "TheCode"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Vecteurs de conformite et fixtures de test"
+# Les vecteurs sont volontairement identiques dans les six implementations :
+# c'est ce qui garantit qu'elles generent le meme mot de passe.
+paths = ['''(^|/)test-vectors\.json$''']
+# Le mot de passe de fixture de l'API : il n'ouvre rien, il sert seulement a
+# passer la longueur minimale exigee a l'inscription.
+regexes = ['''MotDePasseAssezLong1''']
