@@ -94,6 +94,36 @@ export function clearSession(): void {
   }
 }
 
+/** Ce que l'inscription réclame, avant de le demander. */
+export interface RegistrationState {
+  open: boolean;
+  needsCode: boolean;
+  /** Places restantes sans code, ou null quand la notion ne s'applique pas. */
+  freeSlots: number | null;
+}
+
+export async function registrationState(endpoint: string): Promise<RegistrationState> {
+  return (await request(`${endpoint}/v1/auth/registration`)) as RegistrationState;
+}
+
+/** Crée un compte. `inviteCode` n'est réclamé qu'au-delà des places libres. */
+export async function register(
+  endpoint: string,
+  email: string,
+  password: string,
+  inviteCode = "",
+): Promise<Session> {
+  const body = (await request(`${endpoint}/v1/auth/register`, {
+    payload: { email, password, invite_code: inviteCode },
+  })) as { access_token: string; refresh_token: string };
+
+  return {
+    endpoint,
+    accessToken: body.access_token,
+    refreshToken: body.refresh_token,
+  };
+}
+
 export async function login(endpoint: string, email: string, password: string): Promise<Session> {
   const body = await request(`${endpoint}/v1/auth/login`, {
     payload: { email, password, device_label: "site web" },

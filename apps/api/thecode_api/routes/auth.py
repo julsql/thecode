@@ -6,6 +6,7 @@ import secrets
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DbSession
 
@@ -52,6 +53,30 @@ def _issue_tokens(db: DbSession, account: Account, device_label: str = "") -> To
     )
 
 
+@router.get("/registration")
+def registration_state(db: DbSession = Depends(get_db)) -> dict[str, object]:
+    """Dit ce que l'inscription demande, sans rien révéler de plus.
+
+    Le formulaire doit savoir s'il faut réclamer un code avant de le
+    demander : exiger un code sans raison, ou en cacher la nécessité jusqu'au
+    refus, sont aussi désagréables l'un que l'autre.
+
+    Le nombre de comptes existants n'est pas rendu : il ne regarde personne.
+    """
+    settings = get_settings()
+
+    if settings.registration_closed:
+        return {"open": False, "needsCode": True, "freeSlots": 0}
+    if settings.registration_open:
+        return {"open": True, "needsCode": False, "freeSlots": None}
+    if not settings.registration_quota:
+        return {"open": True, "needsCode": True, "freeSlots": None}
+
+    taken = db.scalar(select(func.count()).select_from(Account)) or 0
+    free = max(0, settings.free_accounts - taken)
+    return {"open": True, "needsCode": free == 0, "freeSlots": free}
+
+
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 def register(payload: RegisterRequest, db: DbSession = Depends(get_db)) -> TokenResponse:
     settings = get_settings()
@@ -61,12 +86,23 @@ def register(payload: RegisterRequest, db: DbSession = Depends(get_db)) -> Token
             status.HTTP_403_FORBIDDEN, "Les inscriptions sont fermées pour le moment."
         )
 
+    # En mode quota, les premiers comptes se créent sans rien ; au-delà il faut
+    # un code de parrainage. Le compte se fait sur les comptes existants, pas
+    # sur un compteur à part : un compte supprimé doit libérer sa place.
+    needs_code = not settings.registration_open
+    if settings.registration_quota:
+        taken = db.scalar(select(func.count()).select_from(Account)) or 0
+        needs_code = taken >= settings.free_accounts
+
     # compare_digest : la comparaison ne doit pas fuir le code par le temps
     # qu'elle prend.
-    if not settings.registration_open and not secrets.compare_digest(
-        payload.invite_code, settings.invite_code
-    ):
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Code d'invitation invalide.")
+    if needs_code and not secrets.compare_digest(payload.invite_code, settings.invite_code):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Code de parrainage invalide."
+            if settings.registration_quota
+            else "Code d'invitation invalide.",
+        )
 
     account = Account(email=payload.email.lower(), password_hash=hash_password(payload.password))
     db.add(account)

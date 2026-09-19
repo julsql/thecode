@@ -295,11 +295,33 @@
                   autocomplete="off"
                 />
               </div>
+              <!-- Le code n'est réclamé qu'une fois les places libres
+                   épuisées : le demander sans raison rebute, et cacher qu'il
+                   faudra le fournir jusqu'au refus est pire. -->
+              <div v-if="syncNeedsCode" class="field-row">
+                <input
+                  v-model="syncInviteCode"
+                  type="text"
+                  placeholder="Code de parrainage"
+                  autocomplete="off"
+                />
+              </div>
+
               <div class="panel-actions">
                 <button type="button" class="ghost-btn primary" @click="connectSync">
                   Se connecter
                 </button>
+                <button type="button" class="ghost-btn" @click="createAccount">
+                  Créer un compte
+                </button>
               </div>
+
+              <p v-if="syncFreeSlots !== null && syncFreeSlots > 0" class="hint">
+                {{ syncFreeSlots }} compte(s) encore disponible(s) sans code.
+              </p>
+              <p v-else-if="syncNeedsCode" class="hint">
+                Les comptes libres sont pris : la création demande un code de parrainage.
+              </p>
             </template>
 
             <template v-else>
@@ -330,6 +352,8 @@ import {
   clearSession,
   loadSession,
   login as syncLogin,
+  register,
+  registrationState,
   saveSession,
   syncVault,
   SyncError,
@@ -357,6 +381,7 @@ export default defineComponent({
     // La PSL est servie depuis public/ : on la charge une fois au montage, puis
     // on regenere, car la canonicalisation change le resultat.
     onMounted(async () => {
+      refreshRegistrationState();
       try {
         const res = await fetch("/public_suffix_list.dat");
         if (res.ok) {
@@ -436,6 +461,53 @@ export default defineComponent({
     const syncEmail = ref("");
     const syncPassword = ref("");
     const syncMessage = ref("");
+    const syncInviteCode = ref("");
+    /** Places restantes sans code, null tant qu'on ne sait pas. */
+    const syncFreeSlots = ref<number | null>(null);
+    const syncNeedsCode = ref(false);
+
+    /**
+     * Demande au service ce que l'inscription reclame.
+     *
+     * Silencieux en cas d'echec : le service peut etre injoignable, la page de
+     * generation doit marcher sans lui.
+     */
+    async function refreshRegistrationState() {
+      try {
+        const state = await registrationState(DEFAULT_ENDPOINT);
+        syncFreeSlots.value = state.freeSlots;
+        syncNeedsCode.value = state.needsCode;
+      } catch {
+        syncFreeSlots.value = null;
+        syncNeedsCode.value = false;
+      }
+    }
+
+    /** Cree un compte, puis ouvre la session avec. */
+    async function createAccount() {
+      if (!syncEmail.value || !syncPassword.value) {
+        syncMessage.value = "Renseignez l'adresse et le mot de passe.";
+        return;
+      }
+      syncMessage.value = "Création du compte…";
+      try {
+        saveSession(
+          await register(
+            DEFAULT_ENDPOINT,
+            syncEmail.value,
+            syncPassword.value,
+            syncInviteCode.value,
+          ),
+        );
+        syncConnected.value = true;
+        syncPassword.value = "";
+        syncInviteCode.value = "";
+        syncMessage.value = "Compte créé, vous êtes connectée.";
+        refreshRegistrationState();
+      } catch (e) {
+        syncMessage.value = e instanceof SyncError ? e.message : "Échec de la création.";
+      }
+    }
 
     const scoreSecurite = ref(0);
     const couleurSecurite = ref("");
@@ -808,6 +880,10 @@ export default defineComponent({
       syncEmail,
       syncPassword,
       syncMessage,
+      syncInviteCode,
+      syncFreeSlots,
+      syncNeedsCode,
+      createAccount,
       connectSync,
       runSync,
       disconnectSync,

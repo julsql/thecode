@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     max_blob_bytes: int = 8 * 1024
 
     #: open   — n'importe qui peut s'inscrire
+    #: quota  — libre jusqu'à `free_accounts`, code de parrainage au-delà
     #: invite — il faut connaître le code d'invitation
     #: closed — plus aucune inscription
     #:
@@ -38,6 +39,10 @@ class Settings(BaseSettings):
     #: ouvert à tous dès le premier jour, sans limitation de débit ni
     #: modération, est une invitation à l'abus.
     registration_mode: str = "invite"
+
+    #: Comptes créés sans code, en mode `quota`. Au-delà, il faut un code de
+    #: parrainage — c'est là que passera l'abonnement.
+    free_accounts: int = 5
     invite_code: str = ""
 
     environment: str = "development"
@@ -72,6 +77,10 @@ class Settings(BaseSettings):
     @property
     def registration_closed(self) -> bool:
         return self.registration_mode == "closed"
+
+    @property
+    def registration_quota(self) -> bool:
+        return self.registration_mode == "quota"
 
 
 @lru_cache(maxsize=1)

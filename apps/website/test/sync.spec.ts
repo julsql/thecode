@@ -10,7 +10,15 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { KDF_ITERATIONS, KDF_SALT, deriveTransferKey } from "@/transfer";
-import { clearSession, loadSession, saveSession, SyncError, syncVault } from "@/sync";
+import {
+  clearSession,
+  loadSession,
+  register,
+  registrationState,
+  saveSession,
+  SyncError,
+  syncVault,
+} from "@/sync";
 import { emptyVault, newEntry, type Vault } from "@/vault";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -219,5 +227,61 @@ describe("synchronisation", () => {
 
     const merged = await syncVault(emptyVault(), syncVector.masterKey, SESSION);
     expect(merged.vault.entries[0]).toStrictEqual(syncVector.entry);
+  });
+});
+
+describe("inscription", () => {
+  it("dit combien de places restent sans code", async () => {
+    vi.stubGlobal("fetch", () =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ open: true, needsCode: false, freeSlots: 3 }),
+      } as Response),
+    );
+
+    const state = await registrationState("https://example.test/api");
+    expect(state).toStrictEqual({ open: true, needsCode: false, freeSlots: 3 });
+  });
+
+  it("crée un compte et rend une session utilisable", async () => {
+    let sent: unknown = null;
+    vi.stubGlobal("fetch", (url: string, init?: RequestInit) => {
+      sent = JSON.parse(init!.body as string);
+      return Promise.resolve({
+        ok: true,
+        status: 201,
+        json: () => Promise.resolve({ access_token: "a", refresh_token: "r" }),
+      } as Response);
+    });
+
+    const session = await register(
+      "https://example.test/api",
+      "moi@example.fr",
+      "MotDePasseAssezLong1",
+      "parrainage",
+    );
+
+    // Le code part tel quel : c'est le serveur qui décide s'il est requis.
+    expect(sent).toMatchObject({ email: "moi@example.fr", invite_code: "parrainage" });
+    expect(session).toStrictEqual({
+      endpoint: "https://example.test/api",
+      accessToken: "a",
+      refreshToken: "r",
+    });
+  });
+
+  it("remonte le refus du serveur plutôt que de l'avaler", async () => {
+    vi.stubGlobal("fetch", () =>
+      Promise.resolve({
+        ok: false,
+        status: 403,
+        json: () => Promise.resolve({ detail: "Code de parrainage invalide." }),
+      } as Response),
+    );
+
+    await expect(register("https://example.test/api", "moi@example.fr", "x")).rejects.toThrow(
+      /parrainage/,
+    );
   });
 });
