@@ -104,7 +104,7 @@
             <button v-else type="button" class="ghost-btn primary" @click="createAccount">
               {{ t("acc_register_btn") }}
             </button>
-            <router-link class="ghost-btn" :to="localePath('pricing')">
+            <router-link v-if="!fromApp" class="ghost-btn" :to="localePath('pricing')">
               {{ t("nav_pricing") }}
             </router-link>
           </div>
@@ -199,7 +199,7 @@
                 <button type="button" class="ghost-btn primary" @click="upgrade">
                   {{ t("acc_upgrade") }}
                 </button>
-                <router-link class="ghost-btn" :to="localePath('pricing')">
+                <router-link v-if="!fromApp" class="ghost-btn" :to="localePath('pricing')">
                   {{ t("nav_pricing") }}
                 </router-link>
               </div>
@@ -457,9 +457,22 @@ export default defineComponent({
     // Les offres s'appliquent-elles ? Le service seul le sait.
     loadService();
     const plansOpen = computed(() => service.plans.plansEnforced);
+    /**
+     * Arrivé depuis une application ?
+     *
+     * Les règles des magasins interdisent qu'une app oriente vers un paiement
+     * hors de leur système, et un examinateur suit les liens. La page d'arrivée
+     * ne montre donc ni prix ni abonnement : c'est un formulaire de création de
+     * compte, rien d'autre.
+     *
+     * Non mémorisé : quelqu'un qui navigue ensuite sur le site de son plein gré
+     * n'a pas à rester bridé.
+     */
+    const fromApp = computed(() => route.query.from === "app");
+
     // Peut-on payer ? Autre question : aujourd'hui le déblocage passe par un
     // code, et proposer un abonnement mènerait à une impasse.
-    const billingOpen = computed(() => service.plans.billingAvailable);
+    const billingOpen = computed(() => service.plans.billingAvailable && !fromApp.value);
 
     const planLabel = computed(() => {
       if (info.value?.planSource === "lifetime") return t("acc_plan_lifetime");
@@ -811,6 +824,7 @@ export default defineComponent({
       isPro,
       plansOpen,
       billingOpen,
+      fromApp,
       planLabel,
       formattedPrice,
       renewal,

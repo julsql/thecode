@@ -230,3 +230,32 @@ describe("offres sans paiement ouvert", () => {
     expect(text).toContain("J'ai un code");
   });
 });
+
+describe("tarifs vus depuis une application", () => {
+  beforeEach(() => {
+    vi.unstubAllGlobals();
+    resetService();
+  });
+
+  it("n'affiche aucun prix même quand le paiement est ouvert", async () => {
+    vi.stubGlobal("fetch", () =>
+      json(200, {
+        plans_enforced: true,
+        price_monthly_cents: 200,
+        currency: "EUR",
+        billing_available: true,
+        free_max_entries: 5,
+        free_max_devices: 20,
+        pro_max_entries: 2000,
+        pro_max_devices: 20,
+      }),
+    );
+
+    const wrapper = await mountAt(Pricing, "/fr/pricing?from=app");
+
+    // Un examinateur de magasin suit les liens : la page d'arrivée ne doit
+    // orienter vers aucun paiement.
+    expect(normalize(wrapper.text())).not.toContain("2 €/mois");
+    expect(wrapper.text()).toContain("Se débloque avec un code");
+  });
+});

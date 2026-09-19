@@ -70,6 +70,7 @@
 
 <script lang="ts">
 import { computed, defineComponent } from "vue";
+import { useRoute } from "vue-router";
 import { useI18n } from "@/i18n";
 import { loadService, service } from "@/service";
 
@@ -77,10 +78,17 @@ export default defineComponent({
   name: "Pricing",
   setup() {
     const { t, lang, localePath } = useI18n();
+    const route = useRoute();
 
     // Le service dit ce qu'il applique ; la page n'a rien à décider.
     loadService();
-    const plans = computed(() => service.plans);
+    // Sauf une chose : arrivée depuis une application, elle n'affiche pas de
+    // prix. Les règles des magasins interdisent qu'une app oriente vers un
+    // paiement hors de leur système, et un examinateur suit les liens.
+    const fromApp = computed(() => route.query.from === "app");
+    const plans = computed(() =>
+      fromApp.value ? { ...service.plans, billingAvailable: false } : service.plans,
+    );
 
     const formattedPrice = computed(() =>
       new Intl.NumberFormat(lang.value === "fr" ? "fr-FR" : "en-GB", {

@@ -311,6 +311,38 @@ describe("page du compte", () => {
     });
   });
 
+  describe("arrivée depuis une application", () => {
+    beforeEach(() => {
+      localStorage.setItem(
+        "thecode.session",
+        JSON.stringify({
+          endpoint: "https://thecode-api.julsql.fr",
+          accessToken: "jeton",
+          refreshToken: "renouvellement",
+        }),
+      );
+    });
+
+    it("ne montre ni prix ni abonnement, même quand le paiement est ouvert", async () => {
+      // Les règles des magasins interdisent qu'une app oriente vers un
+      // paiement hors de leur système, et un examinateur suit les liens.
+      fakeService({ plan: "free" });
+      const wrapper = await mountAccount("/fr/account?from=app");
+
+      expect(button(wrapper, "Prendre l'offre complète")).toBeUndefined();
+      expect(wrapper.text()).not.toContain("Tarifs");
+      // Le reste de la page fonctionne : c'est un formulaire de compte.
+      expect(wrapper.text()).toContain("julie@exemple.fr");
+    });
+
+    it("garde l'offre visible quand on vient du site", async () => {
+      fakeService({ plan: "free" });
+      const wrapper = await mountAccount();
+
+      expect(button(wrapper, "Prendre l'offre complète")).toBeDefined();
+    });
+  });
+
   describe("compte connecté", () => {
     beforeEach(() => {
       localStorage.setItem(

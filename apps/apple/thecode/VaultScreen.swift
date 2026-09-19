@@ -144,12 +144,16 @@ struct VaultScreen: View {
 
     /// La page du compte, dans la langue de l'application.
     ///
+    /// `from=app` demande au site de n'y montrer ni prix ni abonnement : les
+    /// règles de l'App Store interdisent qu'une app oriente vers un paiement
+    /// hors de leur système, et un examinateur suit les liens.
+    ///
     /// Litteral constant : cette URL ne peut pas ne pas se construire, et un
     /// repli silencieux cacherait une faute de frappe.
     private var accountURL: URL {
         URL(string: L10n.t(
-            "https://thecode.julsql.fr/fr/account",
-            "https://thecode.julsql.fr/en/account"))!
+            "https://thecode.julsql.fr/fr/account?from=app",
+            "https://thecode.julsql.fr/en/account?from=app"))!
     }
 
     private var signInSheet: some View {
