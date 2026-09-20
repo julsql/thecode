@@ -62,9 +62,11 @@ export const translations = {
       "You give TheCode a key (one you choose and never share) and the website name — TheCode produces a strong, unique password every time, deterministically.",
     about_how_h: "How does it work?",
     about_how_p1:
-      "TheCode combines your secret key with the website identifier and runs a cryptographic hash (SHA-256). The result is converted into a strong password matching the rules you choose: length, lowercase, uppercase, digits, symbols.",
+      "TheCode derives a master key from your secret key with PBKDF2-SHA256 and 600,000 iterations, then computes an HMAC-SHA256 over the site, the login and a counter. The result is turned into a strong password matching the rules you choose: length, lowercase, uppercase, digits, symbols.",
     about_how_p2:
       "Same key + same site = same password. Always. So nothing needs to be saved anywhere.",
+    about_how_p3:
+      "The counter is what lets you change one password without changing your key: raise it, that site gets a new password, everything else stays put. Entries created before this algorithm — v1, a single SHA-256 — keep working and can be moved over from the vault once you have changed the password on the site.",
     about_why_h: "Why use TheCode?",
     about_why_b1_t: "No storage, no leaks",
     about_why_b1_p:
@@ -372,9 +374,11 @@ export const translations = {
       "Vous donnez à TheCode une clef (que vous choisissez et ne partagez jamais) et le nom du site — TheCode produit, à chaque fois, un mot de passe fort et unique, de manière déterministe.",
     about_how_h: "Comment ça marche ?",
     about_how_p1:
-      "TheCode combine votre clef secrète avec l’identifiant du site, puis applique une fonction cryptographique (SHA-256). Le résultat est converti en un mot de passe robuste qui respecte vos critères : longueur, minuscules, majuscules, chiffres, symboles.",
+      "TheCode dérive une clef maîtresse de votre clef secrète avec PBKDF2-SHA256 et 600 000 itérations, puis calcule un HMAC-SHA256 sur le site, l’identifiant et un compteur. Le résultat est converti en un mot de passe robuste qui respecte vos critères : longueur, minuscules, majuscules, chiffres, symboles.",
     about_how_p2:
       "Même clef + même site = même mot de passe. Toujours. Rien n’a donc besoin d’être enregistré quelque part.",
+    about_how_p3:
+      "Le compteur est ce qui permet de changer un mot de passe sans changer de clef : on l’incrémente, ce site obtient un nouveau mot de passe, et tout le reste ne bouge pas. Les entrées créées avant cet algorithme — la v1, un simple SHA-256 — continuent de fonctionner et se migrent depuis le carnet, une fois le mot de passe changé sur le site.",
     about_why_h: "Pourquoi utiliser TheCode ?",
     about_why_b1_t: "Aucun stockage, aucune fuite",
     about_why_b1_p:

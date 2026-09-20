@@ -123,3 +123,20 @@ describe("documents et offre payante", () => {
     expect(doc.intro?.join(" ")).toContain("Stripe n'intervient donc pas encore");
   });
 });
+
+describe("page Le projet", () => {
+  it("décrit l'algorithme réellement utilisé", async () => {
+    const About = (await import("@/pages/About.vue")).default;
+    const wrapper = await mountAt(About, "/fr/about");
+    const text = wrapper.text();
+
+    // La page annonçait encore un simple SHA-256, qui n'est plus l'algorithme
+    // depuis le passage à la v2 : une page qui décrit autre chose que ce que
+    // fait le produit est pire qu'une page qui se tait.
+    expect(text).toContain("PBKDF2");
+    expect(text).toContain("HMAC-SHA256");
+    expect(text).toContain("600 000");
+    // La v1 n'est mentionnée que pour ce qu'elle est devenue : un héritage.
+    expect(text).toContain("v1");
+  });
+});

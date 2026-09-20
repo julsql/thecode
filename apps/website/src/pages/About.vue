@@ -26,11 +26,12 @@
             <span class="formula-op">+</span>
             <span class="formula-part">{{ t("gen_label_site") }}</span>
             <span class="formula-op">→</span>
-            <span class="formula-part formula-out">SHA-256</span>
+            <span class="formula-part formula-out">PBKDF2 → HMAC-SHA256</span>
             <span class="formula-op">→</span>
             <span class="formula-part formula-result">{{ t("gen_section_result") }}</span>
           </div>
           <p>{{ t("about_how_p2") }}</p>
+          <p>{{ t("about_how_p3") }}</p>
         </section>
 
         <section>
