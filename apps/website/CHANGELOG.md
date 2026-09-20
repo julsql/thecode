@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.5.0](https://github.com/julsql/thecode/compare/website-v2.4.0...website-v2.5.0) (2026-09-20)
+
+
+### Features
+
+* hide the paid plan on the page the apps link to ([bfed357](https://github.com/julsql/thecode/commit/bfed357e4d290f34179941f992a58b57faaa41da))
+* make the renewal sell on the web and stay silent in the apps ([1bf8588](https://github.com/julsql/thecode/commit/1bf85889b90a62699669ce5069b7cb0e6dece946))
+* **website:** keep the legal notice off the site until it can be filled ([997ab30](https://github.com/julsql/thecode/commit/997ab30f88d540198e3259da29b971e0d4dd7770))
+
+
+### Bug Fixes
+
+* **website:** describe the algorithm the product actually runs ([0a05fa9](https://github.com/julsql/thecode/commit/0a05fa9401864f8732803c301ec2bedb784b5e5e))
+
 ## [2.4.0](https://github.com/julsql/thecode/compare/website-v2.3.0...website-v2.4.0) (2026-09-19)
 
 
