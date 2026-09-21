@@ -1,35 +1,5 @@
 # Changelog
 
-## [2.3.0](https://github.com/julsql/thecode/compare/cli-v2.2.0...cli-v2.3.0) (2026-09-19)
-
-
-### Features
-
-* **cli:** default to v2, keep --algo 1 as the way back ([9e33fd1](https://github.com/julsql/thecode/commit/9e33fd12c5f2e03f927eba8db5769d443e4d5a57))
-* **clients:** point to the site for creating and managing an account ([9bce2bd](https://github.com/julsql/thecode/commit/9bce2bd25b7ad9334786a75185f5f80582da8141))
-* the counter becomes part of the complete plan ([e21b66c](https://github.com/julsql/thecode/commit/e21b66ca1131a54558d18047c1d416ebc99209b2))
-
-## [2.2.0](https://github.com/julsql/thecode/compare/cli-v2.1.0...cli-v2.2.0) (2026-09-19)
-
-
-### Features
-
-* **cli:** renew an entry's password with --renew ([79fba24](https://github.com/julsql/thecode/commit/79fba242b4f937a27b2e9341f75b55b15faeb64e))
-
-## [2.1.0](https://github.com/julsql/thecode/compare/cli-v2.0.0...cli-v2.1.0) (2026-09-18)
-
-
-### Features
-
-* **cli:** sync the vault through the server ([e546a1e](https://github.com/julsql/thecode/commit/e546a1e98368b98b35acb020c8995090a700c107))
-* point the clients at thecode-api.julsql.fr ([2a35656](https://github.com/julsql/thecode/commit/2a3565629c5bbbd148f0684c8963f2fa31e64f4e))
-
-
-### Bug Fixes
-
-* **cli:** keep a false "deleted" absent after a sync ([8153493](https://github.com/julsql/thecode/commit/81534936d2ec31b9e9b25a09214ffbb9076bda2d))
-* pin one canonical form for merge tie-breaks ([9419141](https://github.com/julsql/thecode/commit/9419141677ee42ac00babdada94468b5b1b9c9ac))
-
 ## [2.0.0](https://github.com/julsql/thecode/compare/cli-v1.0.1...cli-v2.0.0) (2026-09-18)
 
 
