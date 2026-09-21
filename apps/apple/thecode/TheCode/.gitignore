@@ -1,0 +1,73 @@
+# Xcode
+## Build products
+build/
+DerivedData/
+
+## User-specific Xcode settings
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+xcuserdata/
+
+## Swift Package Manager
+Package.resolved
+
+## SwiftPM build products
+.build/
+
+## Xcode Private Schemes
+*.xcscheme
+*.xcconfig
+
+# macOS
+*.DS_Store
+
+# CocoaPods
+Pods/
+
+# Carthage
+Carthage/Checkouts
+Carthage/Build
+
+# AppCode
+.idea/
+
+# fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+fastlane/test_output/
+
+# Swift Package Manager
+## Add this if you're using SPM in your project
+# Package.pins
+# Package.resolved
+# .build/
+
+# Compiled Source
+###################
+*.com.*
+*.class
+*.dll
+*.exe
+*.o
+*.so
+
+# Logs and databases
+######################
+*.log
+*.sqlite
+*.sqlite3
+*.log.*
+
+# OS generated files
+######################
+ehthumbs.db
+Icon?
+Thumbs.db
+
+# SwiftPackageManager
+### Add this if you're using SPM in your project
+# .swiftpm/
+
