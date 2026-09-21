@@ -1,6 +1,6 @@
 # thecode (CLI)
 
-[![tests](https://github.com/julsql/thecode-cli/actions/workflows/tests.yml/badge.svg)](https://github.com/julsql/thecode-cli/actions/workflows/tests.yml)
+[![tests](https://github.com/julsql/thecode/actions/workflows/cli.yml/badge.svg)](https://github.com/julsql/thecode/actions/workflows/cli.yml)
 [![Python](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](https://opensource.org/licenses/MIT)
 
@@ -9,7 +9,7 @@ Version ligne de commande de TheCode. Génère un mot de passe déterministe à 
 ## Installation
 
 ```bash
-cd thecode-cli
+cd thecode/apps/cli
 pip install .
 ```
 

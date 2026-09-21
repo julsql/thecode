@@ -61,7 +61,7 @@
           <p>{{ t("about_oss_p") }}</p>
           <a
             class="cta-link"
-            href="https://github.com/TheCodeDevLab"
+            href="https://github.com/julsql/thecode"
             target="_blank"
             rel="noopener"
           >

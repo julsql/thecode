@@ -206,7 +206,7 @@
             <h4>{{ t("footer_links_resources") }}</h4>
             <router-link :to="localePath('tutorial')">{{ t("nav_tutorial") }}</router-link>
             <router-link :to="localePath('contact')">{{ t("nav_contact") }}</router-link>
-            <a href="https://github.com/TheCodeDevLab" target="_blank" rel="noopener">GitHub</a>
+            <a href="https://github.com/julsql/thecode" target="_blank" rel="noopener">GitHub</a>
           </div>
 
           <div class="footer-col">
@@ -223,12 +223,9 @@
             <router-link v-if="plansOpen" :to="localePath('terms')">
               {{ t("nav_terms") }}
             </router-link>
-            <a
-              href="https://github.com/TheCodeDevLab/thecode-website"
-              target="_blank"
-              rel="noopener"
-              >{{ t("footer_src") }}</a
-            >
+            <a href="https://github.com/julsql/thecode" target="_blank" rel="noopener">{{
+              t("footer_src")
+            }}</a>
           </div>
         </div>
 

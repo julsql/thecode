@@ -183,7 +183,7 @@ LastPass, 1Password, Bitwarden, Dashlane, KeePass — utilisés ci-dessus dans u
 | Site web de l'app | https://thecode.julsql.fr |
 | E-mail développeur | *(votre adresse de contact publique)* |
 | Politique de confidentialité | https://thecode.julsql.fr/privacy *(à confirmer / créer)* |
-| Code source | Lien GitHub TheCodeDevLab |
+| Code source | Lien GitHub : https://github.com/julsql/thecode |
 
 > **Important :** Google exige une URL de politique de confidentialité valide et accessible publiquement. Si elle n'existe pas encore, créez une page dédiée sur thecode.julsql.fr avant publication.
 

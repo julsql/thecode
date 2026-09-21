@@ -58,7 +58,7 @@ You can download TheCode from the official browser extension stores:
 
 ## 📦 Installation for developpment
 
-Download the extension archive from the [Releases page](https://github.com/TheCodeDevLab/thecode-extension/releases/).
+Download the extension archive from the [Releases page](https://github.com/julsql/thecode/releases/).
 
 ### Chrome / Edge / Brave
 
