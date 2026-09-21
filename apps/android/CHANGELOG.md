@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.4.0](https://github.com/julsql/thecode/compare/android-v3.3.0...android-v3.4.0) (2026-09-20)
+
+
+### Features
+
+* **apps:** invite people to sync, without a word about price ([be89c12](https://github.com/julsql/thecode/commit/be89c12098bd1c72ea08d02826efc0fdf3a8ee09))
+* hide the paid plan on the page the apps link to ([bfed357](https://github.com/julsql/thecode/commit/bfed357e4d290f34179941f992a58b57faaa41da))
+* make the renewal sell on the web and stay silent in the apps ([1bf8588](https://github.com/julsql/thecode/commit/1bf85889b90a62699669ce5069b7cb0e6dece946))
+
 ## [3.3.0](https://github.com/julsql/thecode/compare/android-v3.2.0...android-v3.3.0) (2026-09-19)
 
 

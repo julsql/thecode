@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.4.0](https://github.com/julsql/thecode/compare/extension-v3.3.0...extension-v3.4.0) (2026-09-20)
+
+
+### Features
+
+* make the renewal sell on the web and stay silent in the apps ([1bf8588](https://github.com/julsql/thecode/commit/1bf85889b90a62699669ce5069b7cb0e6dece946))
+
 ## [3.3.0](https://github.com/julsql/thecode/compare/extension-v3.2.0...extension-v3.3.0) (2026-09-19)
 
 
