@@ -26,5 +26,65 @@
   "v2_notice_close": {
     "message": "Close",
     "description": "Button closing the v2 announcement."
+  },
+  "sync_need_credentials": {
+    "message": "Enter the address and the password.",
+    "description": "Sync status in the popup."
+  },
+  "sync_connecting": {
+    "message": "Signing in…",
+    "description": "Sync status in the popup."
+  },
+  "sync_connected": {
+    "message": "Signed in.",
+    "description": "Sync status in the popup."
+  },
+  "sync_failed": {
+    "message": "Failed: $VALUE$",
+    "description": "Sync status in the popup.",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "sync_unknown_error": {
+    "message": "unknown",
+    "description": "Sync status in the popup."
+  },
+  "sync_running": {
+    "message": "Syncing…",
+    "description": "Sync status in the popup."
+  },
+  "sync_done": {
+    "message": "$VALUE$ entries synced",
+    "description": "Sync status in the popup.",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "sync_local_only": {
+    "message": ", $VALUE$ kept on this device (free plan limit)",
+    "description": "Sync status in the popup.",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "sync_conflicts": {
+    "message": " ($VALUE$ conflict(s) reported)",
+    "description": "Sync status in the popup.",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "sync_forgotten": {
+    "message": "Session forgotten on this device.",
+    "description": "Sync status in the popup."
   }
 }

@@ -15,11 +15,14 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.TimeZone;
 
 /**
@@ -173,6 +176,7 @@ public final class Vault {
         merged.entries.addAll(byId.values());
         // Collections.sort plutot que List#sort, qui demande l'API 24.
         java.util.Collections.sort(merged.entries, (a, b) -> a.id.compareTo(b.id));
+        findDuplicates(merged.entries, idsOf(left.entries), idsOf(right.entries), conflicts);
 
         String latest = left.updatedAt.compareTo(right.updatedAt) >= 0
                 ? left.updatedAt : right.updatedAt;
@@ -238,8 +242,105 @@ public final class Vault {
         // l'entrée.
         merged.deleted = left.deleted || right.deleted;
 
+        // Une entrée n'est créée qu'une fois : la date la plus ancienne est la
+        // vraie. Un carnet antérieur au champ ne doit pas l'effacer.
+        if (left.createdAt == null) merged.createdAt = right.createdAt;
+        else if (right.createdAt == null) merged.createdAt = left.createdAt;
+        else merged.createdAt = left.createdAt.compareTo(right.createdAt) <= 0
+                    ? left.createdAt : right.createdAt;
+
         merged.updatedAt = byDate >= 0 ? left.updatedAt : right.updatedAt;
         return merged;
+    }
+
+    private static Set<String> idsOf(List<VaultEntry> entries) {
+        Set<String> ids = new HashSet<>();
+        for (VaultEntry e : entries) ids.add(e.id);
+        return ids;
+    }
+
+    /**
+     * Signale les doublons que la fusion rapproche : le même compte créé à part
+     * sur deux appareils, donc sous deux id. Un doublon déjà présent d'un côté
+     * l'a été quand il y est entré — le resignaler à chaque fusion serait du
+     * bruit.
+     */
+    private static void findDuplicates(List<VaultEntry> entries, Set<String> leftIds,
+                                       Set<String> rightIds, List<Conflict> conflicts) {
+        List<VaultEntry> live = new ArrayList<>();
+        for (VaultEntry e : entries) {
+            if (!e.deleted) live.add(e);
+        }
+        for (int i = 0; i < live.size(); i++) {
+            for (int j = i + 1; j < live.size(); j++) {
+                VaultEntry a = live.get(i);
+                VaultEntry b = live.get(j);
+                boolean apart = (leftIds.contains(a.id) && !rightIds.contains(a.id)
+                        && rightIds.contains(b.id) && !leftIds.contains(b.id))
+                        || (rightIds.contains(a.id) && !leftIds.contains(a.id)
+                        && leftIds.contains(b.id) && !rightIds.contains(b.id));
+                if (!apart || !loginOf(a.login).equals(loginOf(b.login))) continue;
+                boolean shared = false;
+                for (String d : b.domains) {
+                    if (a.coversDomain(d)) {
+                        shared = true;
+                        break;
+                    }
+                }
+                // Entrées triées par id : a porte le plus petit.
+                if (shared) conflicts.add(new Conflict("doublon", a.id, b.id));
+            }
+        }
+    }
+
+    /** Ce qui part au serveur, et ce qui reste sur l'appareil. */
+    public static final class PushSelection {
+        public final List<VaultEntry> push;
+        public final List<VaultEntry> localOnly;
+
+        PushSelection(List<VaultEntry> push, List<VaultEntry> localOnly) {
+            this.push = push;
+            this.localOnly = localOnly;
+        }
+    }
+
+    /**
+     * Ce qui part au serveur quand le compte a un plafond, et ce qui reste sur
+     * l'appareil. Voir shared/spec/vault-sync.md, « Synchronisation partielle ».
+     *
+     * Ce qui est déjà sur le serveur part toujours, pierres tombales comprises :
+     * une modification doit pouvoir partir. Les places libres vont aux autres
+     * entrées, les plus anciennes d'abord. Une entrée jamais synchronisée puis
+     * supprimée n'a rien à propager.
+     */
+    public static PushSelection selectForPush(Vault vault, Collection<String> remoteIds,
+                                              int maxEntries) {
+        Set<String> remote = new HashSet<>(remoteIds);
+        List<VaultEntry> onServer = new ArrayList<>();
+        List<VaultEntry> others = new ArrayList<>();
+        int liveOnServer = 0;
+        for (VaultEntry e : vault.entries) {
+            if (remote.contains(e.id)) {
+                onServer.add(e);
+                if (!e.deleted) liveOnServer++;
+            } else if (!e.deleted) {
+                others.add(e);
+            }
+        }
+        java.util.Collections.sort(others, (a, b) -> {
+            String da = a.createdAt != null ? a.createdAt : a.updatedAt;
+            String db = b.createdAt != null ? b.createdAt : b.updatedAt;
+            int byDate = da.compareTo(db);
+            return byDate != 0 ? byDate : a.id.compareTo(b.id);
+        });
+
+        int free = Math.max(0, Math.min(others.size(), maxEntries - liveOnServer));
+        List<VaultEntry> push = new ArrayList<>(onServer);
+        push.addAll(others.subList(0, free));
+        List<VaultEntry> localOnly = new ArrayList<>(others.subList(free, others.size()));
+        java.util.Collections.sort(push, (a, b) -> a.id.compareTo(b.id));
+        java.util.Collections.sort(localOnly, (a, b) -> a.id.compareTo(b.id));
+        return new PushSelection(push, localOnly);
     }
 
     public static Vault fromJson(String json) throws JSONException {

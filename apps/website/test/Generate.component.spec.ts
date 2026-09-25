@@ -31,9 +31,9 @@ function makeRouter(): Router {
   });
 }
 
-async function mountGenerate() {
+async function mountGenerate(path = "/fr") {
   const router = makeRouter();
-  router.push("/fr");
+  router.push(path);
   await router.isReady();
   const wrapper = mount(Generate, { global: { plugins: [router] } });
   await wrapper.vm.$nextTick();
@@ -442,6 +442,22 @@ describe("synchronisation", () => {
     // Le carnet est chiffré avec une clef dérivée de la clef maîtresse :
     // sans elle, il n'y a rien à chiffrer ni à relire.
     expect(wrapper.text()).toContain("clef maîtresse");
+
+    clearSession();
+  });
+});
+
+describe("messages de synchronisation", () => {
+  it("parlent la langue de la page", async () => {
+    const { saveSession, clearSession } = await import("@/sync");
+    saveSession({ endpoint: "https://x", accessToken: "a", refreshToken: "r" });
+
+    const wrapper = await mountGenerate("/en");
+    const button = wrapper.findAll("button").find((b) => b.text().startsWith("Sync now"));
+    await button!.trigger("click");
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.text()).toContain("Enter your master key.");
 
     clearSession();
   });

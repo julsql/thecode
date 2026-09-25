@@ -91,6 +91,7 @@
     <string name="sync_running">Synchronisation…</string>
     <string name="sync_done">Carnet synchronisé : %1$d entrées.</string>
     <string name="sync_done_conflicts">Carnet synchronisé : %1$d entrées, %2$d demandent votre attention.</string>
+    <string name="sync_local_only">%1$d entrées restées sur cet appareil (plafond de l\'offre gratuite).</string>
     <string name="sync_failed">Échec de la synchronisation : %1$s</string>
     <string name="sync_needs_key">Définissez d\'abord votre clef maîtresse : le carnet est chiffré avec elle avant de quitter cet appareil.</string>
     <string name="sync_no_secure_storage">Le stockage chiffré est indisponible sur cet appareil : les identifiants ne peuvent pas être conservés.</string>

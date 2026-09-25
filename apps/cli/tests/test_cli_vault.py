@@ -271,3 +271,23 @@ def test_renew_needs_the_complete_plan(tmp_path, monkeypatch, capsys):
     assert code == 1
     assert "offre complète" in capsys.readouterr().err
     assert load(vault_path)["entries"][0]["counter"] == 1
+
+
+@pytest.mark.parametrize(
+    ("env", "expected"),
+    [
+        ({"LANG": "en_US.UTF-8"}, "en"),
+        ({"LANG": "fr_FR.UTF-8"}, "fr"),
+        ({"LANG": "en_US.UTF-8", "LC_ALL": "fr_FR.UTF-8"}, "fr"),
+        ({"LANG": "C"}, "fr"),
+        ({}, "fr"),
+    ],
+)
+def test_messages_follow_the_terminal_language(monkeypatch, env, expected):
+    from thecode.cli import _t
+
+    for var in ("LC_ALL", "LC_MESSAGES", "LANG"):
+        monkeypatch.delenv(var, raising=False)
+    for var, value in env.items():
+        monkeypatch.setenv(var, value)
+    assert _t("fr", "en") == expected

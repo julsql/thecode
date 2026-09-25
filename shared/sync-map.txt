@@ -67,3 +67,8 @@ vault-fixtures/v2-only.json|apps/extension/js-test
 vault-fixtures/v2-only.json|apps/website/test
 vault-fixtures/v2-only.json|apps/android/app/src/test/resources
 vault-fixtures/v2-only.json|apps/apple/thecodeTests/Resources
+vault-fixtures/sync-selection.json|apps/cli/tests
+vault-fixtures/sync-selection.json|apps/extension/js-test
+vault-fixtures/sync-selection.json|apps/website/test
+vault-fixtures/sync-selection.json|apps/android/app/src/test/resources
+vault-fixtures/sync-selection.json|apps/apple/thecodeTests/Resources

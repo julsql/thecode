@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -28,6 +29,7 @@ from .transfer import TransferError, export_vault, import_vault
 from .variants import variants
 from .vault import (
     DEFAULT_LENGTH,
+    Conflict,
     default_vault_path,
     find_all_by_domain,
     load,
@@ -250,6 +252,36 @@ def _derive(args, params, entry):
     )
 
 
+def _t(fr: str, en: str) -> str:
+    """Le message dans la langue du terminal.
+
+    Français par défaut, comme le reste de la CLI : l'anglais seulement quand
+    la locale le demande explicitement.
+    """
+    for var in ("LC_ALL", "LC_MESSAGES", "LANG"):
+        value = os.environ.get(var, "")
+        if value and value not in ("C", "POSIX") and not value.startswith("C."):
+            return fr if value.lower().startswith("fr") else en
+    return fr
+
+
+def _describe_conflict(conflict: Conflict) -> str:
+    """Une ligne lisible par conflit signalé à la fusion."""
+    if conflict.kind == "doublon":
+        # Rien n'est fusionné : c'est à l'utilisateur de supprimer l'entrée
+        # qu'il ne veut pas.
+        return _t(
+            f"⚠ doublon : {conflict.entry_id} et {conflict.detail} semblent être le "
+            "même compte (même identifiant, domaine commun)",
+            f"⚠ duplicate: {conflict.entry_id} and {conflict.detail} look like the same "
+            "account (same login, shared domain)",
+        )
+    return _t(
+        f"⚠ {conflict.kind} sur {conflict.entry_id} : {conflict.detail}",
+        f"⚠ {conflict.kind} on {conflict.entry_id}: {conflict.detail}",
+    )
+
+
 def _print_vault(vault_data) -> int:
     entries = [e for e in vault_data.get("entries", []) if not e.get("deleted")]
     if not entries:
@@ -329,17 +361,35 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 1
         try:
-            merged, conflicts, _ = sync_vault(vault_data, args.password, creds)
+            merged, conflicts, local_only, _ = sync_vault(vault_data, args.password, creds)
         except (SyncError, TransferError) as exc:
-            print(f"Échec de synchronisation : {exc}", file=sys.stderr)
+            print(
+                _t(f"Échec de synchronisation : {exc}", f"Sync failed: {exc}"), file=sys.stderr
+            )
             return 1
 
         for conflict in conflicts:
-            print(f"⚠ {conflict.kind} sur {conflict.entry_id} : {conflict.detail}", file=sys.stderr)
+            print(_describe_conflict(conflict), file=sys.stderr)
 
         save(merged, vault_path)
-        kept = len([e for e in merged["entries"] if not e.get("deleted")])
-        print(f"✓ Carnet synchronisé : {kept} entrée(s).", file=sys.stderr)
+        kept = len([e for e in merged["entries"] if not e.get("deleted")]) - local_only
+        # Au-delà du plafond, le reste ne part pas : le dire, sinon on croit
+        # retrouver sur l'autre appareil ce qui n'y est jamais allé.
+        local = (
+            _t(
+                f", {local_only} restée(s) sur cet appareil (plafond de l'offre gratuite)",
+                f", {local_only} kept on this device (free plan limit)",
+            )
+            if local_only
+            else ""
+        )
+        print(
+            _t(
+                f"✓ Carnet synchronisé : {kept} entrée(s){local}.",
+                f"✓ Vault synced: {kept} entries{local}.",
+            ),
+            file=sys.stderr,
+        )
         return 0
 
     if args.fingerprint:
@@ -374,17 +424,23 @@ def main(argv: list[str] | None = None) -> int:
         try:
             incoming = import_vault(args.import_payload, args.password)
         except TransferError as exc:
-            print(f"Import impossible : {exc}", file=sys.stderr)
+            print(_t(f"Import impossible : {exc}", f"Import failed: {exc}"), file=sys.stderr)
             return 1
 
         # On fusionne, jamais on n'écrase : un import qui remplace effacerait
         # les entrées créées sur cet appareil.
         merged, conflicts = merge(vault_data, incoming)
         for conflict in conflicts:
-            print(f"⚠ {conflict.kind} sur {conflict.entry_id} : {conflict.detail}", file=sys.stderr)
+            print(_describe_conflict(conflict), file=sys.stderr)
         save(merged, vault_path)
         kept = len([e for e in merged["entries"] if not e.get("deleted")])
-        print(f"✓ Carnet fusionné : {kept} entrée(s). ({vault_path})", file=sys.stderr)
+        print(
+            _t(
+                f"✓ Carnet fusionné : {kept} entrée(s). ({vault_path})",
+                f"✓ Vault merged: {kept} entries. ({vault_path})",
+            ),
+            file=sys.stderr,
+        )
         return 0
 
     entry, params = _resolve(args, vault_data)

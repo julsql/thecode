@@ -26,5 +26,65 @@
   "v2_notice_close": {
     "message": "Fermer",
     "description": "Button closing the v2 announcement."
+  },
+  "sync_need_credentials": {
+    "message": "Renseignez l'adresse et le mot de passe.",
+    "description": "Sync status in the popup."
+  },
+  "sync_connecting": {
+    "message": "Connexion…",
+    "description": "Sync status in the popup."
+  },
+  "sync_connected": {
+    "message": "Connecté.",
+    "description": "Sync status in the popup."
+  },
+  "sync_failed": {
+    "message": "Échec : $VALUE$",
+    "description": "Sync status in the popup.",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "sync_unknown_error": {
+    "message": "inconnu",
+    "description": "Sync status in the popup."
+  },
+  "sync_running": {
+    "message": "Synchronisation…",
+    "description": "Sync status in the popup."
+  },
+  "sync_done": {
+    "message": "$VALUE$ entrée(s) synchronisée(s)",
+    "description": "Sync status in the popup.",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "sync_local_only": {
+    "message": ", $VALUE$ restée(s) sur cet appareil (plafond de l'offre gratuite)",
+    "description": "Sync status in the popup.",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "sync_conflicts": {
+    "message": " ($VALUE$ conflit(s) signalé(s))",
+    "description": "Sync status in the popup.",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "sync_forgotten": {
+    "message": "Session oubliée sur cet appareil.",
+    "description": "Sync status in the popup."
   }
 }

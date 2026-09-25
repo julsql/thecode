@@ -1,0 +1,466 @@
+{
+  "schema": 1,
+  "README": "Choix des entrees poussees au serveur quand le compte a un plafond. La regle est decrite dans shared/spec/vault-sync.md (Synchronisation partielle). 'vault' est le carnet apres fusion, 'remoteIds' les id deja presents sur le serveur, 'maxEntries' le plafond rendu par GET /v1/vault. Chaque implementation doit pousser exactement 'push' et laisser sur l'appareil exactement 'localOnly' (listes triees par id).",
+  "cases": [
+    {
+      "id": "sous-le-plafond",
+      "why": "Tout tient : tout part.",
+      "vault": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "site-1.com",
+            "domains": ["site-1.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 2,
+            "updatedAt": "2026-01-01T00:00:00Z"
+          },
+          {
+            "id": "22222222-2222-4222-8222-222222222222",
+            "siteKey": "site-2.com",
+            "domains": ["site-2.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 2,
+            "updatedAt": "2026-01-01T00:00:00Z"
+          }
+        ]
+      },
+      "remoteIds": ["11111111-1111-4111-8111-111111111111"],
+      "maxEntries": 5,
+      "push": ["11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222"],
+      "localOnly": []
+    },
+    {
+      "id": "les-plus-anciennes-d-abord",
+      "why": "Au-dela du plafond, les entrees nouvelles partent par ordre de creation.",
+      "vault": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "site-1.com",
+            "domains": ["site-1.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 2,
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "createdAt": "2026-01-03T00:00:00Z"
+          },
+          {
+            "id": "22222222-2222-4222-8222-222222222222",
+            "siteKey": "site-2.com",
+            "domains": ["site-2.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 2,
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "createdAt": "2026-01-01T00:00:00Z"
+          },
+          {
+            "id": "33333333-3333-4333-8333-333333333333",
+            "siteKey": "site-3.com",
+            "domains": ["site-3.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 2,
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "createdAt": "2026-01-02T00:00:00Z"
+          }
+        ]
+      },
+      "remoteIds": [],
+      "maxEntries": 2,
+      "push": ["22222222-2222-4222-8222-222222222222", "33333333-3333-4333-8333-333333333333"],
+      "localOnly": ["11111111-1111-4111-8111-111111111111"]
+    },
+    {
+      "id": "le-serveur-d-abord",
+      "why": "Ce qui est deja sur le serveur garde sa place, meme plus recent qu'une entree locale.",
+      "vault": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "site-1.com",
+            "domains": ["site-1.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 2,
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "createdAt": "2026-01-01T00:00:00Z"
+          },
+          {
+            "id": "22222222-2222-4222-8222-222222222222",
+            "siteKey": "site-2.com",
+            "domains": ["site-2.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 2,
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "createdAt": "2026-01-05T00:00:00Z"
+          },
+          {
+            "id": "33333333-3333-4333-8333-333333333333",
+            "siteKey": "site-3.com",
+            "domains": ["site-3.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 2,
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "createdAt": "2026-01-02T00:00:00Z"
+          }
+        ]
+      },
+      "remoteIds": ["22222222-2222-4222-8222-222222222222"],
+      "maxEntries": 2,
+      "push": ["11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222"],
+      "localOnly": ["33333333-3333-4333-8333-333333333333"]
+    },
+    {
+      "id": "updatedAt-sans-createdAt",
+      "why": "Une entree anterieure au champ createdAt est datee par updatedAt.",
+      "vault": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "site-1.com",
+            "domains": ["site-1.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 2,
+            "updatedAt": "2026-01-04T00:00:00Z"
+          },
+          {
+            "id": "22222222-2222-4222-8222-222222222222",
+            "siteKey": "site-2.com",
+            "domains": ["site-2.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 2,
+            "updatedAt": "2026-01-06T00:00:00Z",
+            "createdAt": "2026-01-03T00:00:00Z"
+          }
+        ]
+      },
+      "remoteIds": [],
+      "maxEntries": 1,
+      "push": ["22222222-2222-4222-8222-222222222222"],
+      "localOnly": ["11111111-1111-4111-8111-111111111111"]
+    },
+    {
+      "id": "egalite-departagee-par-id",
+      "why": "Meme date : l'id departage, pour que tous les appareils choisissent pareil.",
+      "vault": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "site-1.com",
+            "domains": ["site-1.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 2,
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "createdAt": "2026-01-01T00:00:00Z"
+          },
+          {
+            "id": "22222222-2222-4222-8222-222222222222",
+            "siteKey": "site-2.com",
+            "domains": ["site-2.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 2,
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "createdAt": "2026-01-01T00:00:00Z"
+          }
+        ]
+      },
+      "remoteIds": [],
+      "maxEntries": 1,
+      "push": ["11111111-1111-4111-8111-111111111111"],
+      "localOnly": ["22222222-2222-4222-8222-222222222222"]
+    },
+    {
+      "id": "suppression-libere-une-place",
+      "why": "Une entree supprimee du serveur part comme pierre tombale et ne compte plus : sa place revient a la plus ancienne des entrees locales.",
+      "vault": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "site-1.com",
+            "domains": ["site-1.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 2,
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "deleted": true
+          },
+          {
+            "id": "22222222-2222-4222-8222-222222222222",
+            "siteKey": "site-2.com",
+            "domains": ["site-2.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 2,
+            "updatedAt": "2026-01-01T00:00:00Z"
+          },
+          {
+            "id": "33333333-3333-4333-8333-333333333333",
+            "siteKey": "site-3.com",
+            "domains": ["site-3.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 2,
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "createdAt": "2026-01-02T00:00:00Z"
+          },
+          {
+            "id": "44444444-4444-4444-8444-444444444444",
+            "siteKey": "site-4.com",
+            "domains": ["site-4.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 2,
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "createdAt": "2026-01-03T00:00:00Z"
+          }
+        ]
+      },
+      "remoteIds": ["11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222"],
+      "maxEntries": 2,
+      "push": [
+        "11111111-1111-4111-8111-111111111111",
+        "22222222-2222-4222-8222-222222222222",
+        "33333333-3333-4333-8333-333333333333"
+      ],
+      "localOnly": ["44444444-4444-4444-8444-444444444444"]
+    },
+    {
+      "id": "pierre-tombale-locale-reste-locale",
+      "why": "Une entree jamais synchronisee puis supprimee n'a rien a propager.",
+      "vault": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "site-1.com",
+            "domains": ["site-1.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 2,
+            "updatedAt": "2026-01-01T00:00:00Z"
+          },
+          {
+            "id": "22222222-2222-4222-8222-222222222222",
+            "siteKey": "site-2.com",
+            "domains": ["site-2.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 2,
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "deleted": true
+          }
+        ]
+      },
+      "remoteIds": [],
+      "maxEntries": 5,
+      "push": ["11111111-1111-4111-8111-111111111111"],
+      "localOnly": []
+    },
+    {
+      "id": "deja-au-dela-du-plafond",
+      "why": "Apres une fin d'abonnement, le serveur garde plus que le plafond : tout ce qu'il a reste synchronise, rien de nouveau ne part.",
+      "vault": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "site-1.com",
+            "domains": ["site-1.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 2,
+            "updatedAt": "2026-01-01T00:00:00Z"
+          },
+          {
+            "id": "22222222-2222-4222-8222-222222222222",
+            "siteKey": "site-2.com",
+            "domains": ["site-2.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 2,
+            "updatedAt": "2026-01-01T00:00:00Z"
+          },
+          {
+            "id": "33333333-3333-4333-8333-333333333333",
+            "siteKey": "site-3.com",
+            "domains": ["site-3.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 2,
+            "updatedAt": "2026-01-01T00:00:00Z"
+          },
+          {
+            "id": "44444444-4444-4444-8444-444444444444",
+            "siteKey": "site-4.com",
+            "domains": ["site-4.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "v": 2,
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "createdAt": "2026-01-02T00:00:00Z"
+          }
+        ]
+      },
+      "remoteIds": [
+        "11111111-1111-4111-8111-111111111111",
+        "22222222-2222-4222-8222-222222222222",
+        "33333333-3333-4333-8333-333333333333"
+      ],
+      "maxEntries": 2,
+      "push": [
+        "11111111-1111-4111-8111-111111111111",
+        "22222222-2222-4222-8222-222222222222",
+        "33333333-3333-4333-8333-333333333333"
+      ],
+      "localOnly": ["44444444-4444-4444-8444-444444444444"]
+    }
+  ]
+}

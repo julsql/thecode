@@ -111,6 +111,8 @@ public struct Sync {
     public struct Result {
         public let vault: Vault
         public let conflicts: [VaultConflict]
+        /// Entrées restées sur l'appareil, faute de place sous le plafond.
+        public let localOnly: Int
         /// Éventuellement renouvelés : l'appelant doit les réenregistrer.
         public let credentials: SyncCredentials
     }
@@ -224,11 +226,25 @@ public struct Sync {
 
         let (merged, conflicts) = Vault.merge(local, remote)
 
+        // Au-delà du plafond, le reste du carnet ne part pas : il reste propre
+        // à l'appareil. Un serveur qui ne dit pas son plafond reçoit tout.
+        let push: [VaultEntry]
+        let localOnly: [VaultEntry]
+        if let maxEntries = pulled["max_entries"] as? Int {
+            let remoteIds = (pulled["entries"] as? [[String: Any]] ?? [])
+                .compactMap { $0["entry_id"] as? String }
+            (push, localOnly) = Vault.selectForPush(
+                merged, remoteIds: remoteIds, maxEntries: maxEntries)
+        } else {
+            (push, localOnly) = (merged.entries, [])
+        }
+
         let payload = try encodePush(
-            baseRevision: pulled["revision"] as? Int ?? 0, merged: merged, key: key)
+            baseRevision: pulled["revision"] as? Int ?? 0, entries: push, key: key)
         _ = try await call(url, method: "POST", payload: payload, bearer: creds.accessToken)
 
-        return Result(vault: merged, conflicts: conflicts, credentials: creds)
+        return Result(
+            vault: merged, conflicts: conflicts, localOnly: localOnly.count, credentials: creds)
     }
 
     /// Comme `sync`, en renouvelant le jeton d'accès s'il a expiré.
@@ -246,7 +262,8 @@ public struct Sync {
             let renewed = try await refresh(creds)
             let result = try await sync(local, masterKey: masterKey, credentials: renewed)
             return Result(
-                vault: result.vault, conflicts: result.conflicts, credentials: renewed)
+                vault: result.vault, conflicts: result.conflicts, localOnly: result.localOnly,
+                credentials: renewed)
         }
     }
 
@@ -287,13 +304,13 @@ public struct Sync {
     }
 
     private func encodePush(
-        baseRevision: Int, merged: Vault, key: SymmetricKey
+        baseRevision: Int, entries: [VaultEntry], key: SymmetricKey
     ) throws -> [String: Any] {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
 
         var rows: [[String: Any]] = []
-        for entry in merged.entries where entry.isStorable {
+        for entry in entries where entry.isStorable {
             let sealed = try Transfer.seal(try encoder.encode(entry), with: key)
             rows.append([
                 "entry_id": entry.id,

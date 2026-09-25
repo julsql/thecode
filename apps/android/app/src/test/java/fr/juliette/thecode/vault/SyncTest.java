@@ -6,10 +6,14 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.junit.Test;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class SyncTest {
 
@@ -51,6 +55,48 @@ public class SyncTest {
         assertEquals(2, phone.entries.size());
         assertNotNull(phone.findByDomain("github.com"));
         assertNotNull(laptop.findByDomain("google.com"));
+    }
+
+    @Test
+    public void pushesOnlyTheOldestBeyondTheLimit() throws Exception {
+        FakeVaultServer server = new FakeVaultServer();
+        server.maxEntries = 2;
+        Vault vault = new Vault();
+        String[][] sites = {
+                {"recent.fr", "2026-03-01T00:00:00Z"},
+                {"ancien.fr", "2026-01-01T00:00:00Z"},
+                {"moyen.fr", "2026-02-01T00:00:00Z"},
+        };
+        for (String[] site : sites) {
+            VaultEntry entry = VaultEntry.create(site[0], null);
+            entry.createdAt = site[1];
+            vault.entries.add(entry);
+        }
+
+        Sync.Result result = new Sync(server).sync(vault, "clef", CREDS);
+
+        JSONArray rows = new JSONObject(server.sentBodies.get(0)).getJSONArray("entries");
+        Set<String> pushed = new HashSet<>();
+        for (int i = 0; i < rows.length(); i++) {
+            pushed.add(rows.getJSONObject(i).getString("entry_id"));
+        }
+        assertEquals(Set.of(vault.findByDomain("ancien.fr").id,
+                vault.findByDomain("moyen.fr").id), pushed);
+        // L'entrée en trop reste dans le carnet local.
+        assertEquals(1, result.localOnly);
+        assertEquals(3, result.vault.entries.size());
+    }
+
+    @Test
+    public void pushesEverythingWithoutAnAdvertisedLimit() throws Exception {
+        FakeVaultServer server = new FakeVaultServer();
+        Vault vault = vaultWith("a.fr", null);
+        vault.entries.add(VaultEntry.create("b.fr", null));
+
+        Sync.Result result = new Sync(server).sync(vault, "clef", CREDS);
+
+        assertEquals(2, new JSONObject(server.sentBodies.get(0)).getJSONArray("entries").length());
+        assertEquals(0, result.localOnly);
     }
 
     @Test

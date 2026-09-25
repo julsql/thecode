@@ -23,9 +23,12 @@ private actor FakeVaultServer: SyncTransport {
     private(set) var sentBodies: [String] = []
 
     private var validAccessToken: String
+    /// Plafond d'entrées du compte, rendu au pull ; nil : le serveur n'en dit rien.
+    private let maxEntries: Int?
 
-    init(validAccessToken: String = "access-1") {
+    init(validAccessToken: String = "access-1", maxEntries: Int? = nil) {
         self.validAccessToken = validAccessToken
+        self.maxEntries = maxEntries
     }
 
     func send(url: String, method: String, body: Data?, bearer: String?) async throws
@@ -49,7 +52,9 @@ private actor FakeVaultServer: SyncTransport {
     }
 
     private func pull() -> SyncResponse {
-        json(200, ["revision": revision, "entries": Array(rows.values)])
+        var body: [String: Any] = ["revision": revision, "entries": Array(rows.values)]
+        if let maxEntries { body["max_entries"] = maxEntries }
+        return json(200, body)
     }
 
     private func push(_ body: Data?) -> SyncResponse {
@@ -134,6 +139,43 @@ struct SyncTests {
         #expect(phone.entries.count == 2)
         #expect(phone.find(domain: "github.com") != nil)
         #expect(laptop.find(domain: "google.com") != nil)
+    }
+
+    @Test("Au-delà du plafond, ne pousse que les plus anciennes")
+    func pushesOnlyTheOldestBeyondTheLimit() async throws {
+        let server = FakeVaultServer(maxEntries: 2)
+        var local = Vault()
+        for (site, created) in [
+            ("recent.fr", "2026-03-01T00:00:00Z"),
+            ("ancien.fr", "2026-01-01T00:00:00Z"),
+            ("moyen.fr", "2026-02-01T00:00:00Z"),
+        ] {
+            var entry = VaultEntry(siteKey: site)
+            entry.createdAt = created
+            local.entries.append(entry)
+        }
+
+        let result = try await Sync(transport: server)
+            .sync(local, masterKey: "clef", credentials: credentials)
+
+        let push = try #require(await server.sentBodies.first)
+        let payload = try #require(
+            try JSONSerialization.jsonObject(with: Data(push.utf8)) as? [String: Any])
+        let pushed = (payload["entries"] as? [[String: Any]] ?? [])
+            .compactMap { $0["entry_id"] as? String }.sorted()
+        let bySite = { (site: String) in local.entries.first { $0.siteKey == site }!.id }
+        #expect(pushed == [bySite("ancien.fr"), bySite("moyen.fr")].sorted())
+        // L'entrée en trop reste dans le carnet local.
+        #expect(result.localOnly == 1)
+        #expect(result.vault.entries.count == 3)
+    }
+
+    @Test("Un serveur sans plafond reçoit tout")
+    func pushesEverythingWithoutALimit() async throws {
+        let result = try await Sync(transport: FakeVaultServer())
+            .sync(vault(siteKey: "google.com", login: "moi"), masterKey: "clef",
+                credentials: credentials)
+        #expect(result.localOnly == 0)
     }
 
     @Test("Une suppression se propage")

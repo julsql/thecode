@@ -28,6 +28,8 @@ final class FakeVaultServer implements Sync.Http {
     String validAccessToken = "access-1";
     String nextAccessToken = "access-2";
     int refreshCount = 0;
+    /** Plafond rendu au pull ; null pour un serveur qui ne le dit pas. */
+    Integer maxEntries = null;
 
     @Override
     public Sync.Response send(String url, String method, String body, String bearer) {
@@ -65,7 +67,9 @@ final class FakeVaultServer implements Sync.Http {
     private Sync.Response pull() throws JSONException {
         JSONArray entries = new JSONArray();
         for (JSONObject row : rows.values()) entries.put(row);
-        return json(200, new JSONObject().put("revision", revision).put("entries", entries));
+        JSONObject body = new JSONObject().put("revision", revision).put("entries", entries);
+        if (maxEntries != null) body.put("max_entries", maxEntries);
+        return json(200, body);
     }
 
     private Sync.Response push(JSONObject payload) throws JSONException {

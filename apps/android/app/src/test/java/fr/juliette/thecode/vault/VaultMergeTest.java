@@ -146,6 +146,36 @@ public class VaultMergeTest {
     }
 
     @Test
+    public void creationDatesTheEntry() throws Exception {
+        VaultEntry e = VaultEntry.create("google.com", null);
+        // Posée une fois pour toutes : c'est elle qui ordonne la
+        // synchronisation partielle.
+        assertNotNull(e.createdAt);
+        assertEquals(e.updatedAt, e.createdAt);
+
+        Vault v = new Vault();
+        v.entries.add(e);
+        assertEquals(e.createdAt, Vault.fromJson(v.toJson()).entries.get(0).createdAt);
+    }
+
+    @Test
+    public void reportsTheDuplicateByItsSmallestId() throws Exception {
+        JSONArray cases = loadSpec().getJSONArray("cases");
+        for (int i = 0; i < cases.length(); i++) {
+            JSONObject c = cases.getJSONObject(i);
+            if (!c.getJSONArray("conflicts").toString().contains("doublon")) continue;
+
+            List<Vault.Conflict> conflicts = new ArrayList<>();
+            Vault.merge(vaultOf(c.getJSONObject("left")), vaultOf(c.getJSONObject("right")),
+                    conflicts);
+            for (Vault.Conflict k : conflicts) {
+                if (!"doublon".equals(k.kind)) continue;
+                assertTrue(c.getString("id"), k.entryId.compareTo(k.detail) < 0);
+            }
+        }
+    }
+
+    @Test
     public void roundTripsThroughJson() throws Exception {
         Vault v = new Vault();
         v.entries.add(VaultEntry.create("google.com", List.of("google.com", "google.fr")));

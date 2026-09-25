@@ -102,6 +102,9 @@ class EntryResponse(BaseModel):
 class PullResponse(BaseModel):
     revision: int
     entries: list[EntryResponse]
+    #: Entrées que le compte peut synchroniser. Le client s'en sert pour
+    #: choisir ce qu'il pousse : au-delà, les entrées restent sur l'appareil.
+    max_entries: int
 
 
 class PushResponse(BaseModel):

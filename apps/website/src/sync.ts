@@ -11,7 +11,14 @@
  */
 
 import { deriveTransferKey } from "@/transfer";
-import { isVaultEntryV2, mergeVaults, type Conflict, type Vault, type VaultEntry } from "@/vault";
+import {
+  isVaultEntryV2,
+  mergeVaults,
+  selectForPush,
+  type Conflict,
+  type Vault,
+  type VaultEntry,
+} from "@/vault";
 
 export const DEFAULT_ENDPOINT = "https://thecode-api.julsql.fr";
 const SESSION_KEY = "thecode.session";
@@ -289,7 +296,7 @@ export async function syncVault(
   vault: Vault,
   masterKey: string,
   session: Session,
-): Promise<{ vault: Vault; conflicts: Conflict[]; session: Session }> {
+): Promise<{ vault: Vault; conflicts: Conflict[]; localOnly: number; session: Session }> {
   const key = await deriveTransferKey(masterKey);
 
   const pulled = await withFreshToken(session, (token) =>
@@ -313,13 +320,24 @@ export async function syncVault(
 
   const { vault: merged, conflicts } = mergeVaults(vault, remote);
 
+  // Au-delà du plafond, le reste du carnet ne part pas : il reste propre à
+  // l'appareil. Un serveur qui ne dit pas son plafond reçoit tout.
+  const { push, localOnly } =
+    typeof pulled.result.max_entries === "number"
+      ? selectForPush(
+          merged,
+          pulled.result.entries.map((row: { entry_id: string }) => row.entry_id),
+          pulled.result.max_entries,
+        )
+      : { push: merged.entries, localOnly: [] };
+
   const payload = {
     base_revision: pulled.result.revision,
-    entries: await Promise.all(merged.entries.map((e) => encryptEntry(e, key))),
+    entries: await Promise.all(push.map((e) => encryptEntry(e, key))),
   };
   const pushed = await withFreshToken(pulled.session, (token) =>
     request(`${session.endpoint}/v1/vault`, { payload, token }),
   );
 
-  return { vault: merged, conflicts, session: pushed.session };
+  return { vault: merged, conflicts, localOnly: localOnly.length, session: pushed.session };
 }

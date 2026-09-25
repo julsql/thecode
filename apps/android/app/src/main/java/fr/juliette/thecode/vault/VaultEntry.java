@@ -45,6 +45,9 @@ public final class VaultEntry {
     public static final int VERSION = 2;
 
     public int v = VERSION;
+    /** Absent des entrées antérieures au champ : {@code updatedAt} en tient lieu. */
+    @Nullable
+    public String createdAt = null;
     public String updatedAt;
     public boolean deleted = false;
 
@@ -57,6 +60,7 @@ public final class VaultEntry {
                 ? List.of(siteKey) : domains);
         java.util.Collections.sort(e.domains);
         e.updatedAt = Vault.nowIso();
+        e.createdAt = e.updatedAt;
         return e;
     }
 
@@ -80,6 +84,7 @@ public final class VaultEntry {
         e.symbols = other.symbols;
         e.numbers = other.numbers;
         e.v = other.v;
+        e.createdAt = other.createdAt;
         e.updatedAt = other.updatedAt;
         e.deleted = other.deleted;
         return e;
@@ -110,6 +115,8 @@ public final class VaultEntry {
         e.symbols = charset.getBoolean("symbols");
         e.numbers = charset.getBoolean("numbers");
         e.v = o.getInt("v");
+        e.createdAt = o.has("createdAt") && !o.isNull("createdAt")
+                ? o.getString("createdAt") : null;
         e.updatedAt = o.getString("updatedAt");
         e.deleted = o.optBoolean("deleted", false);
         return e;
@@ -131,6 +138,8 @@ public final class VaultEntry {
         charset.put("numbers", numbers);
         o.put("charset", charset);
         o.put("v", v);
+        // Absent quand inconnu, comme dans la forme canonique des autres clients.
+        if (createdAt != null) o.put("createdAt", createdAt);
         o.put("updatedAt", updatedAt);
         if (deleted) o.put("deleted", true);
         return o;

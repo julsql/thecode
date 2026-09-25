@@ -23,8 +23,10 @@ CREDS = Credentials("https://example.test/api", "access-1", "refresh-0")
 class FakeServer:
     """Serveur de carnet en mémoire, aux mêmes règles que l'API réelle."""
 
-    def __init__(self, valid_token: str = "access-1") -> None:
+    def __init__(self, valid_token: str = "access-1", max_entries: int | None = None) -> None:
         self.rows: dict[str, dict] = {}
+        #: Plafond du compte, rendu au pull quand il est défini.
+        self.max_entries = max_entries
         self.revision = 0
         self.refresh_count = 0
         self.valid_token = valid_token
@@ -44,7 +46,10 @@ class FakeServer:
             raise SyncError("401 : Jeton expiré")
 
         if payload is None:
-            return {"revision": self.revision, "entries": list(self.rows.values())}
+            body = {"revision": self.revision, "entries": list(self.rows.values())}
+            if self.max_entries is not None:
+                body["max_entries"] = self.max_entries
+            return body
 
         if payload["base_revision"] != self.revision:
             # Écraser reviendrait à perdre en silence ce qu'un autre appareil a
@@ -81,22 +86,53 @@ def test_sends_nothing_readable(server):
 
 
 def test_two_devices_converge(server):
-    phone, _, _ = sync(vault_with("google.com", "moi"), "clef", CREDS)
-    laptop, _, _ = sync(vault_with("github.com", "julsql"), "clef", CREDS)
-    phone, _, _ = sync(phone, "clef", CREDS)
+    phone, _, _, _ = sync(vault_with("google.com", "moi"), "clef", CREDS)
+    laptop, _, _, _ = sync(vault_with("github.com", "julsql"), "clef", CREDS)
+    phone, _, _, _ = sync(phone, "clef", CREDS)
 
     assert len(laptop["entries"]) == 2
     assert {e["siteKey"] for e in phone["entries"]} == {"google.com", "github.com"}
 
 
+def test_pushes_only_the_oldest_beyond_the_cap(monkeypatch):
+    fake = FakeServer(max_entries=2)
+    monkeypatch.setattr(sync_module, "_request", fake)
+    vault = empty_vault()
+    for site, created in [
+        ("recent.fr", "2026-03-01T00:00:00Z"),
+        ("ancien.fr", "2026-01-01T00:00:00Z"),
+        ("moyen.fr", "2026-02-01T00:00:00Z"),
+    ]:
+        vault["entries"].append({**new_entry(site), "createdAt": created})
+
+    merged, _, local_only, _ = sync(vault, "clef", CREDS)
+
+    by_site = {e["siteKey"]: e["id"] for e in vault["entries"]}
+    pushed = [row["entry_id"] for row in json.loads(fake.sent[0])["entries"]]
+    assert sorted(pushed) == sorted([by_site["ancien.fr"], by_site["moyen.fr"]])
+    # L'entrée en trop reste dans le carnet local.
+    assert local_only == 1
+    assert len(merged["entries"]) == 3
+
+
+def test_pushes_everything_without_a_cap(server):
+    vault = empty_vault()
+    vault["entries"] += [new_entry(f"site-{i}.fr") for i in range(3)]
+
+    _, _, local_only, _ = sync(vault, "clef", CREDS)
+
+    assert local_only == 0
+    assert len(json.loads(server.sent[0])["entries"]) == 3
+
+
 def test_tombstone_propagates(server):
-    phone, _, _ = sync(vault_with("google.com", "moi"), "clef", CREDS)
+    phone, _, _, _ = sync(vault_with("google.com", "moi"), "clef", CREDS)
     deleted_id = phone["entries"][0]["id"]
     phone["entries"][0]["deleted"] = True
     phone["entries"][0]["updatedAt"] = "2999-01-01T00:00:00Z"
     sync(phone, "clef", CREDS)
 
-    laptop, _, _ = sync(vault_with("google.com", "moi"), "clef", CREDS)
+    laptop, _, _, _ = sync(vault_with("google.com", "moi"), "clef", CREDS)
     propagated = next(e for e in laptop["entries"] if e["id"] == deleted_id)
     assert propagated["deleted"] is True
 
@@ -109,7 +145,7 @@ def test_absent_deleted_stays_absent(server):
     gagnant, et les carnets ne convergeraient jamais.
     """
     sync(vault_with("google.com", "moi"), "clef", CREDS)
-    merged, _, _ = sync(empty_vault(), "clef", CREDS)
+    merged, _, _, _ = sync(empty_vault(), "clef", CREDS)
 
     assert "deleted" not in merged["entries"][0]
 
@@ -126,7 +162,7 @@ def test_renews_an_expired_token(monkeypatch, tmp_path):
     monkeypatch.setattr(sync_module, "_request", fake)
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
 
-    _, _, creds = sync(vault_with("google.com", "moi"), "clef", CREDS)
+    _, _, _, creds = sync(vault_with("google.com", "moi"), "clef", CREDS)
 
     assert fake.refresh_count == 1
     assert creds.access_token == "access-2"

@@ -47,6 +47,7 @@ def pull(
 
     return PullResponse(
         revision=account.revision,
+        max_entries=limits_for(account, get_settings()).max_entries,
         entries=[
             EntryResponse(
                 entry_id=row.entry_id,
@@ -97,9 +98,15 @@ def push(
     }
 
     limits = limits_for(account, settings)
-    incoming_new = [e for e in payload.entries if e.entry_id not in existing and not e.deleted]
-    live = len([r for r in existing.values() if not r.deleted])
-    if live + len(incoming_new) > limits.max_entries:
+    # Compté après l'écriture : une suppression poussée dans le même lot
+    # qu'un ajout libère sa place. Et seule une croissance est refusée — un
+    # compte déjà au-delà du plafond, après une fin d'abonnement, doit pouvoir
+    # continuer à modifier et supprimer ce qu'il a.
+    final = {entry_id: not row.deleted for entry_id, row in existing.items()}
+    final.update({e.entry_id: not e.deleted for e in payload.entries})
+    live_before = sum(not row.deleted for row in existing.values())
+    live_after = sum(final.values())
+    if live_after > live_before and live_after > limits.max_entries:
         # 402 et non 403 quand c'est l'offre qui borne : le client doit
         # pouvoir distinguer « vous n'avez pas le droit » de « il faut
         # s'abonner », et proposer la bonne suite.

@@ -273,14 +273,20 @@ public class VaultActivity extends AppCompatActivity {
                     preferences.setSyncCredentials(withPlan);
                     render(result.vault);
 
-                    int kept = 0;
+                    int kept = -result.localOnly;
                     for (VaultEntry entry : result.vault.entries) {
                         if (!entry.deleted) kept++;
                     }
-                    toast(result.conflicts.isEmpty()
+                    String done = result.conflicts.isEmpty()
                             ? getString(R.string.sync_done, kept)
                             : getString(R.string.sync_done_conflicts, kept,
-                                    result.conflicts.size()));
+                                    result.conflicts.size());
+                    // Au-delà du plafond, le reste ne part pas : le dire, sinon
+                    // on croit retrouver sur l'autre appareil ce qui n'y est
+                    // jamais allé.
+                    toast(result.localOnly == 0 ? done
+                            : done + " " + getString(R.string.sync_local_only,
+                                    result.localOnly));
                 });
             } catch (Sync.SyncException e) {
                 // 402 : le serveur explique comment lever la limite, ce qu'une

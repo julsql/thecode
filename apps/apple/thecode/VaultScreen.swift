@@ -378,16 +378,28 @@ struct VaultScreen: View {
                 await MainActor.run {
                     vault = result.vault
                     isLinked = true
-                    let kept = result.vault.entries.filter { $0.deleted != true }.count
+                    let kept =
+                        result.vault.entries.filter { $0.deleted != true }.count
+                        - result.localOnly
+                    // Au-delà du plafond, le reste ne part pas : le dire, sinon
+                    // on croit retrouver sur l'autre appareil ce qui n'y est
+                    // jamais allé.
+                    let local =
+                        result.localOnly == 0
+                        ? ""
+                        : L10n.t(
+                            ", \(result.localOnly) restées sur cet appareil "
+                                + "(plafond de l'offre gratuite)",
+                            ", \(result.localOnly) kept on this device (free plan limit)")
                     status =
                         result.conflicts.isEmpty
                         ? L10n.t(
-                            "Carnet synchronisé : \(kept) entrées.",
-                            "Vault synced: \(kept) entries.")
+                            "Carnet synchronisé : \(kept) entrées\(local).",
+                            "Vault synced: \(kept) entries\(local).")
                         : L10n.t(
-                            "Carnet synchronisé : \(kept) entrées, "
+                            "Carnet synchronisé : \(kept) entrées\(local), "
                                 + "\(result.conflicts.count) demandent votre attention.",
-                            "Vault synced: \(kept) entries, \(result.conflicts.count) need "
+                            "Vault synced: \(kept) entries\(local), \(result.conflicts.count) need "
                                 + "your attention.")
                     isWorking = false
                 }

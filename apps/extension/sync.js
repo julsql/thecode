@@ -201,15 +201,26 @@ async function syncVault(vault, masterKey, session) {
 
   const { vault: merged, conflicts } = mergeVaults(vault, remote);
 
+  // Au-dela du plafond, le reste du carnet ne part pas : il reste propre a
+  // l'appareil. Un serveur qui ne dit pas son plafond recoit tout.
+  const { push, localOnly } =
+    typeof pulled.result.max_entries === "number"
+      ? selectForPush(
+          merged,
+          pulled.result.entries.map((row) => row.entry_id),
+          pulled.result.max_entries,
+        )
+      : { push: merged.entries, localOnly: [] };
+
   const payload = {
     base_revision: pulled.result.revision,
-    entries: await Promise.all(merged.entries.map((e) => encryptEntry(e, key))),
+    entries: await Promise.all(push.map((e) => encryptEntry(e, key))),
   };
   const pushed = await withFreshToken(session, (token) =>
     syncRequest(`${session.endpoint}/v1/vault`, { payload, token }),
   );
 
-  return { vault: merged, conflicts, session: pushed.session };
+  return { vault: merged, conflicts, localOnly: localOnly.length, session: pushed.session };
 }
 
 if (typeof module !== "undefined") {

@@ -39,6 +39,8 @@ export interface VaultEntry {
   charset: Charset;
   v: number;
   notes?: string;
+  /** Absent des entrées antérieures au champ : `updatedAt` en tient lieu. */
+  createdAt?: string;
   updatedAt: string;
   deleted?: boolean;
 }
@@ -50,7 +52,7 @@ export interface Vault {
 }
 
 export interface Conflict {
-  kind: "sitekey-divergent" | "counter-recul";
+  kind: "sitekey-divergent" | "counter-recul" | "doublon";
   entryId: string;
   detail: string;
 }
@@ -88,6 +90,7 @@ export function newEntry(
   siteKey: string,
   options: Partial<Omit<VaultEntry, "id" | "siteKey" | "v">> = {},
 ): VaultEntry {
+  const now = nowIso();
   return {
     id: crypto.randomUUID(),
     label: options.label || siteKey,
@@ -99,7 +102,8 @@ export function newEntry(
     charset: { ...DEFAULT_CHARSET, ...(options.charset ?? {}) },
     // Toujours v2 : le carnet n'accepte pas d'autre version.
     v: VAULT_ENTRY_VERSION,
-    updatedAt: nowIso(),
+    createdAt: now,
+    updatedAt: now,
   };
 }
 
@@ -212,8 +216,41 @@ function mergeEntry(left: VaultEntry, right: VaultEntry, conflicts: Conflict[]):
   // Une suppression se propage, sinon l'autre carnet ressusciterait l'entrée.
   if (left.deleted || right.deleted) merged.deleted = true;
 
+  // Une entrée n'est créée qu'une fois : la date la plus ancienne est la
+  // vraie. Un carnet antérieur au champ ne doit pas l'effacer.
+  const created = [left.createdAt, right.createdAt].filter((d): d is string => Boolean(d)).sort();
+  if (created.length) merged.createdAt = created[0];
+  else delete merged.createdAt;
+
   merged.updatedAt = left.updatedAt > right.updatedAt ? left.updatedAt : right.updatedAt;
   return merged;
+}
+
+/**
+ * Signale les doublons que la fusion rapproche : le même compte créé à part
+ * sur deux appareils, donc sous deux id. Un doublon déjà présent d'un côté
+ * l'a été quand il y est entré — le resignaler à chaque fusion serait du bruit.
+ */
+function findDuplicates(
+  entries: VaultEntry[],
+  leftIds: Set<string>,
+  rightIds: Set<string>,
+  conflicts: Conflict[],
+) {
+  const live = entries.filter((e) => !e.deleted);
+  for (let i = 0; i < live.length; i += 1) {
+    for (let j = i + 1; j < live.length; j += 1) {
+      const a = live[i];
+      const b = live[j];
+      const apart =
+        (leftIds.has(a.id) && !rightIds.has(a.id) && rightIds.has(b.id) && !leftIds.has(b.id)) ||
+        (rightIds.has(a.id) && !leftIds.has(a.id) && leftIds.has(b.id) && !rightIds.has(b.id));
+      if (!apart || (a.login ?? "") !== (b.login ?? "")) continue;
+      const domains = new Set(a.domains.map((d) => d.toLowerCase()));
+      if (!b.domains.some((d) => domains.has(d.toLowerCase()))) continue;
+      conflicts.push({ kind: "doublon", entryId: a.id, detail: b.id });
+    }
+  }
 }
 
 /**
@@ -222,14 +259,22 @@ function mergeEntry(left: VaultEntry, right: VaultEntry, conflicts: Conflict[]):
  */
 export function mergeVaults(left: Vault, right: Vault): { vault: Vault; conflicts: Conflict[] } {
   const conflicts: Conflict[] = [];
-  const byId = new Map(keepV2Only(left).entries.map((e) => [e.id, e]));
+  const leftEntries = keepV2Only(left).entries;
+  const rightEntries = keepV2Only(right).entries;
+  const byId = new Map(leftEntries.map((e) => [e.id, e]));
 
-  for (const entry of keepV2Only(right).entries) {
+  for (const entry of rightEntries) {
     const existing = byId.get(entry.id);
     byId.set(entry.id, existing ? mergeEntry(existing, entry, conflicts) : { ...entry });
   }
 
   const entries = [...byId.values()].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  findDuplicates(
+    entries,
+    new Set(leftEntries.map((e) => e.id)),
+    new Set(rightEntries.map((e) => e.id)),
+    conflicts,
+  );
   const updatedAt =
     [left.updatedAt ?? "", right.updatedAt ?? "", ...entries.map((e) => e.updatedAt)]
       .filter(Boolean)
@@ -265,4 +310,37 @@ export function saveVault(vault: Vault): void {
     // Stockage indisponible : le mot de passe reste dérivable, seul le
     // carnet ne persiste pas. On ne bloque pas l'utilisateur pour autant.
   }
+}
+
+/**
+ * Ce qui part au serveur quand le compte a un plafond, et ce qui reste sur
+ * l'appareil. Voir shared/spec/vault-sync.md, « Synchronisation partielle ».
+ *
+ * Ce qui est déjà sur le serveur part toujours, pierres tombales comprises :
+ * une modification doit pouvoir partir. Les places libres vont aux autres
+ * entrées, les plus anciennes d'abord. Une entrée jamais synchronisée puis
+ * supprimée n'a rien à propager.
+ */
+export function selectForPush(
+  vault: Vault,
+  remoteIds: Iterable<string>,
+  maxEntries: number,
+): { push: VaultEntry[]; localOnly: VaultEntry[] } {
+  const remote = new Set(remoteIds);
+  const onServer = vault.entries.filter((e) => remote.has(e.id));
+  const others = vault.entries
+    .filter((e) => !remote.has(e.id) && !e.deleted)
+    .sort((a, b) => {
+      const da = a.createdAt ?? a.updatedAt;
+      const db = b.createdAt ?? b.updatedAt;
+      if (da !== db) return da < db ? -1 : 1;
+      return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+    });
+
+  const free = Math.max(0, maxEntries - onServer.filter((e) => !e.deleted).length);
+  const byId = (a: VaultEntry, b: VaultEntry) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+  return {
+    push: [...onServer, ...others.slice(0, free)].sort(byId),
+    localOnly: others.slice(free).sort(byId),
+  };
 }

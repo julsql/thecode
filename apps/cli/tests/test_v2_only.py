@@ -79,7 +79,7 @@ def test_sync_keeps_only_v2(monkeypatch):
     monkeypatch.setattr(sync_module, "_request", fake_request)
     creds = Credentials("https://example.test/api", "access", "refresh")
 
-    merged, _, _ = sync(empty_vault(), "clef", creds)
+    merged, _, _, _ = sync(empty_vault(), "clef", creds)
 
     assert ids(merged) == EXPECTED
     # Rien d'autre que la v2 ne repart vers le serveur.

@@ -180,21 +180,18 @@
           <!-- Le carnet retient les reglages par site : plus besoin de se souvenir
                qu'un compte avait ete cree sans symboles. -->
           <section class="panel">
-            <h3 class="panel-title">Carnet</h3>
-            <p class="panel-lead">
-              Retient les réglages de chaque site, pour ne plus avoir à se souvenir qu'un compte a
-              été créé sans symboles, ni sous quel identifiant.
-            </p>
+            <h3 class="panel-title">{{ t("vault_title") }}</h3>
+            <p class="panel-lead">{{ t("vault_lead") }}</p>
 
             <div class="panel-actions centered">
               <button type="button" class="ghost-btn" @click="saveEntry">
-                {{ matchedEntry ? "Mettre à jour l'entrée" : "Enregistrer ce site" }}
+                {{ matchedEntry ? t("vault_update") : t("vault_save") }}
               </button>
             </div>
 
             <p v-if="vaultMessage" class="hint">{{ vaultMessage }}</p>
             <p v-else-if="vaultEntries.length" class="hint">
-              {{ vaultEntries.length }} entrée(s) connue(s) pour ce site.
+              {{ tf("vault_known", { n: vaultEntries.length }) }}
             </p>
 
             <!-- Renouveler : la seule action qui change un mot de passe deja
@@ -209,7 +206,7 @@
                      propose rien. C'est le clic qui dit ce que l'offre
                      complète apporte, et où l'obtenir. -->
                 <button type="button" class="ghost-btn small" @click="proposeRenew(entry)">
-                  Renouveler
+                  {{ t("vault_renew") }}
                 </button>
               </li>
             </ul>
@@ -225,23 +222,22 @@
             <!-- Les deux cote a cote : le nouveau ne sert a rien tant qu'il n'a
                  pas ete pose sur le site, et l'ancien reste celui qui connecte. -->
             <div v-if="pending" class="change-box">
-              <p class="hint">Mot de passe actuel</p>
+              <p class="hint">{{ t("vault_current") }}</p>
               <p>
                 <code>{{ pending.before }}</code>
               </p>
-              <p class="hint">Nouveau mot de passe</p>
+              <p class="hint">{{ t("vault_new") }}</p>
               <p>
                 <code>{{ pending.after }}</code>
               </p>
-              <p class="hint">
-                Changez-le sur le site, puis confirmez. Le nouveau ne sert à rien tant que ce n'est
-                pas fait, et l'ancien reste celui qui vous connecte.
-              </p>
+              <p class="hint">{{ t("vault_change_hint") }}</p>
               <div class="panel-actions">
                 <button type="button" class="ghost-btn primary" @click="applyChange">
-                  Confirmer
+                  {{ t("vault_confirm") }}
                 </button>
-                <button type="button" class="ghost-btn" @click="pending = null">Annuler</button>
+                <button type="button" class="ghost-btn" @click="pending = null">
+                  {{ t("vault_cancel") }}
+                </button>
               </div>
             </div>
           </section>
@@ -251,26 +247,23 @@
                chiffré avec une clef dérivée de la clef maîtresse, donc une
                photo de l'écran ne révèle rien. -->
           <section class="panel">
-            <h3 class="panel-title">Transférer le carnet</h3>
-            <p class="panel-lead">
-              Pour emporter le carnet sur un autre appareil, sans serveur ni compte. Le contenu est
-              chiffré : une photo de l'écran, ou le fichier seul, ne révèlent rien.
-            </p>
+            <h3 class="panel-title">{{ t("transfer_title") }}</h3>
+            <p class="panel-lead">{{ t("transfer_lead") }}</p>
 
             <div class="panel-actions fill">
               <button type="button" class="ghost-btn" @click="showTransfer">
-                Afficher un QR code
-                <small>à scanner depuis le téléphone</small>
+                {{ t("transfer_qr") }}
+                <small>{{ t("transfer_qr_hint") }}</small>
               </button>
               <button type="button" class="ghost-btn" @click="downloadVault">
-                Télécharger un fichier
-                <small>pour un autre navigateur</small>
+                {{ t("transfer_download") }}
+                <small>{{ t("transfer_download_hint") }}</small>
               </button>
               <!-- Le champ natif est masqué : « Choose File » n'est ni
                    traduisible ni stylable, et ne dit pas ce qu'on attend. -->
               <label class="ghost-btn as-label">
-                Importer un fichier
-                <small>reçu d'un autre appareil</small>
+                {{ t("transfer_import") }}
+                <small>{{ t("transfer_import_hint") }}</small>
                 <input type="file" accept=".txt,.thecode,text/plain" @change="importFile" />
               </label>
             </div>
@@ -288,19 +281,15 @@
                   :class="module ? 'qr-dark' : 'qr-light'"
                 />
               </div>
-              <p class="hint">Scannez-le depuis l'application sur votre téléphone.</p>
+              <p class="hint">{{ t("transfer_scan") }}</p>
             </div>
           </section>
 
           <!-- Le carnet est chiffré avant de quitter le navigateur : le serveur
                ne reçoit que des blocs opaques. -->
           <section class="panel">
-            <h3 class="panel-title">Synchronisation</h3>
-            <p class="panel-lead">
-              Garde le carnet à jour entre vos appareils, par le serveur. Il est chiffré avant de
-              partir : le service ne voit ni vos sites, ni vos identifiants. Le mot de passe du
-              compte n'est pas votre clef.
-            </p>
+            <h3 class="panel-title">{{ t("sync_title") }}</h3>
+            <p class="panel-lead">{{ t("sync_lead") }}</p>
 
             <!-- Le compte se cree et se gere sur sa propre page : le
                  formulaire vivait ici, au milieu du generateur, ou personne
@@ -317,10 +306,10 @@
             <template v-else>
               <div class="panel-actions">
                 <button type="button" class="ghost-btn primary" @click="runSync">
-                  Synchroniser maintenant
+                  {{ t("sync_now") }}
                 </button>
                 <button type="button" class="ghost-btn" @click="disconnectSync">
-                  Se déconnecter
+                  {{ t("sync_disconnect") }}
                 </button>
               </div>
             </template>
@@ -338,7 +327,7 @@ import { defineComponent, ref, watch, computed, onMounted } from "vue";
 import { generatePassword, calculateEntropyBits, getSecurityLevel } from "@/utils";
 import { canonicalSite, loadPublicSuffixList } from "@/canonicalSite";
 import { keyFingerprint, type Fingerprint } from "@/fingerprint";
-import { clearSession, loadSession, saveSession, syncVault, SyncError } from "@/sync";
+import { clearSession, loadSession, saveSession, syncVault } from "@/sync";
 import { isPaidPlan, refreshPlan } from "@/account";
 import {
   emptyVault,
@@ -380,6 +369,9 @@ export default defineComponent({
     });
 
     const { t, localePath } = useI18n();
+    /** Traduction avec valeurs : `{n}` et consorts remplacés tels quels. */
+    const tf = (key: TranslationKey, values: Record<string, string | number>) =>
+      Object.entries(values).reduce((text, [k, v]) => text.replaceAll(`{${k}}`, String(v)), t(key));
 
     const clef = ref("");
     const site = ref("");
@@ -587,14 +579,14 @@ export default defineComponent({
      */
     async function proposeRenew(entry: VaultEntry) {
       if (!clef.value) {
-        vaultMessage.value = "Renseignez d'abord votre clef.";
+        vaultMessage.value = t("gen_need_key");
         return;
       }
       if (!renewAllowed.value) {
         vaultMessage.value = t("gen_renew_paid");
         return;
       }
-      vaultMessage.value = "Calcul en cours…";
+      vaultMessage.value = t("gen_computing");
 
       pending.value = {
         entryId: entry.id,
@@ -622,7 +614,7 @@ export default defineComponent({
 
       saveVault(vault);
       pending.value = null;
-      vaultMessage.value = `Entrée renouvelée, compteur ${entry.counter}.`;
+      vaultMessage.value = tf("vault_renewed", { n: entry.counter });
       refreshVault();
       genererMotDePasse();
     }
@@ -635,16 +627,16 @@ export default defineComponent({
      */
     async function showTransfer() {
       if (!clef.value) {
-        transferMessage.value = "Renseignez d'abord votre clef.";
+        transferMessage.value = t("gen_need_key");
         return;
       }
       const vault = loadVault();
       if (!vault || !vault.entries.length) {
-        transferMessage.value = "Le carnet est vide, il n'y a rien à transférer.";
+        transferMessage.value = t("transfer_empty");
         return;
       }
 
-      transferMessage.value = "Calcul en cours…";
+      transferMessage.value = t("gen_computing");
       try {
         const payload = await exportVault(vault, clef.value);
         qrRows.value = encodeQr(payload).modules;
@@ -653,19 +645,19 @@ export default defineComponent({
         // Un carnet trop gros ne tient pas dans un QR : le dire plutôt que
         // d'afficher un code tronqué que rien ne saura lire.
         qrRows.value = [];
-        transferMessage.value = `Impossible : ${(e as Error).message}`;
+        transferMessage.value = tf("transfer_failed", { error: (e as Error).message });
       }
     }
 
     /** Enregistre le carnet chiffré dans un fichier. */
     async function downloadVault() {
       if (!clef.value) {
-        transferMessage.value = "Renseignez d'abord votre clef.";
+        transferMessage.value = t("gen_need_key");
         return;
       }
       const vault = loadVault();
       if (!vault || !vault.entries.length) {
-        transferMessage.value = "Le carnet est vide, il n'y a rien à transférer.";
+        transferMessage.value = t("transfer_empty");
         return;
       }
 
@@ -677,7 +669,7 @@ export default defineComponent({
       link.click();
       URL.revokeObjectURL(url);
 
-      transferMessage.value = "Fichier enregistré.";
+      transferMessage.value = t("transfer_saved");
     }
 
     /**
@@ -693,11 +685,11 @@ export default defineComponent({
       input.value = "";
 
       if (!clef.value) {
-        transferMessage.value = "Renseignez d'abord votre clef.";
+        transferMessage.value = t("gen_need_key");
         return;
       }
 
-      transferMessage.value = "Lecture en cours…";
+      transferMessage.value = t("transfer_reading");
       try {
         const incoming = (await importVault((await file.text()).trim(), clef.value)) as Vault;
         const { vault: merged, conflicts } = mergeVaults(loadVault() ?? emptyVault(), incoming);
@@ -706,10 +698,10 @@ export default defineComponent({
 
         const kept = merged.entries.filter((e) => !e.deleted).length;
         transferMessage.value = conflicts.length
-          ? `Carnet fusionné : ${kept} entrées, ${conflicts.length} à vérifier.`
-          : `Carnet fusionné : ${kept} entrées.`;
+          ? tf("transfer_merged_conflicts", { n: kept, c: conflicts.length })
+          : tf("transfer_merged", { n: kept });
       } catch (e) {
-        transferMessage.value = `Impossible : ${(e as Error).message}`;
+        transferMessage.value = tf("transfer_failed", { error: (e as Error).message });
       }
     }
 
@@ -751,7 +743,7 @@ export default defineComponent({
     function saveEntry() {
       const domain = canonicalSite(site.value);
       if (!domain) {
-        vaultMessage.value = "Renseignez un site.";
+        vaultMessage.value = t("vault_need_site");
         return;
       }
 
@@ -770,14 +762,14 @@ export default defineComponent({
         existing.length = Number(longueur.value);
         existing.charset = charset;
         existing.updatedAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
-        vaultMessage.value = "Entrée mise à jour.";
+        vaultMessage.value = t("vault_updated");
       } else {
         // Toujours v2, meme depuis l'ecran regle en v1 : le carnet n'accepte
         // que la v2, la v1 ne vit qu'en generation ponctuelle.
         vault.entries.push(
           newEntry(domain, { length: Number(longueur.value), charset, login: cleanLogin.value }),
         );
-        vaultMessage.value = "Site enregistré.";
+        vaultMessage.value = t("vault_saved");
       }
 
       saveVault(vault);
@@ -787,17 +779,17 @@ export default defineComponent({
     async function runSync() {
       const session = loadSession();
       if (!session) {
-        syncMessage.value = "Connectez-vous d'abord.";
+        syncMessage.value = t("sync_need_login");
         return;
       }
       if (!clef.value) {
         // Le carnet est chiffré avec une clef dérivée de la clef maîtresse :
         // sans elle, il n'y a rien à chiffrer ni à relire.
-        syncMessage.value = "Saisissez votre clef maîtresse.";
+        syncMessage.value = t("sync_need_key");
         return;
       }
 
-      syncMessage.value = "Synchronisation…";
+      syncMessage.value = t("sync_running");
       try {
         const result = await syncVault(loadVault(), clef.value, session);
         saveVault(result.vault);
@@ -806,20 +798,22 @@ export default defineComponent({
         refreshPlan(result.session).then((plan) => (renewAllowed.value = isPaidPlan(plan)));
         refreshVault();
         const conflicts = result.conflicts.length
-          ? ` (${result.conflicts.length} conflit(s) signalé(s))`
+          ? tf("sync_conflicts", { n: result.conflicts.length })
           : "";
-        const kept = result.vault.entries.filter((e) => !e.deleted).length;
-        syncMessage.value = `${kept} entrée(s) synchronisée(s)${conflicts}`;
+        const kept = result.vault.entries.filter((e) => !e.deleted).length - result.localOnly;
+        // Au-delà du plafond, le reste ne part pas : le dire, sinon on croit
+        // retrouver sur l'autre appareil ce qui n'y est jamais allé.
+        const local = result.localOnly ? tf("sync_local_only", { n: result.localOnly }) : "";
+        syncMessage.value = `${tf("sync_done", { n: kept })}${local}${conflicts}`;
       } catch (e) {
-        syncMessage.value =
-          e instanceof SyncError ? `Échec : ${e.message}` : `Échec : ${(e as Error).message}`;
+        syncMessage.value = tf("sync_failed", { error: (e as Error).message });
       }
     }
 
     function disconnectSync() {
       clearSession();
       syncConnected.value = false;
-      syncMessage.value = "Session oubliée sur cet appareil.";
+      syncMessage.value = t("sync_forgotten");
     }
 
     watch(
@@ -832,6 +826,7 @@ export default defineComponent({
 
     return {
       t,
+      tf,
       localePath,
       fingerprint,
       vaultEntries,

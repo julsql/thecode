@@ -47,6 +47,8 @@ public struct VaultEntry: Codable, Equatable {
     /// écartée à la lecture et refusée à l'écriture.
     public var v: Int
     public var notes: String?
+    /// Absent des entrées antérieures au champ : `updatedAt` en tient lieu.
+    public var createdAt: String?
     public var updatedAt: String
     public var deleted: Bool?
 
@@ -62,7 +64,9 @@ public struct VaultEntry: Codable, Equatable {
         self.length = length
         self.charset = charset
         self.v = VaultEntry.version
-        self.updatedAt = Vault.nowIso()
+        let now = Vault.nowIso()
+        self.createdAt = now
+        self.updatedAt = now
     }
 
     /// Vrai quand l'entrée a sa place au carnet.
@@ -253,9 +257,11 @@ public struct Vault: Codable {
     public static func merge(_ left: Vault, _ right: Vault) -> (Vault, [VaultConflict]) {
         var conflicts: [VaultConflict] = []
         var byId: [String: VaultEntry] = [:]
-        for entry in left.entries where entry.isStorable { byId[entry.id] = entry }
+        let leftEntries = left.entries.filter(\.isStorable)
+        let rightEntries = right.entries.filter(\.isStorable)
+        for entry in leftEntries { byId[entry.id] = entry }
 
-        for incoming in right.entries where incoming.isStorable {
+        for incoming in rightEntries {
             if let existing = byId[incoming.id] {
                 byId[incoming.id] = mergeEntry(existing, incoming, &conflicts)
             } else {
@@ -264,6 +270,9 @@ public struct Vault: Codable {
         }
 
         let entries = byId.values.sorted { $0.id < $1.id }
+        findDuplicates(
+            entries, leftIds: Set(leftEntries.map(\.id)), rightIds: Set(rightEntries.map(\.id)),
+            &conflicts)
         var merged = Vault(entries: entries)
         merged.updatedAt = ([left.updatedAt ?? "", right.updatedAt ?? ""]
             + entries.map(\.updatedAt)).filter { !$0.isEmpty }.max() ?? nowIso()
@@ -309,8 +318,70 @@ public struct Vault: Codable {
         // l'entrée.
         if left.deleted == true || right.deleted == true { merged.deleted = true }
 
+        // Une entrée n'est créée qu'une fois : la date la plus ancienne est la
+        // vraie. Un carnet antérieur au champ ne doit pas l'effacer.
+        merged.createdAt = [left.createdAt, right.createdAt]
+            .compactMap { $0 }.filter { !$0.isEmpty }.min()
+
         merged.updatedAt = max(left.updatedAt, right.updatedAt)
         return merged
+    }
+
+    /// Signale les doublons que la fusion rapproche : le même compte créé à
+    /// part sur deux appareils, donc sous deux id. Un doublon déjà présent d'un
+    /// côté l'a été quand il y est entré — le resignaler à chaque fusion serait
+    /// du bruit.
+    private static func findDuplicates(
+        _ entries: [VaultEntry], leftIds: Set<String>, rightIds: Set<String>,
+        _ conflicts: inout [VaultConflict]
+    ) {
+        let live = entries.filter { $0.deleted != true }
+        for i in live.indices {
+            for j in live.indices where j > i {
+                let a = live[i]
+                let b = live[j]
+                let apart =
+                    (leftIds.contains(a.id) && !rightIds.contains(a.id)
+                        && rightIds.contains(b.id) && !leftIds.contains(b.id))
+                    || (rightIds.contains(a.id) && !leftIds.contains(a.id)
+                        && leftIds.contains(b.id) && !rightIds.contains(b.id))
+                guard apart, (a.login ?? "") == (b.login ?? "") else { continue }
+                let domains = Set(a.domains.map { $0.lowercased() })
+                guard b.domains.contains(where: { domains.contains($0.lowercased()) }) else {
+                    continue
+                }
+                // `live` est trié par id : `a` porte le plus petit.
+                conflicts.append(VaultConflict(kind: "doublon", entryId: a.id, detail: b.id))
+            }
+        }
+    }
+
+    /// Ce qui part au serveur quand le compte a un plafond, et ce qui reste sur
+    /// l'appareil. Voir shared/spec/vault-sync.md, « Synchronisation partielle ».
+    ///
+    /// Ce qui est déjà sur le serveur part toujours, pierres tombales comprises :
+    /// une modification doit pouvoir partir. Les places libres vont aux autres
+    /// entrées, les plus anciennes d'abord. Une entrée jamais synchronisée puis
+    /// supprimée n'a rien à propager.
+    public static func selectForPush<S: Sequence>(
+        _ vault: Vault, remoteIds: S, maxEntries: Int
+    ) -> (push: [VaultEntry], localOnly: [VaultEntry]) where S.Element == String {
+        let remote = Set(remoteIds)
+        let onServer = vault.entries.filter { remote.contains($0.id) }
+        let others = vault.entries
+            .filter { !remote.contains($0.id) && $0.deleted != true }
+            .sorted {
+                let da = $0.createdAt ?? $0.updatedAt
+                let db = $1.createdAt ?? $1.updatedAt
+                return da != db ? da < db : $0.id < $1.id
+            }
+
+        let free = max(0, maxEntries - onServer.filter { $0.deleted != true }.count)
+        let byId: (VaultEntry, VaultEntry) -> Bool = { $0.id < $1.id }
+        return (
+            push: (onServer + others.prefix(free)).sorted(by: byId),
+            localOnly: others.dropFirst(free).sorted(by: byId)
+        )
     }
 }
 

@@ -382,7 +382,8 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
         });
         sendResponse({
           ok: true,
-          entries: result.vault.entries.filter((e) => !e.deleted).length,
+          entries: result.vault.entries.filter((e) => !e.deleted).length - result.localOnly,
+          localOnly: result.localOnly,
           conflicts: result.conflicts,
         });
       } catch (e) {

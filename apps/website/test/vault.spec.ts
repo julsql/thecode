@@ -12,11 +12,16 @@ import {
   findByDomain,
   findAllByDomain,
   mergeVaults,
+  selectForPush,
   type Vault,
 } from "@/vault";
 
 const spec = JSON.parse(
   readFileSync(join(dirname(fileURLToPath(import.meta.url)), "merge-cases.json"), "utf8"),
+);
+
+const selection = JSON.parse(
+  readFileSync(join(dirname(fileURLToPath(import.meta.url)), "sync-selection.json"), "utf8"),
 );
 
 const normalise = (v: Vault) => [...v.entries].sort((a, b) => (a.id < b.id ? -1 : 1));
@@ -42,6 +47,21 @@ describe("fusion (cas partages)", () => {
   it.each(spec.cases.map((c: any) => [c.id, c]))("%s — idempotente", (_id: string, c: any) => {
     const once = mergeVaults(c.left, c.right).vault;
     expect(normalise(mergeVaults(once, c.right).vault)).toStrictEqual(normalise(once));
+  });
+});
+
+describe("synchronisation partielle (cas partages)", () => {
+  it.each(selection.cases.map((c: any) => [c.id, c]))("%s", (_id: string, c: any) => {
+    const { push, localOnly } = selectForPush(c.vault, c.remoteIds, c.maxEntries);
+    expect(push.map((e) => e.id)).toStrictEqual(c.push);
+    expect(localOnly.map((e) => e.id)).toStrictEqual(c.localOnly);
+  });
+});
+
+describe("date de creation", () => {
+  it("est posee a la creation", () => {
+    const entry = newEntry("google.com");
+    expect(entry.createdAt).toBe(entry.updatedAt);
   });
 });
 

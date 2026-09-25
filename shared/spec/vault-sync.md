@@ -145,8 +145,35 @@ Le tableau ci-dessous décrit l'état où elles s'appliquent.
 
 Un dépassement dû à l'offre répond **402**, jamais 403 : le client doit pouvoir
 distinguer « vous n'avez pas le droit » de « il faut s'abonner », et ne proposer
-l'abonnement que dans le second cas. Le carnet local, lui, n'est jamais bridé :
-les entrées au-delà du plafond restent sur l'appareil.
+l'abonnement que dans le second cas. Au plafond d'appareils de l'offre complète,
+rien ne se débloque au-dessus : la connexion répond **403**. Le carnet local,
+lui, n'est jamais bridé : les entrées au-delà du plafond restent sur l'appareil.
+
+### Synchronisation partielle
+
+`GET /v1/vault` rend `max_entries`, le plafond du compte. Le client ne pousse
+que ce qui y tient, et garde le reste sur l'appareil :
+
+1. Tout ce qui est déjà sur le serveur (les `id` du pull), pierres tombales
+   comprises : une modification ou une suppression doit toujours pouvoir
+   partir.
+2. Les places libres — `max_entries` moins les entrées du point 1 non
+   supprimées — vont aux autres entrées non supprimées, **les plus anciennes
+   d'abord** : `createdAt`, `updatedAt` à défaut, puis `id` pour départager.
+3. Une entrée jamais synchronisée puis supprimée ne part pas : elle n'a rien à
+   propager.
+
+Le reste est propre à l'appareil : il est dans le carnet, se calcule et se
+fusionne comme le reste, mais le serveur ne le voit pas. Supprimer une entrée
+synchronisée libère sa place à la synchronisation suivante. Le client dit
+combien d'entrées sont restées sur l'appareil.
+
+Le serveur compte après l'écriture, et ne refuse qu'une **croissance** au-delà
+du plafond : une suppression poussée avec un ajout libère sa place, et un
+compte déjà au-delà — après une fin d'abonnement — continue de modifier et de
+supprimer ce qu'il a.
+
+Vecteurs : `vault-fixtures/sync-selection.json`.
 
 Le **compteur** — renouveler un mot de passe sans changer de clef maîtresse —
 fait partie de l'offre complète.

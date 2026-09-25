@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any
 
 from .transfer import derive_transfer_key
-from .vault import ENTRY_VERSION, Conflict, merge
+from .vault import ENTRY_VERSION, Conflict, merge, select_for_push
 
 DEFAULT_ENDPOINT = "https://thecode-api.julsql.fr"
 
@@ -210,8 +210,11 @@ def _decrypt_entry(row: dict[str, str], key: bytes) -> dict[str, Any]:
 
 def sync(
     vault: dict[str, Any], master_key: str, creds: Credentials
-) -> tuple[dict[str, Any], list[Conflict], Credentials]:
+) -> tuple[dict[str, Any], list[Conflict], int, Credentials]:
     """Synchronise le carnet local avec le serveur.
+
+    Rend le carnet fusionné, les conflits, le nombre d'entrées restées sur
+    l'appareil faute de place sous le plafond du compte, et la session.
 
     Toujours dans cet ordre : on tire d'abord, on fusionne, puis on pousse.
     Pousser sans avoir tiré écraserait ce qu'un autre appareil a écrit entre
@@ -243,13 +246,23 @@ def sync(
 
     merged, conflicts = merge(vault, remote)
 
+    # Au-delà du plafond, le reste du carnet ne part pas : il reste propre à
+    # l'appareil. Un serveur qui ne dit pas son plafond reçoit tout.
+    max_entries = pulled.get("max_entries")
+    if isinstance(max_entries, int) and not isinstance(max_entries, bool):
+        push, local_only = select_for_push(
+            merged, [row["entry_id"] for row in pulled["entries"]], max_entries
+        )
+    else:
+        push, local_only = merged["entries"], []
+
     payload = {
         "base_revision": pulled["revision"],
-        "entries": [_encrypt_entry(e, key) for e in merged["entries"]],
+        "entries": [_encrypt_entry(e, key) for e in push],
     }
     _, creds = _authorised(
         creds,
         lambda token: _request(f"{creds.endpoint}/v1/vault", payload, token=token),
     )
 
-    return merged, conflicts, creds
+    return merged, conflicts, len(local_only), creds

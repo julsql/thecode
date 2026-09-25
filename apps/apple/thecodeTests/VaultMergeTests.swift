@@ -34,6 +34,27 @@ private func loadSpec() throws -> MergeSpec {
     return try JSONDecoder().decode(MergeSpec.self, from: Data(contentsOf: url))
 }
 
+private struct SelectionSpec: Decodable {
+    let cases: [Case]
+
+    struct Case: Decodable {
+        let id: String
+        let why: String
+        let vault: Vault
+        let remoteIds: [String]
+        let maxEntries: Int
+        let push: [String]
+        let localOnly: [String]
+    }
+}
+
+private func loadSelection() throws -> SelectionSpec {
+    let url = URL(fileURLWithPath: #filePath)
+        .deletingLastPathComponent()
+        .appendingPathComponent("Resources/sync-selection.json")
+    return try JSONDecoder().decode(SelectionSpec.self, from: Data(contentsOf: url))
+}
+
 /// Compare deux carnets sur ce qui compte, indépendamment de l'ordre.
 private func signature(_ vault: Vault) -> [String] {
     vault.entries.map { $0.canonical() }.sorted()
@@ -79,6 +100,38 @@ struct VaultMergeTests {
             let (twice, _) = Vault.merge(once, c.right)
             #expect(signature(twice) == signature(once), "\(c.id)")
         }
+    }
+}
+
+@Suite("Carnet — synchronisation partielle")
+struct SyncSelectionTests {
+
+    @Test("Chaque cas partagé pousse et garde les entrées attendues")
+    func everySharedCaseMatches() throws {
+        for c in try loadSelection().cases {
+            let (push, localOnly) = Vault.selectForPush(
+                c.vault, remoteIds: c.remoteIds, maxEntries: c.maxEntries)
+            #expect(push.map(\.id) == c.push, "\(c.id) : \(c.why)")
+            #expect(localOnly.map(\.id) == c.localOnly, "\(c.id) : \(c.why)")
+        }
+    }
+}
+
+@Suite("Carnet — date de création")
+struct CreatedAtTests {
+
+    @Test("Est posée à la création")
+    func isSetOnCreation() {
+        let entry = VaultEntry(siteKey: "google.com")
+        #expect(entry.createdAt != nil)
+        #expect(entry.createdAt == entry.updatedAt)
+    }
+
+    @Test("Est posée par l'enregistrement d'un nouveau compte")
+    func isSetByUpsert() {
+        var vault = Vault()
+        let entry = vault.upsert(site: "google.com", login: "moi", length: 20, charset: Charset())
+        #expect(entry.createdAt == entry.updatedAt)
     }
 }
 

@@ -435,6 +435,15 @@ saveEntryBtn.addEventListener("click", () => {
   });
 });
 
+/**
+ * Message traduit selon la langue du navigateur. Le francais reste en secours
+ * quand l'API manque (tests) ou que la clef n'existe pas.
+ */
+function msg(key, fallback, value) {
+  const text = browser.i18n?.getMessage(key, value === undefined ? undefined : [String(value)]);
+  return text || fallback.replace("$1", String(value));
+}
+
 /** Montre la connexion ou les actions, selon qu'une session existe. */
 function refreshSyncState() {
   browser.runtime.sendMessage({ action: "syncStatus" }, (resp) => {
@@ -451,41 +460,62 @@ syncLoginBtn.addEventListener("click", () => {
   const email = syncEmail.value.trim();
   const password = syncPassword.value;
   if (!email || !password) {
-    syncStatus.textContent = "Renseignez l'adresse et le mot de passe.";
+    syncStatus.textContent = msg(
+      "sync_need_credentials",
+      "Renseignez l'adresse et le mot de passe.",
+    );
     return;
   }
 
-  syncStatus.textContent = "Connexion…";
+  syncStatus.textContent = msg("sync_connecting", "Connexion…");
   browser.runtime.sendMessage({ action: "syncLogin", email, password }, (resp) => {
     if (resp && resp.ok) {
       // Le mot de passe du compte ne reste pas dans le DOM une fois utilise.
       syncPassword.value = "";
-      syncStatus.textContent = "Connecté.";
+      syncStatus.textContent = msg("sync_connected", "Connecté.");
       refreshSyncState();
     } else {
-      syncStatus.textContent = `Échec : ${resp?.error || "inconnu"}`;
+      syncStatus.textContent = msg(
+        "sync_failed",
+        "Échec : $1",
+        resp?.error || msg("sync_unknown_error", "inconnu"),
+      );
     }
   });
 });
 
 syncNowBtn.addEventListener("click", () => {
-  syncStatus.textContent = "Synchronisation…";
+  syncStatus.textContent = msg("sync_running", "Synchronisation…");
   browser.runtime.sendMessage({ action: "syncNow" }, (resp) => {
     if (resp && resp.ok) {
       const conflicts = resp.conflicts?.length
-        ? ` (${resp.conflicts.length} conflit(s) signalé(s))`
+        ? msg("sync_conflicts", " ($1 conflit(s) signalé(s))", resp.conflicts.length)
         : "";
-      syncStatus.textContent = `${resp.entries} entrée(s) synchronisée(s)${conflicts}`;
+      // Au-dela du plafond, le reste ne part pas : le dire, sinon on croit
+      // retrouver sur l'autre appareil ce qui n'y est jamais alle.
+      const local = resp.localOnly
+        ? msg(
+            "sync_local_only",
+            ", $1 restée(s) sur cet appareil (plafond de l'offre gratuite)",
+            resp.localOnly,
+          )
+        : "";
+      const done = msg("sync_done", "$1 entrée(s) synchronisée(s)", resp.entries);
+      syncStatus.textContent = `${done}${local}${conflicts}`;
       refreshVault(currentDomain);
     } else {
-      syncStatus.textContent = `Échec : ${resp?.error || "inconnu"}`;
+      syncStatus.textContent = msg(
+        "sync_failed",
+        "Échec : $1",
+        resp?.error || msg("sync_unknown_error", "inconnu"),
+      );
     }
   });
 });
 
 syncLogoutBtn.addEventListener("click", () => {
   browser.runtime.sendMessage({ action: "syncLogout" }, () => {
-    syncStatus.textContent = "Session oubliée sur cet appareil.";
+    syncStatus.textContent = msg("sync_forgotten", "Session oubliée sur cet appareil.");
     refreshSyncState();
   });
 });

@@ -112,6 +112,53 @@ class TestQuotas:
         assert push(client, auth, batch).status_code == 403
 
 
+class TestPartialSync:
+    """Au-delà du plafond gratuit, le client ne pousse qu'une partie du carnet."""
+
+    def test_the_pull_tells_the_cap(self, client, auth, settings):
+        assert client.get("/v1/vault", headers=auth).json()["max_entries"] == (
+            settings.free_max_entries
+        )
+
+    def test_a_deletion_frees_its_slot_in_the_same_push(self, client, auth, settings):
+        cap = settings.free_max_entries
+        first = push(client, auth, [entry(f"e{i}") for i in range(cap)])
+        revision = first.json()["revision"]
+
+        swap = [entry("e0", deleted=True), entry("nouvelle")]
+        assert push(client, auth, swap, base_revision=revision).status_code == 200
+
+    def test_an_account_over_the_cap_can_still_edit_what_it_has(
+        self, client, auth, settings, db_session
+    ):
+        """Une fin d'abonnement laisse le carnet au-delà du plafond gratuit."""
+        settings.free_max_entries = cap = 3
+        account = db_session.query(models.Account).one()
+        account.plan = "pro"
+        account.subscription_status = "active"
+        db_session.commit()
+        revision = push(client, auth, [entry(f"e{i}") for i in range(cap + 2)]).json()["revision"]
+
+        account.plan = "free"
+        db_session.commit()
+
+        edit = [entry("e0", blob=b"modifie"), entry("e1", deleted=True)]
+        assert push(client, auth, edit, base_revision=revision).status_code == 200
+
+    def test_an_account_over_the_cap_cannot_grow(self, client, auth, settings, db_session):
+        settings.free_max_entries = cap = 3
+        account = db_session.query(models.Account).one()
+        account.plan = "pro"
+        account.subscription_status = "active"
+        db_session.commit()
+        revision = push(client, auth, [entry(f"e{i}") for i in range(cap + 2)]).json()["revision"]
+
+        account.plan = "free"
+        db_session.commit()
+
+        assert push(client, auth, [entry("nouvelle")], base_revision=revision).status_code == 402
+
+
 class TestIsolation:
     def test_an_account_never_sees_another(self, client):
         """La garantie qui compte le plus après le chiffrement."""
