@@ -153,22 +153,36 @@ describe("carnet et empreinte", () => {
     expect(wrapper.text()).toContain("Enregistrer ce site");
   });
 
-  it("propose de migrer une entree v1 et de renouveler une v2", async () => {
+  it("ignore une entree v1 du stockage et ne propose plus de migration", async () => {
+    const { emptyVault, newEntry, VAULT_STORAGE_KEY } = await import("@/vault");
+
+    // Ecrit a la main : le carnet refuse d'enregistrer une entree v1.
+    const vault = emptyVault();
+    vault.entries.push({ ...newEntry("google.com", { domains: ["google.com"] }), v: 1 });
+    localStorage.setItem(VAULT_STORAGE_KEY, JSON.stringify(vault));
+
+    const wrapper = await mountGenerate();
+    await wrapper.find("#id_site").setValue("google.com");
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.text()).not.toContain("Passer en v2");
+    expect(wrapper.text()).not.toContain("Renouveler");
+    expect(wrapper.text()).toContain("Enregistrer ce site");
+  });
+
+  it("propose de renouveler une entree v2", async () => {
     const { saveVault, emptyVault, newEntry } = await import("@/vault");
 
     const vault = emptyVault();
-    // v1 explicite : les entrees naissent desormais en v2.
-    vault.entries.push(newEntry("google.com", { domains: ["google.com"], v: 1 }));
+    vault.entries.push(newEntry("google.com", { domains: ["google.com"] }));
     saveVault(vault);
 
     const wrapper = await mountGenerate();
     await wrapper.find("#id_site").setValue("google.com");
     await wrapper.vm.$nextTick();
 
-    // Une entree v1 n'a rien a renouveler : le compteur n'entre pas dans sa
-    // derivation. On ne propose donc que la migration.
-    expect(wrapper.text()).toContain("Passer en v2");
-    expect(wrapper.text()).not.toContain("Renouveler");
+    expect(wrapper.text()).toContain("Renouveler");
+    expect(wrapper.text()).not.toContain("Passer en v2");
   });
 
   /**
@@ -192,7 +206,7 @@ describe("carnet et empreinte", () => {
     const { saveVault, emptyVault, newEntry, loadVault, findAllByDomain } = await import("@/vault");
 
     const vault = emptyVault();
-    vault.entries.push(newEntry("google.com", { domains: ["google.com"], v: 2 }));
+    vault.entries.push(newEntry("google.com", { domains: ["google.com"] }));
     saveVault(vault);
     signInAs("pro");
 
@@ -222,7 +236,7 @@ describe("carnet et empreinte", () => {
     const { saveVault, emptyVault, newEntry } = await import("@/vault");
 
     const vault = emptyVault();
-    vault.entries.push(newEntry("google.com", { domains: ["google.com"], v: 2 }));
+    vault.entries.push(newEntry("google.com", { domains: ["google.com"] }));
     saveVault(vault);
     // Sans compte, donc offre gratuite : le compteur est ce qui permet de
     // changer un mot de passe sans changer sa clef, et c'est ce qui se paie.
@@ -245,23 +259,21 @@ describe("carnet et empreinte", () => {
     expect(wrapper.text()).not.toContain("Nouveau mot de passe");
   }, 20000);
 
-  it("laisse migrer une entree v1 sans compte", async () => {
-    const { saveVault, emptyVault, newEntry } = await import("@/vault");
-
-    const vault = emptyVault();
-    vault.entries.push(newEntry("google.com", { domains: ["google.com"], v: 1 }));
-    saveVault(vault);
-
+  it("enregistre en v2 meme depuis l'ecran regle en v1", async () => {
     const wrapper = await mountGenerate();
-    await wrapper.find("#id_clef").setValue("clef");
+
     await wrapper.find("#id_site").setValue("google.com");
+    const v1Button = wrapper.findAll("button").find((b) => b.text() === "v1");
+    await v1Button!.trigger("click");
+
+    const button = wrapper.findAll("button").find((b) => b.text().includes("Enregistrer"));
+    await button!.trigger("click");
     await wrapper.vm.$nextTick();
 
-    // Passer en v2 est une mise a niveau, pas un service : la brider
-    // laisserait des comptes sur l'ancien algorithme pour une question de prix.
-    const migrate = wrapper.findAll("button").find((b) => b.text() === "Passer en v2");
-    expect(migrate!.attributes("disabled")).toBeUndefined();
-  }, 20000);
+    // La v1 ne vit qu'en generation ponctuelle, hors carnet.
+    const { loadVault, findAllByDomain } = await import("@/vault");
+    expect(findAllByDomain(loadVault(), "google.com")[0]?.v).toBe(2);
+  });
 
   it("enregistre les reglages et les retrouve", async () => {
     const wrapper = await mountGenerate();

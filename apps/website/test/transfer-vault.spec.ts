@@ -20,6 +20,9 @@ import { emptyVault, newEntry, type Vault } from "@/vault";
 const vector = JSON.parse(
   readFileSync(join(dirname(fileURLToPath(import.meta.url)), "transfer-vector.json"), "utf8"),
 );
+const v2Only = JSON.parse(
+  readFileSync(join(dirname(fileURLToPath(import.meta.url)), "v2-only.json"), "utf8"),
+) as { vault: Vault; expectedIds: string[] };
 
 function filled(): Vault {
   const v = emptyVault();
@@ -80,6 +83,13 @@ describe("transfert d'un carnet", () => {
     // Le fichier vient du CLI Python : c'est la seule garantie qui vaille.
     const imported = (await importVault(vector.payload, vector.masterKey)) as Vault;
     expect(imported.entries.length).toBeGreaterThan(0);
+  });
+
+  it("écarte à l'import les entrées v ≠ 2 (vecteur partagé)", async () => {
+    // Le carnet n'accepte que la v2 : shared/spec/vault-merge.md.
+    const payload = await exportVault(v2Only.vault, "clef");
+    const imported = (await importVault(payload, "clef")) as Vault;
+    expect(imported.entries.map((e) => e.id).sort()).toStrictEqual([...v2Only.expectedIds].sort());
   });
 
   it("produit un payload que les autres relisent", async () => {

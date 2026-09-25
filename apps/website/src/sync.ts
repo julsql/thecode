@@ -11,7 +11,7 @@
  */
 
 import { deriveTransferKey } from "@/transfer";
-import { mergeVaults, type Conflict, type Vault, type VaultEntry } from "@/vault";
+import { isVaultEntryV2, mergeVaults, type Conflict, type Vault, type VaultEntry } from "@/vault";
 
 export const DEFAULT_ENDPOINT = "https://thecode-api.julsql.fr";
 const SESSION_KEY = "thecode.session";
@@ -291,6 +291,9 @@ export async function syncVault(
   const remote: Vault = { schema: 1, updatedAt: vault.updatedAt, entries: [] };
   for (const row of pulled.result.entries) {
     const entry = await decryptEntry(row, key);
+    // Le carnet n'accepte que la v2 : une entrée v1 venue du serveur est
+    // écartée sans erreur et ne rejoint pas le carnet local.
+    if (!isVaultEntryV2(entry)) continue;
     // Absent quand faux, jamais « deleted: false ». La représentation
     // canonique départage les écritures simultanées : y laisser un champ que
     // les autres implémentations n'écrivent pas ferait désigner un gagnant

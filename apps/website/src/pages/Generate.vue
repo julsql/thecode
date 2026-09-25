@@ -178,31 +178,24 @@
               {{ vaultEntries.length }} entrée(s) connue(s) pour ce site.
             </p>
 
-            <!-- Renouveler et migrer : les deux actions qui changent un mot de
-                 passe deja en service. Jamais les deux a la fois — le compteur
-                 n'entre pas dans la derivation v1, et une entree v2 n'a plus
-                 rien a migrer. -->
+            <!-- Renouveler : la seule action qui change un mot de passe deja
+                 en service. Le carnet ne contient que des entrees v2. -->
             <ul v-if="vaultEntries.length && !pending" class="entry-list">
               <li v-for="entry in vaultEntries" :key="entry.id">
                 <span class="entry-name">{{ entry.label || entry.siteKey }}</span>
                 <!-- Jamais désactivé : un bouton éteint n'explique rien et ne
                      propose rien. C'est le clic qui dit ce que l'offre
                      complète apporte, et où l'obtenir. -->
-                <button
-                  type="button"
-                  class="ghost-btn small"
-                  @click="proposeChange(entry, entry.v >= 2)"
-                >
-                  {{ entry.v >= 2 ? "Renouveler" : "Passer en v2" }}
+                <button type="button" class="ghost-btn small" @click="proposeRenew(entry)">
+                  Renouveler
                 </button>
               </li>
             </ul>
 
             <!-- Le compteur est ce qui permet de changer un mot de passe sans
                  changer sa clef maitresse : il fait partie de l'offre
-                 complete. La migration v1 vers v2, elle, reste ouverte a
-                 tous — c'est une mise a niveau, pas un service. -->
-            <p v-if="!renewAllowed && vaultEntries.some((e) => e.v >= 2)" class="hint">
+                 complete. -->
+            <p v-if="!renewAllowed && vaultEntries.length" class="hint">
               {{ t("gen_renew_paid") }}
               <router-link :to="localePath('pricing')">{{ t("nav_pricing") }}</router-link>
             </p>
@@ -421,7 +414,6 @@ export default defineComponent({
     /** Changement propose, en attente de confirmation. */
     const pending = ref<{
       entryId: string;
-      renew: boolean;
       before: string;
       after: string;
     } | null>(null);
@@ -519,10 +511,10 @@ export default defineComponent({
     });
 
     /**
-     * Derive le mot de passe d'une entree, dans sa version a elle.
+     * Derive le mot de passe d'une entree.
      *
-     * Les deux versions coexistent entree par entree : une entree existante
-     * reste en v1 et son mot de passe ne doit pas changer.
+     * Le carnet ne contient que des entrees v2 ; `version` = 1 ne sert qu'a la
+     * generation ponctuelle demandee depuis l'ecran regle en v1.
      */
     async function passwordForEntry(entry: VaultEntry, counter?: number, version?: number) {
       const v = version ?? entry.v;
@@ -549,18 +541,18 @@ export default defineComponent({
     }
 
     /**
-     * Prepare un renouvellement ou une migration, sans rien ecrire.
+     * Prepare un renouvellement, sans rien ecrire.
      *
      * Les deux mots de passe s'affichent cote a cote : le nouveau ne sert a
      * rien tant qu'il n'a pas ete pose sur le site, et l'ancien reste celui qui
      * connecte. Ecrire d'abord rendrait le compte inaccessible.
      */
-    async function proposeChange(entry: VaultEntry, renew: boolean) {
+    async function proposeRenew(entry: VaultEntry) {
       if (!clef.value) {
         vaultMessage.value = "Renseignez d'abord votre clef.";
         return;
       }
-      if (renew && !renewAllowed.value) {
+      if (!renewAllowed.value) {
         vaultMessage.value = t("gen_renew_paid");
         return;
       }
@@ -568,14 +560,8 @@ export default defineComponent({
 
       pending.value = {
         entryId: entry.id,
-        renew,
         before: (await passwordForEntry(entry)) ?? "",
-        after:
-          (await passwordForEntry(
-            entry,
-            renew ? entry.counter + 1 : entry.counter,
-            renew ? entry.v : 2,
-          )) ?? "",
+        after: (await passwordForEntry(entry, entry.counter + 1)) ?? "",
       };
       vaultMessage.value = "";
     }
@@ -591,17 +577,14 @@ export default defineComponent({
         return;
       }
 
-      if (change.renew) entry.counter += 1;
-      else entry.v = 2;
+      entry.counter += 1;
       // Sans rehorodatage, la fusion ferait gagner l'autre appareil et le
       // changement serait perdu a la synchronisation suivante.
       entry.updatedAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
 
       saveVault(vault);
       pending.value = null;
-      vaultMessage.value = change.renew
-        ? `Entrée renouvelée, compteur ${entry.counter}.`
-        : "Entrée passée en v2.";
+      vaultMessage.value = `Entrée renouvelée, compteur ${entry.counter}.`;
       refreshVault();
       genererMotDePasse();
     }
@@ -729,11 +712,9 @@ export default defineComponent({
         existing.updatedAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
         vaultMessage.value = "Entrée mise à jour.";
       } else {
-        // Enregistrer un mot de passe genere en v1 sous une entree v2 donnerait
-        // un autre mot de passe a la relecture.
-        vault.entries.push(
-          newEntry(domain, { length: Number(longueur.value), charset, v: enV1.value ? 1 : 2 }),
-        );
+        // Toujours v2, meme depuis l'ecran regle en v1 : le carnet n'accepte
+        // que la v2, la v1 ne vit qu'en generation ponctuelle.
+        vault.entries.push(newEntry(domain, { length: Number(longueur.value), charset }));
         vaultMessage.value = "Site enregistré.";
       }
 
@@ -791,7 +772,7 @@ export default defineComponent({
       vaultMessage,
       saveEntry,
       pending,
-      proposeChange,
+      proposeRenew,
       applyChange,
       enV1,
       showV2Notice,

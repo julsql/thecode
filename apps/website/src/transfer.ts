@@ -12,6 +12,8 @@
  * Spécification : shared/spec/vault-transfer.md
  */
 
+import { keepV2Only } from "@/vault";
+
 export const TRANSFER_PREFIX = "TC1";
 export const TRANSFER_NONCE_BYTES = 12;
 export const KDF_SALT = "thecode-transfer/v1";
@@ -104,5 +106,7 @@ export async function importVault(payload: string, masterKey: string): Promise<u
     );
   }
 
-  return JSON.parse(new TextDecoder().decode(await inflate(new Uint8Array(plain))));
+  const vault: unknown = JSON.parse(new TextDecoder().decode(await inflate(new Uint8Array(plain))));
+  // Le carnet n'accepte que la v2 : une entrée v1 importée est écartée.
+  return vault && typeof vault === "object" ? keepV2Only(vault as { entries?: unknown }) : vault;
 }

@@ -12,6 +12,8 @@
 export const VAULT_SCHEMA = 1;
 export const VAULT_STORAGE_KEY = "thecode.vault";
 export const DEFAULT_LENGTH = 20;
+/** Seule version admise dans le carnet : la v1 ne vit plus qu'hors carnet. */
+export const VAULT_ENTRY_VERSION = 2;
 export const DEFAULT_CHARSET: Charset = {
   lower: true,
   upper: true,
@@ -61,9 +63,30 @@ export function emptyVault(): Vault {
   return { schema: VAULT_SCHEMA, updatedAt: nowIso(), entries: [] };
 }
 
+/** Vrai pour une entrée que le carnet accepte, c'est-à-dire en v2. */
+export function isVaultEntryV2(entry: unknown): entry is VaultEntry {
+  return (
+    typeof entry === "object" &&
+    entry !== null &&
+    (entry as { v?: unknown }).v === VAULT_ENTRY_VERSION
+  );
+}
+
+/**
+ * Écarte toute entrée `v ≠ 2`, sans erreur.
+ *
+ * Appliqué à chaque lecture (stockage local, import, synchronisation) et à
+ * chaque écriture : une entrée v1 qui passerait par un seul de ces chemins
+ * reviendrait dans le carnet. Voir shared/spec/vault-merge.md.
+ */
+export function keepV2Only<T extends { entries?: unknown }>(vault: T): T {
+  if (!Array.isArray(vault.entries)) return vault;
+  return { ...vault, entries: vault.entries.filter(isVaultEntryV2) };
+}
+
 export function newEntry(
   siteKey: string,
-  options: Partial<Omit<VaultEntry, "id" | "siteKey">> = {},
+  options: Partial<Omit<VaultEntry, "id" | "siteKey" | "v">> = {},
 ): VaultEntry {
   return {
     id: crypto.randomUUID(),
@@ -74,8 +97,8 @@ export function newEntry(
     counter: 1,
     length: options.length ?? DEFAULT_LENGTH,
     charset: { ...DEFAULT_CHARSET, ...(options.charset ?? {}) },
-    // Les entrées naissent en v2 ; la v1 reste lisible pour les anciennes.
-    v: options.v ?? 2,
+    // Toujours v2 : le carnet n'accepte pas d'autre version.
+    v: VAULT_ENTRY_VERSION,
     updatedAt: nowIso(),
   };
 }
@@ -177,9 +200,9 @@ function mergeEntry(left: VaultEntry, right: VaultEntry, conflicts: Conflict[]):
  */
 export function mergeVaults(left: Vault, right: Vault): { vault: Vault; conflicts: Conflict[] } {
   const conflicts: Conflict[] = [];
-  const byId = new Map(left.entries.map((e) => [e.id, e]));
+  const byId = new Map(keepV2Only(left).entries.map((e) => [e.id, e]));
 
-  for (const entry of right.entries) {
+  for (const entry of keepV2Only(right).entries) {
     const existing = byId.get(entry.id);
     byId.set(entry.id, existing ? mergeEntry(existing, entry, conflicts) : { ...entry });
   }
@@ -205,7 +228,7 @@ export function loadVault(): Vault {
     if (!raw) return emptyVault();
     const vault = JSON.parse(raw) as Vault;
     if (vault.schema !== VAULT_SCHEMA) return emptyVault();
-    return vault;
+    return keepV2Only(vault);
   } catch {
     return emptyVault();
   }
@@ -214,7 +237,8 @@ export function loadVault(): Vault {
 export function saveVault(vault: Vault): void {
   try {
     vault.updatedAt = nowIso();
-    localStorage.setItem(VAULT_STORAGE_KEY, JSON.stringify(vault));
+    // Refus à l'écriture : une entrée v1 ne rejoint jamais le stockage.
+    localStorage.setItem(VAULT_STORAGE_KEY, JSON.stringify(keepV2Only(vault)));
   } catch {
     // Stockage indisponible : le mot de passe reste dérivable, seul le
     // carnet ne persiste pas. On ne bloque pas l'utilisateur pour autant.
