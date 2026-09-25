@@ -125,6 +125,16 @@ describe("generation avec identifiant", () => {
     expect(res.login).toBe("moi");
   });
 
+  it("ignore les espaces autour de l'identifiant", async () => {
+    const { worker } = loadWorker();
+
+    const padded = await worker.generatePasswordForUrl("https://inconnu.fr/", 2, "  moi ");
+    const clean = await worker.generatePasswordForUrl("https://inconnu.fr/", 2, "moi");
+
+    expect(padded.password).toBe(clean.password);
+    expect(padded.login).toBe("moi");
+  });
+
   it("un identifiant vide ne change rien au calcul", async () => {
     const { worker } = loadWorker();
 

@@ -28,6 +28,11 @@ en v1 par des `siteKey` distincts ; la v2 le traite directement.
 
 ## Dérivation
 
+`login` est pris **sans les espaces qui l'entourent** : chaque client retire les
+espaces de début et de fin à la saisie, avant la dérivation et avant
+l'enregistrement dans le carnet. Un espace collé en trop ne doit pas donner un
+autre mot de passe.
+
 ```
 mk   = PBKDF2-SHA256(clef, salt = "thecode-master/v2", iterations = 600000, dkLen = 32)
 seed = HMAC-SHA256(mk, "thecode/v2" ‖ 0x00 ‖ siteKey ‖ 0x00 ‖ login ‖ 0x00 ‖ counter)

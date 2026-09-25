@@ -400,7 +400,10 @@ export default defineComponent({
     const fingerprint = ref<Fingerprint>({ text: "", color: "", colorName: "" });
     const vaultEntries = ref<VaultEntry[]>([]);
     /** Entree du carnet pour ce site et cet identifiant, s'il y en a une. */
-    const matchedEntry = computed(() => findByLogin(vaultEntries.value, login.value));
+    // Les espaces autour de l'identifiant ne comptent pas : sans cela, un espace
+    // colle en trop donnerait un autre mot de passe, comme sur les apps.
+    const cleanLogin = computed(() => login.value.trim());
+    const matchedEntry = computed(() => findByLogin(vaultEntries.value, cleanLogin.value));
     const vaultMessage = ref("");
     const transferMessage = ref("");
     /**
@@ -535,7 +538,7 @@ export default defineComponent({
               useSymbols: symboles.value,
               useNumbers: chiffres.value,
               // La v1 ignore l'identifiant ; la v2 le fait entrer dans la graine.
-              login: login.value,
+              login: cleanLogin.value,
             });
       if (generation !== generationCourante) return;
       motDePasse.value = mdp ?? "";
@@ -761,7 +764,7 @@ export default defineComponent({
       };
       // Appariement sur le site et l'identifiant : un autre identifiant est
       // un autre compte, donc une autre entree.
-      const existing = findByLogin(findAllByDomain(vault, domain), login.value);
+      const existing = findByLogin(findAllByDomain(vault, domain), cleanLogin.value);
 
       if (existing) {
         existing.length = Number(longueur.value);
@@ -772,7 +775,7 @@ export default defineComponent({
         // Toujours v2, meme depuis l'ecran regle en v1 : le carnet n'accepte
         // que la v2, la v1 ne vit qu'en generation ponctuelle.
         vault.entries.push(
-          newEntry(domain, { length: Number(longueur.value), charset, login: login.value }),
+          newEntry(domain, { length: Number(longueur.value), charset, login: cleanLogin.value }),
         );
         vaultMessage.value = "Site enregistré.";
       }

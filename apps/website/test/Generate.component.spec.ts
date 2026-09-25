@@ -313,6 +313,19 @@ describe("identifiant", () => {
     });
   }, 20000);
 
+  it("ignore les espaces autour de l'identifiant", async () => {
+    const withLogin = vectors.v2.cases.find((c: any) => c.id === "v2-with-login");
+    const wrapper = await mountGenerate();
+
+    await wrapper.find("#id_site").setValue(withLogin.site);
+    await wrapper.find("#id_login").setValue(`  ${withLogin.login} `);
+    await wrapper.find("#id_clef").setValue(withLogin.master);
+
+    await vi.waitFor(() => expect(generated(wrapper)).toBe(withLogin.expected), {
+      timeout: 15000,
+    });
+  }, 20000);
+
   it("est ignore en v1, et le dit", async () => {
     const canonical = vectors.v1.cases.find((c: any) => c.id === "canonical");
     const wrapper = await mountGenerate();

@@ -435,12 +435,13 @@ async function passwordForEntry(entry, counter, version = 2) {
 /**
  * Identifiant tel qu'il entre dans la derivation.
  *
- * `undefined` quand l'appelant n'en envoie pas (content.js) : on garde alors
+ * Sans les espaces autour. `undefined` quand l'appelant n'en envoie pas (content.js) : on garde alors
  * la premiere entree du domaine, comme avant. Borne : il est hache, mais un
  * message peut contenir n'importe quoi.
  */
 function normalizeLogin(login) {
-  return typeof login === "string" ? login.slice(0, VAULT_LOGIN_MAX) : undefined;
+  // Les espaces autour ne comptent pas, comme sur les apps et le site.
+  return typeof login === "string" ? login.trim().slice(0, VAULT_LOGIN_MAX) : undefined;
 }
 
 /**
