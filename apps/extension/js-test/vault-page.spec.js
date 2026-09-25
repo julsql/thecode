@@ -17,7 +17,6 @@ function entry(id, overrides = {}) {
     counter: 1,
     length: 20,
     charset: { lower: true, upper: true, symbols: true, numbers: true },
-    v: 2,
     updatedAt: OLD,
     ...overrides,
   };

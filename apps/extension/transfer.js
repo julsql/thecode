@@ -100,14 +100,13 @@ async function importVault(payload, masterKey) {
   }
 
   const vault = JSON.parse(new TextDecoder().decode(await inflate(new Uint8Array(plain))));
-  // Le carnet n'accepte que la v2 : une entree v1 venue d'un autre appareil
-  // est ecartee ici, sans erreur.
-  return keepV2Entries(vault);
+  // Un `v` residuel est ignore, jamais reecrit : une entree derive toujours en v2.
+  return stripVersions(vault);
 }
 
 if (typeof module !== "undefined") {
-  // Dans le service worker, keepV2Entries vient de vault.js, charge avant.
-  Object.assign(globalThis, { keepV2Entries: require("./vault.js").keepV2Entries });
+  // Dans le service worker, stripVersions vient de vault.js, charge avant.
+  Object.assign(globalThis, { stripVersions: require("./vault.js").stripVersions });
   module.exports = {
     TRANSFER_PREFIX,
     TRANSFER_KDF_SALT,

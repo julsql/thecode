@@ -424,7 +424,8 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
 /**
  * Derive le mot de passe d'une entree.
  *
- * Le carnet ne contient que des entrees v2. `version` vaut 1 seulement quand
+ * Une entree ne porte pas de version : elle derive en v2, jamais d'apres un
+ * `v` qu'elle porterait. `version` vaut 1 seulement quand
  * la popup demande l'ancien algorithme, en secours pour un site dont le mot de
  * passe n'a pas encore ete change : la v1 n'existe plus qu'hors carnet.
  */

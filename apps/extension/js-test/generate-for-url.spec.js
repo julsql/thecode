@@ -93,9 +93,9 @@ describe("generation pour une page", () => {
     expect(viaAlias.password).toBe(direct.password);
   });
 
-  it("ignore une entree v1 restee dans le stockage", async () => {
-    // Le carnet n'accepte que la v2 : l'entree v1 est ecartee a la lecture,
-    // ses reglages ne s'appliquent plus et le site redevient inconnu.
+  it("derive en v2 une entree portant un v residuel", async () => {
+    // Une entree ne porte pas de version : un `v: 1` reste de l'ancien format
+    // est ignore, l'entree est gardee et ses reglages s'appliquent en v2.
     const { worker, storage } = loadWorker();
     const { emptyVault, newEntry, saveVault } = require("../vault");
     const { generatePasswordV2 } = require("../core-v2");
@@ -105,8 +105,8 @@ describe("generation pour une page", () => {
     await saveVault(storage, vault);
 
     const res = await worker.generatePasswordForUrl("https://vieux.fr/login");
-    expect(res.known).toBe(false);
-    expect(res.password).toBe(await generatePasswordV2("vieux.fr", "clef", 20));
+    expect(res.known).toBe(true);
+    expect(res.password).toBe(await generatePasswordV2("vieux.fr", "clef", 12, { counter: 1 }));
   });
 
   it("derive en v1 quand la popup le demande, pour une entree connue", async () => {
@@ -210,7 +210,7 @@ describe("renouvellement", () => {
     expect(await worker.passwordForEntry(entry)).not.toBe(
       await worker.passwordForEntry(entry, entry.counter, 1),
     );
-    expect(entry.v).toBe(2);
+    expect(entry).not.toHaveProperty("v");
   });
 
   it("le compteur n'a aucun effet en v1", async () => {

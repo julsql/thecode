@@ -267,7 +267,6 @@ function initVaultPage() {
     $("detailLength").textContent = String(entry.length);
     $("detailCharset").textContent = charsetLabel(entry.charset);
     $("detailCounter").textContent = String(entry.counter);
-    $("detailVersion").textContent = `v${entry.v}`;
     $("detailUpdatedAt").textContent = new Date(entry.updatedAt).toLocaleString("fr-FR");
     if (moveFocus) $("detailTitle").focus();
   }

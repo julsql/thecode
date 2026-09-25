@@ -16,25 +16,20 @@ const VAULT_DEFAULT_CHARSET = { lower: true, upper: true, symbols: true, numbers
 const VAULT_DEFAULT_LENGTH = 20;
 
 /**
- * Seule version d'entree admise dans le carnet.
- *
- * La v1 ne subsiste qu'en generation ponctuelle, hors carnet : une entree
- * `v != 2` est ecartee a chaque lecture et ne peut pas etre ecrite.
- * Voir shared/spec/vault-merge.md, « Uniquement des entrées v2 ».
+ * Retire un champ `v` residuel : une entree ne porte pas de version et derive
+ * toujours en v2. Tolere, ignore, jamais reecrit.
+ * Voir shared/spec/vault-merge.md, « Pas de version par entrée ».
  */
-const VAULT_ENTRY_VERSION = 2;
-
-function isV2Entry(entry) {
-  return Boolean(entry) && entry.v === VAULT_ENTRY_VERSION;
+function dropVersion(entry) {
+  if (!entry || typeof entry !== "object" || !("v" in entry)) return entry;
+  const { v: _stray, ...rest } = entry;
+  return rest;
 }
 
-/**
- * Ne garde que les entrees v2, sans erreur : un carnet ancien ou venu d'un
- * autre appareil reste lisible, ses entrees v1 disparaissent simplement.
- */
-function keepV2Entries(vault) {
+/** Applique dropVersion a tout le carnet, a chaque lecture. */
+function stripVersions(vault) {
   if (!vault || !Array.isArray(vault.entries)) return vault;
-  return { ...vault, entries: vault.entries.filter(isV2Entry) };
+  return { ...vault, entries: vault.entries.map(dropVersion) };
 }
 
 function nowIso() {
@@ -46,7 +41,7 @@ function emptyVault() {
 }
 
 function newEntry(siteKey, options = {}) {
-  // Pas d'option `v` : une entree nait toujours en v2.
+  // Pas de version : une entree derive toujours en v2.
   const { label, domains, login = "", length = VAULT_DEFAULT_LENGTH, charset } = options;
   const now = nowIso();
   return {
@@ -58,7 +53,6 @@ function newEntry(siteKey, options = {}) {
     counter: 1,
     length,
     charset: { ...VAULT_DEFAULT_CHARSET, ...(charset || {}) },
-    v: VAULT_ENTRY_VERSION,
     createdAt: now,
     updatedAt: now,
   };
@@ -90,7 +84,7 @@ function findByDomainAndLogin(vault, domain, login = "") {
  * Le compte est designe par domaine + identifiant : deux identifiants sur un
  * meme site sont deux entrees. Une entree existante ne voit changer que sa
  * longueur et son jeu de caracteres — jamais son siteKey, qui produit le mot
- * de passe. Sinon, une entree v2 nait avec cet identifiant.
+ * de passe. Sinon, une entree nait avec cet identifiant.
  */
 function upsertSiteEntry(vault, { domain, login = "", length, charset }) {
   const existing = findByDomainAndLogin(vault, domain, login);
@@ -215,9 +209,9 @@ function findDuplicates(entries, leftIds, rightIds, conflicts) {
  */
 function mergeVaults(left, right) {
   const conflicts = [];
-  // Filet : ce qui sort d'une fusion est ecrit, et rien de v1 ne doit l'etre.
-  const leftEntries = (left.entries || []).filter(isV2Entry);
-  const rightEntries = (right.entries || []).filter(isV2Entry);
+  // Ce qui sort d'une fusion est ecrit : un `v` residuel n'y survit pas.
+  const leftEntries = (left.entries || []).map(dropVersion);
+  const rightEntries = (right.entries || []).map(dropVersion);
   const byId = new Map(leftEntries.map((e) => [e.id, e]));
 
   for (const entry of rightEntries) {
@@ -284,7 +278,7 @@ async function loadVault(storage) {
       console.error("TheCode: carnet en version", vault.schema, "attendu", VAULT_SCHEMA);
       return emptyVault();
     }
-    return keepV2Entries(vault);
+    return stripVersions(vault);
   } catch (e) {
     console.error("TheCode: echec de la lecture du carnet", e);
     return emptyVault();
@@ -308,9 +302,8 @@ if (typeof module !== "undefined") {
     VAULT_STORAGE_KEY,
     VAULT_DEFAULT_CHARSET,
     VAULT_DEFAULT_LENGTH,
-    VAULT_ENTRY_VERSION,
-    isV2Entry,
-    keepV2Entries,
+    dropVersion,
+    stripVersions,
     emptyVault,
     newEntry,
     findByDomain,

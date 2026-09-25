@@ -186,10 +186,8 @@ async function syncVault(vault, masterKey, session) {
 
   const remote = { schema: 1, updatedAt: vault.updatedAt || "", entries: [] };
   for (const row of pulled.result.entries) {
-    const entry = await decryptEntry(row, key);
-    // Le carnet n'accepte que la v2 : une ligne v1 poussee par un ancien
-    // client est ignoree, sans erreur, et n'est pas repoussee.
-    if (!isV2Entry(entry)) continue;
+    // Un `v` residuel est ignore : une entree derive toujours en v2.
+    const entry = dropVersion(await decryptEntry(row, key));
     // Absent quand faux, jamais « deleted: false ». La representation
     // canonique departage les ecritures simultanees : y laisser un champ que
     // les autres implementations n'ecrivent pas ferait designer un gagnant

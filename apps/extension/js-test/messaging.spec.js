@@ -109,7 +109,6 @@ describe("cloisonnement vis-a-vis des content scripts", () => {
           counter: 1,
           length: 20,
           charset: { lower: true, upper: true, symbols: true, numbers: true },
-          v: 2,
           updatedAt: "2026-01-01T00:00:00Z",
         },
       ],
@@ -195,7 +194,6 @@ describe("renouvellement reserve a l'offre complete", () => {
     length: 20,
     charset: "luds",
     counter: 1,
-    v: 2,
     updatedAt: "2026-09-01T10:00:00Z",
   };
 
@@ -238,17 +236,18 @@ describe("renouvellement reserve a l'offre complete", () => {
     expect(store.vault.entries[0].counter).toBe(2);
   });
 
-  it("ne migre plus rien : une entree v1 est introuvable", async () => {
+  it("garde une entree portant un v residuel et ne le reecrit pas", async () => {
     const { send, store } = loadWorker({
       storage: { vault: vaultWith({ ...ENTRY, v: 1 }), syncSession: session("pro") },
     });
     await send({ action: "setEncodingKey", encodingKey: "clef" }, FROM_POPUP);
 
-    // Le carnet n'accepte que la v2 : l'entree v1 est ecartee a la lecture.
-    const response = await send({ action: "applyChange", id: "e1", renew: false }, FROM_POPUP);
+    // Une entree ne porte pas de version : le `v` est ignore a la lecture.
+    const response = await send({ action: "applyChange", id: "e1", renew: true }, FROM_POPUP);
 
-    expect(response.ok).toBe(false);
-    expect(store.vault.entries[0]).toMatchObject({ v: 1, counter: 1 });
+    expect(response.ok).toBe(true);
+    expect(store.vault.entries[0].counter).toBe(2);
+    expect(store.vault.entries[0]).not.toHaveProperty("v");
   });
 
   it("ne fait que renouveler, meme sans drapeau renew", async () => {
@@ -261,7 +260,7 @@ describe("renouvellement reserve a l'offre complete", () => {
     const response = await send({ action: "applyChange", id: "e1" }, FROM_POPUP);
 
     expect(response.ok).toBe(false);
-    expect(store.vault.entries[0]).toMatchObject({ v: 2, counter: 1 });
+    expect(store.vault.entries[0]).toMatchObject({ counter: 1 });
   });
 
   it("ne calcule meme pas l'apercu d'un renouvellement interdit", async () => {

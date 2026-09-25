@@ -90,7 +90,7 @@ describe("carnet : un compte = domaine + identifiant", () => {
     });
 
     expect(updated).toBe(false);
-    expect(entry).toMatchObject({ siteKey: "a.fr", login: "y", length: 16, v: 2 });
+    expect(entry).toMatchObject({ siteKey: "a.fr", login: "y", length: 16 });
     expect(vault.entries).toHaveLength(2);
   });
 
@@ -108,7 +108,7 @@ describe("carnet : un compte = domaine + identifiant", () => {
 
     expect(updated).toBe(true);
     expect(entry.id).toBe(original.id);
-    expect(entry).toMatchObject({ siteKey: "google.com", length: 30, counter: 1, v: 2 });
+    expect(entry).toMatchObject({ siteKey: "google.com", length: 30, counter: 1 });
     expect(entry.charset.symbols).toBe(false);
     expect(vault.entries).toHaveLength(1);
   });
@@ -221,7 +221,7 @@ describe("enregistrement depuis la popup", () => {
 
     expect(resp).toMatchObject({ ok: true, updated: false });
     const [entry] = (await loadVault(storage)).entries;
-    expect(entry).toMatchObject({ siteKey: "banque.fr", login: "moi", v: 2, length: 20 });
+    expect(entry).toMatchObject({ siteKey: "banque.fr", login: "moi", length: 20 });
   });
 
   it("met a jour le compte existant avec les parametres courants", async () => {
