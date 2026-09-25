@@ -71,8 +71,8 @@
         },
         "v": {
           "type": "integer",
-          "minimum": 1,
-          "description": "Version de l'algorithme de derivation. Permet a la v1 et a la v2 de coexister, et donc de migrer site par site."
+          "const": 2,
+          "description": "Version de l'algorithme de derivation. Le carnet n'accepte que la v2 : une entree v1 est refusee a l'ecriture et ecartee a la lecture (chargement, import, synchronisation). La v1 ne subsiste qu'en generation ponctuelle, hors carnet."
         },
         "notes": { "type": "string", "maxLength": 2000 },
         "updatedAt": {

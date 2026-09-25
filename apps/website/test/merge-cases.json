@@ -25,7 +25,7 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
+            "v": 2,
             "updatedAt": "2026-01-01T00:00:00Z"
           }
         ]
@@ -49,7 +49,7 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
+            "v": 2,
             "updatedAt": "2026-01-01T00:00:00Z"
           }
         ]
@@ -74,7 +74,7 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
+            "v": 2,
             "updatedAt": "2026-01-01T00:00:00Z"
           }
         ]
@@ -94,7 +94,7 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
+            "v": 2,
             "updatedAt": "2026-01-01T00:00:00Z"
           }
         ]
@@ -114,7 +114,7 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
+            "v": 2,
             "updatedAt": "2026-01-01T00:00:00Z"
           }
         ]
@@ -139,7 +139,7 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
+            "v": 2,
             "updatedAt": "2026-01-01T00:00:00Z"
           }
         ]
@@ -159,7 +159,7 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
+            "v": 2,
             "updatedAt": "2026-06-01T00:00:00Z"
           }
         ]
@@ -179,7 +179,7 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
+            "v": 2,
             "updatedAt": "2026-06-01T00:00:00Z"
           }
         ]
@@ -204,7 +204,7 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
+            "v": 2,
             "updatedAt": "2026-01-01T00:00:00Z",
             "label": "Google"
           }
@@ -225,7 +225,7 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
+            "v": 2,
             "updatedAt": "2026-06-01T00:00:00Z",
             "label": "Google perso"
           }
@@ -246,7 +246,7 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
+            "v": 2,
             "updatedAt": "2026-06-01T00:00:00Z",
             "label": "Google perso"
           }
@@ -272,7 +272,7 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
+            "v": 2,
             "updatedAt": "2026-01-01T00:00:00Z"
           }
         ]
@@ -292,7 +292,7 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
+            "v": 2,
             "updatedAt": "2026-06-01T00:00:00Z",
             "deleted": true
           }
@@ -313,7 +313,7 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
+            "v": 2,
             "updatedAt": "2026-06-01T00:00:00Z",
             "deleted": true
           }
@@ -339,7 +339,7 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
+            "v": 2,
             "updatedAt": "2026-01-01T00:00:00Z"
           }
         ]
@@ -359,7 +359,7 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
+            "v": 2,
             "updatedAt": "2026-06-01T00:00:00Z"
           }
         ]
@@ -379,7 +379,7 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
+            "v": 2,
             "updatedAt": "2026-06-01T00:00:00Z"
           }
         ]
@@ -404,7 +404,7 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
+            "v": 2,
             "updatedAt": "2026-01-01T00:00:00Z",
             "label": "A"
           },
@@ -420,7 +420,7 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
+            "v": 2,
             "updatedAt": "2026-01-01T00:00:00Z",
             "label": "B"
           }
@@ -441,7 +441,7 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
+            "v": 2,
             "updatedAt": "2026-01-01T00:00:00Z",
             "label": "C"
           },
@@ -457,7 +457,7 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
+            "v": 2,
             "updatedAt": "2026-01-01T00:00:00Z",
             "label": "D"
           }
@@ -478,7 +478,7 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
+            "v": 2,
             "updatedAt": "2026-01-01T00:00:00Z",
             "label": "A"
           },
@@ -494,7 +494,7 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
+            "v": 2,
             "updatedAt": "2026-01-01T00:00:00Z",
             "label": "B"
           }
@@ -520,7 +520,7 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
+            "v": 2,
             "updatedAt": "2026-01-01T00:00:00Z"
           }
         ]
@@ -540,7 +540,7 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
+            "v": 2,
             "updatedAt": "2026-01-01T00:00:00Z"
           }
         ]
@@ -560,7 +560,7 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
+            "v": 2,
             "updatedAt": "2026-01-01T00:00:00Z"
           },
           {
@@ -575,7 +575,7 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
+            "v": 2,
             "updatedAt": "2026-01-01T00:00:00Z"
           }
         ]

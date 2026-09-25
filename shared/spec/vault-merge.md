@@ -8,6 +8,21 @@ La règle doit être **identique sur les cinq implémentations** : deux appareil
 qui fusionnent les mêmes carnets doivent aboutir au même résultat, sinon ils
 repartent en divergence à la synchronisation suivante.
 
+## Uniquement des entrées v2
+
+Le carnet n'accepte **que** des entrées `v = 2`. La v1 ne subsiste qu'en
+génération ponctuelle, hors carnet.
+
+- **Écriture** : aucune création ni mise à jour ne peut produire `v ≠ 2`.
+  Enregistrer depuis un écran réglé en v1 crée ou garde une entrée v2.
+- **Lecture** : toute entrée `v ≠ 2` est écartée, sans erreur, au chargement du
+  carnet local, à l'import (QR, transfert) et à la synchronisation. Elle
+  disparaît donc du carnet local à la prochaine écriture.
+- Il n'y a plus de migration v1 → v2 : il n'existe plus d'entrée v1 à migrer.
+
+Vecteur : `vault-fixtures/v2-only.json` — après lecture de `vault`, seules les
+entrées de `expectedIds` restent.
+
 ## Principe
 
 Fusion par entrée, appariée sur `id` (UUID). Une entrée présente d'un seul côté

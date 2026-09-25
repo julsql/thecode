@@ -149,8 +149,7 @@ l'abonnement que dans le second cas. Le carnet local, lui, n'est jamais bridé :
 les entrées au-delà du plafond restent sur l'appareil.
 
 Le **compteur** — renouveler un mot de passe sans changer de clef maîtresse —
-fait partie de l'offre complète. La migration v1 vers v2 reste ouverte à tous :
-c'est une mise à niveau, pas un service.
+fait partie de l'offre complète.
 
 Ce contrôle-là vit sur l'appareil, et ne peut pas vivre ailleurs : le compteur
 voyage à l'intérieur du bloc chiffré, le serveur ne le voit pas et ne peut donc
