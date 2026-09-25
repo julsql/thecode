@@ -296,7 +296,7 @@ def _print_vault(vault_data) -> int:
         print(f"{e.get('label', e['siteKey'])}{login}")
         print(f"  site      {e['siteKey']}")
         print(f"  domaines  {', '.join(e['domains'])}")
-        print(f"  reglages  {e['length']} caracteres, {charset}  (v{e['v']}, compteur {e['counter']})")
+        print(f"  reglages  {e['length']} caracteres, {charset}  (compteur {e['counter']})")
     return 0
 
 

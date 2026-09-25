@@ -28,10 +28,6 @@ from typing import Any
 
 SCHEMA_VERSION = 1
 
-#: Seule version d'algorithme admise dans le carnet. La v1 ne subsiste qu'en
-#: génération ponctuelle, hors carnet (shared/spec/vault-merge.md).
-ENTRY_VERSION = 2
-
 #: Champs jamais fusionnés automatiquement : ils déterminent le mot de passe.
 _NEVER_MERGED = ("siteKey",)
 
@@ -75,7 +71,6 @@ def new_entry(
     login: str = "",
     length: int = DEFAULT_LENGTH,
     charset: dict[str, bool] | None = None,
-    version: int = 2,
 ) -> dict[str, Any]:
     """Crée une entrée.
 
@@ -83,12 +78,8 @@ def new_entry(
     la canonicalisation, sinon une mise à jour de la PSL changerait des mots de
     passe existants.
 
-    Le carnet n'accepte que la v2 : toute autre version est refusée.
+    Une entrée ne porte pas de version : elle dérive toujours en v2.
     """
-    if version != ENTRY_VERSION:
-        raise ValueError(
-            f"Le carnet n'accepte que des entrées v{ENTRY_VERSION}, pas v{version}."
-        )
     now = now_iso()
     return {
         "id": str(uuid.uuid4()),
@@ -99,21 +90,23 @@ def new_entry(
         "counter": 1,
         "length": length,
         "charset": dict(charset or DEFAULT_CHARSET),
-        "v": version,
         "createdAt": now,
         "updatedAt": now,
     }
 
 
-def keep_supported(vault: dict[str, Any]) -> dict[str, Any]:
-    """Écarte, sans erreur, toute entrée dont ``v`` n'est pas 2.
+def drop_version(entry: dict[str, Any]) -> dict[str, Any]:
+    """Retire un champ ``v`` résiduel : une entrée dérive toujours en v2."""
+    return {k: v for k, v in entry.items() if k != "v"}
 
-    Appliqué à chaque lecture (chargement, import, synchronisation) : une
-    entrée v1 ou d'une version future disparaît ainsi du carnet local à la
-    prochaine écriture.
+
+def strip_versions(vault: dict[str, Any]) -> dict[str, Any]:
+    """Applique :func:`drop_version` à tout le carnet.
+
+    Appliqué à chaque lecture (chargement, import, fusion) : un ``v`` résiduel
+    est toléré, ignoré, et jamais réécrit (shared/spec/vault-merge.md).
     """
-    entries = [e for e in vault.get("entries", []) if e.get("v") == ENTRY_VERSION]
-    return {**vault, "entries": entries}
+    return {**vault, "entries": [drop_version(e) for e in vault.get("entries", [])]}
 
 
 def default_vault_path() -> Path:
@@ -261,7 +254,7 @@ def merge(
     doit pas changer le résultat, sinon ils ne convergent jamais.
     """
     conflicts: list[Conflict] = []
-    left, right = keep_supported(left), keep_supported(right)
+    left, right = strip_versions(left), strip_versions(right)
     by_id: dict[str, dict[str, Any]] = {e["id"]: e for e in left.get("entries", [])}
 
     for entry in right.get("entries", []):
@@ -318,7 +311,7 @@ def load(path: Path) -> dict[str, Any]:
         raise ValueError(
             f"Carnet en version {data.get('schema')}, attendu {SCHEMA_VERSION}"
         )
-    return keep_supported(data)
+    return strip_versions(data)
 
 
 def save(vault: dict[str, Any], path: Path) -> None:

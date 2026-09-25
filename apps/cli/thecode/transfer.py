@@ -19,7 +19,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
-from .vault import keep_supported
+from .vault import strip_versions
 
 PREFIX = "TC1"
 NONCE_BYTES = 12
@@ -84,5 +84,5 @@ def import_vault(payload: str, master_key: str) -> dict[str, Any]:
             "Déchiffrement impossible : clef maîtresse différente, ou données altérées."
         ) from exc
 
-    # Le carnet n'accepte que la v2 : le reste est écarté dès la lecture.
-    return keep_supported(json.loads(zlib.decompress(plain)))
+    # Un « v » résiduel est ignoré : une entrée dérive toujours en v2.
+    return strip_versions(json.loads(zlib.decompress(plain)))
