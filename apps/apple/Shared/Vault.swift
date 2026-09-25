@@ -313,3 +313,30 @@ public struct Vault: Codable {
         return merged
     }
 }
+
+/// Proposer d'enregistrer au carnet un compte généré depuis l'app.
+///
+/// Réservé à qui est connecté à la synchronisation : le carnet sert d'abord à
+/// retrouver ses réglages sur un autre appareil. Sans compte, la proposition
+/// reviendrait à chaque site sans rien apporter de plus que le bouton.
+public enum SaveProposal {
+
+    /// Ce qui identifie un refus : le même compte n'est pas reproposé.
+    public static func key(site: String, login: String) -> String {
+        site.trimmingCharacters(in: .whitespaces).lowercased() + "\n" + login
+    }
+
+    /// Vrai quand le compte (site + identifiant) est absent du carnet.
+    ///
+    /// Jamais en v1 : l'entrée créée serait en v2, et donnerait un autre mot
+    /// de passe que celui qui vient d'être copié.
+    public static func shouldPropose(
+        site: String, login: String, in vault: Vault, isLinked: Bool, usesV1: Bool,
+        declined: Set<String> = []
+    ) -> Bool {
+        let domain = site.trimmingCharacters(in: .whitespaces)
+        guard isLinked, !usesV1, !domain.isEmpty else { return false }
+        guard !declined.contains(key(site: domain, login: login)) else { return false }
+        return !vault.findAll(domain: domain).contains { ($0.login ?? "") == login }
+    }
+}

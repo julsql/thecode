@@ -76,6 +76,11 @@ struct MainView: View {
     @State private var showNoPasswordAlert: Bool = false
     @State private var showVault: Bool = false
     @State private var vaultSaveMessage: String?
+    /// Proposition d'enregistrer au carnet un site qu'il ne connaît pas.
+    @State private var showSaveProposal = false
+    /// Comptes pour lesquels la proposition a été refusée, le temps de la
+    /// session : la reposer à chaque copie la rendrait pénible.
+    @State private var declinedProposals: Set<String> = []
 
     /// Clef maîtresse déjà dérivée, et la clef dont elle vient.
     ///
@@ -332,6 +337,7 @@ struct MainView: View {
 
                                     Button(action: {
                                         UIPasteboard.general.string = generatedValue
+                                        proposeSaveIfNeeded()
                                     }) {
                                         Image(systemName: "doc.on.doc") // icône “copier”
                                     }
@@ -375,6 +381,20 @@ struct MainView: View {
                         }
                     }
                 }
+            }
+            // Sur le Form et non sur la NavigationView : deux .alert sur une
+            // même vue ne s'affichent pas toujours tous les deux.
+            .alert(
+                L10n.t("Enregistrer ce site dans le carnet ?", "Save this site to the vault?"),
+                isPresented: $showSaveProposal
+            ) {
+                Button(L10n.t("Enregistrer", "Save")) { saveToVault() }
+                Button(L10n.t("Pas maintenant", "Not now"), role: .cancel) {
+                    declinedProposals.insert(
+                        SaveProposal.key(site: siteName, login: trimmedLogin))
+                }
+            } message: {
+                Text(saveProposalMessage)
             }
             .navigationTitle("TheCode")
             .toolbar {
@@ -546,6 +566,27 @@ struct MainView: View {
                     + "depuis « \(entry.siteKey) », pas depuis ce que vous avez saisi.",
                 "\"\(site)\" saved. Careful: this entry generates its password from "
                     + "\"\(entry.siteKey)\", not from what you typed.")
+    }
+
+    /// Propose d'enregistrer le site quand le mot de passe vient d'être copié.
+    ///
+    /// La copie est le moment où le mot de passe sert : proposer à chaque
+    /// frappe interromprait la saisie du nom du site.
+    private func proposeSaveIfNeeded() {
+        showSaveProposal = SaveProposal.shouldPropose(
+            site: siteName, login: trimmedLogin, in: VaultStore.load(),
+            isLinked: SyncCredentialsStore.load() != nil, usesV1: useV1,
+            declined: declinedProposals)
+    }
+
+    private var saveProposalMessage: String {
+        let site = siteName.trimmingCharacters(in: .whitespaces)
+        let shown = trimmedLogin.isEmpty ? site : "\(site) · \(trimmedLogin)"
+        return L10n.t(
+            "« \(shown) » n'est pas dans votre carnet. Ses réglages seront synchronisés "
+                + "avec vos autres appareils, jamais le mot de passe.",
+            "\"\(shown)\" is not in your vault. Its settings will sync to your other "
+                + "devices, never the password.")
     }
 
     /// L'identifiant tel qu'il entre dans la dérivation et au carnet.
