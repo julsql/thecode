@@ -115,6 +115,28 @@ export function findByDomain(vault: Vault, domain: string): VaultEntry | null {
   return findAllByDomain(vault, domain)[0] ?? null;
 }
 
+/**
+ * Entrée d'un même site portant cet identifiant, telle que saisie.
+ *
+ * Un identifiant absent vaut chaîne vide : c'est ce qu'il vaut dans la
+ * dérivation v2.
+ */
+export function findByLogin(entries: VaultEntry[], login: string): VaultEntry | null {
+  return entries.find((e) => (e.login ?? "") === login) ?? null;
+}
+
+/**
+ * Identifiant à proposer quand l'utilisateur n'en a saisi aucun.
+ *
+ * Null si un identifiant est déjà saisi, si le site est inconnu, ou si une
+ * entrée sans identifiant existe : elle correspond déjà à la saisie vide.
+ * Sinon, celui de la première entrée du site.
+ */
+export function loginToPrefill(entries: VaultEntry[], login: string): string | null {
+  if (login || !entries.length || entries.some((e) => !e.login)) return null;
+  return entries[0]?.login ?? null;
+}
+
 /** Représentation stable, pour départager sans dépendre de l'ordre. */
 
 /**

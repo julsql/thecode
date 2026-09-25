@@ -86,6 +86,25 @@
               required
             />
           </div>
+
+          <!-- L'identifiant entre dans la derivation v2 : deux comptes sur un
+               meme site ont chacun leur mot de passe. Vide = comportement
+               d'avant. -->
+          <div class="form-group">
+            <label for="id_login">{{ t("gen_label_login") }}</label>
+            <input
+              type="text"
+              v-model="login"
+              :placeholder="t('gen_placeholder_login')"
+              id="id_login"
+              autocomplete="off"
+              :aria-describedby="enV1 ? 'id_login_hint' : undefined"
+              @input="loginPrefilled = false"
+            />
+            <p v-if="enV1" id="id_login_hint" class="hint login-hint">
+              {{ t("gen_login_v1_ignored") }}
+            </p>
+          </div>
         </fieldset>
 
         <!-- Paramètres -->
@@ -169,7 +188,7 @@
 
             <div class="panel-actions centered">
               <button type="button" class="ghost-btn" @click="saveEntry">
-                {{ vaultEntries.length ? "Mettre à jour l'entrée" : "Enregistrer ce site" }}
+                {{ matchedEntry ? "Mettre à jour l'entrée" : "Enregistrer ce site" }}
               </button>
             </div>
 
@@ -182,7 +201,10 @@
                  en service. Le carnet ne contient que des entrees v2. -->
             <ul v-if="vaultEntries.length && !pending" class="entry-list">
               <li v-for="entry in vaultEntries" :key="entry.id">
-                <span class="entry-name">{{ entry.label || entry.siteKey }}</span>
+                <span class="entry-name">
+                  {{ entry.label || entry.siteKey }}
+                  <small v-if="entry.login" class="entry-login">{{ entry.login }}</small>
+                </span>
                 <!-- Jamais désactivé : un bouton éteint n'explique rien et ne
                      propose rien. C'est le clic qui dit ce que l'offre
                      complète apporte, et où l'obtenir. -->
@@ -321,7 +343,9 @@ import { isPaidPlan, refreshPlan } from "@/account";
 import {
   emptyVault,
   findAllByDomain,
+  findByLogin,
   loadVault,
+  loginToPrefill,
   mergeVaults,
   newEntry,
   saveVault,
@@ -359,6 +383,13 @@ export default defineComponent({
 
     const clef = ref("");
     const site = ref("");
+    /**
+     * Identifiant du compte sur le site. Entre dans la derivation v2 tel que
+     * saisi, sans normalisation : les autres clients font de meme.
+     */
+    const login = ref("");
+    /** Vrai tant que l'identifiant vient du carnet et non de l'utilisateur. */
+    const loginPrefilled = ref(false);
     const longueur = ref(20);
     const minuscules = ref(true);
     const majuscules = ref(true);
@@ -368,6 +399,8 @@ export default defineComponent({
     const motDePasse = ref("");
     const fingerprint = ref<Fingerprint>({ text: "", color: "", colorName: "" });
     const vaultEntries = ref<VaultEntry[]>([]);
+    /** Entree du carnet pour ce site et cet identifiant, s'il y en a une. */
+    const matchedEntry = computed(() => findByLogin(vaultEntries.value, login.value));
     const vaultMessage = ref("");
     const transferMessage = ref("");
     /**
@@ -483,7 +516,7 @@ export default defineComponent({
       // v2 par defaut, partout. La v1 ne sort que sur demande explicite, pour
       // un site dont le mot de passe n'a pas encore ete change.
       const version = enV1.value ? 1 : 2;
-      const entry = vaultEntries.value[0];
+      const entry = matchedEntry.value;
       const mdp = entry
         ? await passwordForEntry(entry, entry.counter, version)
         : version === 1
@@ -501,6 +534,8 @@ export default defineComponent({
               useUpper: majuscules.value,
               useSymbols: symboles.value,
               useNumbers: chiffres.value,
+              // La v1 ignore l'identifiant ; la v2 le fait entrer dans la graine.
+              login: login.value,
             });
       if (generation !== generationCourante) return;
       motDePasse.value = mdp ?? "";
@@ -681,7 +716,27 @@ export default defineComponent({
       vaultEntries.value = domain ? findAllByDomain(loadVault(), domain) : [];
     }
 
-    watch(site, refreshVault, { immediate: true });
+    /**
+     * Au changement de site, reprend l'identifiant connu du carnet.
+     *
+     * Seulement si l'utilisateur n'en a pas saisi un lui-meme, et si aucune
+     * entree sans identifiant ne correspond deja : celle-la l'emporte, c'est
+     * le comportement d'avant l'identifiant.
+     */
+    function onSiteChange() {
+      refreshVault();
+      if (loginPrefilled.value) {
+        login.value = "";
+        loginPrefilled.value = false;
+      }
+      const prefill = loginToPrefill(vaultEntries.value, login.value);
+      if (prefill !== null) {
+        login.value = prefill;
+        loginPrefilled.value = true;
+      }
+    }
+
+    watch(site, onSiteChange, { immediate: true });
     watch(enV1, () => genererMotDePasse());
 
     /**
@@ -704,7 +759,9 @@ export default defineComponent({
         symbols: symboles.value,
         numbers: chiffres.value,
       };
-      const existing = findAllByDomain(vault, domain)[0];
+      // Appariement sur le site et l'identifiant : un autre identifiant est
+      // un autre compte, donc une autre entree.
+      const existing = findByLogin(findAllByDomain(vault, domain), login.value);
 
       if (existing) {
         existing.length = Number(longueur.value);
@@ -714,7 +771,9 @@ export default defineComponent({
       } else {
         // Toujours v2, meme depuis l'ecran regle en v1 : le carnet n'accepte
         // que la v2, la v1 ne vit qu'en generation ponctuelle.
-        vault.entries.push(newEntry(domain, { length: Number(longueur.value), charset }));
+        vault.entries.push(
+          newEntry(domain, { length: Number(longueur.value), charset, login: login.value }),
+        );
         vaultMessage.value = "Site enregistré.";
       }
 
@@ -760,9 +819,13 @@ export default defineComponent({
       syncMessage.value = "Session oubliée sur cet appareil.";
     }
 
-    watch([clef, site, longueur, minuscules, majuscules, symboles, chiffres], genererMotDePasse, {
-      immediate: true,
-    });
+    watch(
+      [clef, site, login, longueur, minuscules, majuscules, symboles, chiffres],
+      genererMotDePasse,
+      {
+        immediate: true,
+      },
+    );
 
     return {
       t,
@@ -790,6 +853,9 @@ export default defineComponent({
       disconnectSync,
       clef,
       site,
+      login,
+      loginPrefilled,
+      matchedEntry,
       longueur,
       minuscules,
       majuscules,
@@ -1083,6 +1149,16 @@ input[type="text"]:read-only {
 .entry-name {
   font-size: 0.9rem;
   word-break: break-all;
+}
+
+.entry-login {
+  margin-left: 6px;
+  opacity: 0.7;
+}
+
+.login-hint {
+  margin: 6px 0 0;
+  font-size: 0.8rem;
 }
 
 .change-box {

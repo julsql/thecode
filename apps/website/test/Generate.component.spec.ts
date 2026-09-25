@@ -294,6 +294,119 @@ describe("carnet et empreinte", () => {
   });
 });
 
+describe("identifiant", () => {
+  beforeEach(() => localStorage.clear());
+
+  const loginValue = (w: { find: (s: string) => any }) =>
+    (w.find("#id_login").element as HTMLInputElement).value;
+
+  it("fait entrer l'identifiant dans la derivation v2", async () => {
+    const withLogin = vectors.v2.cases.find((c: any) => c.id === "v2-with-login");
+    const wrapper = await mountGenerate();
+
+    await wrapper.find("#id_site").setValue(withLogin.site);
+    await wrapper.find("#id_login").setValue(withLogin.login);
+    await wrapper.find("#id_clef").setValue(withLogin.master);
+
+    await vi.waitFor(() => expect(generated(wrapper)).toBe(withLogin.expected), {
+      timeout: 15000,
+    });
+  }, 20000);
+
+  it("est ignore en v1, et le dit", async () => {
+    const canonical = vectors.v1.cases.find((c: any) => c.id === "canonical");
+    const wrapper = await mountGenerate();
+    expect(wrapper.text()).not.toContain("ignore l'identifiant");
+
+    await wrapper.find("#id_site").setValue(canonical.site);
+    await wrapper.find("#id_login").setValue("moi");
+    await wrapper.find("#id_clef").setValue(canonical.master);
+    const v1Button = wrapper.findAll("button").find((b) => b.text() === "v1");
+    await v1Button!.trigger("click");
+
+    expect(wrapper.text()).toContain("L'algorithme v1 ignore l'identifiant.");
+    await vi.waitFor(() => expect(generated(wrapper)).toBe(canonical.expected), {
+      timeout: 15000,
+    });
+  }, 20000);
+
+  it("se traduit en anglais", async () => {
+    const router = makeRouter();
+    router.push("/en");
+    await router.isReady();
+    const wrapper = mount(Generate, { global: { plugins: [router] } });
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.find("label[for='id_login']").text()).toBe("Login");
+  });
+
+  it("reprend l'identifiant connu du carnet, puis l'oublie en changeant de site", async () => {
+    const { saveVault, emptyVault, newEntry } = await import("@/vault");
+    const vault = emptyVault();
+    vault.entries.push(newEntry("google.com", { login: "moi" }));
+    saveVault(vault);
+
+    const wrapper = await mountGenerate();
+    await wrapper.find("#id_site").setValue("google.com");
+    expect(loginValue(wrapper)).toBe("moi");
+    expect(wrapper.text()).toContain("Mettre à jour l'entrée");
+
+    await wrapper.find("#id_site").setValue("github.com");
+    expect(loginValue(wrapper)).toBe("");
+  });
+
+  it("garde l'identifiant saisi par l'utilisateur", async () => {
+    const { saveVault, emptyVault, newEntry } = await import("@/vault");
+    const vault = emptyVault();
+    vault.entries.push(newEntry("google.com", { login: "moi" }));
+    saveVault(vault);
+
+    const wrapper = await mountGenerate();
+    await wrapper.find("#id_login").setValue("pro");
+    await wrapper.find("#id_site").setValue("google.com");
+
+    expect(loginValue(wrapper)).toBe("pro");
+    expect(wrapper.text()).toContain("Enregistrer ce site");
+  });
+
+  it("met a jour l'entree du meme identifiant sans toucher a siteKey", async () => {
+    const { saveVault, emptyVault, newEntry, loadVault } = await import("@/vault");
+    const vault = emptyVault();
+    const entry = newEntry("google.com", { domains: ["google.com"], login: "moi" });
+    entry.siteKey = "accounts.google.com";
+    vault.entries.push(entry);
+    saveVault(vault);
+
+    const wrapper = await mountGenerate();
+    await wrapper.find("#id_site").setValue("google.com");
+    await wrapper.find("#id_longueur").setValue("16");
+    const button = wrapper.findAll("button").find((b) => b.text().includes("Mettre à jour"));
+    await button!.trigger("click");
+
+    const entries = loadVault().entries;
+    expect(entries).toHaveLength(1);
+    expect(entries[0].length).toBe(16);
+    expect(entries[0].siteKey).toBe("accounts.google.com");
+  });
+
+  it("cree une nouvelle entree v2 pour un autre identifiant", async () => {
+    const { saveVault, emptyVault, newEntry, loadVault, findAllByDomain } = await import("@/vault");
+    const vault = emptyVault();
+    vault.entries.push(newEntry("google.com", { login: "moi" }));
+    saveVault(vault);
+
+    const wrapper = await mountGenerate();
+    await wrapper.find("#id_site").setValue("google.com");
+    await wrapper.find("#id_login").setValue("pro");
+    const button = wrapper.findAll("button").find((b) => b.text().includes("Enregistrer"));
+    await button!.trigger("click");
+
+    const entries = findAllByDomain(loadVault(), "google.com");
+    expect(entries.map((e) => e.login).sort()).toStrictEqual(["moi", "pro"]);
+    expect(entries.every((e) => e.v === 2)).toBe(true);
+  });
+});
+
 describe("synchronisation", () => {
   it("propose de se connecter, pas de synchroniser", async () => {
     const wrapper = await mountGenerate();
