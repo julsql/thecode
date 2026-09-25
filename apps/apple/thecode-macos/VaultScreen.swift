@@ -38,6 +38,14 @@ struct VaultScreen: View {
     @StateObject private var lock = VaultLockController()
     @State private var showLockSettings = false
 
+    /// Entrée ouverte en détail. Relue dans le carnet à chaque rendu : un
+    /// renouvellement doit s'y voir sans rouvrir l'écran.
+    @State private var selectedID: String?
+
+    private var selectedEntry: VaultEntry? {
+        vault.entries.first { $0.id == selectedID && $0.deleted != true }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 12) {
@@ -149,6 +157,7 @@ struct VaultScreen: View {
                 showSignIn = false
                 showTransfer = false
                 showLockSettings = false
+                selectedID = nil
                 pending = nil
                 status = nil
             }
@@ -198,7 +207,30 @@ struct VaultScreen: View {
             .padding(.bottom, 12)
         }
 
-        VaultView(vault: vault, onSelect: propose)
+        if let entry = selectedEntry {
+            // Sur place plutôt qu'en feuille par-dessus la feuille.
+            HStack {
+                Button {
+                    selectedID = nil
+                } label: {
+                    Label(L10n.t("Carnet", "Vault"), systemImage: "chevron.left")
+                }
+                .buttonStyle(.borderless)
+
+                Spacer()
+
+                Text(VaultEntryDetailView.label(of: entry))
+                    .font(.headline)
+
+                Spacer()
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+
+            VaultEntryDetailView(entry: entry, onRenew: propose, onDelete: delete)
+        } else {
+            VaultView(vault: vault, onSelect: { selectedID = $0.id })
+        }
     }
 
     /// La page du compte, dans la langue de l'application.
@@ -357,6 +389,28 @@ struct VaultScreen: View {
         status = L10n.t(
             "« \(label) » renouvelée, compteur \(vault.entries[index].counter).",
             "\"\(label)\" renewed, counter \(vault.entries[index].counter).")
+    }
+
+    // MARK: - Suppression
+
+    private func delete(_ entry: VaultEntry) {
+        var updated = vault
+        // Pierre tombale réhorodatée : la suppression se propage à la
+        // synchronisation au lieu d'être annulée par l'autre carnet.
+        guard updated.delete(id: entry.id) else { return }
+
+        do {
+            try VaultStore.save(updated)
+        } catch {
+            status = L10n.t(
+                "Le carnet n'a pas pu être enregistré.", "The vault could not be saved.")
+            return
+        }
+
+        vault = updated
+        selectedID = nil
+        let label = VaultEntryDetailView.label(of: entry)
+        status = L10n.t("« \(label) » supprimée.", "\"\(label)\" deleted.")
     }
 
     // MARK: - Actions

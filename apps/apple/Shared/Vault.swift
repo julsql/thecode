@@ -234,6 +234,20 @@ public struct Vault: Codable {
         return created
     }
 
+    /// Supprime une entrée en y posant une pierre tombale.
+    ///
+    /// Pas de retrait du tableau : la fusion reprendrait l'entrée de l'autre
+    /// carnet et la suppression serait annulée à la synchronisation suivante.
+    /// Le réhorodatage fait gagner cette écriture sur les autres champs.
+    @discardableResult
+    public mutating func delete(id: String, at now: String? = nil) -> Bool {
+        guard let index = entries.firstIndex(where: { $0.id == id && $0.deleted != true })
+        else { return false }
+        entries[index].deleted = true
+        entries[index].updatedAt = now ?? Vault.nowIso()
+        return true
+    }
+
     /// L'identifiant que le carnet connaît pour ce site, s'il en connaît un.
     ///
     /// Plusieurs comptes : le premier, comme `find(domain:)`. L'écran de

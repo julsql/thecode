@@ -67,6 +67,11 @@ public struct VaultView: View {
                         Text(Self.label(of: entry))
                             .font(.headline)
 
+                        if let login = entry.login, !login.isEmpty {
+                            Text(login)
+                                .font(.subheadline)
+                        }
+
                         Text(entry.domains.joined(separator: ", "))
                             .font(.caption)
                             .foregroundStyle(.secondary)

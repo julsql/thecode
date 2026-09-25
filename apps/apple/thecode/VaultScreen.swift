@@ -32,6 +32,14 @@ struct VaultScreen: View {
     /// Neuf à chaque présentation : aucun déverrouillage n'est mémorisé.
     @StateObject private var lock = VaultLockController()
     @State private var showLockSettings = false
+
+    /// Entrée ouverte en détail. Relue dans le carnet à chaque rendu : un
+    /// renouvellement doit s'y voir sans rouvrir l'écran.
+    @State private var selectedID: String?
+
+    private var selectedEntry: VaultEntry? {
+        vault.entries.first { $0.id == selectedID && $0.deleted != true }
+    }
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -56,7 +64,21 @@ struct VaultScreen: View {
                     }
                 }
             }
-            .alert(pending?.title ?? "", isPresented: Binding(
+        .onAppear { vault = VaultStore.load() }
+            .sheet(isPresented: $showSignIn) { signInSheet }
+        .sheet(isPresented: $showTransfer) {
+            // Le QR transporte le carnet sans serveur : c'est l'option qui
+            // rend la synchronisation facultative.
+            TransferView(masterKey: masterKey, isPresented: $showTransfer)
+                .onDisappear { vault = VaultStore.load() }
+        }
+        .sheet(isPresented: $showLockSettings) {
+            VaultLockSettingsView(lock: lock) { showLockSettings = false }
+        }
+        }
+        // Au niveau de la NavigationView : l'alerte doit pouvoir s'ouvrir
+        // depuis le détail d'une entrée, poussé par-dessus la liste.
+        .alert(pending?.title ?? "", isPresented: Binding(
             get: { pending != nil },
             set: { if !$0 { pending = nil } }
         ), presenting: pending) { change in
@@ -89,18 +111,6 @@ struct VaultScreen: View {
                     Change it on the site, then confirm.
                     """))
         }
-        .onAppear { vault = VaultStore.load() }
-            .sheet(isPresented: $showSignIn) { signInSheet }
-        .sheet(isPresented: $showTransfer) {
-            // Le QR transporte le carnet sans serveur : c'est l'option qui
-            // rend la synchronisation facultative.
-            TransferView(masterKey: masterKey, isPresented: $showTransfer)
-                .onDisappear { vault = VaultStore.load() }
-        }
-        .sheet(isPresented: $showLockSettings) {
-            VaultLockSettingsView(lock: lock) { showLockSettings = false }
-        }
-        }
         // Session : jusqu'à la sortie de l'écran ou la mise en arrière-plan.
         // Pas sur `.inactive`, que Face ID déclenche lui-même en s'affichant.
         .onChange(of: scenePhase) { phase in
@@ -116,6 +126,7 @@ struct VaultScreen: View {
                 showSignIn = false
                 showTransfer = false
                 showLockSettings = false
+                selectedID = nil
                 pending = nil
                 status = nil
             }
@@ -189,8 +200,24 @@ struct VaultScreen: View {
                 .padding(.vertical, 10)
             }
 
-            VaultView(vault: vault, onSelect: propose)
+            VaultView(vault: vault, onSelect: { selectedID = $0.id })
         }
+        .background(
+            NavigationLink(
+                isActive: Binding(
+                    get: { selectedEntry != nil },
+                    set: { if !$0 { selectedID = nil } })
+            ) {
+                if let entry = selectedEntry {
+                    VaultEntryDetailView(entry: entry, onRenew: propose, onDelete: delete)
+                        .navigationBarTitle(
+                            VaultEntryDetailView.label(of: entry), displayMode: .inline)
+                }
+            } label: {
+                EmptyView()
+            }
+            .hidden()
+        )
     }
 
     /// La page du compte, dans la langue de l'application.
@@ -358,6 +385,28 @@ struct VaultScreen: View {
         status = L10n.t(
             "« \(label) » renouvelée, compteur \(vault.entries[index].counter).",
             "\"\(label)\" renewed, counter \(vault.entries[index].counter).")
+    }
+
+    // MARK: - Suppression
+
+    private func delete(_ entry: VaultEntry) {
+        var updated = vault
+        // Pierre tombale réhorodatée : la suppression se propage à la
+        // synchronisation au lieu d'être annulée par l'autre carnet.
+        guard updated.delete(id: entry.id) else { return }
+
+        do {
+            try VaultStore.save(updated)
+        } catch {
+            status = L10n.t(
+                "Le carnet n'a pas pu être enregistré.", "The vault could not be saved.")
+            return
+        }
+
+        vault = updated
+        selectedID = nil
+        let label = VaultEntryDetailView.label(of: entry)
+        status = L10n.t("« \(label) » supprimée.", "\"\(label)\" deleted.")
     }
 
     // MARK: - Actions
