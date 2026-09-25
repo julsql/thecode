@@ -53,6 +53,7 @@
     <string name="autofill_open_settings">Ouvrir les paramètres</string>
     <string name="autofill_for_domain">Pour %1$s</string>
     <string name="autofill_auth_title">Authentification requise</string>
+    <string name="autofill_save_foreign">Ce mot de passe ne vient pas de TheCode : il n\'est pas enregistré dans le carnet.</string>
     <string name="autofill_no_key_warning">Définissez d\'abord une clé pour utiliser le remplissage automatique.</string>
 
     <!-- Affichage de la clé -->

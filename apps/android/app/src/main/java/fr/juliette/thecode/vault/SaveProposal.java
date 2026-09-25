@@ -29,22 +29,25 @@ public final class SaveProposal {
     }
 
     /**
-     * L'identifiant à enregistrer pour un mot de passe soumis.
+     * L'identifiant à enregistrer pour un mot de passe soumis, ou {@code null}
+     * s'il ne faut rien enregistrer.
      *
-     * L'identifiant entre dans la dérivation v2 : l'enregistrer tel quel
-     * changerait le mot de passe d'un compte dont le mot de passe a été rempli
-     * sans identifiant (c'est ce que fait le remplissage d'un site inconnu). On
-     * garde donc celui qui redonne le mot de passe soumis ; si aucun ne le
-     * redonne, le mot de passe ne vient pas de TheCode et on garde le compte
-     * tel qu'il a été saisi.
+     * Le carnet ne stocke pas de mot de passe : il le recalcule. Un mot de passe
+     * que TheCode ne redonne pas (tapé à la main, venu d'ailleurs) produirait
+     * une entrée qui en proposerait ensuite un autre : on ne l'enregistre pas,
+     * comme sur iOS.
+     *
+     * L'identifiant entre dans la dérivation v2 : on garde celui qui redonne le
+     * mot de passe soumis, puis l'identifiant vide, qui est ce qu'utilise le
+     * remplissage d'un site inconnu.
      */
-    @NonNull
+    @Nullable
     public static String loginToStore(@Nullable String submittedPassword,
                                       @Nullable String username, @NonNull Deriver deriver) {
+        if (submittedPassword == null || submittedPassword.isEmpty()) return null;
         String user = username == null ? "" : username.trim();
-        if (submittedPassword == null || submittedPassword.isEmpty()) return user;
         if (!user.isEmpty() && submittedPassword.equals(deriver.passwordFor(user))) return user;
         if (submittedPassword.equals(deriver.passwordFor(""))) return "";
-        return user;
+        return null;
     }
 }

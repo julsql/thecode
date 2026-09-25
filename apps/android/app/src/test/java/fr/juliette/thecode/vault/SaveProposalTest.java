@@ -1,6 +1,7 @@
 package fr.juliette.thecode.vault;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -55,9 +56,15 @@ public class SaveProposalTest {
     }
 
     @Test
-    public void keepsTheUsernameForAForeignPassword() {
-        assertEquals("moi", SaveProposal.loginToStore("hunter2", "moi", DERIVER));
-        assertEquals("moi", SaveProposal.loginToStore(null, "moi", DERIVER));
-        assertEquals("", SaveProposal.loginToStore("hunter2", null, DERIVER));
+    public void refusesAPasswordThatDoesNotComeFromTheCode() {
+        // Tape a la main : le carnet en recalculerait un autre.
+        assertNull(SaveProposal.loginToStore("hunter2", "moi", DERIVER));
+        assertNull(SaveProposal.loginToStore("hunter2", null, DERIVER));
+    }
+
+    @Test
+    public void refusesAnEmptyPassword() {
+        assertNull(SaveProposal.loginToStore(null, "moi", DERIVER));
+        assertNull(SaveProposal.loginToStore("", "moi", DERIVER));
     }
 }

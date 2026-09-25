@@ -166,20 +166,26 @@ public class TheCodeAutofillService extends AutofillService {
         new Thread(() -> {
             String login = loginToStore(masterKey, domain, submitted, username,
                     length, lower, upper, symbols, numbers);
+            android.os.Handler main = new android.os.Handler(android.os.Looper.getMainLooper());
+            if (login == null) {
+                main.post(() -> callback.onFailure(getString(R.string.autofill_save_foreign)));
+                return;
+            }
             Vault vault = Vault.load(this);
             // Le siteKey d'une entrée existante n'est jamais réécrit : il
             // produit le mot de passe, le modifier en changerait un déjà en
             // service.
             vault.upsertAccount(domain, login, length, lower, upper, symbols, numbers);
             vault.save(this);
-            new android.os.Handler(android.os.Looper.getMainLooper()).post(callback::onSuccess);
+            main.post(callback::onSuccess);
         }).start();
     }
 
     /**
-     * L'identifiant qui redonne le mot de passe soumis, voir
-     * {@link SaveProposal#loginToStore}.
+     * L'identifiant qui redonne le mot de passe soumis, ou {@code null} s'il ne
+     * vient pas de TheCode : voir {@link SaveProposal#loginToStore}.
      */
+    @Nullable
     private static String loginToStore(String masterKey, String domain, String submitted,
                                        String username, int length, boolean lower,
                                        boolean upper, boolean symbols, boolean numbers) {
@@ -193,7 +199,7 @@ public class TheCodeAutofillService extends AutofillService {
         try {
             master = CodeV2.deriveMasterKey(masterKey);
         } catch (java.security.GeneralSecurityException e) {
-            return username == null ? "" : username.trim();
+            return null;
         }
         return SaveProposal.loginToStore(submitted, username,
                 login -> CodeV2.getCode(code, masterKey, domain, login, 1, master));

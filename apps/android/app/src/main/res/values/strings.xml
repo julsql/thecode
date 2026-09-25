@@ -53,6 +53,7 @@
     <string name="autofill_open_settings">Open settings</string>
     <string name="autofill_for_domain">For %1$s</string>
     <string name="autofill_auth_title">Authentication required</string>
+    <string name="autofill_save_foreign">This password does not come from TheCode: it is not saved to the vault.</string>
     <string name="autofill_no_key_warning">Set a key first to use autofill.</string>
 
     <!-- Key visibility -->
