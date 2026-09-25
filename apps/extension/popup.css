@@ -52,6 +52,7 @@ label {
 }
 
 input[type="password"],
+input[type="text"],
 input[type="number"] {
   width: calc(100% - 20px);
   padding: 8px;
@@ -167,8 +168,8 @@ button {
   opacity: 0.75;
 }
 
-#accountRow select {
-  max-width: 12rem;
+#login::-webkit-calendar-picker-indicator {
+  opacity: 0.6;
 }
 
 /* Annonce du passage a la v2, en fenetre modale a l'ouverture. */

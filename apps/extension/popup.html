@@ -87,16 +87,25 @@
       <label><input type="radio" name="version" value="1" /> v1 (ancien)</label>
     </fieldset>
 
+    <!-- Identifiant du compte : il entre dans la derivation v2 (ignore en
+         v1). Pre-rempli depuis le carnet ; les autres comptes du site sont
+         proposes dans la liste. -->
+    <div>
+      <label for="login">Identifiant :</label>
+      <input
+        type="text"
+        id="login"
+        list="loginOptions"
+        maxlength="120"
+        autocomplete="off"
+        autocapitalize="off"
+        spellcheck="false"
+      />
+      <datalist id="loginOptions"></datalist>
+    </div>
+
     <!-- Bouton de génération -->
     <button id="generatePassword">Générer mot de passe</button>
-
-    <!-- Plusieurs comptes sur un meme site : il faut choisir, pas deviner.
-         Un mauvais choix donne un mot de passe qui ne marche pas, sans
-         rien expliquer. -->
-    <p id="accountRow" hidden>
-      <label for="accountSelect">Compte :</label>
-      <select id="accountSelect"></select>
-    </p>
 
     <p id="siteContainer">Site : <span id="site"></span></p>
     <p id="passwordResultContainer">
@@ -124,7 +133,7 @@
     <!-- Le carnet retient les reglages par site : plus besoin de se
          souvenir qu'un compte avait ete cree sans symboles. -->
     <div class="vault">
-      <button id="saveEntry" type="button">Enregistrer ce site</button>
+      <button id="saveEntry" type="button">Enregistrer</button>
 
       <!-- Renouveler : change un mot de passe deja en service. -->
       <button id="changeEntry" type="button" hidden>Renouveler</button>

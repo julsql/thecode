@@ -106,34 +106,35 @@ describe("aucune ecriture ne produit une entree non v2", () => {
     return worker;
   }
 
-  it("refuse d'enregistrer une entree v1", async () => {
-    const storage = memoryStorage();
+  it("enregistre en v2 un site dont seule une entree v1 subsiste", async () => {
+    // vieux.fr n'existe qu'en v1 dans le vecteur : l'enregistrer depuis la
+    // popup cree une entree v2, il n'y a pas d'entree v1 a mettre a jour.
+    const storage = memoryStorage({ vault: clone(fixture.vault) });
     const worker = loadWorker(storage);
-    const entry = { ...newEntry("vieux.fr"), v: 1 };
 
-    const resp = await worker.saveEntry(entry);
+    const resp = await worker.saveSite("vieux.fr", "");
 
-    expect(resp.ok).toBe(false);
-    expect(storage.store.vault).toBeUndefined();
+    expect(resp).toMatchObject({ ok: true, updated: false });
+    expect(resp.entry.v).toBe(2);
+    expect(resp.entry.id).not.toBe(fixture.vault.entries[0].id);
   });
 
-  it("ne laisse pas une mise a jour repasser une entree en v1", async () => {
-    const entry = newEntry("neuf.fr");
-    const storage = memoryStorage({ vault: { ...emptyVault(), entries: [entry] } });
+  it("met a jour une entree v2 sans changer sa version", async () => {
+    const storage = memoryStorage({ vault: clone(fixture.vault) });
     const worker = loadWorker(storage);
 
-    const resp = await worker.saveEntry({ ...entry, length: 12, v: 1 });
+    const resp = await worker.saveSite("neuf.fr", "moi");
 
-    expect(resp.ok).toBe(false);
-    expect(storage.store.vault.entries[0].v).toBe(2);
-    expect(storage.store.vault.entries[0].length).toBe(20);
+    expect(resp).toMatchObject({ ok: true, updated: true });
+    expect(resp.entry.id).toBe(fixture.expectedIds[0]);
+    expect(resp.entry.v).toBe(2);
   });
 
   it("disparait du stockage a la prochaine ecriture", async () => {
     const storage = memoryStorage({ vault: clone(fixture.vault) });
     const worker = loadWorker(storage);
 
-    await worker.saveEntry(newEntry("autre.fr"));
+    await worker.saveSite("autre.fr", "");
 
     expect(storage.store.vault.entries.every((e) => e.v === 2)).toBe(true);
     expect(storage.store.vault.entries.map((e) => e.id)).toEqual(

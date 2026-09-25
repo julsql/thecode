@@ -35,7 +35,7 @@ describe("cloisonnement des actions sensibles", () => {
       "getEncodingKey",
       "importVault",
       "previewChange",
-      "saveEntry",
+      "saveSite",
       "setEncodingKey",
       "setParams",
       "syncLogin",
@@ -71,7 +71,7 @@ describe("cloisonnement des actions sensibles", () => {
     // pour proposer le bon compte ; il ne doit jamais pouvoir en creer ni en
     // supprimer, sinon une page pourrait detourner un mot de passe en
     // reecrivant le siteKey.
-    expect(PRIVILEGED_ACTIONS.has("saveEntry")).toBe(true);
+    expect(PRIVILEGED_ACTIONS.has("saveSite")).toBe(true);
     expect(PRIVILEGED_ACTIONS.has("deleteEntry")).toBe(true);
   });
 

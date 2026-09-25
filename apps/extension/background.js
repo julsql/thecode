@@ -154,7 +154,7 @@ const PRIVILEGED_ACTIONS = new Set([
   "clearEncodingKey",
   "checkEncodingKey",
   "setParams",
-  "saveEntry",
+  "saveSite",
   "deleteEntry",
   "previewChange",
   "applyChange",
@@ -229,14 +229,15 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
       encodingKey = null;
       sendResponse({ ok: true });
     } else if (request.action === "generatePassword") {
-      // Seule la popup demande la v1 : content.js n'envoie pas de version.
-      const res = await generatePasswordForUrl(request.url || "", request.version);
+      // Seule la popup demande la v1 ou un identifiant : content.js n'envoie
+      // ni l'un ni l'autre et garde le comportement d'origine.
+      const res = await generatePasswordForUrl(request.url || "", request.version, request.login);
       sendResponse(res);
     } else if (request.action === "getVault") {
       sendResponse({ ok: true, vault: await loadVault(browser?.storage?.local) });
-    } else if (request.action === "saveEntry") {
+    } else if (request.action === "saveSite") {
       try {
-        sendResponse(await saveEntry(request.entry));
+        sendResponse(await saveSite(request.domain, request.login));
       } catch (e) {
         sendResponse({ ok: false, error: e.message });
       }
@@ -432,26 +433,37 @@ async function passwordForEntry(entry, counter, version = 2) {
 }
 
 /**
- * Ecrit une entree venue de la popup.
+ * Identifiant tel qu'il entre dans la derivation.
  *
- * Le carnet n'accepte que la v2 : une entree `v != 2` est refusee, et une mise
- * a jour ne peut ni changer la version ni reecrire le siteKey — il produit le
- * mot de passe, le modifier en changerait un deja en service.
+ * `undefined` quand l'appelant n'en envoie pas (content.js) : on garde alors
+ * la premiere entree du domaine, comme avant. Borne : il est hache, mais un
+ * message peut contenir n'importe quoi.
  */
-async function saveEntry(incoming) {
-  if (!isV2Entry(incoming)) {
-    return { ok: false, error: "le carnet n'accepte que des entrees v2" };
+function normalizeLogin(login) {
+  return typeof login === "string" ? login.slice(0, VAULT_LOGIN_MAX) : undefined;
+}
+
+/**
+ * Enregistre le compte affiche dans la popup : domaine + identifiant.
+ *
+ * Une entree existante ne voit changer que sa longueur et son jeu de
+ * caracteres, relus des parametres ; sinon une entree v2 nait. Rien ici ne
+ * peut produire une entree v1, meme quand la popup est reglee en v1.
+ */
+async function saveSite(domain, login) {
+  if (typeof domain !== "string" || !domain.trim()) {
+    return { ok: false, error: "aucun site detecte" };
   }
+  const { lengthNumber, minState, majState, symState, chiState } = await loadParams();
   const vault = await loadVault(browser?.storage?.local);
-  const existing = vault.entries.find((e) => e.id === incoming.id);
-  if (existing) {
-    Object.assign(existing, incoming, { siteKey: existing.siteKey, v: existing.v });
-    existing.updatedAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
-  } else {
-    vault.entries.push(incoming);
-  }
+  const { entry, updated } = upsertSiteEntry(vault, {
+    domain: domain.trim().toLowerCase(),
+    login: normalizeLogin(login) ?? "",
+    length: lengthNumber,
+    charset: { lower: minState, upper: majState, symbols: symState, numbers: chiState },
+  });
   await saveVault(browser?.storage?.local, vault);
-  return { ok: true, vault };
+  return { ok: true, updated, entry };
 }
 
 /**
@@ -506,7 +518,7 @@ async function saveCurrentSite(sender, login) {
       length: lengthNumber,
       charset,
       // Borne : un champ de page peut contenir n'importe quoi.
-      login: typeof login === "string" ? login.slice(0, 120) : "",
+      login: normalizeLogin(login) ?? "",
     }),
   );
   await saveVault(browser?.storage?.local, vault);
@@ -547,9 +559,15 @@ function setEncodingKeyForTests(key) {
  * `version` vaut 2 par defaut : c'est ce que rend le remplissage automatique.
  * La popup peut demander la v1, en secours pour un site pas encore migre ;
  * toute autre valeur retombe sur la v2.
+ *
+ * `login` vient de la popup, ou l'utilisateur le saisit. Absent (content.js),
+ * on retient la premiere entree du domaine, comme avant. Present, il designe
+ * le compte — domaine + identifiant — et entre dans la derivation v2 ; vide,
+ * il ne change rien au calcul. La v1 l'ignore.
  */
-async function generatePasswordForUrl(url, version) {
+async function generatePasswordForUrl(url, version, login) {
   const v = version === 1 ? 1 : 2;
+  const requestedLogin = normalizeLogin(login);
   if (!encodingKey) {
     return { error: "Aucune clé n'est définie. Ouvre l'extension TheCode et entre ta clé." };
   }
@@ -570,7 +588,10 @@ async function generatePasswordForUrl(url, version) {
     // domaine saisi peut etre un alias — google.fr doit rendre le mot de passe
     // de google.com.
     const vault = await loadVault(browser?.storage?.local);
-    const entry = findAllByDomain(vault, domain)[0];
+    const entry =
+      requestedLogin === undefined
+        ? findAllByDomain(vault, domain)[0]
+        : findByDomainAndLogin(vault, domain, requestedLogin);
 
     if (!entry) {
       // Site inconnu : v2 par defaut aussi, c'est la version des entrees qui
@@ -597,8 +618,18 @@ async function generatePasswordForUrl(url, version) {
               useUpper: majState,
               useSymbols: symState,
               useNumbers: chiState,
+              login: requestedLogin || "",
             });
-      return { password: mdp, site: domain, security, bits, color, known: false, version: v };
+      return {
+        password: mdp,
+        site: domain,
+        login: requestedLogin || "",
+        security,
+        bits,
+        color,
+        known: false,
+        version: v,
+      };
     }
 
     const { security, bits, color } = await generatePassword(
@@ -619,6 +650,7 @@ async function generatePasswordForUrl(url, version) {
       password: mdp,
       site: domain,
       login: entry.login || "",
+      entryId: entry.id,
       security,
       bits,
       color,
@@ -813,7 +845,8 @@ if (typeof module !== "undefined") {
     generatePassword,
     generatePasswordForUrl,
     passwordForEntry,
-    saveEntry,
+    saveSite,
+    normalizeLogin,
     exportVaultPayload,
     importVaultPayload,
     saveCurrentSite,

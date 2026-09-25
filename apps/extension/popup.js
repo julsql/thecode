@@ -15,8 +15,8 @@ const passwordSecurityContainer = document.getElementById("passwordSecurityConta
 const errorContainer = document.getElementById("errorContainer");
 const fingerprintRow = document.getElementById("fingerprintRow");
 const fingerprintChip = document.getElementById("fingerprint");
-const accountRow = document.getElementById("accountRow");
-const accountSelect = document.getElementById("accountSelect");
+const loginInput = document.getElementById("login");
+const loginOptions = document.getElementById("loginOptions");
 const saveEntryBtn = document.getElementById("saveEntry");
 const vaultStatus = document.getElementById("vaultStatus");
 const changeEntryBtn = document.getElementById("changeEntry");
@@ -210,7 +210,38 @@ generateBtn.addEventListener("click", () => {
   generatePassword();
 });
 
-function generatePassword() {
+/**
+ * Identifiant du compte.
+ *
+ * Tant que l'utilisateur n'y a pas touche et qu'aucune generation n'a
+ * repondu, on n'en envoie pas : le service worker retient alors la premiere
+ * entree du domaine et rend son identifiant, qui pre-remplit le champ. Ensuite
+ * c'est le champ qui fait foi, vide compris.
+ */
+let loginResolved = false;
+
+loginInput.addEventListener("input", () => {
+  loginResolved = true;
+});
+
+// `change` couvre la saisie validee et le choix dans la liste des comptes.
+loginInput.addEventListener("change", () => {
+  if (passInput.value) generatePassword();
+});
+
+loginInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    generatePassword();
+  }
+});
+
+function requestedLogin() {
+  return loginResolved ? loginInput.value.trim() : undefined;
+}
+
+/** `vaultMessage` remplace le statut du carnet une fois celui-ci relu. */
+function generatePassword(vaultMessage) {
   // Aucune option n'est transmise : le background relit les paramètres
   // persistés, exactement comme pour le menu injecté dans la page. C'est ce
   // qui garantit un mot de passe identique des deux côtés.
@@ -224,6 +255,7 @@ function generatePassword() {
         action: "generatePassword",
         url: tab.url,
         version: selectedVersion(),
+        login: requestedLogin(),
       },
       (response) => {
         if (response.error) {
@@ -234,8 +266,13 @@ function generatePassword() {
         } else if (response.password) {
           hideError();
           showResult();
+          if (!loginResolved) {
+            loginInput.value = response.login || "";
+            loginResolved = true;
+          }
+          currentEntryId = response.entryId || null;
           site.textContent = response.site;
-          refreshVault(response.site);
+          refreshVault(response.site, vaultMessage);
           passwordResult.textContent = response.password;
           passwordSecurity.style.color = response.color;
           passwordSecurity.textContent = `${response.security} (${response.bits} bits)`;
@@ -250,9 +287,9 @@ function generatePassword() {
   });
 }
 
-/** Entrees du carnet couvrant le domaine affiche, et celle retenue. */
+/** Domaine affiche, et l'entree du compte affiche s'il est dans le carnet. */
 let currentDomain = "";
-let currentMatches = [];
+let currentEntryId = null;
 
 /**
  * Affiche l'empreinte de la clef.
@@ -275,40 +312,42 @@ async function refreshFingerprint(key) {
   }
 }
 
-/** Charge les entrees du carnet pour le domaine courant. */
-function refreshVault(domain) {
+/**
+ * Charge les comptes du carnet pour le domaine courant.
+ *
+ * Plusieurs comptes sur un meme site : leurs identifiants sont proposes dans
+ * le champ, il faut choisir, pas deviner. Un mauvais choix donne un mot de
+ * passe qui ne marche pas, sans rien expliquer.
+ */
+function refreshVault(domain, message) {
   currentDomain = domain || "";
-  if (!currentDomain) {
-    accountRow.hidden = true;
-    return;
-  }
+  loginOptions.innerHTML = "";
+  if (!currentDomain) return;
 
   browser.runtime.sendMessage({ action: "getVault" }, (resp) => {
     const vault = resp?.vault || { entries: [] };
-    currentMatches = (vault.entries || []).filter(
+    const matches = (vault.entries || []).filter(
       (e) => !e.deleted && e.domains.some((d) => d.toLowerCase() === currentDomain.toLowerCase()),
     );
 
-    // Un seul compte : rien a choisir, on n'encombre pas l'interface.
-    accountRow.hidden = currentMatches.length < 2;
-    if (currentMatches.length >= 2) {
-      accountSelect.innerHTML = "";
-      currentMatches.forEach((entry, index) => {
-        const option = document.createElement("option");
-        option.value = String(index);
-        option.textContent = entry.login || entry.label || entry.siteKey;
-        accountSelect.appendChild(option);
-      });
+    loginOptions.innerHTML = "";
+    for (const login of new Set(matches.map((e) => e.login || ""))) {
+      if (!login) continue;
+      const option = document.createElement("option");
+      option.value = login;
+      loginOptions.appendChild(option);
     }
 
-    vaultStatus.textContent = currentMatches.length
-      ? `${currentMatches.length} entrée(s) connue(s) pour ${currentDomain}`
-      : `${currentDomain} n'est pas encore dans le carnet`;
-    saveEntryBtn.textContent = currentMatches.length
-      ? "Mettre à jour l'entrée"
-      : "Enregistrer ce site";
+    const known = Boolean(currentEntryId);
+    vaultStatus.textContent = known
+      ? `Compte enregistré pour ${currentDomain}.`
+      : matches.length
+        ? `${matches.length} compte(s) connu(s) pour ${currentDomain}, pas celui-ci.`
+        : `${currentDomain} n'est pas encore dans le carnet.`;
+    if (message) vaultStatus.textContent = message;
+    saveEntryBtn.textContent = known ? "Mettre à jour l'entrée" : "Enregistrer";
 
-    // Rien a renouveler tant que le site n'est pas dans le carnet.
+    // Rien a renouveler tant que le compte n'est pas dans le carnet.
     refreshChangeButton();
     changePreview.hidden = true;
     pendingChange = null;
@@ -325,32 +364,26 @@ function refreshVault(domain) {
 let canRenew = false;
 
 function refreshChangeButton() {
-  const target = currentMatches[0];
-  changeEntryBtn.hidden = !target;
+  const known = Boolean(currentEntryId);
+  changeEntryBtn.hidden = !known;
   // Jamais desactive : un bouton eteint n'explique rien et ne propose rien.
   // Le service worker refuse et rend le message, qui dit ce que l'offre
   // complete apporte et ou l'obtenir.
-  renewPitch.hidden = !target || canRenew;
-}
-
-/** L'entree visee : celle choisie quand il y en a plusieurs. */
-function selectedEntry() {
-  if (currentMatches.length < 2) return currentMatches[0];
-  return currentMatches[Number(accountSelect.value) || 0];
+  renewPitch.hidden = !known || canRenew;
 }
 
 changeEntryBtn.addEventListener("click", () => {
-  const entry = selectedEntry();
-  if (!entry) return;
+  const id = currentEntryId;
+  if (!id) return;
 
   vaultStatus.textContent = "Calcul en cours…";
 
-  browser.runtime.sendMessage({ action: "previewChange", id: entry.id }, (resp) => {
+  browser.runtime.sendMessage({ action: "previewChange", id }, (resp) => {
     if (!resp?.ok) {
       vaultStatus.textContent = `Échec : ${resp?.error || "inconnu"}`;
       return;
     }
-    pendingChange = { id: entry.id };
+    pendingChange = { id };
     changeBefore.textContent = resp.before;
     changeAfter.textContent = resp.after;
     changePreview.hidden = false;
@@ -374,8 +407,7 @@ changeConfirmBtn.addEventListener("click", () => {
     }
     pendingChange = null;
     changePreview.hidden = true;
-    vaultStatus.textContent = `Entrée renouvelée, compteur ${resp.counter}.`;
-    refreshVault(currentDomain);
+    generatePassword(`Entrée renouvelée, compteur ${resp.counter}.`);
   });
 });
 
@@ -385,37 +417,14 @@ saveEntryBtn.addEventListener("click", () => {
     return;
   }
 
-  const params = getParams();
-  const charset = {
-    lower: params.minState,
-    upper: params.majState,
-    symbols: params.symState,
-    numbers: params.chiState,
-  };
-  const existing = currentMatches[0];
-
-  // siteKey n'est jamais reecrit : il produit le mot de passe, le modifier
-  // en changerait un deja en service.
-  const entry = existing
-    ? { ...existing, length: Number(params.lengthNumber), charset }
-    : {
-        id: crypto.randomUUID(),
-        label: currentDomain,
-        siteKey: currentDomain,
-        domains: [currentDomain],
-        login: "",
-        counter: 1,
-        length: Number(params.lengthNumber),
-        charset,
-        // Le carnet n'accepte que la v2, meme quand l'ecran est regle en v1.
-        v: 2,
-        updatedAt: new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
-      };
-
-  browser.runtime.sendMessage({ action: "saveEntry", entry }, (resp) => {
+  // Le compte est designe par domaine + identifiant. Le service worker relit
+  // longueur et caracteres des parametres, ne reecrit jamais le siteKey, et
+  // cree une entree v2 meme quand l'ecran est regle en v1.
+  const login = loginInput.value.trim();
+  browser.runtime.sendMessage({ action: "saveSite", domain: currentDomain, login }, (resp) => {
     if (resp && resp.ok) {
-      vaultStatus.textContent = existing ? "Entrée mise à jour." : "Site enregistré.";
-      refreshVault(currentDomain);
+      loginResolved = true;
+      generatePassword(resp.updated ? "Entrée mise à jour." : "Compte enregistré.");
     } else {
       vaultStatus.textContent = `Échec : ${resp?.error || "inconnu"}`;
     }

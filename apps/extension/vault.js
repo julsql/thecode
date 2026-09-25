@@ -74,6 +74,35 @@ function findByDomain(vault, domain) {
   return findAllByDomain(vault, domain)[0] || null;
 }
 
+/** Longueur maximale d'un identifiant : il entre dans la derivation v2. */
+const VAULT_LOGIN_MAX = 120;
+
+/** L'entree d'un compte precis : meme domaine et meme identifiant. */
+function findByDomainAndLogin(vault, domain, login = "") {
+  return findAllByDomain(vault, domain).find((e) => (e.login || "") === login) || null;
+}
+
+/**
+ * Enregistre un compte depuis la popup.
+ *
+ * Le compte est designe par domaine + identifiant : deux identifiants sur un
+ * meme site sont deux entrees. Une entree existante ne voit changer que sa
+ * longueur et son jeu de caracteres — jamais son siteKey, qui produit le mot
+ * de passe. Sinon, une entree v2 nait avec cet identifiant.
+ */
+function upsertSiteEntry(vault, { domain, login = "", length, charset }) {
+  const existing = findByDomainAndLogin(vault, domain, login);
+  if (existing) {
+    existing.length = length;
+    existing.charset = { ...VAULT_DEFAULT_CHARSET, ...(charset || {}) };
+    existing.updatedAt = nowIso();
+    return { entry: existing, updated: true };
+  }
+  const entry = newEntry(domain, { domains: [domain], login, length, charset });
+  vault.entries.push(entry);
+  return { entry, updated: false };
+}
+
 /** Representation stable, pour departager sans dependre de l'ordre. */
 
 /**
@@ -218,6 +247,9 @@ if (typeof module !== "undefined") {
     newEntry,
     findByDomain,
     findAllByDomain,
+    findByDomainAndLogin,
+    upsertSiteEntry,
+    VAULT_LOGIN_MAX,
     mergeVaults,
     loadVault,
     saveVault,
