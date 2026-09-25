@@ -99,6 +99,9 @@
     <string name="vault_save">Save settings to vault</string>
     <string name="vault_saved">"%1$s" saved to the vault.</string>
     <string name="vault_saved_other_key">"%1$s" saved. Careful: this entry generates its password from "%2$s", not from what you typed.</string>
+    <string name="vault_propose_save">Save this site to the vault?</string>
+    <string name="vault_propose_save_copied">Password copied. Save this site to the vault?</string>
+    <string name="vault_propose_save_action">Save</string>
     <string name="vault_save_needs_site">Type a site first.</string>
     <string name="vault_entry_actions">What do you want to do with "%1$s"?</string>
     <string name="vault_renew">Renew this password</string>

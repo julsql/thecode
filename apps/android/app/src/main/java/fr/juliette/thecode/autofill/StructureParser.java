@@ -6,6 +6,7 @@ import android.text.InputType;
 import android.text.TextUtils;
 import android.view.View;
 import android.view.autofill.AutofillId;
+import android.view.autofill.AutofillValue;
 
 import androidx.annotation.RequiresApi;
 
@@ -44,6 +45,9 @@ final class StructureParser {
     private static ParsedStructure relocate(ParsedStructure src, String newDomain, boolean isPackage) {
         ParsedStructure copy = new ParsedStructure(newDomain, isPackage);
         copy.passwordIds.addAll(src.passwordIds);
+        copy.usernameId = src.usernameId;
+        copy.usernameValue = src.usernameValue;
+        copy.passwordValue = src.passwordValue;
         return copy;
     }
 
@@ -66,6 +70,14 @@ final class StructureParser {
             if (id != null) parsed.passwordIds.add(id);
             if (passwordDomain[0] == null && currentDomain != null) {
                 passwordDomain[0] = currentDomain;
+            }
+            if (parsed.passwordValue == null) parsed.passwordValue = textValue(node);
+        } else if (isUsernameField(node)) {
+            // Le premier seulement : un formulaire en porte rarement deux, et
+            // une barre de recherche plus bas ne doit pas passer pour lui.
+            if (parsed.usernameId == null) {
+                parsed.usernameId = node.getAutofillId();
+                parsed.usernameValue = textValue(node);
             }
         }
 
@@ -105,6 +117,46 @@ final class StructureParser {
         CharSequence hint = node.getHint();
         CharSequence idEntry = node.getIdEntry();
         return matchesPasswordKeyword(hint) || matchesPasswordKeyword(idEntry);
+    }
+
+    /** Texte saisi dans le champ, ou null s'il est vide ou non textuel. */
+    private static String textValue(AssistStructure.ViewNode node) {
+        AutofillValue value = node.getAutofillValue();
+        if (value == null || !value.isText()) return null;
+        String text = value.getTextValue().toString();
+        return text.isEmpty() ? null : text;
+    }
+
+    private static boolean isUsernameField(AssistStructure.ViewNode node) {
+        if (node.getAutofillType() != View.AUTOFILL_TYPE_TEXT) return false;
+
+        String[] hints = node.getAutofillHints();
+        if (hints != null) {
+            for (String hint : hints) {
+                if (hint == null) continue;
+                String h = hint.toLowerCase();
+                if (h.contains("username") || h.contains("email")) return true;
+            }
+        }
+
+        int inputType = node.getInputType();
+        int variation = inputType & InputType.TYPE_MASK_VARIATION;
+        if ((inputType & InputType.TYPE_MASK_CLASS) == InputType.TYPE_CLASS_TEXT
+                && (variation == InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
+                    || variation == InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS)) {
+            return true;
+        }
+
+        return matchesUsernameKeyword(node.getHint()) || matchesUsernameKeyword(node.getIdEntry());
+    }
+
+    /** Mots qui désignent un champ identifiant, en anglais et en français. */
+    static boolean matchesUsernameKeyword(CharSequence value) {
+        if (value == null || value.length() == 0) return false;
+        String v = value.toString().toLowerCase();
+        return v.contains("user") || v.contains("login") || v.contains("email")
+                || v.contains("e-mail") || v.contains("identifiant")
+                || v.contains("courriel") || v.contains("utilisateur");
     }
 
     private static boolean matchesPasswordKeyword(CharSequence value) {

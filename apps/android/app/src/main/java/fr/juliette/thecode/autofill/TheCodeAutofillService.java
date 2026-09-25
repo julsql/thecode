@@ -33,7 +33,10 @@ import java.util.List;
 
 import android.service.autofill.SaveInfo;
 
+import fr.juliette.thecode.Code;
+import fr.juliette.thecode.CodeV2;
 import fr.juliette.thecode.Preferences;
+import fr.juliette.thecode.vault.SaveProposal;
 import fr.juliette.thecode.vault.SiteResolution;
 import fr.juliette.thecode.vault.Vault;
 import fr.juliette.thecode.R;
@@ -100,23 +103,39 @@ public class TheCodeAutofillService extends AutofillService {
         // Le carnet dit sous quelle clef dériver, avec quels réglages, et pour
         // lequel des comptes du site. Plusieurs entrées pour un même domaine,
         // c'est plusieurs comptes : on les propose toutes.
+        Vault vault = Vault.load(this);
         List<SiteResolution> resolutions = SiteResolution.forDomain(
-                Vault.load(this), domain, prefs.getLength(), prefs.getMinState(),
+                vault, domain, prefs.getLength(), prefs.getMinState(),
                 prefs.getMajState(), prefs.getSymState(), prefs.getChiState());
 
-        callback.onSuccess(buildAuthenticatedResponse(request, domain, resolutions, ids));
+        // Même règle que l'écran de génération : compte de synchronisation lié
+        // et site inconnu du carnet.
+        boolean proposeSave = SaveProposal.shouldPropose(
+                prefs.getSyncCredentials() != null, vault, domain);
+
+        callback.onSuccess(buildAuthenticatedResponse(request, domain, resolutions, ids,
+                proposeSave ? parsed.usernameId : null, proposeSave));
     }
 
     /**
      * Enregistre le site dans le carnet quand l'utilisateur accepte.
      *
      * Le mot de passe lui-même n'est pas stocké — il se recalcule. Ce qu'on
-     * retient, ce sont les réglages qui ont servi, et le domaine : sans eux,
-     * un autre appareil ne saurait pas les rejouer. C'est exactement ce que
-     * la boîte de dialogue du système propose.
+     * retient, ce sont les réglages qui ont servi, le domaine et l'identifiant
+     * saisi : sans eux, un autre appareil ne saurait pas les rejouer. L'entrée
+     * naît en v2, comme toute entrée du carnet.
      */
     @Override
     public void onSaveRequest(@NonNull SaveRequest request, @NonNull SaveCallback callback) {
+        Preferences prefs = new Preferences(this);
+        String masterKey = prefs.getEncodingKey();
+        // Même condition qu'à la proposition : la déconnexion a pu survenir
+        // entre les deux.
+        if (masterKey.isEmpty() || prefs.getSyncCredentials() == null) {
+            callback.onSuccess();
+            return;
+        }
+
         List<FillContext> contexts = request.getFillContexts();
         if (contexts.isEmpty()) {
             callback.onSuccess();
@@ -135,31 +154,70 @@ public class TheCodeAutofillService extends AutofillService {
             return;
         }
 
-        Preferences prefs = new Preferences(this);
-        Vault vault = Vault.load(this);
-        // Le siteKey n'est jamais réécrit : il produit le mot de passe, le
-        // modifier en changerait un déjà en service.
-        vault.upsert(domain, prefs.getLength(), prefs.getMinState(), prefs.getMajState(),
-                prefs.getSymState(), prefs.getChiState());
-        vault.save(this);
+        int length = prefs.getLength();
+        boolean lower = prefs.getMinState();
+        boolean upper = prefs.getMajState();
+        boolean symbols = prefs.getSymState();
+        boolean numbers = prefs.getChiState();
+        String submitted = parsed.passwordValue;
+        String username = parsed.usernameValue;
 
-        callback.onSuccess();
+        // PBKDF2 à 600 000 itérations : hors du fil principal du service.
+        new Thread(() -> {
+            String login = loginToStore(masterKey, domain, submitted, username,
+                    length, lower, upper, symbols, numbers);
+            Vault vault = Vault.load(this);
+            // Le siteKey d'une entrée existante n'est jamais réécrit : il
+            // produit le mot de passe, le modifier en changerait un déjà en
+            // service.
+            vault.upsertAccount(domain, login, length, lower, upper, symbols, numbers);
+            vault.save(this);
+            new android.os.Handler(android.os.Looper.getMainLooper()).post(callback::onSuccess);
+        }).start();
+    }
+
+    /**
+     * L'identifiant qui redonne le mot de passe soumis, voir
+     * {@link SaveProposal#loginToStore}.
+     */
+    private static String loginToStore(String masterKey, String domain, String submitted,
+                                       String username, int length, boolean lower,
+                                       boolean upper, boolean symbols, boolean numbers) {
+        Code code = new Code();
+        code.setMinState(lower);
+        code.setMajState(upper);
+        code.setSymState(symbols);
+        code.setChiState(numbers);
+        code.setLength(length);
+        byte[] master;
+        try {
+            master = CodeV2.deriveMasterKey(masterKey);
+        } catch (java.security.GeneralSecurityException e) {
+            return username == null ? "" : username.trim();
+        }
+        return SaveProposal.loginToStore(submitted, username,
+                login -> CodeV2.getCode(code, masterKey, domain, login, 1, master));
     }
 
     private FillResponse buildAuthenticatedResponse(FillRequest request, String domain,
                                                     List<SiteResolution> resolutions,
-                                                    AutofillId[] passwordIds) {
+                                                    AutofillId[] passwordIds,
+                                                    @Nullable AutofillId usernameId,
+                                                    boolean proposeSave) {
         FillResponse.Builder response = new FillResponse.Builder();
         for (int i = 0; i < resolutions.size(); i++) {
             response.addDataset(buildDataset(request, domain, resolutions.get(i), i, passwordIds));
         }
 
         // Le carnet ne connaît pas encore ce site : on demande au système de
-        // proposer de l'enregistrer. Déjà connu, la question serait du bruit.
-        boolean known = resolutions.isEmpty() || !resolutions.get(0).entryId.isEmpty();
-        if (!known) {
-            response.setSaveInfo(new SaveInfo.Builder(
-                    SaveInfo.SAVE_DATA_TYPE_PASSWORD, passwordIds).build());
+        // proposer de l'enregistrer, identifiant compris quand le formulaire
+        // en porte un. Déjà connu, la question serait du bruit.
+        if (proposeSave) {
+            int types = SaveInfo.SAVE_DATA_TYPE_PASSWORD;
+            if (usernameId != null) types |= SaveInfo.SAVE_DATA_TYPE_USERNAME;
+            SaveInfo.Builder save = new SaveInfo.Builder(types, passwordIds);
+            if (usernameId != null) save.setOptionalIds(new AutofillId[] {usernameId});
+            response.setSaveInfo(save.build());
         }
 
         return response.build();

@@ -99,6 +99,9 @@
     <string name="vault_save">Enregistrer les réglages au carnet</string>
     <string name="vault_saved">« %1$s » enregistré au carnet.</string>
     <string name="vault_saved_other_key">« %1$s » enregistré. Attention : cette entrée génère son mot de passe depuis « %2$s », pas depuis ce que vous avez saisi.</string>
+    <string name="vault_propose_save">Enregistrer ce site dans le carnet ?</string>
+    <string name="vault_propose_save_copied">Mot de passe copié. Enregistrer ce site dans le carnet ?</string>
+    <string name="vault_propose_save_action">Enregistrer</string>
     <string name="vault_save_needs_site">Saisissez d\'abord un site.</string>
     <string name="vault_entry_actions">Que faire de « %1$s » ?</string>
     <string name="vault_renew">Renouveler ce mot de passe</string>

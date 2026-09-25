@@ -12,6 +12,7 @@ import android.os.Bundle;
 import android.provider.Settings;
 
 import fr.juliette.thecode.autofill.TheCodeAutofillService;
+import fr.juliette.thecode.vault.SaveProposal;
 import fr.juliette.thecode.vault.Vault;
 import fr.juliette.thecode.vault.VaultEntry;
 import android.text.Editable;
@@ -135,6 +136,8 @@ public class MainActivity extends AppCompatActivity {
     private boolean loginPrefilled = false;
     /** Évite que le préremplissage passe pour une frappe de l'utilisateur. */
     private boolean settingLogin = false;
+    /** Dernier site pour lequel l'enregistrement a été proposé : une fois suffit. */
+    private String proposedFor;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -722,7 +725,33 @@ public class MainActivity extends AppCompatActivity {
         }
         ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
         cm.setPrimaryClip(ClipData.newPlainText(getString(R.string.clipboard_label), password));
-        Snackbar.make(resultCard, R.string.password_copied, Snackbar.LENGTH_SHORT).show();
+        if (!proposeSaveIfNeeded(R.string.vault_propose_save_copied)) {
+            Snackbar.make(resultCard, R.string.password_copied, Snackbar.LENGTH_SHORT).show();
+        }
+    }
+
+    /**
+     * Propose d'enregistrer au carnet le site dont on vient d'utiliser le mot
+     * de passe, quand un compte de synchronisation est lié et que le carnet ne
+     * le connaît pas (règle partagée avec le remplissage automatique).
+     *
+     * Pas en v1 : le carnet n'admet que la v2, l'entrée créée donnerait un
+     * autre mot de passe que celui affiché.
+     *
+     * @return vrai si la proposition a été affichée.
+     */
+    private boolean proposeSaveIfNeeded(int messageRes) {
+        if (useV1) return false;
+        String site = textOf(siteEditText).trim();
+        if (site.equals(proposedFor)) return false;
+        boolean linked = preferences.getSyncCredentials() != null;
+        if (!SaveProposal.shouldPropose(linked, vault, site)) return false;
+
+        proposedFor = site;
+        Snackbar.make(resultCard, messageRes, Snackbar.LENGTH_LONG)
+                .setAction(R.string.vault_propose_save_action, v -> saveToVault())
+                .show();
+        return true;
     }
 
     private void share() {
@@ -738,6 +767,7 @@ public class MainActivity extends AppCompatActivity {
         share.putExtra(Intent.EXTRA_TEXT,
                 getString(R.string.share_text, site, password));
         startActivity(Intent.createChooser(share, getString(R.string.share_title)));
+        proposeSaveIfNeeded(R.string.vault_propose_save);
     }
 
     private void showHelp() {
