@@ -271,10 +271,10 @@ struct MainView: View {
                         .font(.footnote.weight(.bold))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
-                        .background(useV1 ? Color.orange.opacity(0.25) : Color.clear)
+                        .background(useV1 ? AlgoTheme.v1Pink.opacity(0.25) : Color.clear)
                         .overlay(
                             RoundedRectangle(cornerRadius: 6)
-                                .stroke(Color.accentColor.opacity(0.6), lineWidth: 1))
+                                .stroke(AlgoTheme.tint(usesV1: useV1).opacity(0.6), lineWidth: 1))
                         .cornerRadius(6)
                 }
                 .buttonStyle(.borderless)
@@ -436,6 +436,8 @@ struct MainView: View {
             }
         }
         .frame(minWidth: 520, minHeight: 600)
+        // Toute l'interface passe en rose en v1 : l'exception doit se voir.
+        .tint(AlgoTheme.tint(usesV1: useV1))
         .preferredColorScheme(preferredScheme)
         .onAppear {
             if !v2NoticeSeen { showV2Notice = true }

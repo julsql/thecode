@@ -425,10 +425,10 @@ struct MainView: View {
                             .font(.footnote.weight(.bold))
                             .padding(.horizontal, 8)
                             .padding(.vertical, 3)
-                            .background(useV1 ? Color.orange.opacity(0.25) : Color.clear)
+                            .background(useV1 ? AlgoTheme.v1Pink.opacity(0.25) : Color.clear)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 6)
-                                    .stroke(Color.accentColor.opacity(0.6), lineWidth: 1))
+                                    .stroke(AlgoTheme.tint(usesV1: useV1).opacity(0.6), lineWidth: 1))
                             .cornerRadius(6)
                     }
                     .accessibilityLabel(
@@ -484,6 +484,8 @@ struct MainView: View {
                 Button("OK", role: .cancel) { }
             }
         }
+        // Toute l'interface passe en rose en v1 : l'exception doit se voir.
+        .tint(AlgoTheme.tint(usesV1: useV1))
         .onChange(of: siteName) { newSite in
             vaultSaveMessage = nil
             prefillLogin(for: newSite)
