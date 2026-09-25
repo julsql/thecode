@@ -44,7 +44,7 @@ struct AutofillSaveTests {
         }
         #expect(entry.siteKey == "site.fr")
         #expect(entry.login == "moi")
-        #expect(entry.v == 2)
+        #expect(SiteResolution(entry: entry).v == 2)
         #expect(entry.length == 20)
     }
 

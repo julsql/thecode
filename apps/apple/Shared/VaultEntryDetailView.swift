@@ -36,7 +36,6 @@ struct VaultEntryDetailView: View {
                 row(T.t("Longueur", "Length"), "\(entry.length)")
                 row(T.t("Caractères", "Characters"), Self.charsetSummary(entry.charset))
                 row(T.t("Compteur", "Counter"), "\(entry.counter)")
-                row(T.t("Version", "Version"), "v\(entry.v)")
                 row(T.t("Mis à jour", "Updated"), Self.formattedDate(entry.updatedAt))
             }
 

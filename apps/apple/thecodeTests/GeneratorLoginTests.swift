@@ -42,7 +42,7 @@ struct GeneratorLoginTests {
         #expect(vault.entries.count == 2)
         #expect(saved.id != entry.id)
         #expect(saved.login == "pro")
-        #expect(saved.v == 2)
+        #expect(SiteResolution(entry: saved).v == 2)
         // L'entrée existante n'est pas touchée.
         #expect(vault.entries.first { $0.id == entry.id }?.length == 20)
         #expect(vault.entries.first { $0.id == entry.id }?.charset == Charset())

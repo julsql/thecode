@@ -292,9 +292,6 @@ public struct Sync {
             guard var entry = try? JSONDecoder().decode(VaultEntry.self, from: plain) else {
                 throw SyncError(message: "Carnet distant illisible : entrée invalide")
             }
-            // Le carnet n'admet que la v2 : une entrée d'une autre version,
-            // poussée par un client plus ancien, est écartée sans erreur.
-            guard entry.isStorable else { continue }
             // La pierre tombale du serveur fait foi même si l'entrée chiffrée
             // est antérieure à la suppression.
             if row["deleted"] as? Bool == true { entry.deleted = true }
@@ -310,7 +307,7 @@ public struct Sync {
         encoder.outputFormatting = [.sortedKeys]
 
         var rows: [[String: Any]] = []
-        for entry in entries where entry.isStorable {
+        for entry in entries {
             let sealed = try Transfer.seal(try encoder.encode(entry), with: key)
             rows.append([
                 "entry_id": entry.id,

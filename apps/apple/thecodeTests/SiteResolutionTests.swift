@@ -31,6 +31,15 @@ struct SiteResolutionTests {
         #expect(out[0].v == 1)
     }
 
+    @Test("Une entrée du carnet se résout toujours en v2")
+    func vaultEntryAlwaysResolvesToV2() {
+        let out = SiteResolution.forDomain(
+            "banque.fr", in: Vault(entries: [VaultEntry(siteKey: "banque.fr")]), length: 20,
+            charset: general)
+
+        #expect(out[0].v == 2)
+    }
+
     @Test("Les réglages enregistrés pour le site sont repris")
     func usesTheRecordedSettings() {
         // Le deuxième problème : ne plus avoir à se souvenir qu'un site
