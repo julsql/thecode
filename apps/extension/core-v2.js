@@ -5,9 +5,9 @@
  * seul mot de passe qui fuite permet de retrouver la clef maitresse hors ligne,
  * et cette clef ouvre tous les comptes.
  *
- * La v2 ne remplace pas la v1 : elles coexistent, entree par entree, via le
- * champ `v` du carnet. Une entree existante reste en v1 et son mot de passe ne
- * change pas.
+ * Le carnet ne contient que des entrees v2. La v1 ne subsiste qu'en
+ * generation ponctuelle depuis la popup, hors carnet, pour un site dont le mot
+ * de passe n'a pas encore ete change.
  *
  * Specification : shared/spec/algo-v2.md
  */

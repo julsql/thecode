@@ -236,19 +236,7 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse({ ok: true, vault: await loadVault(browser?.storage?.local) });
     } else if (request.action === "saveEntry") {
       try {
-        const vault = await loadVault(browser?.storage?.local);
-        const incoming = request.entry;
-        const existing = vault.entries.find((e) => e.id === incoming.id);
-        if (existing) {
-          // siteKey n'est jamais reecrit : il produit le mot de passe, le
-          // modifier en changerait un deja en service.
-          Object.assign(existing, incoming, { siteKey: existing.siteKey });
-          existing.updatedAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
-        } else {
-          vault.entries.push(incoming);
-        }
-        await saveVault(browser?.storage?.local, vault);
-        sendResponse({ ok: true, vault });
+        sendResponse(await saveEntry(request.entry));
       } catch (e) {
         sendResponse({ ok: false, error: e.message });
       }
@@ -273,6 +261,7 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
         sendResponse({ ok: false, error: e.message });
       }
     } else if (request.action === "previewChange") {
+      // Renouvellement seulement : il n'y a plus d'entree v1 a migrer.
       // Calcule sans rien ecrire : l'ancien mot de passe est encore celui du
       // site tant qu'il n'y a pas ete change.
       try {
@@ -282,17 +271,13 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
           sendResponse({ ok: false, error: "entree introuvable" });
         } else if (!encodingKey) {
           sendResponse({ ok: false, error: "aucune clef definie" });
-        } else if (request.renew && !(await renewAllowed())) {
+        } else if (!(await renewAllowed())) {
           sendResponse({ ok: false, error: RENEW_IS_PAID });
         } else {
           sendResponse({
             ok: true,
             before: await passwordForEntry(entry),
-            after: await passwordForEntry(
-              entry,
-              request.renew ? entry.counter + 1 : entry.counter,
-              request.renew ? entry.v : 2,
-            ),
+            after: await passwordForEntry(entry, entry.counter + 1),
           });
         }
       } catch (e) {
@@ -304,16 +289,15 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
         const entry = vault.entries.find((e) => e.id === request.id && !e.deleted);
         if (!entry) {
           sendResponse({ ok: false, error: "entree introuvable" });
-        } else if (request.renew && !(await renewAllowed())) {
+        } else if (!(await renewAllowed())) {
           sendResponse({ ok: false, error: RENEW_IS_PAID });
         } else {
-          if (request.renew) entry.counter += 1;
-          else entry.v = 2;
+          entry.counter += 1;
           // Sans rehorodatage, la fusion ferait gagner l'autre appareil et le
           // changement serait perdu a la synchronisation suivante.
           entry.updatedAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
           await saveVault(browser?.storage?.local, vault);
-          sendResponse({ ok: true, counter: entry.counter, v: entry.v });
+          sendResponse({ ok: true, counter: entry.counter });
         }
       } catch (e) {
         sendResponse({ ok: false, error: e.message });
@@ -419,13 +403,12 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
 /**
  * Derive le mot de passe d'une entree.
  *
- * `version` permet de forcer : l'autoremplissage derive toujours en v2, et
- * l'ecran de generation propose la v1 en secours pour un site pas encore
- * migre. Sans elle, on suit ce que le carnet a enregistre.
+ * Le carnet ne contient que des entrees v2. `version` vaut 1 seulement quand
+ * la popup demande l'ancien algorithme, en secours pour un site dont le mot de
+ * passe n'a pas encore ete change : la v1 n'existe plus qu'hors carnet.
  */
-async function passwordForEntry(entry, counter, version) {
-  const v = version ?? entry.v;
-  if (v >= 2) {
+async function passwordForEntry(entry, counter, version = 2) {
+  if (version !== 1) {
     return generatePasswordV2(entry.siteKey, encodingKey, entry.length, {
       useLower: entry.charset.lower,
       useUpper: entry.charset.upper,
@@ -446,6 +429,29 @@ async function passwordForEntry(entry, counter, version) {
     entry.charset.numbers,
   );
   return mdp;
+}
+
+/**
+ * Ecrit une entree venue de la popup.
+ *
+ * Le carnet n'accepte que la v2 : une entree `v != 2` est refusee, et une mise
+ * a jour ne peut ni changer la version ni reecrire le siteKey — il produit le
+ * mot de passe, le modifier en changerait un deja en service.
+ */
+async function saveEntry(incoming) {
+  if (!isV2Entry(incoming)) {
+    return { ok: false, error: "le carnet n'accepte que des entrees v2" };
+  }
+  const vault = await loadVault(browser?.storage?.local);
+  const existing = vault.entries.find((e) => e.id === incoming.id);
+  if (existing) {
+    Object.assign(existing, incoming, { siteKey: existing.siteKey, v: existing.v });
+    existing.updatedAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+  } else {
+    vault.entries.push(incoming);
+  }
+  await saveVault(browser?.storage?.local, vault);
+  return { ok: true, vault };
 }
 
 /**
@@ -499,8 +505,6 @@ async function saveCurrentSite(sender, login) {
       domains: [domain],
       length: lengthNumber,
       charset,
-      // Les entrees naissent en v2 : la v1 n'est plus qu'un secours explicite.
-      v: 2,
       // Borne : un champ de page peut contenir n'importe quoi.
       login: typeof login === "string" ? login.slice(0, 120) : "",
     }),
@@ -562,10 +566,9 @@ async function generatePasswordForUrl(url, version) {
     const hostname = u.hostname;
     const domain = getRegistrableDomain(hostname);
 
-    // Le carnet dit sous quelle clef deriver, avec quels reglages et en
-    // quelle version. L'ignorer rendrait un mot de passe v1 pour une entree
-    // v2 : faux, sans que rien ne le signale. Et le domaine saisi peut etre un
-    // alias — google.fr doit rendre le mot de passe de google.com.
+    // Le carnet dit sous quelle clef deriver et avec quels reglages. Le
+    // domaine saisi peut etre un alias — google.fr doit rendre le mot de passe
+    // de google.com.
     const vault = await loadVault(browser?.storage?.local);
     const entry = findAllByDomain(vault, domain)[0];
 
@@ -608,9 +611,8 @@ async function generatePasswordForUrl(url, version) {
       entry.charset.numbers,
     );
 
-    // v2 par defaut, quelle que soit la version notee dans le carnet : le
-    // remplissage automatique ne propose pas de choix, il doit donc etre
-    // previsible. Un site encore en v1 se genere depuis la popup.
+    // Les entrees sont toutes v2. La v1 ne se derive que sur demande de la
+    // popup, pour un site dont le mot de passe n'a pas encore ete change.
     const mdp = await passwordForEntry(entry, entry.counter, v);
 
     return {
@@ -811,6 +813,7 @@ if (typeof module !== "undefined") {
     generatePassword,
     generatePasswordForUrl,
     passwordForEntry,
+    saveEntry,
     exportVaultPayload,
     importVaultPayload,
     saveCurrentSite,

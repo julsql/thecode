@@ -15,6 +15,28 @@ const VAULT_STORAGE_KEY = "vault";
 const VAULT_DEFAULT_CHARSET = { lower: true, upper: true, symbols: true, numbers: true };
 const VAULT_DEFAULT_LENGTH = 20;
 
+/**
+ * Seule version d'entree admise dans le carnet.
+ *
+ * La v1 ne subsiste qu'en generation ponctuelle, hors carnet : une entree
+ * `v != 2` est ecartee a chaque lecture et ne peut pas etre ecrite.
+ * Voir shared/spec/vault-merge.md, « Uniquement des entrées v2 ».
+ */
+const VAULT_ENTRY_VERSION = 2;
+
+function isV2Entry(entry) {
+  return Boolean(entry) && entry.v === VAULT_ENTRY_VERSION;
+}
+
+/**
+ * Ne garde que les entrees v2, sans erreur : un carnet ancien ou venu d'un
+ * autre appareil reste lisible, ses entrees v1 disparaissent simplement.
+ */
+function keepV2Entries(vault) {
+  if (!vault || !Array.isArray(vault.entries)) return vault;
+  return { ...vault, entries: vault.entries.filter(isV2Entry) };
+}
+
 function nowIso() {
   return new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
 }
@@ -24,7 +46,8 @@ function emptyVault() {
 }
 
 function newEntry(siteKey, options = {}) {
-  const { label, domains, login = "", length = VAULT_DEFAULT_LENGTH, charset, v = 1 } = options;
+  // Pas d'option `v` : une entree nait toujours en v2.
+  const { label, domains, login = "", length = VAULT_DEFAULT_LENGTH, charset } = options;
   return {
     id: crypto.randomUUID(),
     label: label || siteKey,
@@ -34,7 +57,7 @@ function newEntry(siteKey, options = {}) {
     counter: 1,
     length,
     charset: { ...VAULT_DEFAULT_CHARSET, ...(charset || {}) },
-    v,
+    v: VAULT_ENTRY_VERSION,
     updatedAt: nowIso(),
   };
 }
@@ -133,9 +156,10 @@ function mergeEntry(left, right, conflicts) {
  */
 function mergeVaults(left, right) {
   const conflicts = [];
-  const byId = new Map((left.entries || []).map((e) => [e.id, e]));
+  // Filet : ce qui sort d'une fusion est ecrit, et rien de v1 ne doit l'etre.
+  const byId = new Map((left.entries || []).filter(isV2Entry).map((e) => [e.id, e]));
 
-  for (const entry of right.entries || []) {
+  for (const entry of (right.entries || []).filter(isV2Entry)) {
     const existing = byId.get(entry.id);
     byId.set(entry.id, existing ? mergeEntry(existing, entry, conflicts) : { ...entry });
   }
@@ -163,7 +187,7 @@ async function loadVault(storage) {
       console.error("TheCode: carnet en version", vault.schema, "attendu", VAULT_SCHEMA);
       return emptyVault();
     }
-    return vault;
+    return keepV2Entries(vault);
   } catch (e) {
     console.error("TheCode: echec de la lecture du carnet", e);
     return emptyVault();
@@ -187,6 +211,9 @@ if (typeof module !== "undefined") {
     VAULT_STORAGE_KEY,
     VAULT_DEFAULT_CHARSET,
     VAULT_DEFAULT_LENGTH,
+    VAULT_ENTRY_VERSION,
+    isV2Entry,
+    keepV2Entries,
     emptyVault,
     newEntry,
     findByDomain,

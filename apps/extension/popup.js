@@ -308,7 +308,7 @@ function refreshVault(domain) {
       ? "Mettre à jour l'entrée"
       : "Enregistrer ce site";
 
-    // Rien a renouveler ni a migrer tant que le site n'est pas dans le carnet.
+    // Rien a renouveler tant que le site n'est pas dans le carnet.
     refreshChangeButton();
     changePreview.hidden = true;
     pendingChange = null;
@@ -317,8 +317,7 @@ function refreshVault(domain) {
 
 /**
  * Le compteur — renouveler sans changer de clef — fait partie de l'offre
- * complete. La migration v1 vers v2 reste ouverte a tous : c'est une mise a
- * niveau, pas un service.
+ * complete.
  *
  * L'etat sert a annoncer l'offre avant le clic ; c'est le service worker qui
  * refuse, puisque c'est lui qui ecrit le compteur.
@@ -328,14 +327,10 @@ let canRenew = false;
 function refreshChangeButton() {
   const target = currentMatches[0];
   changeEntryBtn.hidden = !target;
-  if (!target) return;
-
-  const renew = target.v >= 2;
-  changeEntryBtn.textContent = renew ? "Renouveler" : "Passer en v2";
   // Jamais desactive : un bouton eteint n'explique rien et ne propose rien.
   // Le service worker refuse et rend le message, qui dit ce que l'offre
   // complete apporte et ou l'obtenir.
-  renewPitch.hidden = !(renew && !canRenew);
+  renewPitch.hidden = !target || canRenew;
 }
 
 /** L'entree visee : celle choisie quand il y en a plusieurs. */
@@ -348,15 +343,14 @@ changeEntryBtn.addEventListener("click", () => {
   const entry = selectedEntry();
   if (!entry) return;
 
-  const renew = entry.v >= 2;
   vaultStatus.textContent = "Calcul en cours…";
 
-  browser.runtime.sendMessage({ action: "previewChange", id: entry.id, renew }, (resp) => {
+  browser.runtime.sendMessage({ action: "previewChange", id: entry.id }, (resp) => {
     if (!resp?.ok) {
       vaultStatus.textContent = `Échec : ${resp?.error || "inconnu"}`;
       return;
     }
-    pendingChange = { id: entry.id, renew };
+    pendingChange = { id: entry.id };
     changeBefore.textContent = resp.before;
     changeAfter.textContent = resp.after;
     changePreview.hidden = false;
@@ -373,22 +367,16 @@ changeCancelBtn.addEventListener("click", () => {
 changeConfirmBtn.addEventListener("click", () => {
   if (!pendingChange) return;
 
-  browser.runtime.sendMessage(
-    { action: "applyChange", id: pendingChange.id, renew: pendingChange.renew },
-    (resp) => {
-      if (!resp?.ok) {
-        vaultStatus.textContent = `Échec : ${resp?.error || "inconnu"}`;
-        return;
-      }
-      const renewed = pendingChange.renew;
-      pendingChange = null;
-      changePreview.hidden = true;
-      vaultStatus.textContent = renewed
-        ? `Entrée renouvelée, compteur ${resp.counter}.`
-        : "Entrée passée en v2.";
-      refreshVault(currentDomain);
-    },
-  );
+  browser.runtime.sendMessage({ action: "applyChange", id: pendingChange.id }, (resp) => {
+    if (!resp?.ok) {
+      vaultStatus.textContent = `Échec : ${resp?.error || "inconnu"}`;
+      return;
+    }
+    pendingChange = null;
+    changePreview.hidden = true;
+    vaultStatus.textContent = `Entrée renouvelée, compteur ${resp.counter}.`;
+    refreshVault(currentDomain);
+  });
 });
 
 saveEntryBtn.addEventListener("click", () => {
@@ -409,7 +397,7 @@ saveEntryBtn.addEventListener("click", () => {
   // siteKey n'est jamais reecrit : il produit le mot de passe, le modifier
   // en changerait un deja en service.
   const entry = existing
-    ? { ...existing, length: Number(params.length), charset }
+    ? { ...existing, length: Number(params.lengthNumber), charset }
     : {
         id: crypto.randomUUID(),
         label: currentDomain,
@@ -417,9 +405,10 @@ saveEntryBtn.addEventListener("click", () => {
         domains: [currentDomain],
         login: "",
         counter: 1,
-        length: Number(params.length),
+        length: Number(params.lengthNumber),
         charset,
-        v: 1,
+        // Le carnet n'accepte que la v2, meme quand l'ecran est regle en v1.
+        v: 2,
         updatedAt: new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
       };
 

@@ -170,7 +170,12 @@ describe("renouvellement reserve a l'offre complete", () => {
     updatedAt: "2026-09-01T10:00:00Z",
   };
 
-  const vaultWith = (entry) => ({ schema: 1, updatedAt: "2026-09-01T10:00:00Z", entries: [entry] });
+  // Copie : un test qui renouvelle ne doit pas modifier ENTRY pour les suivants.
+  const vaultWith = (entry) => ({
+    schema: 1,
+    updatedAt: "2026-09-01T10:00:00Z",
+    entries: [{ ...entry }],
+  });
 
   const session = (plan) => ({
     endpoint: "https://exemple.test",
@@ -204,18 +209,30 @@ describe("renouvellement reserve a l'offre complete", () => {
     expect(store.vault.entries[0].counter).toBe(2);
   });
 
-  it("laisse migrer une entree v1 sans compte", async () => {
+  it("ne migre plus rien : une entree v1 est introuvable", async () => {
     const { send, store } = loadWorker({
-      storage: { vault: vaultWith({ ...ENTRY, v: 1 }) },
+      storage: { vault: vaultWith({ ...ENTRY, v: 1 }), syncSession: session("pro") },
     });
     await send({ action: "setEncodingKey", encodingKey: "clef" }, FROM_POPUP);
 
-    // Passer en v2 est une mise a niveau, pas un service : la brider
-    // laisserait des comptes sur l'ancien algorithme par question de prix.
+    // Le carnet n'accepte que la v2 : l'entree v1 est ecartee a la lecture.
     const response = await send({ action: "applyChange", id: "e1", renew: false }, FROM_POPUP);
 
-    expect(response.ok).toBe(true);
-    expect(store.vault.entries[0].v).toBe(2);
+    expect(response.ok).toBe(false);
+    expect(store.vault.entries[0]).toMatchObject({ v: 1, counter: 1 });
+  });
+
+  it("ne fait que renouveler, meme sans drapeau renew", async () => {
+    const { send, store } = loadWorker({
+      storage: { vault: vaultWith(ENTRY), syncSession: session("free") },
+    });
+    await send({ action: "setEncodingKey", encodingKey: "clef" }, FROM_POPUP);
+
+    // L'ancien chemin de migration ne doit pas contourner l'offre.
+    const response = await send({ action: "applyChange", id: "e1" }, FROM_POPUP);
+
+    expect(response.ok).toBe(false);
+    expect(store.vault.entries[0]).toMatchObject({ v: 2, counter: 1 });
   });
 
   it("ne calcule meme pas l'apercu d'un renouvellement interdit", async () => {
