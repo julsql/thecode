@@ -78,6 +78,72 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
         }
     }
 
+    // MARK: – Enregistrement proposé par le système (iOS 26.2+)
+
+    /// Le système transmet un mot de passe saisi dans un formulaire.
+    ///
+    /// Rien n'est affiché : on n'enregistre que ce que la dérivation v2
+    /// reproduit, et seulement pour qui est connecté à la synchronisation.
+    /// Le reste est refusé sans bruit — le système n'attend pas d'erreur.
+    @available(iOS 26.2, *)
+    override func performWithoutUserInteractionIfPossible(
+        savePasswordRequest: ASSavePasswordRequest
+    ) {
+        handleSave(savePasswordRequest)
+    }
+
+    /// Même traitement : il n'y a rien à demander à l'utilisatrice.
+    @available(iOS 26.2, *)
+    override func prepareInterface(for savePasswordRequest: ASSavePasswordRequest) {
+        handleSave(savePasswordRequest)
+    }
+
+    @available(iOS 26.2, *)
+    private func handleSave(_ request: ASSavePasswordRequest) {
+        // Un mot de passe « généré » vient d'un autre fournisseur, et le
+        // formulaire n'est pas encore envoyé : il n'y a rien de sûr à retenir.
+        guard request.event != .generatedPasswordFilled else {
+            finishSave(saved: false)
+            return
+        }
+
+        let domain = DomainNormalizer.normalize(request.serviceIdentifier)
+        let user = request.credential.user
+        let password = request.credential.password
+
+        // PBKDF2 à 600 000 itérations : jamais sur le fil principal.
+        Task.detached {
+            let settings = PasswordSettings.load(from: UserDefaults(suiteName: appGroupID))
+            var vault = VaultStore.load()
+            let outcome = AutofillSave.plan(
+                domain: domain, user: user, password: password, vault: vault,
+                isLinked: SyncCredentialsStore.load() != nil,
+                masterKey: SecureKeyStore.read(), length: settings.length,
+                charset: Charset(
+                    lower: settings.minState, upper: settings.majState,
+                    symbols: settings.symState, numbers: settings.chiState))
+
+            var saved = outcome == .alreadyKnown
+            if case .save(let entry) = outcome {
+                vault.entries.append(entry)
+                saved = (try? VaultStore.save(vault)) != nil
+            }
+            await MainActor.run { self.finishSave(saved: saved) }
+        }
+    }
+
+    @available(iOS 26.2, *)
+    private func finishSave(saved: Bool) {
+        if saved {
+            extensionContext.completeSavePasswordRequest(completionHandler: nil)
+        } else {
+            extensionContext.cancelRequest(withError: NSError(
+                domain: ASExtensionErrorDomain,
+                code: ASExtensionError.failed.rawValue
+            ))
+        }
+    }
+
     // MARK: – Appelé par AutofillModel après auth
 
     func completeFill(domain: String, resolution: SiteResolution?, saveToVault: Bool) {

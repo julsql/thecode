@@ -4,6 +4,19 @@
 <dict>
 	<key>NSExtension</key>
 	<dict>
+		<key>NSExtensionAttributes</key>
+		<dict>
+			<!-- SupportsSavePasswordCredentials : iOS 26.2+ transmet les mots
+			     de passe saisis ; seuls ceux que TheCode sait recalculer
+			     entrent au carnet (cf. AutofillSave.swift). Ignoré avant. -->
+			<key>ASCredentialProviderExtensionCapabilities</key>
+			<dict>
+				<key>ProvidesPasswords</key>
+				<true/>
+				<key>SupportsSavePasswordCredentials</key>
+				<true/>
+			</dict>
+		</dict>
 		<key>NSExtensionPrincipalClass</key>
 		<string>$(PRODUCT_MODULE_NAME).CredentialProviderViewController</string>
 		<key>NSExtensionPointIdentifier</key>
