@@ -62,6 +62,10 @@ struct VaultScreen: View {
                     if isLinked {
                         Button(L10n.t("Délier", "Unlink"), action: unlink)
                             .buttonStyle(.borderless)
+                    } else {
+                        // Seule l'icône de synchronisation menait à la
+                        // connexion, sans que rien ne le dise.
+                        Button(L10n.t("Se connecter", "Sign in")) { showSignIn = true }
                     }
 
                     Button { showLockSettings = true } label: {
@@ -199,8 +203,12 @@ struct VaultScreen: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
-                Link(L10n.t("Créer un compte", "Create an account"), destination: accountURL)
-                    .font(.footnote)
+                HStack(spacing: 12) {
+                    Button(L10n.t("Se connecter", "Sign in")) { showSignIn = true }
+                        .controlSize(.small)
+                    Link(L10n.t("Créer un compte", "Create an account"), destination: accountURL)
+                        .font(.footnote)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 20)
