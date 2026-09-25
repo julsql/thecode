@@ -527,6 +527,13 @@ const V2_NOTICE_KEY = "v2NoticeSeen";
 const v2Notice = document.getElementById("v2Notice");
 const v2NeverAgain = document.getElementById("v2NoticeNeverAgain");
 
+// Traduite selon la langue du navigateur ; le francais du HTML reste en
+// secours si une clef manque.
+v2Notice.querySelectorAll("[data-i18n]").forEach((el) => {
+  const message = browser.i18n?.getMessage(el.dataset.i18n);
+  if (message) el.textContent = message;
+});
+
 browser.storage?.local?.get([V2_NOTICE_KEY], (stored) => {
   if (!stored?.[V2_NOTICE_KEY]) v2Notice.hidden = false;
 });

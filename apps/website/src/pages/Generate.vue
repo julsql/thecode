@@ -3,22 +3,17 @@
        prochaine fois ; seule la case à cocher la retire pour de bon. -->
   <div v-if="showV2Notice" class="modal-backdrop" @click.self="closeV2Notice">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="v2NoticeTitle">
-      <h3 id="v2NoticeTitle">Nouvel algorithme</h3>
-      <p>
-        Les mots de passe se calculent désormais avec un nouvel algorithme (v2). Ceux déjà posés sur
-        vos sites viennent de l'ancien et n'ont pas changé.
-      </p>
-      <p>
-        Le remplissage automatique utilise le nouveau : pour un site que vous n'avez pas encore mis
-        à jour, utilisez « Générer en v1 (ancien) », ou passez l'entrée en v2 depuis le carnet après
-        avoir changé le mot de passe sur le site.
-      </p>
+      <h3 id="v2NoticeTitle">{{ t("v2_notice_title") }}</h3>
+      <p>{{ t("v2_notice_intro") }}</p>
+      <p>{{ t("v2_notice_detail") }}</p>
       <label class="modal-check">
         <input v-model="v2NoticeNeverAgain" type="checkbox" />
-        Ne plus afficher
+        {{ t("v2_notice_never_again") }}
       </label>
       <div class="modal-actions">
-        <button type="button" class="ghost-btn primary" @click="closeV2Notice">Fermer</button>
+        <button type="button" class="ghost-btn primary" @click="closeV2Notice">
+          {{ t("v2_notice_close") }}
+        </button>
       </div>
     </div>
   </div>

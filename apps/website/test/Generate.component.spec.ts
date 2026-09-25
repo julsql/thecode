@@ -372,6 +372,17 @@ describe("annonce du passage à la v2", () => {
     expect(wrapper.text()).toContain("Nouvel algorithme");
   });
 
+  it("se traduit en anglais et renvoie vers le site pour la v1", async () => {
+    const router = makeRouter();
+    router.push("/en");
+    await router.isReady();
+    const wrapper = mount(Generate, { global: { plugins: [router] } });
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.text()).toContain("New algorithm");
+    expect(wrapper.text()).toContain("generate the password in v1 from the website");
+  });
+
   it("revient la prochaine fois si on ferme sans cocher", async () => {
     const wrapper = await mountGenerate();
 

@@ -6,5 +6,25 @@
   "extension_description": {
     "message": "Generate secure, unique passwords for every site from a single secret key. No storage, no risk.",
     "description": "Description of what the extension does."
+  },
+  "v2_notice_title": {
+    "message": "New algorithm",
+    "description": "Title of the v2 announcement."
+  },
+  "v2_notice_intro": {
+    "message": "Passwords are now computed with a new algorithm (v2). Please migrate your passwords to this new algorithm.",
+    "description": "First paragraph of the v2 announcement."
+  },
+  "v2_notice_detail": {
+    "message": "Autofill uses the new one: for a site you have not updated yet, generate the password in v1 from the extension with the old algorithm.",
+    "description": "Second paragraph of the v2 announcement."
+  },
+  "v2_notice_never_again": {
+    "message": "Don't show again",
+    "description": "Checkbox hiding the v2 announcement for good."
+  },
+  "v2_notice_close": {
+    "message": "Close",
+    "description": "Button closing the v2 announcement."
   }
 }

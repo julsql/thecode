@@ -133,7 +133,7 @@
     <string name="algo_now_v1">Old algorithm. For a site whose password has not been changed yet.</string>
     <string name="algo_now_v2">Current algorithm.</string>
     <!-- Annonce du passage a la v2. -->
-    <string name="v2_notice">Passwords are now computed with a new algorithm (v2). The ones already set on your sites came from the old one and have not changed. Autofill uses the new one: for a site you have not updated yet, generate with the old algorithm (v1) from the menu, or move the entry to v2 from the vault once you have changed the password on the site.</string>
+    <string name="v2_notice">Passwords are now computed with a new algorithm (v2). Please migrate your passwords to this new algorithm. Autofill uses the new one: for a site you have not updated yet, generate the password in v1 from the app with the old algorithm.</string>
     <string name="v2_notice_title">New algorithm</string>
     <string name="v2_notice_never_again">Don\'t show again</string>
     <string name="v2_notice_close">Close</string>

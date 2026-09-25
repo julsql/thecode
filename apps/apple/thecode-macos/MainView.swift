@@ -153,18 +153,16 @@ struct MainView: View {
 
     private var v2NoticeSheet: some View {
         let intro = L10n.t(
-            "Les mots de passe se calculent désormais avec un nouvel algorithme (v2). Ceux "
-                + "déjà posés sur vos sites viennent de l'ancien et n'ont pas changé.",
-            "Passwords are now computed with a new algorithm (v2). The ones already set on "
-                + "your sites came from the old one and have not changed.")
+            "Les mots de passe se calculent désormais avec un nouvel algorithme "
+                + "(v2). Veuillez migrer vos mots de passe dans ce nouvel algorithme.",
+            "Passwords are now computed with a new algorithm (v2). Please migrate "
+                + "your passwords to this new algorithm.")
         let detail = L10n.t(
-            "Le remplissage automatique utilise le nouveau. Pour un site que vous n'avez pas "
-                + "encore mis à jour, générez avec l'ancien (v1) depuis la barre d'outils, ou "
-                + "passez l'entrée en v2 depuis le carnet après avoir changé le mot de passe "
-                + "sur le site.",
-            "Autofill uses the new one. For a site you have not updated yet, generate with "
-                + "the old algorithm (v1) from the toolbar, or move the entry to v2 from the "
-                + "vault once you have changed the password on the site.")
+            "Le remplissage automatique utilise le nouveau : pour un site que vous "
+                + "n'avez pas encore mis à jour, générez le mot de passe en v1 depuis "
+                + "l'application avec l'ancien algorithme.",
+            "Autofill uses the new one: for a site you have not updated yet, "
+                + "generate the password in v1 from the app with the old algorithm.")
 
         // Pas de ScrollView : elle n'a pas de hauteur propre, ce qui obligeait à
         // fixer celle de la fenêtre — d'où un grand vide sous un texte court.

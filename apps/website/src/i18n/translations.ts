@@ -165,6 +165,13 @@ export const translations = {
     gen_numbers: "Numbers",
     gen_section_result: "Generated password",
     gen_placeholder_result: "Fill in the fields to generate a password",
+    v2_notice_title: "New algorithm",
+    v2_notice_intro:
+      "Passwords are now computed with a new algorithm (v2). Please migrate your passwords to this new algorithm.",
+    v2_notice_detail:
+      "Autofill uses the new one: for a site you have not updated yet, generate the password in v1 from the website with the old algorithm.",
+    v2_notice_never_again: "Don't show again",
+    v2_notice_close: "Close",
     gen_security_label: "Security",
     sec_none: "None",
     sec_veryweak: "Very weak",
@@ -480,6 +487,13 @@ export const translations = {
     gen_numbers: "Chiffres",
     gen_section_result: "Mot de passe généré",
     gen_placeholder_result: "Remplissez les champs pour générer un mot de passe",
+    v2_notice_title: "Nouvel algorithme",
+    v2_notice_intro:
+      "Les mots de passe se calculent désormais avec un nouvel algorithme (v2). Veuillez migrer vos mots de passe dans ce nouvel algorithme.",
+    v2_notice_detail:
+      "Le remplissage automatique utilise le nouveau : pour un site que vous n'avez pas encore mis à jour, générez le mot de passe en v1 depuis le site avec l'ancien algorithme.",
+    v2_notice_never_again: "Ne plus afficher",
+    v2_notice_close: "Fermer",
     gen_security_label: "Sécurité",
     sec_none: "Aucune",
     sec_veryweak: "Très faible",

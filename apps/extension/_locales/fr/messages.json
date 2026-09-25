@@ -6,5 +6,25 @@
   "extension_description": {
     "message": "Générez des mots de passe sécurisés et uniques pour chaque site à partir d'une seule clé secrète. Aucun stockage, zéro risque.\n",
     "description": "Description of what the extension does."
+  },
+  "v2_notice_title": {
+    "message": "Nouvel algorithme",
+    "description": "Title of the v2 announcement."
+  },
+  "v2_notice_intro": {
+    "message": "Les mots de passe se calculent désormais avec un nouvel algorithme (v2). Veuillez migrer vos mots de passe dans ce nouvel algorithme.",
+    "description": "First paragraph of the v2 announcement."
+  },
+  "v2_notice_detail": {
+    "message": "Le remplissage automatique utilise le nouveau : pour un site que vous n'avez pas encore mis à jour, générez le mot de passe en v1 depuis l'extension avec l'ancien algorithme.",
+    "description": "Second paragraph of the v2 announcement."
+  },
+  "v2_notice_never_again": {
+    "message": "Ne plus afficher",
+    "description": "Checkbox hiding the v2 announcement for good."
+  },
+  "v2_notice_close": {
+    "message": "Fermer",
+    "description": "Button closing the v2 announcement."
   }
 }

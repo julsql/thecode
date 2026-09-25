@@ -133,7 +133,7 @@
     <string name="algo_now_v1">Ancien algorithme. Pour un site dont le mot de passe n\'a pas encore été changé.</string>
     <string name="algo_now_v2">Algorithme actuel.</string>
     <!-- Annonce du passage a la v2. -->
-    <string name="v2_notice">Les mots de passe se calculent désormais avec un nouvel algorithme (v2). Ceux déjà posés sur vos sites viennent de l\'ancien et n\'ont pas changé. Le remplissage automatique utilise le nouveau : pour un site que vous n\'avez pas encore mis à jour, générez avec l\'ancien (v1) depuis le menu, ou passez l\'entrée en v2 depuis le carnet après avoir changé le mot de passe sur le site.</string>
+    <string name="v2_notice">Les mots de passe se calculent désormais avec un nouvel algorithme (v2). Veuillez migrer vos mots de passe dans ce nouvel algorithme. Le remplissage automatique utilise le nouveau : pour un site que vous n\'avez pas encore mis à jour, générez le mot de passe en v1 depuis l\'application avec l\'ancien algorithme.</string>
     <string name="v2_notice_title">Nouvel algorithme</string>
     <string name="v2_notice_never_again">Ne plus afficher</string>
     <string name="v2_notice_close">Fermer</string>
