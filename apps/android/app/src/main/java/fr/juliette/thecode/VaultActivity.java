@@ -617,7 +617,7 @@ public class VaultActivity extends AppCompatActivity {
             ((TextView) card.findViewById(R.id.entryDomains)).setText(domainsOf(entry));
             ((TextView) card.findViewById(R.id.entrySettings)).setText(
                     getString(R.string.vault_entry_settings,
-                            entry.length, charsetSummary(entry), entry.v, entry.counter));
+                            entry.length, charsetSummary(entry), entry.counter));
 
             com.google.android.material.button.MaterialButton action =
                     card.findViewById(R.id.entryAction);
@@ -715,7 +715,7 @@ public class VaultActivity extends AppCompatActivity {
                 .setTitle(label)
                 .setMessage(getString(R.string.vault_detail,
                         entry.siteKey, domainsOf(entry), loginOf(entry), entry.length,
-                        charsetSummary(entry), entry.counter, entry.v,
+                        charsetSummary(entry), entry.counter,
                         entry.updatedAt == null ? "" : entry.updatedAt))
                 .setPositiveButton(R.string.vault_renew, (d, w) -> proposeRenew(entry))
                 .setNegativeButton(R.string.vault_delete, (d, w) -> confirmDelete(entry, label))

@@ -941,8 +941,8 @@ public class MainActivity extends AppCompatActivity {
         VaultEntry entry = vault.upsertAccount(site, login, (int) lengthSlider.getValue(),
                 minSwitch.isChecked(), majSwitch.isChecked(),
                 symSwitch.isChecked(), chiSwitch.isChecked());
-        // Le carnet n'admet que la v2 : upsert l'impose, même depuis l'écran
-        // réglé en v1. Ne jamais redescendre une entrée existante.
+        // Une entrée du carnet dérive toujours en v2, même enregistrée depuis
+        // l'écran réglé en v1 : elle ne porte aucune version.
         vault.save(this);
 
         // Une entrée existante garde son siteKey : le réécrire changerait un

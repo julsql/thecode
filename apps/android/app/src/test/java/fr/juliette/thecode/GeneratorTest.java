@@ -8,7 +8,8 @@ import org.junit.Test;
 import fr.juliette.thecode.vault.SiteResolution;
 
 /**
- * Le point de passage entre le carnet et les deux versions de l'algorithme.
+ * Le point de passage entre le carnet (toujours v2) et la génération
+ * ponctuelle d'un site inconnu (v1).
  *
  * Appliquer la mauvaise version rendrait un mot de passe faux sans rien
  * signaler — le pire des échecs pour ce produit.
@@ -38,7 +39,6 @@ public class GeneratorTest {
         // l'application ne savait pas faire.
         fr.juliette.thecode.vault.VaultEntry entry =
                 fr.juliette.thecode.vault.VaultEntry.create("google.com", null);
-        entry.v = 2;
         fr.juliette.thecode.vault.Vault vault = new fr.juliette.thecode.vault.Vault();
         vault.entries.add(entry);
 

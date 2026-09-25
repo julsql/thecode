@@ -22,8 +22,8 @@ public class RenewTest {
     }
 
     @Test
-    public void entriesAreBornInV2() {
-        assertEquals(2, VaultEntry.create("google.com", null).v);
+    public void entriesDeriveInV2() {
+        assertEquals(2, SiteResolution.of(VaultEntry.create("google.com", null)).v);
     }
 
     @Test
@@ -46,7 +46,6 @@ public class RenewTest {
         preview.counter = 99;
 
         assertEquals(1, entry.counter);
-        assertEquals(2, entry.v);
     }
 
     @Test
@@ -66,7 +65,6 @@ public class RenewTest {
         assertEquals(entry.domains, copy.domains);
         assertEquals(entry.length, copy.length);
         assertEquals(entry.symbols, copy.symbols);
-        assertEquals(entry.v, copy.v);
         assertEquals(entry.counter, copy.counter);
 
         // Listes distinctes : sinon modifier la copie modifierait l'original.

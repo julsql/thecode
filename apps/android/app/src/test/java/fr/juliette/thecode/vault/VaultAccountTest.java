@@ -26,7 +26,7 @@ public class VaultAccountTest {
         assertEquals(1, vault.entries.size());
         assertEquals("github.com", entry.siteKey);
         assertEquals("julsql", entry.login);
-        assertEquals(2, entry.v);
+        assertEquals(2, SiteResolution.of(entry).v);
         assertEquals(24, entry.length);
     }
 

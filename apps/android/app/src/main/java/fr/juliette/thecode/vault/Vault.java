@@ -102,7 +102,6 @@ public final class Vault {
             java.util.Collections.sort(entry.domains);
         }
 
-        entry.v = VaultEntry.VERSION;
         entry.length = length;
         entry.lower = lower;
         entry.upper = upper;
@@ -170,7 +169,6 @@ public final class Vault {
             entries.add(entry);
         }
 
-        entry.v = VaultEntry.VERSION;
         entry.length = length;
         entry.lower = lower;
         entry.upper = upper;
@@ -232,7 +230,6 @@ public final class Vault {
         merged.upper = winner.upper;
         merged.symbols = winner.symbols;
         merged.numbers = winner.numbers;
-        merged.v = winner.v;
 
         // siteKey produit le mot de passe : on ne choisit jamais à la place de
         // l'utilisateur. On garde celui de gauche et on signale.
@@ -375,11 +372,7 @@ public final class Vault {
         v.updatedAt = root.optString("updatedAt", nowIso());
         JSONArray arr = root.getJSONArray("entries");
         for (int i = 0; i < arr.length(); i++) {
-            VaultEntry entry = VaultEntry.fromJson(arr.getJSONObject(i));
-            // Une entrée hors v2 est écartée sans erreur : refuser tout le
-            // carnet pour elle ferait perdre les autres. Elle disparaît du
-            // carnet local à la prochaine écriture.
-            if (entry.isSupported()) v.entries.add(entry);
+            v.entries.add(VaultEntry.fromJson(arr.getJSONObject(i)));
         }
         return v;
     }
@@ -398,10 +391,7 @@ public final class Vault {
         root.put("schema", SCHEMA);
         root.put("updatedAt", updatedAt);
         JSONArray arr = new JSONArray();
-        // Le carnet n'écrit que de la v2, quoi qu'on ait mis dans la liste.
-        for (VaultEntry e : entries) {
-            if (e.isSupported()) arr.put(e.toJson());
-        }
+        for (VaultEntry e : entries) arr.put(e.toJson());
         root.put("entries", arr);
         return root;
     }

@@ -8,9 +8,8 @@ import fr.juliette.thecode.vault.SiteResolution;
 /**
  * Applique la bonne version de l'algorithme à une résolution du carnet.
  *
- * Les deux versions coexistent, entrée par entrée : une entrée existante reste
- * en v1 et son mot de passe ne change pas, une entrée récente naît en v2. Sans
- * ce point de passage, chaque écran devrait s'en souvenir.
+ * Une entrée du carnet dérive toujours en v2 ; seul le repli pour un site
+ * inconnu, génération ponctuelle hors carnet, reste en v1.
  *
  * Spécification : shared/spec/algo-v2.md
  */
@@ -48,9 +47,8 @@ public final class Generator {
             return CodeV2.getCode(code, masterKey, resolution.siteKey,
                     resolution.login, resolution.counter, masterV2);
         }
-        // v1 : ni login ni compteur n'entrent dans la dérivation. C'est
-        // précisément ce que la v2 corrige, mais le mot de passe d'une entrée
-        // existante ne doit pas changer.
+        // v1, génération ponctuelle : ni login ni compteur n'entrent dans la
+        // dérivation. C'est précisément ce que la v2 corrige.
         return code.getCode(masterKey, resolution.siteKey);
     }
 }

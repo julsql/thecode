@@ -18,6 +18,10 @@ import java.util.UUID;
  * rejouer une dérivation. Une fuite révèle les sites et les identifiants, pas
  * les mots de passe.
  *
+ * Aucune version d'algorithme : toute entrée du carnet dérive en v2. La v1
+ * ne subsiste qu'en génération ponctuelle, hors carnet. Un « v » résiduel lu
+ * dans un carnet est ignoré et jamais réécrit : shared/spec/vault-merge.md.
+ *
  * Schéma : shared/vault.schema.json
  */
 public final class VaultEntry {
@@ -38,13 +42,6 @@ public final class VaultEntry {
     public boolean upper = true;
     public boolean symbols = true;
     public boolean numbers = true;
-    /**
-     * Seule version admise dans le carnet. La v1 ne subsiste qu'en génération
-     * ponctuelle, hors carnet : shared/spec/vault-merge.md.
-     */
-    public static final int VERSION = 2;
-
-    public int v = VERSION;
     /** Absent des entrées antérieures au champ : {@code updatedAt} en tient lieu. */
     @Nullable
     public String createdAt = null;
@@ -83,16 +80,10 @@ public final class VaultEntry {
         e.upper = other.upper;
         e.symbols = other.symbols;
         e.numbers = other.numbers;
-        e.v = other.v;
         e.createdAt = other.createdAt;
         e.updatedAt = other.updatedAt;
         e.deleted = other.deleted;
         return e;
-    }
-
-    /** Faux pour une entrée que le carnet écarte à la lecture et refuse à l'écriture. */
-    public boolean isSupported() {
-        return v == VERSION;
     }
 
     static VaultEntry fromJson(JSONObject o) throws JSONException {
@@ -114,7 +105,7 @@ public final class VaultEntry {
         e.upper = charset.getBoolean("upper");
         e.symbols = charset.getBoolean("symbols");
         e.numbers = charset.getBoolean("numbers");
-        e.v = o.getInt("v");
+        // Un « v » résiduel est toléré : jamais lu, donc jamais réécrit.
         e.createdAt = o.has("createdAt") && !o.isNull("createdAt")
                 ? o.getString("createdAt") : null;
         e.updatedAt = o.getString("updatedAt");
@@ -137,7 +128,6 @@ public final class VaultEntry {
         charset.put("symbols", symbols);
         charset.put("numbers", numbers);
         o.put("charset", charset);
-        o.put("v", v);
         // Absent quand inconnu, comme dans la forme canonique des autres clients.
         if (createdAt != null) o.put("createdAt", createdAt);
         o.put("updatedAt", updatedAt);

@@ -73,7 +73,7 @@
     <string name="fingerprint_label">Empreinte</string>
     <string name="vault_title">Carnet</string>
     <string name="vault_empty">Aucun site enregistré. Enregistrez-en un depuis l\'écran principal pour ne plus avoir à retenir ses réglages.</string>
-    <string name="vault_entry_settings">%1$d caractères, %2$s — v%3$d, compteur %4$d</string>
+    <string name="vault_entry_settings">%1$d caractères, %2$s — compteur %3$d</string>
 
     <!-- Synchronisation chiffrée (facultative). -->
     <string name="sync_action">Synchroniser</string>
@@ -177,7 +177,7 @@
     <string name="vault_lock_biometric_unavailable">Ni la biométrie ni le verrouillage de l\'écran ne sont disponibles. Configurez un verrouillage de l\'écran, ou effacez le carnet local.</string>
     <!-- Gestion du carnet : detail et suppression d'une entree. -->
     <string name="vault_entry_login_none">Sans identifiant</string>
-    <string name="vault_detail">Clé du site : %1$s\nDomaines : %2$s\nIdentifiant : %3$s\nLongueur : %4$d\nCaractères : %5$s\nCompteur : %6$d\nVersion : v%7$d\nMise à jour : %8$s</string>
+    <string name="vault_detail">Clé du site : %1$s\nDomaines : %2$s\nIdentifiant : %3$s\nLongueur : %4$d\nCaractères : %5$s\nCompteur : %6$d\nMise à jour : %7$s</string>
     <string name="vault_delete">Supprimer</string>
     <string name="vault_close">Fermer</string>
     <string name="vault_delete_title">Supprimer « %1$s » ?</string>

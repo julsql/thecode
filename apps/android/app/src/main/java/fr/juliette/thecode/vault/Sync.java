@@ -314,8 +314,6 @@ public final class Sync {
                         Base64Url.decode(row.getString("blob")));
                 VaultEntry entry = VaultEntry.fromJson(
                         new JSONObject(new String(plain, StandardCharsets.UTF_8)));
-                // Hors v2 : écartée, comme au chargement du carnet local.
-                if (!entry.isSupported()) continue;
                 // La pierre tombale du serveur fait foi même si l'entrée
                 // chiffrée est antérieure à la suppression.
                 entry.deleted = entry.deleted || row.optBoolean("deleted", false);
@@ -347,7 +345,6 @@ public final class Sync {
         try {
             JSONArray rows = new JSONArray();
             for (VaultEntry entry : entries) {
-                if (!entry.isSupported()) continue;
                 Transfer.Sealed sealed = Transfer.seal(key, entry.toJson().toString());
                 rows.put(new JSONObject()
                         .put("entry_id", entry.id)
