@@ -490,18 +490,13 @@ struct MainView: View {
         let site = siteName.trimmingCharacters(in: .whitespaces)
         guard !site.isEmpty else { return }
 
+        // Le carnet n'admet que la v2 : enregistrer depuis l'écran réglé en v1
+        // crée ou garde une entrée v2, jamais l'inverse.
         var vault = VaultStore.load()
-        var entry = vault.upsert(
+        let entry = vault.upsert(
             site: site, length: lengthNumber,
             charset: Charset(
                 lower: minState, upper: majState, symbols: symState, numbers: chiState))
-
-        // Enregistrer un mot de passe généré en v1 sous une entrée v2 donnerait
-        // un autre mot de passe à la relecture.
-        if let index = vault.entries.firstIndex(where: { $0.id == entry.id }) {
-            vault.entries[index].v = useV1 ? 1 : 2
-            entry = vault.entries[index]
-        }
 
         do {
             try VaultStore.save(vault)

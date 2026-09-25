@@ -209,15 +209,14 @@ struct VaultScreen: View {
     }
 
 
-    // MARK: - Renouvellement et migration
+    // MARK: - Renouvellement
 
-    /// Ce qui est proposé sur une entrée, et ce qu'elle deviendrait.
+    /// Le renouvellement proposé sur une entrée, et ce qu'elle deviendrait.
     ///
-    /// Les deux actions ne sont jamais offertes ensemble : le compteur n'entre
-    /// pas dans la dérivation v1, et une entrée v2 n'a plus rien à migrer.
+    /// Le carnet n'admet que la v2 : il n'y a plus rien à migrer, seul le
+    /// compteur peut avancer.
     private struct PendingChange: Identifiable {
         let entry: VaultEntry
-        let isRenewal: Bool
         let before: String
         let after: String
 
@@ -225,9 +224,7 @@ struct VaultScreen: View {
 
         var title: String {
             let label = entry.label.flatMap { $0.isEmpty ? nil : $0 } ?? entry.siteKey
-            return isRenewal
-                ? L10n.t("Renouveler « \(label) »", "Renew \"\(label)\"")
-                : L10n.t("Passer « \(label) » en v2", "Move \"\(label)\" to v2")
+            return L10n.t("Renouveler « \(label) »", "Renew \"\(label)\"")
         }
     }
 
@@ -254,14 +251,13 @@ struct VaultScreen: View {
         // il ne renvoie nulle part : les règles de l'App Store interdisent
         // d'orienter vers un paiement hors de leur système, et une app qui
         // vend depuis un écran de carnet se ferait refuser.
-        if entry.v >= 2 && !renewAllowed {
+        if !renewAllowed {
             status = L10n.t(
                 "Le renouvellement n'est pas activé sur ce compte.",
                 "Renewal is not enabled on this account.")
             return
         }
 
-        let isRenewal = entry.v >= 2
         isWorking = true
         status = L10n.t("Calcul en cours…", "Computing…")
 
@@ -276,14 +272,13 @@ struct VaultScreen: View {
             // Sur une copie : modifier l'entrée puis renoncer laisserait la
             // porte ouverte à un carnet enregistré à mi-chemin.
             var preview = entry
-            if isRenewal { preview.counter += 1 } else { preview.v = 2 }
+            preview.counter += 1
             let after = PasswordUtils().generatePassword(
                 for: SiteResolution(entry: preview), masterKey: masterKey
             ).code
 
             await MainActor.run {
-                pending = PendingChange(
-                    entry: entry, isRenewal: isRenewal, before: before, after: after)
+                pending = PendingChange(entry: entry, before: before, after: after)
                 isWorking = false
                 status = nil
             }
@@ -295,11 +290,7 @@ struct VaultScreen: View {
             return
         }
 
-        if change.isRenewal {
-            vault.entries[index].counter += 1
-        } else {
-            vault.entries[index].v = 2
-        }
+        vault.entries[index].counter += 1
         // Sans réhorodatage, la fusion ferait gagner l'autre appareil et le
         // changement serait perdu à la synchronisation suivante.
         vault.entries[index].updatedAt = Vault.nowIso()
@@ -313,12 +304,9 @@ struct VaultScreen: View {
         }
 
         let label = change.entry.label.flatMap { $0.isEmpty ? nil : $0 } ?? change.entry.siteKey
-        status =
-            change.isRenewal
-            ? L10n.t(
-                "« \(label) » renouvelée, compteur \(vault.entries[index].counter).",
-                "\"\(label)\" renewed, counter \(vault.entries[index].counter).")
-            : L10n.t("« \(label) » est en v2.", "\"\(label)\" is now in v2.")
+        status = L10n.t(
+            "« \(label) » renouvelée, compteur \(vault.entries[index].counter).",
+            "\"\(label)\" renewed, counter \(vault.entries[index].counter).")
     }
 
     // MARK: - Actions

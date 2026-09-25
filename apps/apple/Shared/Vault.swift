@@ -28,6 +28,10 @@ public struct Charset: Codable, Equatable {
 }
 
 public struct VaultEntry: Codable, Equatable {
+    /// Seule version admise au carnet. La v1 ne subsiste qu'en génération
+    /// ponctuelle, hors carnet : voir shared/spec/vault-merge.md.
+    public static let version = 2
+
     public var id: String
     public var label: String?
     /// Chaîne réellement passée à la dérivation. Figée à la création : elle ne
@@ -39,6 +43,8 @@ public struct VaultEntry: Codable, Equatable {
     public var counter: Int
     public var length: Int
     public var charset: Charset
+    /// Toujours `VaultEntry.version` dans un carnet : toute autre valeur est
+    /// écartée à la lecture et refusée à l'écriture.
     public var v: Int
     public var notes: String?
     public var updatedAt: String
@@ -46,7 +52,7 @@ public struct VaultEntry: Codable, Equatable {
 
     public init(siteKey: String, domains: [String]? = nil, label: String? = nil,
                 login: String? = nil, length: Int = 20,
-                charset: Charset = Charset(), v: Int = 2) {
+                charset: Charset = Charset()) {
         self.id = UUID().uuidString.lowercased()
         self.label = label
         self.siteKey = siteKey
@@ -55,9 +61,12 @@ public struct VaultEntry: Codable, Equatable {
         self.counter = 1
         self.length = length
         self.charset = charset
-        self.v = v
+        self.v = VaultEntry.version
         self.updatedAt = Vault.nowIso()
     }
+
+    /// Vrai quand l'entrée a sa place au carnet.
+    public var isStorable: Bool { v == VaultEntry.version }
 
     func covers(domain: String) -> Bool {
         domains.contains { $0.lowercased() == domain.lowercased() }
@@ -99,7 +108,51 @@ public struct Vault: Codable {
     public init(entries: [VaultEntry] = []) {
         self.schema = Vault.schemaVersion
         self.updatedAt = Vault.nowIso()
-        self.entries = entries
+        self.entries = entries.filter(\.isStorable)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case schema, updatedAt, entries
+    }
+
+    /// Ce qu'il faut lire d'une entrée pour décider si elle a sa place.
+    private struct VersionProbe: Decodable {
+        let v: Int?
+    }
+
+    /// Lecture tolérante : une entrée `v ≠ 2` est écartée sans erreur.
+    ///
+    /// Le décodage synthétisé échouait sur tout le carnet pour une seule
+    /// entrée refusée, et le chargement retombe alors sur un carnet vide : la
+    /// prochaine écriture aurait effacé toutes les autres. Une entrée v2
+    /// malformée, elle, reste une erreur — la taire masquerait une corruption.
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        schema = try container.decode(Int.self, forKey: .schema)
+        updatedAt = try container.decodeIfPresent(String.self, forKey: .updatedAt)
+
+        // Deux passes sur le même tableau : un conteneur non indexé ne revient
+        // pas en arrière, et il faut connaître `v` avant de décoder l'entrée.
+        var probes = try container.nestedUnkeyedContainer(forKey: .entries)
+        var items = try container.nestedUnkeyedContainer(forKey: .entries)
+        var kept: [VaultEntry] = []
+        while !probes.isAtEnd {
+            let probe = try probes.decode(VersionProbe.self)
+            if probe.v == VaultEntry.version {
+                kept.append(try items.decode(VaultEntry.self))
+            } else {
+                _ = try items.decode(VersionProbe.self)
+            }
+        }
+        entries = kept
+    }
+
+    /// Écriture : une entrée `v ≠ 2` ne quitte jamais la mémoire.
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(schema, forKey: .schema)
+        try container.encodeIfPresent(updatedAt, forKey: .updatedAt)
+        try container.encode(entries.filter(\.isStorable), forKey: .entries)
     }
 
     static func nowIso() -> String {
@@ -132,7 +185,9 @@ public struct Vault: Codable {
     /// au site saisi pour prévenir quand les deux diffèrent.
     @discardableResult
     public mutating func upsert(site: String, length: Int, charset: Charset) -> VaultEntry {
-        if let index = entries.firstIndex(where: { $0.deleted != true && $0.covers(domain: site) }) {
+        if let index = entries.firstIndex(where: {
+            $0.isStorable && $0.deleted != true && $0.covers(domain: site)
+        }) {
             entries[index].length = length
             entries[index].charset = charset
             entries[index].updatedAt = Vault.nowIso()
@@ -149,9 +204,9 @@ public struct Vault: Codable {
     public static func merge(_ left: Vault, _ right: Vault) -> (Vault, [VaultConflict]) {
         var conflicts: [VaultConflict] = []
         var byId: [String: VaultEntry] = [:]
-        for entry in left.entries { byId[entry.id] = entry }
+        for entry in left.entries where entry.isStorable { byId[entry.id] = entry }
 
-        for incoming in right.entries {
+        for incoming in right.entries where incoming.isStorable {
             if let existing = byId[incoming.id] {
                 byId[incoming.id] = mergeEntry(existing, incoming, &conflicts)
             } else {
