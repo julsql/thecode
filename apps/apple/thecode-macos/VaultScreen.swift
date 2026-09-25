@@ -11,6 +11,7 @@
 //  n'a pas de barre de navigation, les actions vont dans une barre à elle.
 //
 
+import AppKit
 import SwiftUI
 
 struct VaultScreen: View {
@@ -33,6 +34,10 @@ struct VaultScreen: View {
     @State private var email = ""
     @State private var password = ""
 
+    /// Neuf à chaque présentation : aucun déverrouillage n'est mémorisé.
+    @StateObject private var lock = VaultLockController()
+    @State private var showLockSettings = false
+
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 12) {
@@ -41,21 +46,29 @@ struct VaultScreen: View {
 
                 Spacer()
 
-                if isWorking {
-                    ProgressView().controlSize(.small)
-                }
+                if lock.isUnlocked {
+                    if isWorking {
+                        ProgressView().controlSize(.small)
+                    }
 
-                if isLinked {
-                    Button(L10n.t("Délier", "Unlink"), action: unlink)
-                        .buttonStyle(.borderless)
-                }
+                    if isLinked {
+                        Button(L10n.t("Délier", "Unlink"), action: unlink)
+                            .buttonStyle(.borderless)
+                    }
 
-                Button(action: startSync) {
-                    Image(systemName: "arrow.triangle.2.circlepath")
+                    Button { showLockSettings = true } label: {
+                        Image(systemName: "lock")
+                    }
+                    .buttonStyle(.borderless)
+                    .help(L10n.t("Verrou du carnet", "Vault lock"))
+
+                    Button(action: startSync) {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                    }
+                    .buttonStyle(.borderless)
+                    .disabled(isWorking)
+                    .help(L10n.t("Synchroniser", "Sync"))
                 }
-                .buttonStyle(.borderless)
-                .disabled(isWorking)
-                .help(L10n.t("Synchroniser", "Sync"))
 
                 Button(L10n.t("Fermer", "Close")) { isPresented = false }
                     .keyboardShortcut(.cancelAction)
@@ -66,48 +79,13 @@ struct VaultScreen: View {
 
             Divider()
 
-            if let status {
-                Text(status)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
-                    .padding(.horizontal)
-                    .padding(.vertical, 8)
+            // Le verrou protège l'écran de gestion, pas les données : le
+            // remplissage et la génération lisent le carnet sans lui.
+            if lock.isUnlocked {
+                unlockedContent
+            } else {
+                VaultLockView(lock: lock)
             }
-
-            // La synchronisation est la principale raison de créer un compte,
-            // et rien ne le disait tant qu'aucun n'était lié. Aucune mention
-            // d'offre ni de prix : les règles des magasins d'applications
-            // interdisent d'orienter vers un paiement.
-            if !isLinked {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(L10n.t("Synchronisez votre carnet", "Sync your vault"))
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-
-                    Text(
-                        L10n.t(
-                            "Gardez votre carnet à jour entre vos appareils. Il est chiffré "
-                                + "sur cet appareil avant d'être envoyé : le serveur ne peut "
-                                + "lire ni vos sites, ni vos identifiants.",
-                            "Keep your vault up to date across your devices. It is encrypted "
-                                + "on this device before it is sent: the server can read "
-                                + "neither your sites nor your logins.")
-                    )
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                    Link(L10n.t("Créer un compte", "Create an account"), destination: accountURL)
-                        .font(.footnote)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 20)
-                .padding(.bottom, 12)
-            }
-
-            VaultView(vault: vault, onSelect: propose)
         }
         .frame(minWidth: 420, minHeight: 440)
         .alert(pending?.title ?? "", isPresented: Binding(
@@ -151,6 +129,76 @@ struct VaultScreen: View {
             TransferView(masterKey: masterKey, isPresented: $showTransfer)
                 .onDisappear { vault = VaultStore.load() }
         }
+        .sheet(isPresented: $showLockSettings) {
+            VaultLockSettingsView(lock: lock) { showLockSettings = false }
+        }
+        // Session : jusqu'à la fermeture de la feuille ou le passage à une
+        // autre app, comme la clef de l'écran principal.
+        .onReceive(
+            NotificationCenter.default.publisher(for: NSApplication.didResignActiveNotification)
+        ) { _ in
+            lock.lock()
+        }
+        .onDisappear { lock.lock() }
+        .onChange(of: lock.isUnlocked) { _, unlocked in
+            if unlocked {
+                // Un oubli a pu effacer le carnet entre-temps.
+                vault = VaultStore.load()
+            } else {
+                // Rien de ce qui était ouvert ne doit rester par-dessus le verrou.
+                showSignIn = false
+                showTransfer = false
+                showLockSettings = false
+                pending = nil
+                status = nil
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var unlockedContent: some View {
+        if let status {
+            Text(status)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+        }
+
+        // La synchronisation est la principale raison de créer un compte,
+        // et rien ne le disait tant qu'aucun n'était lié. Aucune mention
+        // d'offre ni de prix : les règles des magasins d'applications
+        // interdisent d'orienter vers un paiement.
+        if !isLinked {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(L10n.t("Synchronisez votre carnet", "Sync your vault"))
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+
+                Text(
+                    L10n.t(
+                        "Gardez votre carnet à jour entre vos appareils. Il est chiffré "
+                            + "sur cet appareil avant d'être envoyé : le serveur ne peut "
+                            + "lire ni vos sites, ni vos identifiants.",
+                        "Keep your vault up to date across your devices. It is encrypted "
+                            + "on this device before it is sent: the server can read "
+                            + "neither your sites nor your logins.")
+                )
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+                Link(L10n.t("Créer un compte", "Create an account"), destination: accountURL)
+                    .font(.footnote)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 12)
+        }
+
+        VaultView(vault: vault, onSelect: propose)
     }
 
     /// La page du compte, dans la langue de l'application.

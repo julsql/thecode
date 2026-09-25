@@ -563,6 +563,7 @@
 			knownRegions = (
 				en,
 				Base,
+				fr,
 			);
 			mainGroup = 6D0D49372E8AC379003ABC8F;
 			minimizedProjectReferenceProxies = 1;
@@ -794,7 +795,7 @@
 				INFOPLIST_FILE = thecode/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = TheCode;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-				INFOPLIST_KEY_NSFaceIDUsageDescription = "Authentification pour afficher la clé du mot de passe";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Face ID protects your master key and your vault.";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -830,7 +831,7 @@
 				INFOPLIST_FILE = thecode/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = TheCode;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-				INFOPLIST_KEY_NSFaceIDUsageDescription = "Authentification pour afficher la clé du mot de passe";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Face ID protects your master key and your vault.";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";

@@ -29,51 +29,21 @@ struct VaultScreen: View {
     @State private var email = ""
     @State private var password = ""
 
+    /// Neuf à chaque présentation : aucun déverrouillage n'est mémorisé.
+    @StateObject private var lock = VaultLockController()
+    @State private var showLockSettings = false
+    @Environment(\.scenePhase) private var scenePhase
+
     var body: some View {
         NavigationView {
-            VStack(spacing: 0) {
-                if let status {
-                    Text(status)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .frame(maxWidth: .infinity)
-                        .padding(.horizontal)
-                        .padding(.vertical, 8)
+            Group {
+                // Le verrou protège l'écran de gestion, pas les données : le
+                // remplissage et la génération lisent le carnet sans lui.
+                if lock.isUnlocked {
+                    unlockedContent
+                } else {
+                    VaultLockView(lock: lock)
                 }
-
-                // La synchronisation est la principale raison de créer un
-                // compte, et rien ne le disait tant qu'aucun n'était lié.
-                // Aucune mention d'offre ni de prix : les règles de l'App
-                // Store interdisent d'orienter vers un paiement.
-                if !isLinked {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(L10n.t("Synchronisez votre carnet", "Sync your vault"))
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-
-                        Text(
-                            L10n.t(
-                                "Gardez votre carnet à jour entre vos appareils. Il est "
-                                    + "chiffré sur cet appareil avant d'être envoyé : le "
-                                    + "serveur ne peut lire ni vos sites, ni vos identifiants.",
-                                "Keep your vault up to date across your devices. It is "
-                                    + "encrypted on this device before it is sent: the server "
-                                    + "can read neither your sites nor your logins.")
-                        )
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                        Link(L10n.t("Créer un compte", "Create an account"), destination: accountURL)
-                            .font(.footnote)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal)
-                    .padding(.vertical, 10)
-                }
-
-                VaultView(vault: vault, onSelect: propose)
             }
             .navigationBarTitle(L10n.t("Carnet", "Vault"), displayMode: .inline)
             .toolbar {
@@ -81,21 +51,9 @@ struct VaultScreen: View {
                     Button(L10n.t("Fermer", "Close")) { isPresented = false }
                 }
                 ToolbarItemGroup(placement: .navigationBarTrailing) {
-                    if isLinked {
-                        Button(L10n.t("Délier", "Unlink"), action: unlink)
+                    if lock.isUnlocked {
+                        trailingActions
                     }
-                    Button(L10n.t("Transférer", "Transfer")) { showTransfer = true }
-                        .buttonStyle(.borderless)
-
-                    Button(action: startSync) {
-                        if isWorking {
-                            ProgressView()
-                        } else {
-                            Image(systemName: "arrow.triangle.2.circlepath")
-                        }
-                    }
-                    .disabled(isWorking)
-                    .accessibilityLabel(L10n.t("Synchroniser", "Sync"))
                 }
             }
             .alert(pending?.title ?? "", isPresented: Binding(
@@ -139,6 +97,99 @@ struct VaultScreen: View {
             TransferView(masterKey: masterKey, isPresented: $showTransfer)
                 .onDisappear { vault = VaultStore.load() }
         }
+        .sheet(isPresented: $showLockSettings) {
+            VaultLockSettingsView(lock: lock) { showLockSettings = false }
+        }
+        }
+        // Session : jusqu'à la sortie de l'écran ou la mise en arrière-plan.
+        // Pas sur `.inactive`, que Face ID déclenche lui-même en s'affichant.
+        .onChange(of: scenePhase) { phase in
+            if phase == .background { lock.lock() }
+        }
+        .onDisappear { lock.lock() }
+        .onChange(of: lock.isUnlocked) { unlocked in
+            if unlocked {
+                // Un oubli a pu effacer le carnet entre-temps.
+                vault = VaultStore.load()
+            } else {
+                // Rien de ce qui était ouvert ne doit rester par-dessus le verrou.
+                showSignIn = false
+                showTransfer = false
+                showLockSettings = false
+                pending = nil
+                status = nil
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var trailingActions: some View {
+        if isLinked {
+            Button(L10n.t("Délier", "Unlink"), action: unlink)
+        }
+        Button(L10n.t("Transférer", "Transfer")) { showTransfer = true }
+            .buttonStyle(.borderless)
+
+        Button { showLockSettings = true } label: {
+            Image(systemName: "lock")
+        }
+        .accessibilityLabel(L10n.t("Verrou du carnet", "Vault lock"))
+
+        Button(action: startSync) {
+            if isWorking {
+                ProgressView()
+            } else {
+                Image(systemName: "arrow.triangle.2.circlepath")
+            }
+        }
+        .disabled(isWorking)
+        .accessibilityLabel(L10n.t("Synchroniser", "Sync"))
+    }
+
+    private var unlockedContent: some View {
+        VStack(spacing: 0) {
+            if let status {
+                Text(status)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
+            }
+
+            // La synchronisation est la principale raison de créer un
+            // compte, et rien ne le disait tant qu'aucun n'était lié.
+            // Aucune mention d'offre ni de prix : les règles de l'App
+            // Store interdisent d'orienter vers un paiement.
+            if !isLinked {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(L10n.t("Synchronisez votre carnet", "Sync your vault"))
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+
+                    Text(
+                        L10n.t(
+                            "Gardez votre carnet à jour entre vos appareils. Il est "
+                                + "chiffré sur cet appareil avant d'être envoyé : le "
+                                + "serveur ne peut lire ni vos sites, ni vos identifiants.",
+                            "Keep your vault up to date across your devices. It is "
+                                + "encrypted on this device before it is sent: the server "
+                                + "can read neither your sites nor your logins.")
+                    )
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                    Link(L10n.t("Créer un compte", "Create an account"), destination: accountURL)
+                        .font(.footnote)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal)
+                .padding(.vertical, 10)
+            }
+
+            VaultView(vault: vault, onSelect: propose)
         }
     }
 

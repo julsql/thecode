@@ -1,0 +1,2 @@
+/* Face ID : clef de l'écran principal et verrou du carnet. */
+"NSFaceIDUsageDescription" = "Face ID protège votre clef maîtresse et votre carnet.";
