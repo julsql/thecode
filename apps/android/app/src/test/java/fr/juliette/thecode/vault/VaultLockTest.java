@@ -112,6 +112,63 @@ public class VaultLockTest {
     }
 
     @Test
+    public void leavingOutsideSystemAuthLocksImmediately() {
+        lock.chooseBiometric();
+        assertTrue(lock.onLeave());
+        assertEquals(VaultLock.State.LOCKED, lock.state());
+    }
+
+    @Test
+    public void deviceCredentialFallbackUnlocksDespiteLeavingDuringThePrompt() {
+        lock.chooseBiometric();
+        lock.lock();
+
+        lock.beginSystemAuth();
+        // L'écran du code de l'appareil fait quitter l'activité.
+        assertFalse(lock.onLeave());
+        assertFalse(lock.endSystemAuth(true));
+        lock.unlock(VaultLock.Method.BIOMETRIC);
+
+        assertEquals(VaultLock.State.UNLOCKED, lock.state());
+        assertFalse(lock.isSystemAuthInProgress());
+    }
+
+    @Test
+    public void switchingMethodSurvivesTheDeviceCredentialScreen() {
+        lock.choosePassword(VaultPassword.hash("vault-pass".toCharArray()));
+
+        lock.beginSystemAuth();
+        assertFalse(lock.onLeave());
+        assertTrue(lock.isUnlocked());
+        lock.endSystemAuth(true);
+        lock.chooseBiometric();
+
+        assertEquals(VaultLock.Method.BIOMETRIC, lock.method());
+        assertTrue(lock.isUnlocked());
+    }
+
+    @Test
+    public void failedOrCancelledAuthAppliesTheDeferredLock() {
+        lock.chooseBiometric();
+        lock.beginSystemAuth();
+        lock.onLeave();
+
+        assertTrue(lock.endSystemAuth(false));
+        assertEquals(VaultLock.State.LOCKED, lock.state());
+    }
+
+    @Test
+    public void cancelWithoutLeavingKeepsTheCurrentState() {
+        lock.chooseBiometric();
+        lock.beginSystemAuth();
+
+        assertFalse(lock.endSystemAuth(false));
+        assertTrue(lock.isUnlocked());
+        // Plus d'auth en cours : la sortie suivante reverrouille.
+        assertTrue(lock.onLeave());
+    }
+
+    @Test
     public void forgetResetsToSetup() {
         lock.choosePassword(VaultPassword.hash("vault-pass".toCharArray()));
         lock.lock();

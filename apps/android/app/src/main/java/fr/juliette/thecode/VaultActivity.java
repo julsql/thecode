@@ -58,7 +58,6 @@ public class VaultActivity extends AppCompatActivity {
     private Preferences preferences;
     /** Verrou de l'écran (shared/spec/vault-lock.md) : ouvert en mémoire seulement. */
     private VaultLock lock;
-    private boolean authInFlight = false;
     /**
      * Incrémenté à chaque reverrouillage : un calcul PBKDF2 lancé avant que
      * l'écran soit quitté ne doit pas le rouvrir en revenant.
@@ -96,8 +95,10 @@ public class VaultActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         // Pas de déverrouillage mémorisé : quitter l'écran ou passer en
-        // arrière-plan referme le carnet.
-        lock.lock();
+        // arrière-plan referme le carnet. Sauf pendant notre propre invite :
+        // le code de l'appareil s'ouvre dans une autre activité, le verrou
+        // est alors différé jusqu'à l'issue de l'auth.
+        lock.onLeave();
         lockEpoch++;
         dismissOpenDialog();
         hideContent();
@@ -127,13 +128,13 @@ public class VaultActivity extends AppCompatActivity {
             case LOCKED:
                 hideContent();
                 findViewById(R.id.vaultForgotAction).setVisibility(View.VISIBLE);
-                if (!authInFlight && openDialog == null) promptUnlock();
+                if (!lock.isSystemAuthInProgress() && openDialog == null) promptUnlock();
                 return;
             case SETUP:
             default:
                 hideContent();
                 findViewById(R.id.vaultForgotAction).setVisibility(View.GONE);
-                if (!authInFlight && openDialog == null) startSetup();
+                if (!lock.isSystemAuthInProgress() && openDialog == null) startSetup();
         }
     }
 
@@ -210,23 +211,35 @@ public class VaultActivity extends AppCompatActivity {
     }
 
     private void runBiometric(Runnable onSuccess) {
-        if (authInFlight) return;
-        authInFlight = true;
+        if (lock.isSystemAuthInProgress()) return;
+        // Posé avant authenticate() : le repli sur le code de l'appareil
+        // peut déclencher onStop avant tout rappel.
+        lock.beginSystemAuth();
         BiometricPrompt prompt = new BiometricPrompt(this,
                 ContextCompat.getMainExecutor(this),
                 new BiometricPrompt.AuthenticationCallback() {
                     @Override
                     public void onAuthenticationSucceeded(
                             @NonNull BiometricPrompt.AuthenticationResult result) {
-                        authInFlight = false;
+                        lock.endSystemAuth(true);
                         onSuccess.run();
                     }
 
                     @Override
                     public void onAuthenticationError(int code, @NonNull CharSequence message) {
                         // L'écran reste verrouillé, avec de quoi réessayer ou
-                        // effacer le carnet.
-                        authInFlight = false;
+                        // effacer le carnet. Si on l'a quitté pendant l'invite,
+                        // le verrou différé s'applique maintenant.
+                        if (lock.endSystemAuth(false)) {
+                            dismissOpenDialog();
+                            // Écran encore en arrière-plan : onStart s'en chargera.
+                            if (!isFinishing() && getLifecycle().getCurrentState()
+                                    .isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) {
+                                applyLockState();
+                            } else {
+                                hideContent();
+                            }
+                        }
                     }
                 });
 
@@ -357,9 +370,8 @@ public class VaultActivity extends AppCompatActivity {
             if (biometricAvailable()) {
                 labels.add(getString(R.string.vault_lock_switch_biometric));
                 actions.add(() -> runBiometric(() -> {
-                    // Un repli sur le code de l'appareil peut avoir fait
-                    // quitter l'écran : il est alors reverrouillé, on ne
-                    // change rien.
+                    // Le verrou est différé pendant l'invite : l'écran est
+                    // encore ouvert même si le code de l'appareil l'a quitté.
                     if (!lock.isUnlocked()) return;
                     lock.chooseBiometric();
                     toast(getString(R.string.vault_lock_method_changed));

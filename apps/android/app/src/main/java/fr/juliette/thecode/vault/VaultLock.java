@@ -105,6 +105,51 @@ public final class VaultLock {
         unlocked = false;
     }
 
+    /** Vrai pendant une auth système lancée par l'écran (biométrie, code de l'appareil). */
+    private boolean systemAuthInProgress = false;
+    /** L'écran a été quitté pendant cette auth : reverrouiller si elle échoue. */
+    private boolean lockDeferred = false;
+
+    /** À appeler juste avant d'afficher l'invite biométrique. */
+    public void beginSystemAuth() {
+        systemAuthInProgress = true;
+        lockDeferred = false;
+    }
+
+    public boolean isSystemAuthInProgress() {
+        return systemAuthInProgress;
+    }
+
+    /**
+     * Sortie de l'écran. L'écran du code de l'appareil, ouvert par notre
+     * propre invite, fait quitter l'activité : on ne reverrouille pas pendant
+     * cette auth, on le fera si elle échoue.
+     *
+     * @return vrai si le verrou a été appliqué maintenant.
+     */
+    public boolean onLeave() {
+        if (systemAuthInProgress) {
+            lockDeferred = true;
+            return false;
+        }
+        lock();
+        return true;
+    }
+
+    /**
+     * Fin de l'auth système, dans chaque rappel. Un échec (annulation, mise en
+     * arrière-plan) applique le verrou différé ; un succès le lève.
+     *
+     * @return vrai si un verrou différé vient d'être appliqué.
+     */
+    public boolean endSystemAuth(boolean success) {
+        boolean relock = !success && lockDeferred;
+        systemAuthInProgress = false;
+        lockDeferred = false;
+        if (relock) lock();
+        return relock;
+    }
+
     /**
      * Oubli : efface le verrou. L'appelant efface aussi le carnet local — rien
      * d'autre ne permet de passer le verrou.
