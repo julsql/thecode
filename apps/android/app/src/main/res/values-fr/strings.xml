@@ -174,4 +174,12 @@
     <string name="vault_lock_password_changed">Mot de passe de carnet modifié.</string>
     <string name="vault_lock_method_changed">Méthode de déverrouillage modifiée.</string>
     <string name="vault_lock_biometric_unavailable">Ni la biométrie ni le verrouillage de l\'écran ne sont disponibles. Configurez un verrouillage de l\'écran, ou effacez le carnet local.</string>
+    <!-- Gestion du carnet : detail et suppression d'une entree. -->
+    <string name="vault_entry_login_none">Sans identifiant</string>
+    <string name="vault_detail">Clé du site : %1$s\nDomaines : %2$s\nIdentifiant : %3$s\nLongueur : %4$d\nCaractères : %5$s\nCompteur : %6$d\nVersion : v%7$d\nMise à jour : %8$s</string>
+    <string name="vault_delete">Supprimer</string>
+    <string name="vault_close">Fermer</string>
+    <string name="vault_delete_title">Supprimer « %1$s » ?</string>
+    <string name="vault_delete_body">L\'entrée quitte ce carnet et, à la prochaine synchronisation, vos autres appareils. Le mot de passe lui-même ne change pas sur le site.</string>
+    <string name="vault_delete_done">« %1$s » supprimé.</string>
 </resources>

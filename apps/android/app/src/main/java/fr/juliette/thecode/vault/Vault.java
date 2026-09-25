@@ -112,6 +112,28 @@ public final class Vault {
         return entry;
     }
 
+    /**
+     * Supprime une entrée en laissant une pierre tombale : {@code deleted} et
+     * {@code updatedAt} à maintenant. Retirer l'entrée ferait revenir la copie
+     * de l'autre appareil à la synchronisation (voir vault-merge.md).
+     *
+     * @return faux si l'entrée n'existe pas ou est déjà supprimée.
+     */
+    public boolean delete(String id) {
+        return delete(id, nowIso());
+    }
+
+    boolean delete(String id, String now) {
+        for (VaultEntry e : entries) {
+            if (e.id.equals(id) && !e.deleted) {
+                e.deleted = true;
+                e.updatedAt = now;
+                return true;
+            }
+        }
+        return false;
+    }
+
     /** Identifiant tel qu'il entre dans la dérivation : absent vaut vide. */
     @NonNull
     public static String loginOf(@Nullable String login) {

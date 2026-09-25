@@ -601,13 +601,8 @@ public class VaultActivity extends AppCompatActivity {
             View card = inflater.inflate(R.layout.vault_item, list, false);
 
             ((TextView) card.findViewById(R.id.entryLabel)).setText(label(entry));
-            // String.join demande l'API 26 : on assemble a la main.
-            StringBuilder domains = new StringBuilder();
-            for (String domain : entry.domains) {
-                if (domains.length() > 0) domains.append(", ");
-                domains.append(domain);
-            }
-            ((TextView) card.findViewById(R.id.entryDomains)).setText(domains.toString());
+            ((TextView) card.findViewById(R.id.entryLogin)).setText(loginOf(entry));
+            ((TextView) card.findViewById(R.id.entryDomains)).setText(domainsOf(entry));
             ((TextView) card.findViewById(R.id.entrySettings)).setText(
                     getString(R.string.vault_entry_settings,
                             entry.length, charsetSummary(entry), entry.v, entry.counter));
@@ -620,7 +615,7 @@ public class VaultActivity extends AppCompatActivity {
             // apporte.
             action.setOnClickListener(v -> proposeRenew(entry));
 
-            card.setOnClickListener(v -> proposeRenew(entry));
+            card.setOnClickListener(v -> showDetail(entry));
             list.addView(card);
         }
     }
@@ -672,13 +667,19 @@ public class VaultActivity extends AppCompatActivity {
             preview.counter = entry.counter + 1;
             String after = Generator.generate(SiteResolution.of(preview), masterKey, null);
 
-            main.post(() -> new MaterialAlertDialogBuilder(this)
-                    .setTitle(getString(R.string.vault_renew_title, label))
-                    .setMessage(getString(R.string.vault_password_pair, before, after))
-                    .setNegativeButton(android.R.string.cancel, null)
-                    .setPositiveButton(android.R.string.ok,
-                            (dialog, which) -> applyRenew(entry, label))
-                    .show());
+            main.post(() -> {
+                // Écran reverrouillé pendant le calcul : ne rien montrer.
+                if (!lock.isUnlocked() || isFinishing()) return;
+                AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+                        .setTitle(getString(R.string.vault_renew_title, label))
+                        .setMessage(getString(R.string.vault_password_pair, before, after))
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .setPositiveButton(android.R.string.ok,
+                                (d, which) -> applyRenew(entry, label))
+                        .create();
+                track(dialog);
+                dialog.show();
+            });
         });
     }
 
@@ -691,6 +692,58 @@ public class VaultActivity extends AppCompatActivity {
 
         render(vault);
         toast(getString(R.string.vault_renew_done, label, entry.counter));
+    }
+
+    // ------------------------------------------------------------- gestion
+
+    /** Détail d'une entrée : tout ce qui rejoue la dérivation, plus les actions. */
+    private void showDetail(VaultEntry entry) {
+        String label = label(entry);
+        AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+                .setTitle(label)
+                .setMessage(getString(R.string.vault_detail,
+                        entry.siteKey, domainsOf(entry), loginOf(entry), entry.length,
+                        charsetSummary(entry), entry.counter, entry.v,
+                        entry.updatedAt == null ? "" : entry.updatedAt))
+                .setPositiveButton(R.string.vault_renew, (d, w) -> proposeRenew(entry))
+                .setNegativeButton(R.string.vault_delete, (d, w) -> confirmDelete(entry, label))
+                .setNeutralButton(R.string.vault_close, null)
+                .create();
+        track(dialog);
+        dialog.show();
+    }
+
+    private void confirmDelete(VaultEntry entry, String label) {
+        AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+                .setTitle(getString(R.string.vault_delete_title, label))
+                .setMessage(R.string.vault_delete_body)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.vault_delete, (d, w) -> {
+                    if (!lock.isUnlocked()) return;
+                    // Pierre tombale et non retrait : la suppression doit se
+                    // propager à la synchronisation.
+                    if (vault.delete(entry.id)) vault.save(this);
+                    render(vault);
+                    toast(getString(R.string.vault_delete_done, label));
+                })
+                .create();
+        track(dialog);
+        dialog.show();
+    }
+
+    private String loginOf(VaultEntry entry) {
+        return entry.login == null || entry.login.isEmpty()
+                ? getString(R.string.vault_entry_login_none) : entry.login;
+    }
+
+    /** String.join demande l'API 26 : on assemble à la main. */
+    private static String domainsOf(VaultEntry entry) {
+        StringBuilder domains = new StringBuilder();
+        for (String domain : entry.domains) {
+            if (domains.length() > 0) domains.append(", ");
+            domains.append(domain);
+        }
+        return domains.toString();
     }
 
     private static String label(VaultEntry entry) {
