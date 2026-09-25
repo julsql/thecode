@@ -821,9 +821,8 @@ public class MainActivity extends AppCompatActivity {
         VaultEntry entry = vault.upsert(site, (int) lengthSlider.getValue(),
                 minSwitch.isChecked(), majSwitch.isChecked(),
                 symSwitch.isChecked(), chiSwitch.isChecked());
-        // Enregistrer un mot de passe genere en v1 sous une entree v2
-        // donnerait un autre mot de passe a la relecture.
-        entry.v = useV1 ? 1 : 2;
+        // Le carnet n'admet que la v2 : upsert l'impose, même depuis l'écran
+        // réglé en v1. Ne jamais redescendre une entrée existante.
         vault.save(this);
 
         // Une entrée existante garde son siteKey : le réécrire changerait un

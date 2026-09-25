@@ -102,14 +102,9 @@
     <string name="vault_renew">Renouveler ce mot de passe</string>
     <string name="vault_renew_paid">Le renouvellement n\'est pas activé sur ce compte.</string>
     <string name="sync_limit_reached">Limite de synchronisation atteinte : les entrées en trop restent sur cet appareil.</string>
-    <string name="vault_migrate">Passer cette entrée en v2</string>
     <string name="vault_renew_title">Renouveler « %1$s »</string>
-    <string name="vault_migrate_title">Passer « %1$s » en v2</string>
     <string name="vault_password_pair">Actuel\n%1$s\n\nNouveau\n%2$s\n\nChangez-le sur le site, puis confirmez. Le nouveau ne sert à rien tant que ce n\'est pas fait, et l\'ancien reste celui qui vous connecte.</string>
     <string name="vault_renew_done">« %1$s » renouvelée, compteur %2$d.</string>
-    <string name="vault_migrate_done">« %1$s » est en v2.</string>
-    <string name="vault_renew_needs_v2">« %1$s » est en v1, où le compteur n\'a aucun effet. Passez-la d\'abord en v2.</string>
-    <string name="vault_already_v2">« %1$s » est déjà en v2.</string>
     <string name="vault_needs_key">Définissez d\'abord votre clef maîtresse : c\'est elle qui calcule les mots de passe.</string>
     <string name="vault_working">Calcul en cours…</string>
     <!-- Transfert du carnet par QR code. -->

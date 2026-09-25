@@ -198,7 +198,13 @@ public final class Transfer {
     /** Chiffre un carnet en un payload transportable. */
     public static String exportVault(@NonNull Vault vault, @NonNull String masterKey)
             throws GeneralSecurityException, JSONException {
-        byte[] compressed = deflate(vault.toCompactJson().getBytes(StandardCharsets.UTF_8));
+        return exportJson(vault.toCompactJson(), masterKey);
+    }
+
+    /** Chiffre un carnet déjà sérialisé. Séparé pour les tests d'interopérabilité. */
+    static String exportJson(@NonNull String json, @NonNull String masterKey)
+            throws GeneralSecurityException {
+        byte[] compressed = deflate(json.getBytes(StandardCharsets.UTF_8));
 
         byte[] nonce = new byte[NONCE_BYTES];
         RANDOM.nextBytes(nonce);

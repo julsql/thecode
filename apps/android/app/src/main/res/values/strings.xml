@@ -102,14 +102,9 @@
     <string name="vault_renew">Renew this password</string>
     <string name="vault_renew_paid">Renewal is not enabled on this account.</string>
     <string name="sync_limit_reached">Sync limit reached: the extra entries stay on this device.</string>
-    <string name="vault_migrate">Upgrade to v2</string>
     <string name="vault_renew_title">Renew "%1$s"</string>
-    <string name="vault_migrate_title">Move "%1$s" to v2</string>
     <string name="vault_password_pair">Current\n%1$s\n\nNew\n%2$s\n\nChange it on the site, then confirm. The new one is useless until you have, and the old one is still what signs you in.</string>
     <string name="vault_renew_done">"%1$s" renewed, counter %2$d.</string>
-    <string name="vault_migrate_done">"%1$s" is now in v2.</string>
-    <string name="vault_renew_needs_v2">"%1$s" is in v1, where the counter has no effect. Move it to v2 first.</string>
-    <string name="vault_already_v2">"%1$s" is already in v2.</string>
     <string name="vault_needs_key">Set your master key first: it is what computes the passwords.</string>
     <string name="vault_working">Computing…</string>
     <!-- Transfert du carnet par QR code. -->

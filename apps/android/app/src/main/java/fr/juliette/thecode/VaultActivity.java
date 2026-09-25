@@ -355,23 +355,20 @@ public class VaultActivity extends AppCompatActivity {
                     getString(R.string.vault_entry_settings,
                             entry.length, charsetSummary(entry), entry.v, entry.counter));
 
-            // Le libelle dit l'action : une entree v1 n'a que la migration, le
-            // compteur n'entrant pas dans sa derivation.
-            boolean isV2 = entry.v >= 2;
             com.google.android.material.button.MaterialButton action =
                     card.findViewById(R.id.entryAction);
-            action.setText(isV2 ? R.string.vault_renew : R.string.vault_migrate);
+            action.setText(R.string.vault_renew);
             // Jamais désactivé : un bouton éteint n'explique rien et ne
             // propose rien. C'est le clic qui dit ce que l'offre complète
-            // apporte — la migration v1 vers v2, elle, reste ouverte à tous.
-            action.setOnClickListener(v -> proposeChange(entry, isV2));
+            // apporte.
+            action.setOnClickListener(v -> proposeRenew(entry));
 
-            card.setOnClickListener(v -> proposeChange(entry, isV2));
+            card.setOnClickListener(v -> proposeRenew(entry));
             list.addView(card);
         }
     }
 
-    // --------------------------------------------- renouvellement et migration
+    // ------------------------------------------------------ renouvellement
 
     /**
      * Le renouvellement demande l'offre complète.
@@ -393,13 +390,13 @@ public class VaultActivity extends AppCompatActivity {
      * Écrire d'abord rendrait le compte inaccessible : l'ancien mot de passe
      * est encore celui du site tant qu'il n'y a pas été changé.
      */
-    private void proposeChange(VaultEntry entry, boolean renew) {
+    private void proposeRenew(VaultEntry entry) {
         String masterKey = preferences.getEncodingKey();
         if (masterKey.isEmpty()) {
             toast(getString(R.string.vault_needs_key));
             return;
         }
-        if (renew && !renewAllowed()) {
+        if (!renewAllowed()) {
             toast(getString(R.string.vault_renew_paid));
             return;
         }
@@ -415,39 +412,28 @@ public class VaultActivity extends AppCompatActivity {
             String before = Generator.generate(current, masterKey, null);
 
             VaultEntry preview = VaultEntry.copyOf(entry);
-            if (renew) {
-                preview.counter = entry.counter + 1;
-            } else {
-                preview.v = 2;
-            }
+            preview.counter = entry.counter + 1;
             String after = Generator.generate(SiteResolution.of(preview), masterKey, null);
 
             main.post(() -> new MaterialAlertDialogBuilder(this)
-                    .setTitle(getString(renew ? R.string.vault_renew_title
-                            : R.string.vault_migrate_title, label))
+                    .setTitle(getString(R.string.vault_renew_title, label))
                     .setMessage(getString(R.string.vault_password_pair, before, after))
                     .setNegativeButton(android.R.string.cancel, null)
                     .setPositiveButton(android.R.string.ok,
-                            (dialog, which) -> applyChange(entry, renew, label))
+                            (dialog, which) -> applyRenew(entry, label))
                     .show());
         });
     }
 
-    private void applyChange(VaultEntry entry, boolean renew, String label) {
-        if (renew) {
-            entry.counter += 1;
-        } else {
-            entry.v = 2;
-        }
+    private void applyRenew(VaultEntry entry, String label) {
+        entry.counter += 1;
         // Sans réhorodatage, la fusion ferait gagner l'autre appareil et le
         // changement serait perdu à la synchronisation suivante.
         entry.updatedAt = Vault.nowIso();
         vault.save(this);
 
         render(vault);
-        toast(renew
-                ? getString(R.string.vault_renew_done, label, entry.counter)
-                : getString(R.string.vault_migrate_done, label));
+        toast(getString(R.string.vault_renew_done, label, entry.counter));
     }
 
     private static String label(VaultEntry entry) {

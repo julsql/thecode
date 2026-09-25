@@ -38,8 +38,13 @@ public final class VaultEntry {
     public boolean upper = true;
     public boolean symbols = true;
     public boolean numbers = true;
-    /** Les entrées naissent en v2 ; la v1 reste lisible pour les anciennes. */
-    public int v = 2;
+    /**
+     * Seule version admise dans le carnet. La v1 ne subsiste qu'en génération
+     * ponctuelle, hors carnet : shared/spec/vault-merge.md.
+     */
+    public static final int VERSION = 2;
+
+    public int v = VERSION;
     public String updatedAt;
     public boolean deleted = false;
 
@@ -78,6 +83,11 @@ public final class VaultEntry {
         e.updatedAt = other.updatedAt;
         e.deleted = other.deleted;
         return e;
+    }
+
+    /** Faux pour une entrée que le carnet écarte à la lecture et refuse à l'écriture. */
+    public boolean isSupported() {
+        return v == VERSION;
     }
 
     static VaultEntry fromJson(JSONObject o) throws JSONException {

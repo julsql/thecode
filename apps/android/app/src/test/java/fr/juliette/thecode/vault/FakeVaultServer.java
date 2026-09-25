@@ -56,6 +56,12 @@ final class FakeVaultServer implements Sync.Http {
         }
     }
 
+    /** Dépose une ligne telle qu'un autre client l'aurait poussée. */
+    void seed(JSONObject row) throws JSONException {
+        rows.put(row.getString("entry_id"), row);
+        revision++;
+    }
+
     private Sync.Response pull() throws JSONException {
         JSONArray entries = new JSONArray();
         for (JSONObject row : rows.values()) entries.put(row);

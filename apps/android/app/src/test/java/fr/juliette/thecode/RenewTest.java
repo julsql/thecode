@@ -9,23 +9,26 @@ import fr.juliette.thecode.vault.SiteResolution;
 import fr.juliette.thecode.vault.VaultEntry;
 
 /**
- * Renouveler et migrer : les deux actions qui changent un mot de passe déjà en
- * service.
+ * Renouveler : la seule action qui change un mot de passe déjà en service.
  *
  * Ce qui compte est qu'on puisse calculer le nouveau <b>avant</b> d'écrire quoi
  * que ce soit : écrire d'abord rendrait le compte inaccessible, l'ancien mot de
  * passe étant encore celui du site.
  */
-public class RenewAndMigrateTest {
+public class RenewTest {
 
     private static String passwordFor(VaultEntry entry) {
         return Generator.generate(SiteResolution.of(entry), "clef", null);
     }
 
     @Test
-    public void renewingChangesThePasswordOfAV2Entry() {
+    public void entriesAreBornInV2() {
+        assertEquals(2, VaultEntry.create("google.com", null).v);
+    }
+
+    @Test
+    public void renewingChangesThePassword() {
         VaultEntry entry = VaultEntry.create("google.com", null);
-        entry.v = 2;
 
         VaultEntry preview = VaultEntry.copyOf(entry);
         preview.counter = entry.counter + 1;
@@ -38,40 +41,12 @@ public class RenewAndMigrateTest {
         // Modifier l'entrée puis revenir en arrière laisserait la porte ouverte
         // à un carnet enregistré à mi-chemin.
         VaultEntry entry = VaultEntry.create("google.com", null);
-        entry.v = 2;
 
         VaultEntry preview = VaultEntry.copyOf(entry);
         preview.counter = 99;
-        preview.v = 1;
 
         assertEquals(1, entry.counter);
         assertEquals(2, entry.v);
-    }
-
-    @Test
-    public void migratingChangesThePassword() {
-        // C'est pourquoi la migration s'affiche avec les deux mots de passe :
-        // il faudra aller changer celui du site.
-        VaultEntry entry = VaultEntry.create("google.com", null);
-        entry.v = 1; // les entrees naissent desormais en v2
-
-        VaultEntry migrated = VaultEntry.copyOf(entry);
-        migrated.v = 2;
-
-        assertNotEquals(passwordFor(entry), passwordFor(migrated));
-    }
-
-    @Test
-    public void theCounterDoesNothingInV1() {
-        // D'où le refus de renouveler une entrée v1 : l'incrémenter ne
-        // changerait rien, et le laisser croire serait pire.
-        VaultEntry entry = VaultEntry.create("google.com", null);
-        entry.v = 1; // les entrees naissent desormais en v2
-
-        VaultEntry bumped = VaultEntry.copyOf(entry);
-        bumped.counter = 5;
-
-        assertEquals(passwordFor(entry), passwordFor(bumped));
     }
 
     @Test
@@ -81,7 +56,6 @@ public class RenewAndMigrateTest {
         entry.login = "moi@example.fr";
         entry.length = 32;
         entry.symbols = false;
-        entry.v = 2;
         entry.counter = 3;
 
         VaultEntry copy = VaultEntry.copyOf(entry);
