@@ -573,6 +573,22 @@ export default defineComponent({
       return true;
     }
 
+    /**
+     * Traduit un refus de connexion dû à la limite d'appareils. 402 : l'offre
+     * gratuite, que débloquer lève ; 403 : le plafond de l'offre complète.
+     * `closed403` dit si un 403 peut venir d'autre chose — les inscriptions
+     * fermées, pour une connexion Google qui crée le compte.
+     */
+    function signInError(e: unknown, closed403 = false): string {
+      if (e instanceof SyncError && e.status === 402) {
+        return t("acc_device_limit_free").replace("{n}", String(service.plans.freeMaxDevices));
+      }
+      if (e instanceof SyncError && e.status === 403 && !closed403) {
+        return t("acc_device_limit_pro").replace("{n}", String(service.plans.proMaxDevices));
+      }
+      return (e as Error).message;
+    }
+
     async function signIn() {
       if (!checkCredentials(false)) return;
       message.value = t("acc_connecting");
@@ -582,7 +598,7 @@ export default defineComponent({
         message.value = t("acc_connected");
         await refresh();
       } catch (e) {
-        message.value = (e as Error).message;
+        message.value = signInError(e);
       }
     }
 
@@ -618,7 +634,7 @@ export default defineComponent({
         message.value = t("acc_connected");
         await refresh();
       } catch (e) {
-        message.value = (e as Error).message;
+        message.value = signInError(e, true);
       }
     }
 

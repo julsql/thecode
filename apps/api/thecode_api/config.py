@@ -63,14 +63,13 @@ class Settings(BaseSettings):
     #: l'appareil et les mots de passe continuent de se calculer. Ce qui est
     #: borné, c'est le service rendu par le serveur.
     free_max_entries: int = 5
-    #: Pas de limite d'appareils sur l'offre gratuite : synchroniser entre deux
-    #: appareils est le minimum pour que le mot veuille dire quelque chose, et
-    #: en compter trois plutôt que deux ne distingue rien d'utile. Le garde-fou
-    #: anti-abus reste, commun aux deux offres.
-    free_max_devices: int = 20
-    #: L'offre payante n'est pas illimitée mais très large : sans borne, un
-    #: compte compromis pourrait ouvrir des sessions sans fin.
-    pro_max_devices: int = 20
+    #: L'offre gratuite couvre l'usage courant — un téléphone, un ordinateur et
+    #: un navigateur — sans aller au-delà : c'est aussi ce qui distingue les deux
+    #: offres, avec le nombre d'entrées.
+    free_max_devices: int = 3
+    #: L'offre payante n'est pas illimitée mais large : sans borne, un compte
+    #: compromis pourrait ouvrir des sessions sans fin.
+    pro_max_devices: int = 10
 
     #: Prix affiché par le site. Stripe reste la source de vérité de ce qui est
     #: facturé ; ces deux valeurs ne servent qu'à l'affichage, pour éviter un

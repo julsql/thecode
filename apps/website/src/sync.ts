@@ -16,7 +16,15 @@ import { isVaultEntryV2, mergeVaults, type Conflict, type Vault, type VaultEntry
 export const DEFAULT_ENDPOINT = "https://thecode-api.julsql.fr";
 const SESSION_KEY = "thecode.session";
 
-export class SyncError extends Error {}
+export class SyncError extends Error {
+  /** Statut HTTP de la réponse, 0 quand le service n'a pas répondu. */
+  readonly status: number;
+
+  constructor(message: string, status = 0) {
+    super(message);
+    this.status = status;
+  }
+}
 
 export interface Session {
   endpoint: string;
@@ -69,7 +77,7 @@ export async function request(
     } catch {
       detail = "";
     }
-    throw new SyncError(`${response.status} : ${detail || response.statusText}`);
+    throw new SyncError(`${response.status} : ${detail || response.statusText}`, response.status);
   }
 
   return response.status === 204 ? null : response.json();

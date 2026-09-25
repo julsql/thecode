@@ -242,6 +242,10 @@ export const translations = {
     acc_connecting: "Signing in…",
     acc_creating: "Creating the account…",
     acc_connected: "Signed in.",
+    acc_device_limit_free:
+      "The free plan allows {n} connected devices. Disconnect one from the Account page of a device already signed in, or unlock the full plan.",
+    acc_device_limit_pro:
+      "{n} connected devices at most. Disconnect one from the Account page of a device already signed in.",
     acc_created: "Account created. Check your inbox to confirm your address.",
     acc_choose_plan: "Which plan?",
     acc_plan: "Plan",
@@ -567,6 +571,10 @@ export const translations = {
     acc_connecting: "Connexion…",
     acc_creating: "Création du compte…",
     acc_connected: "Connecté.",
+    acc_device_limit_free:
+      "L'offre gratuite permet {n} appareils connectés. Déconnectez-en un depuis la page Compte d'un appareil déjà connecté, ou débloquez l'offre complète.",
+    acc_device_limit_pro:
+      "{n} appareils connectés au maximum. Déconnectez-en un depuis la page Compte d'un appareil déjà connecté.",
     acc_created: "Compte créé. Confirmez votre adresse depuis l'e-mail reçu.",
     acc_choose_plan: "Quelle offre ?",
     acc_plan: "Offre",

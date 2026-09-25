@@ -282,6 +282,54 @@ describe("page du compte", () => {
     });
   });
 
+  describe("limite d'appareils", () => {
+    /** Le service refuse la connexion avec ce statut, le reste répond normalement. */
+    function refuseLogin(status: number) {
+      const service = fakeService();
+      const answer = vi.mocked(fetch).getMockImplementation()!;
+      vi.stubGlobal(
+        "fetch",
+        vi.fn((url: string, init?: RequestInit) =>
+          url.endsWith("/v1/auth/login")
+            ? Promise.resolve({
+                ok: false,
+                status,
+                statusText: "",
+                json: () => Promise.resolve({ detail: "refusé" }),
+              } as Response)
+            : answer(url, init),
+        ),
+      );
+      return service;
+    }
+
+    async function signIn() {
+      const wrapper = await mountAccount();
+      await wrapper.find("#acc_email").setValue("julie@exemple.fr");
+      await wrapper.find("#acc_password").setValue("mot-de-passe-de-test");
+      const submit = wrapper.findAll("button").filter((b) => b.text() === "Se connecter");
+      await submit[submit.length - 1].trigger("click");
+      await flush();
+      return wrapper;
+    }
+
+    it("propose de débloquer l'offre complète au plafond de l'offre gratuite", async () => {
+      refuseLogin(402);
+      const text = (await signIn()).text();
+
+      expect(text).toContain("L'offre gratuite permet 2 appareils connectés");
+      expect(text).toContain("débloquez l'offre complète");
+    });
+
+    it("ne propose rien à acheter au plafond de l'offre complète", async () => {
+      refuseLogin(403);
+      const text = (await signIn()).text();
+
+      expect(text).toContain("20 appareils connectés au maximum");
+      expect(text).not.toContain("débloquez");
+    });
+  });
+
   describe("mot de passe oublié", () => {
     it("demande un lien sans rien dire de l'existence du compte", async () => {
       const service = fakeService();
