@@ -14,8 +14,8 @@ import { loadVault, saveVault, type VaultEntry } from "@/vault";
 /**
  * Dérive le mot de passe d'une entrée.
  *
- * Le carnet ne contient que des entrées v2 ; `version` = 1 ne sert qu'à la
- * génération ponctuelle demandée depuis l'écran réglé en v1.
+ * Une entrée ne porte pas de version : elle dérive en v2. `version` = 1 ne sert
+ * qu'à la génération ponctuelle demandée depuis l'écran réglé en v1.
  */
 export async function passwordForEntry(
   entry: VaultEntry,
@@ -23,8 +23,7 @@ export async function passwordForEntry(
   counter?: number,
   version?: number,
 ): Promise<string | null> {
-  const v = version ?? entry.v;
-  if (v >= 2) {
+  if (version !== 1) {
     return generatePasswordV2(entry.siteKey, clef, entry.length, {
       useLower: entry.charset.lower,
       useUpper: entry.charset.upper,

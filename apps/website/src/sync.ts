@@ -12,7 +12,7 @@
 
 import { deriveTransferKey } from "@/transfer";
 import {
-  isVaultEntryV2,
+  dropVersion,
   mergeVaults,
   selectForPush,
   type Conflict,
@@ -305,10 +305,8 @@ export async function syncVault(
 
   const remote: Vault = { schema: 1, updatedAt: vault.updatedAt, entries: [] };
   for (const row of pulled.result.entries) {
-    const entry = await decryptEntry(row, key);
-    // Le carnet n'accepte que la v2 : une entrée v1 venue du serveur est
-    // écartée sans erreur et ne rejoint pas le carnet local.
-    if (!isVaultEntryV2(entry)) continue;
+    // Un `v` résiduel est ignoré : une entrée dérive toujours en v2.
+    const entry = dropVersion(await decryptEntry(row, key));
     // Absent quand faux, jamais « deleted: false ». La représentation
     // canonique départage les écritures simultanées : y laisser un champ que
     // les autres implémentations n'écrivent pas ferait désigner un gagnant

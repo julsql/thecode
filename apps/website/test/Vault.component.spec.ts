@@ -6,7 +6,14 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import { createRouter, createMemoryHistory } from "vue-router";
 import Vault from "@/pages/Vault.vue";
-import { emptyVault, loadVault, newEntry, saveVault, VAULT_STORAGE_KEY } from "@/vault";
+import {
+  emptyVault,
+  loadVault,
+  newEntry,
+  saveVault,
+  VAULT_STORAGE_KEY,
+  type VaultEntry,
+} from "@/vault";
 import { createLock, hasLock, verifyLock } from "@/vaultLock";
 
 const PASSWORD = "mot de passe";
@@ -42,13 +49,8 @@ function seed() {
   const google = newEntry("google.com", { login: "alice", length: 16 });
   const github = newEntry("github.com");
   const gone = { ...newEntry("gone.com"), deleted: true };
-  const v1 = { ...newEntry("old.com"), v: 1 };
   vault.entries.push(google, github, gone);
   saveVault(vault);
-  // Écrit à la main : le carnet refuse d'enregistrer une entrée v1.
-  const raw = JSON.parse(localStorage.getItem(VAULT_STORAGE_KEY)!);
-  raw.entries.push(v1);
-  localStorage.setItem(VAULT_STORAGE_KEY, JSON.stringify(raw));
   return { google, github };
 }
 
@@ -120,7 +122,18 @@ describe("verrou", () => {
     expect(w.text()).toContain("google.com");
     expect(w.text()).toContain("alice");
     expect(w.text()).not.toContain("gone.com");
-    expect(w.text()).not.toContain("old.com");
+  });
+
+  it("garde une entrée portant un v résiduel", async () => {
+    // Écrit à la main : le carnet ne réécrit jamais `v`.
+    const vault = emptyVault();
+    vault.entries.push({ ...newEntry("old.com"), v: 1 } as VaultEntry);
+    localStorage.setItem(VAULT_STORAGE_KEY, JSON.stringify(vault));
+    const w = await mountVault();
+    await unlock(w);
+
+    expect(w.findAll(".entry-list li")).toHaveLength(1);
+    expect(w.text()).toContain("old.com");
   });
 
   it("ne mémorise pas le déverrouillage", async () => {
@@ -201,7 +214,7 @@ describe("détail d'une entrée", () => {
     expect(detail).toContain("google.com");
     expect(detail).toContain("alice");
     expect(detail).toContain("16");
-    expect(detail).toContain("v2");
+    expect(detail).not.toContain("Version");
     expect(detail).toContain("Création");
     const times = w.findAll("time").map((t) => t.attributes("datetime"));
     expect(times).toStrictEqual([google.createdAt, google.updatedAt]);

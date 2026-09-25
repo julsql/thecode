@@ -12,7 +12,7 @@
  * Spécification : shared/spec/vault-transfer.md
  */
 
-import { keepV2Only } from "@/vault";
+import { stripVersions } from "@/vault";
 
 export const TRANSFER_PREFIX = "TC1";
 export const TRANSFER_NONCE_BYTES = 12;
@@ -107,6 +107,6 @@ export async function importVault(payload: string, masterKey: string): Promise<u
   }
 
   const vault: unknown = JSON.parse(new TextDecoder().decode(await inflate(new Uint8Array(plain))));
-  // Le carnet n'accepte que la v2 : une entrée v1 importée est écartée.
-  return vault && typeof vault === "object" ? keepV2Only(vault as { entries?: unknown }) : vault;
+  // Un `v` résiduel est ignoré, jamais réécrit : une entrée dérive toujours en v2.
+  return vault && typeof vault === "object" ? stripVersions(vault as { entries?: unknown }) : vault;
 }

@@ -174,12 +174,12 @@ describe("carnet et empreinte", () => {
     expect(wrapper.text()).toContain("Enregistrer ce site");
   });
 
-  it("ignore une entree v1 du stockage et ne propose plus de migration", async () => {
+  it("garde une entree portant un v residuel, sans proposer de migration", async () => {
     const { emptyVault, newEntry, VAULT_STORAGE_KEY } = await import("@/vault");
 
-    // Ecrit a la main : le carnet refuse d'enregistrer une entree v1.
+    // Ecrit a la main : le carnet ne reecrit jamais `v`.
     const vault = emptyVault();
-    vault.entries.push({ ...newEntry("google.com", { domains: ["google.com"] }), v: 1 });
+    vault.entries.push({ ...newEntry("google.com", { domains: ["google.com"] }), v: 1 } as never);
     localStorage.setItem(VAULT_STORAGE_KEY, JSON.stringify(vault));
 
     const wrapper = await mountGenerate();
@@ -187,8 +187,7 @@ describe("carnet et empreinte", () => {
     await wrapper.vm.$nextTick();
 
     expect(wrapper.text()).not.toContain("Passer en v2");
-    expect(wrapper.text()).not.toContain("Renouveler");
-    expect(wrapper.text()).toContain("Enregistrer ce site");
+    expect(wrapper.text()).toContain("Mettre à jour");
   });
 
   it("renvoie vers l'écran carnet pour gérer les entrées", async () => {
@@ -207,7 +206,7 @@ describe("carnet et empreinte", () => {
     expect(wrapper.find('a[href="/fr/vault"]').exists()).toBe(true);
   });
 
-  it("enregistre en v2 meme depuis l'ecran regle en v1", async () => {
+  it("enregistre une entree sans version meme depuis l'ecran regle en v1", async () => {
     const wrapper = await mountGenerate();
 
     await wrapper.find("#id_site").setValue("google.com");
@@ -218,9 +217,12 @@ describe("carnet et empreinte", () => {
     await button!.trigger("click");
     await wrapper.vm.$nextTick();
 
-    // La v1 ne vit qu'en generation ponctuelle, hors carnet.
+    // La v1 ne vit qu'en generation ponctuelle, hors carnet : l'entree n'a
+    // pas de version et derive en v2.
     const { loadVault, findAllByDomain } = await import("@/vault");
-    expect(findAllByDomain(loadVault(), "google.com")[0]?.v).toBe(2);
+    const [entry] = findAllByDomain(loadVault(), "google.com");
+    expect(entry).toBeDefined();
+    expect(entry).not.toHaveProperty("v");
   });
 
   it("enregistre les reglages et les retrouve", async () => {
@@ -364,7 +366,7 @@ describe("identifiant", () => {
 
     const entries = findAllByDomain(loadVault(), "google.com");
     expect(entries.map((e) => e.login).sort()).toStrictEqual(["moi", "pro"]);
-    expect(entries.every((e) => e.v === 2)).toBe(true);
+    expect(entries.every((e) => !("v" in e))).toBe(true);
   });
 });
 

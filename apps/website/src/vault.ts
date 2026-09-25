@@ -12,8 +12,6 @@
 export const VAULT_SCHEMA = 1;
 export const VAULT_STORAGE_KEY = "thecode.vault";
 export const DEFAULT_LENGTH = 20;
-/** Seule version admise dans le carnet : la v1 ne vit plus qu'hors carnet. */
-export const VAULT_ENTRY_VERSION = 2;
 export const DEFAULT_CHARSET: Charset = {
   lower: true,
   upper: true,
@@ -37,7 +35,6 @@ export interface VaultEntry {
   counter: number;
   length: number;
   charset: Charset;
-  v: number;
   notes?: string;
   /** Absent des entrées antérieures au champ : `updatedAt` en tient lieu. */
   createdAt?: string;
@@ -65,30 +62,31 @@ export function emptyVault(): Vault {
   return { schema: VAULT_SCHEMA, updatedAt: nowIso(), entries: [] };
 }
 
-/** Vrai pour une entrée que le carnet accepte, c'est-à-dire en v2. */
-export function isVaultEntryV2(entry: unknown): entry is VaultEntry {
-  return (
-    typeof entry === "object" &&
-    entry !== null &&
-    (entry as { v?: unknown }).v === VAULT_ENTRY_VERSION
-  );
+/**
+ * Retire un champ `v` résiduel : une entrée ne porte pas de version et dérive
+ * toujours en v2. Toléré, ignoré, jamais réécrit.
+ * Voir shared/spec/vault-merge.md, « Pas de version par entrée ».
+ */
+export function dropVersion<T>(entry: T): T {
+  if (typeof entry !== "object" || entry === null || !("v" in entry)) return entry;
+  const { v: _stray, ...rest } = entry as T & { v?: unknown };
+  return rest as T;
 }
 
 /**
- * Écarte toute entrée `v ≠ 2`, sans erreur.
+ * Applique {@link dropVersion} à tout le carnet.
  *
- * Appliqué à chaque lecture (stockage local, import, synchronisation) et à
- * chaque écriture : une entrée v1 qui passerait par un seul de ces chemins
- * reviendrait dans le carnet. Voir shared/spec/vault-merge.md.
+ * Appliqué à chaque lecture (stockage local, import, synchronisation, fusion)
+ * et à chaque écriture : un `v` résiduel n'est jamais réécrit.
  */
-export function keepV2Only<T extends { entries?: unknown }>(vault: T): T {
+export function stripVersions<T extends { entries?: unknown }>(vault: T): T {
   if (!Array.isArray(vault.entries)) return vault;
-  return { ...vault, entries: vault.entries.filter(isVaultEntryV2) };
+  return { ...vault, entries: vault.entries.map(dropVersion) };
 }
 
 export function newEntry(
   siteKey: string,
-  options: Partial<Omit<VaultEntry, "id" | "siteKey" | "v">> = {},
+  options: Partial<Omit<VaultEntry, "id" | "siteKey">> = {},
 ): VaultEntry {
   const now = nowIso();
   return {
@@ -100,8 +98,6 @@ export function newEntry(
     counter: 1,
     length: options.length ?? DEFAULT_LENGTH,
     charset: { ...DEFAULT_CHARSET, ...(options.charset ?? {}) },
-    // Toujours v2 : le carnet n'accepte pas d'autre version.
-    v: VAULT_ENTRY_VERSION,
     createdAt: now,
     updatedAt: now,
   };
@@ -279,8 +275,8 @@ function findDuplicates(
  */
 export function mergeVaults(left: Vault, right: Vault): { vault: Vault; conflicts: Conflict[] } {
   const conflicts: Conflict[] = [];
-  const leftEntries = keepV2Only(left).entries;
-  const rightEntries = keepV2Only(right).entries;
+  const leftEntries = stripVersions(left).entries;
+  const rightEntries = stripVersions(right).entries;
   const byId = new Map(leftEntries.map((e) => [e.id, e]));
 
   for (const entry of rightEntries) {
@@ -315,7 +311,7 @@ export function loadVault(): Vault {
     if (!raw) return emptyVault();
     const vault = JSON.parse(raw) as Vault;
     if (vault.schema !== VAULT_SCHEMA) return emptyVault();
-    return keepV2Only(vault);
+    return stripVersions(vault);
   } catch {
     return emptyVault();
   }
@@ -324,8 +320,8 @@ export function loadVault(): Vault {
 export function saveVault(vault: Vault): void {
   try {
     vault.updatedAt = nowIso();
-    // Refus à l'écriture : une entrée v1 ne rejoint jamais le stockage.
-    localStorage.setItem(VAULT_STORAGE_KEY, JSON.stringify(keepV2Only(vault)));
+    // Un `v` résiduel ne rejoint jamais le stockage.
+    localStorage.setItem(VAULT_STORAGE_KEY, JSON.stringify(stripVersions(vault)));
   } catch {
     // Stockage indisponible : le mot de passe reste dérivable, seul le
     // carnet ne persiste pas. On ne bloque pas l'utilisateur pour autant.

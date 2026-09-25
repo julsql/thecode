@@ -168,8 +168,6 @@
               <dd>{{ charsetText(selected) }}</dd>
               <dt>{{ t("vault_f_counter") }}</dt>
               <dd>{{ selected.counter }}</dd>
-              <dt>{{ t("vault_f_version") }}</dt>
-              <dd>v{{ selected.v }}</dd>
               <template v-if="selected.createdAt">
                 <dt>{{ t("vault_f_created") }}</dt>
                 <dd>
