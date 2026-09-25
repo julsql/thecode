@@ -145,8 +145,9 @@ browser?.storage?.onChanged?.addListener((changes, area) => {
  * getEncodingKey. Les pages de l'extension envoient leurs messages sans onglet
  * associe (sender.tab est undefined), un content script en a toujours un.
  *
- * content.js n'utilise que generatePassword et openPopup, donc rien de
- * legitime n'est bloque ici.
+ * content.js n'utilise que generatePassword, saveCurrentSite et openPopup,
+ * donc rien de legitime n'est bloque ici. getVault en fait partie : le carnet
+ * liste les sites et identifiants de l'utilisateur, une page n'a pas a le lire.
  */
 const PRIVILEGED_ACTIONS = new Set([
   "getEncodingKey",
@@ -154,6 +155,7 @@ const PRIVILEGED_ACTIONS = new Set([
   "clearEncodingKey",
   "checkEncodingKey",
   "setParams",
+  "getVault",
   "saveSite",
   "deleteEntry",
   "previewChange",

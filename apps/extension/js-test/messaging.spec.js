@@ -95,6 +95,35 @@ describe("cloisonnement vis-a-vis des content scripts", () => {
     expect(res.error).toBeDefined();
   });
 
+  it("refuse de livrer le carnet a un content script", async () => {
+    const vault = {
+      schema: 1,
+      updatedAt: "2026-01-01T00:00:00Z",
+      entries: [
+        {
+          id: "a",
+          label: "bank.example",
+          siteKey: "bank.example",
+          domains: ["bank.example"],
+          login: "moi@example.com",
+          counter: 1,
+          length: 20,
+          charset: { lower: true, upper: true, symbols: true, numbers: true },
+          v: 2,
+          updatedAt: "2026-01-01T00:00:00Z",
+        },
+      ],
+    };
+    const { send } = loadWorker({ storage: { vault } });
+
+    const denied = await send({ action: "getVault" }, FROM_CONTENT_SCRIPT);
+    expect(denied.vault).toBeUndefined();
+    expect(denied.error).toBeDefined();
+
+    const allowed = await send({ action: "getVault" }, FROM_POPUP);
+    expect(allowed.vault.entries.map((e) => e.login)).toStrictEqual(["moi@example.com"]);
+  });
+
   it("la livre a la popup", async () => {
     const { send } = loadWorker();
     await send({ action: "setEncodingKey", encodingKey: "secret" }, FROM_POPUP);
