@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any
 
 from .transfer import derive_transfer_key
-from .vault import Conflict, merge
+from .vault import ENTRY_VERSION, Conflict, merge
 
 DEFAULT_ENDPOINT = "https://thecode-api.julsql.fr"
 
@@ -226,6 +226,10 @@ def sync(
     remote = {"schema": 1, "updatedAt": vault.get("updatedAt", ""), "entries": []}
     for row in pulled["entries"]:
         entry = _decrypt_entry(row, key)
+        if entry.get("v") != ENTRY_VERSION:
+            # Le carnet n'accepte que la v2 : écartée sans erreur, l'entrée
+            # n'est ni fusionnée ni repoussée.
+            continue
         # Absent quand faux, jamais « deleted: false ». La représentation
         # canonique départage les écritures simultanées : y laisser un champ
         # que les autres implémentations n'écrivent pas ferait désigner un

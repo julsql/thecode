@@ -91,13 +91,7 @@ def build_parser() -> argparse.ArgumentParser:
         choices=(1, 2),
         default=2,
         help="Version de l'algorithme (défaut: 2). --algo 1 retrouve un mot de "
-        "passe posé sur un site avant la v2",
-    )
-    parser.add_argument(
-        "--migrate",
-        action="store_true",
-        help="Affiche l'ancien et le nouveau mot de passe d'une entrée, "
-        "et la passe en v2 une fois le site mis à jour",
+        "passe posé sur un site avant la v2, sans passer par le carnet",
     )
     parser.add_argument(
         "--renew",
@@ -232,9 +226,8 @@ def _resolve(args, vault_data):
 
 
 def _derive(args, params, entry):
-    """Dérive le mot de passe dans la version demandée par l'entrée."""
-    version = entry["v"] if entry else args.algo
-    if version >= 2:
+    """Dérive le mot de passe : en v2 dès qu'une entrée du carnet est en jeu."""
+    if entry or args.algo == 2:
         return generate_password_v2(
             params["site"],
             args.password,
@@ -277,6 +270,16 @@ def _print_vault(vault_data) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+
+    if args.save and args.algo != 2:
+        # Le carnet n'accepte que la v2 : la v1 ne sert plus qu'à retrouver
+        # ponctuellement un ancien mot de passe, sans rien enregistrer.
+        print(
+            "Le carnet n'accepte que la v2 : --save est incompatible avec --algo 1. "
+            "Retirez --algo 1 pour enregistrer l'entrée en v2.",
+            file=sys.stderr,
+        )
+        return 1
 
     vault_path = args.vault or default_vault_path()
     vault_data = load(vault_path)
@@ -386,50 +389,9 @@ def main(argv: list[str] | None = None) -> int:
 
     entry, params = _resolve(args, vault_data)
 
-    if args.migrate:
-        if entry is None:
-            print(f"Aucune entrée pour {canonical_site(args.site)} dans le carnet.", file=sys.stderr)
-            return 1
-        if entry["v"] >= 2:
-            print(f"« {entry['label']} » est déjà en v{entry['v']}.", file=sys.stderr)
-            return 0
-
-        before = _derive(args, params, entry)
-        after = generate_password_v2(
-            entry["siteKey"], args.password, entry["length"],
-            entry["charset"]["lower"], entry["charset"]["upper"],
-            entry["charset"]["symbols"], entry["charset"]["numbers"],
-            login=entry.get("login") or "", counter=entry.get("counter", 1),
-        )
-        # Les deux côte à côte : le nouveau ne sert à rien tant qu'il n'a pas
-        # été posé sur le site, et l'ancien reste nécessaire pour s'y connecter.
-        print(f"Migration de « {entry['label']} » vers la v2\n")
-        print(f"  actuel   {before}")
-        print(f"  nouveau  {after}\n")
-        print("Changez le mot de passe sur le site, puis confirmez :")
-        if input("  entrée migrée ? [o/N] ").strip().lower() not in ("o", "oui", "y", "yes"):
-            print("Annulé, l'entrée reste en v1.", file=sys.stderr)
-            return 0
-
-        entry["v"] = 2
-        entry["updatedAt"] = now_iso()
-        save(vault_data, vault_path)
-        print(f"✓ « {entry['label']} » est en v2.", file=sys.stderr)
-        return 0
-
     if args.renew:
         if entry is None:
             print(f"Aucune entrée pour {canonical_site(args.site)} dans le carnet.", file=sys.stderr)
-            return 1
-        if entry["v"] < 2:
-            # Le compteur n'entre pas dans la dérivation v1 : l'incrémenter ne
-            # changerait rien, et le dire vaut mieux que de laisser croire que
-            # le mot de passe a été renouvelé.
-            print(
-                f"« {entry['label']} » est en v1, où le compteur n'a aucun effet. "
-                "Passez l'entrée en v2 avec --migrate pour pouvoir la renouveler.",
-                file=sys.stderr,
-            )
             return 1
 
         # Le compteur — changer de mot de passe sans changer de clef — fait
@@ -471,10 +433,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"✓ « {entry['label']} » renouvelée, compteur {entry['counter']}.", file=sys.stderr)
         return 0
 
-
-    # La version de l'algorithme est portée par l'entrée : c'est ce qui permet
-    # à la v1 et à la v2 de coexister, et donc de migrer site par site sans
-    # changer d'un coup tous les mots de passe.
+    # Une entrée du carnet est toujours en v2 ; --algo 1 ne vaut que hors
+    # carnet, pour retrouver un mot de passe posé avant la v2.
     pwd = _derive(args, params, entry)
 
     if pwd is None:
@@ -483,10 +443,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.save:
         if entry is None:
-            # Un deuxième compte sur un site déjà connu a besoin d'un siteKey
-            # distinct, sinon il produirait le même mot de passe : en v1 le
-            # login n'entre pas dans la dérivation. Le suffixe est figé dans
-            # l'entrée, donc invisible à l'usage.
+            # Un deuxième compte sur un site déjà connu reçoit un siteKey
+            # distinct, hérité de la v1 où le login n'entrait pas dans la
+            # dérivation. Le suffixe est figé dans l'entrée, donc invisible à
+            # l'usage.
             site_key = params["site"]
             if args.account and find_all_by_domain(vault_data, params["site"]):
                 site_key = f"{params['site']}#{args.account}"
@@ -503,14 +463,12 @@ def main(argv: list[str] | None = None) -> int:
                     "symbols": params["symbols"],
                     "numbers": params["numbers"],
                 },
-                version=args.algo,
             )
             vault_data["entries"].append(entry)
             action = "ajoutée au"
             if entry["siteKey"] != params["site"]:
                 # Le mot de passe affiché doit être celui de la nouvelle entrée,
-                # dans sa version à elle. Dériver en v1 en dur ici rendait un
-                # mot de passe que la lecture suivante ne retrouvait pas.
+                # sinon la lecture suivante ne le retrouverait pas.
                 pwd = _derive(args, {**params, "site": entry["siteKey"]}, entry)
         else:
             # siteKey n'est jamais réécrit : il produit le mot de passe, le

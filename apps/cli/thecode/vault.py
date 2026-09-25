@@ -28,6 +28,10 @@ from typing import Any
 
 SCHEMA_VERSION = 1
 
+#: Seule version d'algorithme admise dans le carnet. La v1 ne subsiste qu'en
+#: génération ponctuelle, hors carnet (shared/spec/vault-merge.md).
+ENTRY_VERSION = 2
+
 #: Champs jamais fusionnés automatiquement : ils déterminent le mot de passe.
 _NEVER_MERGED = ("siteKey",)
 
@@ -78,7 +82,13 @@ def new_entry(
     ``site_key`` est figé ici pour toujours : il ne suit pas les évolutions de
     la canonicalisation, sinon une mise à jour de la PSL changerait des mots de
     passe existants.
+
+    Le carnet n'accepte que la v2 : toute autre version est refusée.
     """
+    if version != ENTRY_VERSION:
+        raise ValueError(
+            f"Le carnet n'accepte que des entrées v{ENTRY_VERSION}, pas v{version}."
+        )
     return {
         "id": str(uuid.uuid4()),
         "label": label or site_key,
@@ -91,6 +101,17 @@ def new_entry(
         "v": version,
         "updatedAt": now_iso(),
     }
+
+
+def keep_supported(vault: dict[str, Any]) -> dict[str, Any]:
+    """Écarte, sans erreur, toute entrée dont ``v`` n'est pas 2.
+
+    Appliqué à chaque lecture (chargement, import, synchronisation) : une
+    entrée v1 ou d'une version future disparaît ainsi du carnet local à la
+    prochaine écriture.
+    """
+    entries = [e for e in vault.get("entries", []) if e.get("v") == ENTRY_VERSION]
+    return {**vault, "entries": entries}
 
 
 def default_vault_path() -> Path:
@@ -196,6 +217,7 @@ def merge(
     doit pas changer le résultat, sinon ils ne convergent jamais.
     """
     conflicts: list[Conflict] = []
+    left, right = keep_supported(left), keep_supported(right)
     by_id: dict[str, dict[str, Any]] = {e["id"]: e for e in left.get("entries", [])}
 
     for entry in right.get("entries", []):
@@ -221,7 +243,7 @@ def load(path: Path) -> dict[str, Any]:
         raise ValueError(
             f"Carnet en version {data.get('schema')}, attendu {SCHEMA_VERSION}"
         )
-    return data
+    return keep_supported(data)
 
 
 def save(vault: dict[str, Any], path: Path) -> None:
