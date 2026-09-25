@@ -3,6 +3,10 @@
     <!-- Couleurs de marque -->
     <color name="brand_green">#1CD001</color>
     <color name="brand_blue">#2E8DEF</color>
+    <!-- Mode v1 : l'ecran vire au rose pour qu'on ne genere pas en v1 sans
+         le voir. Clair : texte blanc dessus (4,6:1). Sombre : texte noir (7:1). -->
+    <color name="brand_pink">#D6336C</color>
+    <color name="brand_pink_dark">#F06595</color>
 
     <!-- Mode clair -->
     <color name="background_light">#FFFFFFFF</color>

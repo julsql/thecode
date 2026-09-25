@@ -100,6 +100,13 @@ public class MainActivity extends AppCompatActivity {
      */
     private boolean useV1 = false;
     private MenuItem algoItem;
+    /**
+     * Basculer d'algorithme recrée l'écran pour changer de couleur : le mode
+     * et l'annonce traversent la recréation par l'état sauvegardé.
+     */
+    private static final String STATE_USE_V1 = "useV1";
+    private static final String STATE_ANNOUNCE_ALGO = "announceAlgo";
+    private boolean announceAlgo = false;
 
     /**
      * Clef maîtresse déjà dérivée, et la clef dont elle vient.
@@ -141,6 +148,13 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        if (savedInstanceState != null) {
+            useV1 = savedInstanceState.getBoolean(STATE_USE_V1, false);
+            announceAlgo = savedInstanceState.getBoolean(STATE_ANNOUNCE_ALGO, false);
+        }
+        // Avant l'inflation : chaque vue lit colorPrimary à sa création.
+        int overlay = AlgoTheme.overlayFor(useV1);
+        if (overlay != 0) getTheme().applyStyle(overlay, true);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         setSupportActionBar(findViewById(R.id.topAppBar));
@@ -157,6 +171,12 @@ public class MainActivity extends AppCompatActivity {
 
         showV2NoticeIfNeeded();
         applyLoginMode();
+        if (announceAlgo) {
+            announceAlgo = false;
+            Snackbar.make(findViewById(android.R.id.content),
+                    useV1 ? R.string.algo_now_v1 : R.string.algo_now_v2,
+                    Snackbar.LENGTH_LONG).show();
+        }
 
         regenerate();
     }
@@ -819,12 +839,18 @@ public class MainActivity extends AppCompatActivity {
     /** Bascule entre les deux algorithmes et le fait savoir. */
     private void toggleAlgo() {
         useV1 = !useV1;
-        applyAlgoLabel();
-        applyLoginMode();
-        Snackbar.make(findViewById(android.R.id.content),
-                useV1 ? R.string.algo_now_v1 : R.string.algo_now_v2,
-                Snackbar.LENGTH_LONG).show();
-        regenerate();
+        // Recréer plutôt que reteindre vue par vue : boutons, interrupteurs,
+        // champs et barre reprennent tous la couleur du thème, en clair comme
+        // en sombre. onCreate régénère et annonce le nouveau mode.
+        announceAlgo = true;
+        recreate();
+    }
+
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putBoolean(STATE_USE_V1, useV1);
+        outState.putBoolean(STATE_ANNOUNCE_ALGO, announceAlgo);
     }
 
     /**
