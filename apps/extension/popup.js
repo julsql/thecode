@@ -540,6 +540,10 @@ settingsView.addEventListener("keydown", (e) => {
   }
 });
 
+document.getElementById("openVault").addEventListener("click", () => {
+  browser.tabs.create({ url: browser.runtime.getURL("vault-page.html") });
+});
+
 document.getElementById("openTransfer").addEventListener("click", () => {
   browser.tabs.create({ url: browser.runtime.getURL("transfer-page.html") });
 });

@@ -44,6 +44,12 @@ describe("cloisonnement des actions sensibles", () => {
       "syncLogout",
       "syncNow",
       "syncStatus",
+      // Verrou de l'ecran carnet : l'oubli efface le carnet.
+      "vaultLockChange",
+      "vaultLockCreate",
+      "vaultLockForget",
+      "vaultLockStatus",
+      "vaultLockVerify",
     ]);
   });
 

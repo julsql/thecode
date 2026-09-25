@@ -7,14 +7,20 @@ if (typeof browser === "undefined" && typeof chrome !== "undefined") {
 // en page de fond, sans importScripts : c'est leur manifeste qui liste ces
 // fichiers avant celui-ci (voir manifest.spec.js).
 if (typeof importScripts === "function") {
-  importScripts("vault.js", "transfer.js", "sync.js", "core-v2.js");
+  importScripts("vault.js", "transfer.js", "sync.js", "core-v2.js", "vault-lock.js");
 }
 // En test, core-v2.js est charge en fin de fichier : il require background.js,
 // et le faire ici rendrait des exports encore vides.
 else if (typeof require === "function") {
   // Environnement de test : pas de service worker, donc pas d'importScripts.
   // On expose les memes symboles pour tester le cablage reellement livre.
-  Object.assign(globalThis, require("./vault.js"), require("./transfer.js"), require("./sync.js"));
+  Object.assign(
+    globalThis,
+    require("./vault.js"),
+    require("./transfer.js"),
+    require("./sync.js"),
+    require("./vault-lock.js"),
+  );
 }
 
 let psl = [];
@@ -166,6 +172,11 @@ const PRIVILEGED_ACTIONS = new Set([
   "syncLogout",
   "syncNow",
   "syncStatus",
+  "vaultLockStatus",
+  "vaultLockCreate",
+  "vaultLockVerify",
+  "vaultLockChange",
+  "vaultLockForget",
 ]);
 
 function isFromExtensionPage(sender) {
@@ -377,6 +388,12 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
       } catch (e) {
         sendResponse({ ok: false, error: e.message });
       }
+    } else if (VAULT_LOCK_ACTIONS.has(request.action)) {
+      try {
+        sendResponse(await handleVaultLock(request));
+      } catch (e) {
+        sendResponse({ ok: false, error: e.message });
+      }
     } else if (request.action === "openPopup") {
       try {
         if (browser.action && typeof browser.action.openPopup === "function") {
@@ -526,6 +543,63 @@ async function saveCurrentSite(sender, login) {
   );
   await saveVault(browser?.storage?.local, vault);
   return { ok: true, updated: false, site: domain };
+}
+
+const VAULT_LOCK_ACTIONS = new Set([
+  "vaultLockStatus",
+  "vaultLockCreate",
+  "vaultLockVerify",
+  "vaultLockChange",
+  "vaultLockForget",
+]);
+
+/**
+ * Verrou de l'ecran carnet (shared/spec/vault-lock.md).
+ *
+ * Verifie ici plutot que dans la page : l'empreinte stockee ne transite pas
+ * jusqu'a elle. L'etat deverrouille, lui, ne vit que dans la page — rien n'est
+ * memorise ici, fermer l'onglet reverrouille.
+ */
+async function handleVaultLock(request) {
+  const store = browser?.storage?.local;
+  const record = await loadVaultLock(store);
+
+  switch (request.action) {
+    case "vaultLockStatus":
+      return { ok: true, configured: Boolean(record) };
+
+    case "vaultLockCreate": {
+      // Une fois pose, le verrou ne se remplace qu'avec l'actuel ou en
+      // effacant le carnet : sinon n'importe quelle page de l'extension
+      // pourrait le reinitialiser.
+      if (record) return { ok: false, error: "un mot de passe de carnet existe deja" };
+      const weak = vaultLockPasswordError(request.password);
+      if (weak) return { ok: false, error: weak };
+      await saveVaultLock(store, await hashVaultPassword(request.password));
+      return { ok: true };
+    }
+
+    case "vaultLockVerify":
+      return { ok: true, unlocked: await verifyVaultPassword(request.password, record) };
+
+    case "vaultLockChange": {
+      if (!(await verifyVaultPassword(request.current, record))) {
+        return { ok: false, error: "mot de passe actuel incorrect" };
+      }
+      const weak = vaultLockPasswordError(request.next);
+      if (weak) return { ok: false, error: weak };
+      await saveVaultLock(store, await hashVaultPassword(request.next));
+      return { ok: true };
+    }
+
+    case "vaultLockForget":
+      // Seule issue sans le mot de passe : le carnet local part avec le
+      // verrou. La synchronisation le rapportera s'il existe sur le serveur.
+      await store.remove([VAULT_STORAGE_KEY]);
+      await clearVaultLock(store);
+      return { ok: true };
+  }
+  return { ok: false, error: "action inconnue" };
 }
 
 /** Chiffre le carnet courant. Rend la meme forme que l'action du meme nom. */

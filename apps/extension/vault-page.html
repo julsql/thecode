@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="popup.css" />
+    <link rel="stylesheet" href="vault-page.css" />
+    <!-- Page a part et non popup : un popup se ferme des qu'il perd le focus,
+         et le renouvellement demande d'aller changer le mot de passe sur le
+         site. Fermer l'onglet reverrouille : l'etat deverrouille ne vit que
+         dans cette page. -->
+    <script src="vault-page.js" defer></script>
+    <title>TheCode — Carnet</title>
+  </head>
+
+  <body class="vault-page">
+    <header class="topbar">
+      <h1 id="pageTitle" tabindex="-1">Carnet</h1>
+      <button id="lockNow" type="button" hidden>Verrouiller</button>
+    </header>
+
+    <p id="pageStatus" class="status" role="status" aria-live="polite"></p>
+
+    <!-- Premiere ouverture : pas de biometrie fiable dans un navigateur, le
+         mot de passe de carnet est obligatoire. -->
+    <form id="createView" class="panel" aria-labelledby="createTitle" hidden novalidate>
+      <h2 id="createTitle">Protéger le carnet</h2>
+      <p class="hint" id="createHint">
+        Choisissez un mot de passe de carnet (8 caractères minimum). Il reste sur cet appareil et
+        n'est jamais synchronisé. Il protège cet écran, pas le remplissage automatique.
+      </p>
+      <label for="createPassword">Mot de passe de carnet</label>
+      <input
+        id="createPassword"
+        type="password"
+        autocomplete="new-password"
+        minlength="8"
+        required
+        aria-describedby="createHint"
+      />
+      <label for="createConfirm">Confirmer le mot de passe</label>
+      <input id="createConfirm" type="password" autocomplete="new-password" required />
+      <p id="createError" class="error" role="alert"></p>
+      <button type="submit" class="primary">Créer le mot de passe</button>
+    </form>
+
+    <form id="unlockView" class="panel" aria-labelledby="unlockTitle" hidden novalidate>
+      <h2 id="unlockTitle">Carnet verrouillé</h2>
+      <label for="unlockPassword">Mot de passe de carnet</label>
+      <input id="unlockPassword" type="password" autocomplete="current-password" required />
+      <p id="unlockError" class="error" role="alert"></p>
+      <div class="row">
+        <button type="submit" class="primary">Déverrouiller</button>
+        <button id="forgotBtn" type="button" aria-controls="forgetConfirm" aria-expanded="false">
+          Mot de passe oublié ?
+        </button>
+      </div>
+
+      <!-- Rien d'autre ne passe le verrou : l'oubli efface le carnet local. -->
+      <div id="forgetConfirm" class="danger-zone" role="group" aria-labelledby="forgetTitle" hidden>
+        <h3 id="forgetTitle" tabindex="-1">Effacer le carnet de cet appareil ?</h3>
+        <p class="hint">
+          Toutes les entrées enregistrées sur cet appareil et le mot de passe de carnet seront
+          effacés. Si la synchronisation est active, le carnet reviendra à la prochaine
+          synchronisation. Cette action est irréversible.
+        </p>
+        <div class="row">
+          <button id="forgetConfirmBtn" type="button" class="danger">Effacer le carnet</button>
+          <button id="forgetCancelBtn" type="button">Annuler</button>
+        </div>
+      </div>
+    </form>
+
+    <main id="unlockedView" hidden>
+      <section id="entriesSection" class="panel" aria-labelledby="entriesTitle">
+        <h2 id="entriesTitle">Entrées</h2>
+      </section>
+
+      <section class="panel" aria-labelledby="changeLockTitle">
+        <h2 id="changeLockTitle">Mot de passe de carnet</h2>
+        <form id="changeLockForm" novalidate>
+          <label for="changeCurrent">Mot de passe actuel</label>
+          <input id="changeCurrent" type="password" autocomplete="current-password" required />
+          <label for="changeNext">Nouveau mot de passe</label>
+          <input
+            id="changeNext"
+            type="password"
+            autocomplete="new-password"
+            minlength="8"
+            required
+          />
+          <label for="changeConfirm">Confirmer le nouveau mot de passe</label>
+          <input id="changeConfirm" type="password" autocomplete="new-password" required />
+          <p id="changeLockError" class="error" role="alert"></p>
+          <button type="submit">Changer le mot de passe</button>
+        </form>
+      </section>
+    </main>
+  </body>
+</html>

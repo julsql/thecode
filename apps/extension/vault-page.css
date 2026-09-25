@@ -1,0 +1,48 @@
+/* Ecran carnet, ouvert dans un onglet. Couleurs : variables de popup.css. */
+
+.vault-page {
+  width: auto;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 0 16px 24px;
+}
+
+.vault-page form,
+.vault-page main {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.vault-page h2 {
+  margin: 8px 0 4px;
+  font-size: 14px;
+}
+
+.vault-page .panel {
+  padding-top: 10px;
+}
+
+.vault-page .error:empty,
+.vault-page .status:empty {
+  display: none;
+}
+
+button.danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.danger-zone {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+}
+
+.danger-zone h3 {
+  margin: 0;
+}

@@ -47,6 +47,7 @@
       "transfer.js",
       "sync.js",
       "core-v2.js",
+      "vault-lock.js",
       "background.js"
     ]
   },
