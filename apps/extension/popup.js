@@ -47,6 +47,16 @@ const minInput = document.getElementById("lowercase");
 const majInput = document.getElementById("uppercase");
 const symInput = document.getElementById("symbols");
 const chiInput = document.getElementById("numbers");
+const versionGroup = document.getElementById("versionGroup");
+
+/** Version choisie pour la generation depuis la popup : v2 sauf demande. */
+function selectedVersion() {
+  return versionGroup.querySelector("input:checked")?.value === "1" ? 1 : 2;
+}
+
+versionGroup.addEventListener("change", () => {
+  if (passInput.value) generatePassword();
+});
 
 if (typeof browser === "undefined") {
   var browser = chrome;
@@ -213,6 +223,7 @@ function generatePassword() {
       {
         action: "generatePassword",
         url: tab.url,
+        version: selectedVersion(),
       },
       (response) => {
         if (response.error) {

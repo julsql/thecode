@@ -72,6 +72,20 @@ input[type="number"] {
   margin: 4px 0; /* un peu d'espacement entre les lignes */
 }
 
+.version-group {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+.version-group legend {
+  padding: 0 6px 0 0;
+  float: left;
+}
+
 button {
   margin-top: 10px;
   padding: 8px 12px;

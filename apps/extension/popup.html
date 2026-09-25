@@ -28,8 +28,8 @@
         </p>
         <p>
           Le remplissage automatique utilise le nouveau : pour un site que vous n'avez pas encore
-          mis à jour, générez-le depuis le site ou l'application avec l'ancien algorithme, ou passez
-          l'entrée en v2 depuis le carnet après avoir changé le mot de passe sur le site.
+          mis à jour, générez-le ici en choisissant l'algorithme v1, ou passez l'entrée en v2 depuis
+          le carnet après avoir changé le mot de passe sur le site.
         </p>
         <label class="modal-check">
           <input id="v2NoticeNeverAgain" type="checkbox" />
@@ -78,6 +78,15 @@
     </div>
 
     <hr />
+
+    <!-- v2 a chaque ouverture : la v1 ne sert qu'en secours, pour un site dont
+         le mot de passe n'a pas encore ete change. Le choix n'est donc pas
+         retenu. -->
+    <fieldset id="versionGroup" class="version-group">
+      <legend>Algorithme</legend>
+      <label><input type="radio" name="version" value="2" checked /> v2</label>
+      <label><input type="radio" name="version" value="1" /> v1 (ancien)</label>
+    </fieldset>
 
     <!-- Bouton de génération -->
     <button id="generatePassword">Générer mot de passe</button>

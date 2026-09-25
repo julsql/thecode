@@ -228,7 +228,8 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
       encodingKey = null;
       sendResponse({ ok: true });
     } else if (request.action === "generatePassword") {
-      const res = await generatePasswordForUrl(request.url || "");
+      // Seule la popup demande la v1 : content.js n'envoie pas de version.
+      const res = await generatePasswordForUrl(request.url || "", request.version);
       sendResponse(res);
     } else if (request.action === "getVault") {
       sendResponse({ ok: true, vault: await loadVault(browser?.storage?.local) });
@@ -537,7 +538,13 @@ function setEncodingKeyForTests(key) {
   encodingKey = key;
 }
 
-async function generatePasswordForUrl(url) {
+/**
+ * `version` vaut 2 par defaut : c'est ce que rend le remplissage automatique.
+ * La popup peut demander la v1, en secours pour un site pas encore migre ;
+ * toute autre valeur retombe sur la v2.
+ */
+async function generatePasswordForUrl(url, version) {
+  const v = version === 1 ? 1 : 2;
   if (!encodingKey) {
     return { error: "Aucune clé n'est définie. Ouvre l'extension TheCode et entre ta clé." };
   }
@@ -562,8 +569,14 @@ async function generatePasswordForUrl(url) {
     const entry = findAllByDomain(vault, domain)[0];
 
     if (!entry) {
-      // Site inconnu : v2 aussi, c'est la version des entrees qui naissent.
-      const { security, bits, color } = await generatePassword(
+      // Site inconnu : v2 par defaut aussi, c'est la version des entrees qui
+      // naissent.
+      const {
+        mdp: v1Password,
+        security,
+        bits,
+        color,
+      } = await generatePassword(
         domain,
         encodingKey,
         lengthNumber,
@@ -572,13 +585,16 @@ async function generatePasswordForUrl(url) {
         symState,
         chiState,
       );
-      const mdp = await generatePasswordV2(domain, encodingKey, lengthNumber, {
-        useLower: minState,
-        useUpper: majState,
-        useSymbols: symState,
-        useNumbers: chiState,
-      });
-      return { password: mdp, site: domain, security, bits, color, known: false };
+      const mdp =
+        v === 1
+          ? v1Password
+          : await generatePasswordV2(domain, encodingKey, lengthNumber, {
+              useLower: minState,
+              useUpper: majState,
+              useSymbols: symState,
+              useNumbers: chiState,
+            });
+      return { password: mdp, site: domain, security, bits, color, known: false, version: v };
     }
 
     const { security, bits, color } = await generatePassword(
@@ -591,10 +607,10 @@ async function generatePasswordForUrl(url) {
       entry.charset.numbers,
     );
 
-    // Toujours en v2, quelle que soit la version notee dans le carnet : le
+    // v2 par defaut, quelle que soit la version notee dans le carnet : le
     // remplissage automatique ne propose pas de choix, il doit donc etre
     // previsible. Un site encore en v1 se genere depuis la popup.
-    const mdp = await passwordForEntry(entry, entry.counter, 2);
+    const mdp = await passwordForEntry(entry, entry.counter, v);
 
     return {
       password: mdp,
@@ -604,6 +620,7 @@ async function generatePasswordForUrl(url) {
       bits,
       color,
       known: true,
+      version: v,
     };
   } catch (err) {
     return { error: err.message };

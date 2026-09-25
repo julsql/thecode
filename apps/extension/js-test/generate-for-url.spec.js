@@ -108,6 +108,43 @@ describe("generation pour une page", () => {
     expect(res.password).toBe(await generatePasswordV2("vieux.fr", "clef", 20));
   });
 
+  it("derive en v1 quand la popup le demande, pour une entree connue", async () => {
+    // Secours pour un site dont le mot de passe n'a pas encore ete change.
+    const { worker, storage } = loadWorker();
+    const { emptyVault, newEntry, saveVault } = require("../vault");
+
+    const vault = emptyVault();
+    vault.entries.push(newEntry("vieux.fr", { domains: ["vieux.fr"], v: 2 }));
+    await saveVault(storage, vault);
+
+    const res = await worker.generatePasswordForUrl("https://vieux.fr/login", 1);
+    const { mdp } = await worker.generatePassword("vieux.fr", "clef", 20, true, true, true, true);
+
+    expect(res.password).toBe(mdp);
+    expect(res.version).toBe(1);
+  });
+
+  it("derive en v1 quand la popup le demande, pour un site inconnu", async () => {
+    const { worker } = loadWorker();
+
+    const res = await worker.generatePasswordForUrl("https://inconnu.fr/login", 1);
+    const { mdp } = await worker.generatePassword("inconnu.fr", "clef", 20, true, true, true, true);
+
+    expect(res.password).toBe(mdp);
+  });
+
+  it("retombe sur la v2 pour une version inattendue", async () => {
+    // Un message mal forme ne doit pas faire basculer en v1 sans le dire.
+    const { worker } = loadWorker();
+    const { generatePasswordV2 } = require("../core-v2");
+
+    for (const version of [undefined, 0, 3, "1", null]) {
+      const res = await worker.generatePasswordForUrl("https://inconnu.fr/login", version);
+      expect(res.password).toBe(await generatePasswordV2("inconnu.fr", "clef", 20));
+      expect(res.version).toBe(2);
+    }
+  });
+
   it("derive en v2 quand l'entree est en v2", async () => {
     const { worker, storage } = loadWorker();
     const { emptyVault, newEntry, saveVault } = require("../vault");
