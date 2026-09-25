@@ -63,6 +63,9 @@ versionGroup.addEventListener("change", () => {
   if (passInput.value) generatePassword();
 });
 
+// Rose en v1, bleu en v2 : voir algo-theme.js.
+bindAlgoTheme(versionGroup, document.documentElement);
+
 if (typeof browser === "undefined") {
   var browser = chrome;
 }
