@@ -2,9 +2,10 @@ if (typeof browser === "undefined" && typeof chrome !== "undefined") {
   var browser = chrome;
 }
 
-// Le carnet vit dans un fichier a part. importScripts fonctionne dans un
-// service worker classique, donc sur Chrome, Firefox et Safari ; les modules
-// ES ne sont pas supportes partout de la meme facon.
+// Le carnet vit dans un fichier a part. Chrome charge le fond en service
+// worker : importScripts y tire les dependances. Firefox et Safari le chargent
+// en page de fond, sans importScripts : c'est leur manifeste qui liste ces
+// fichiers avant celui-ci (voir manifest.spec.js).
 if (typeof importScripts === "function") {
   importScripts("vault.js", "transfer.js", "sync.js", "core-v2.js");
 }

@@ -43,9 +43,12 @@
   ],
   "background": {
     "scripts": [
+      "vault.js",
+      "transfer.js",
+      "sync.js",
+      "core-v2.js",
       "background.js"
-    ],
-    "type": "module"
+    ]
   },
   "content_scripts": [
     {
