@@ -260,8 +260,8 @@ function findDuplicates(
   const live = entries.filter((e) => !e.deleted);
   for (let i = 0; i < live.length; i += 1) {
     for (let j = i + 1; j < live.length; j += 1) {
-      const a = live[i];
-      const b = live[j];
+      const a = live[i]!;
+      const b = live[j]!;
       const apart =
         (leftIds.has(a.id) && !rightIds.has(a.id) && rightIds.has(b.id) && !leftIds.has(b.id)) ||
         (rightIds.has(a.id) && !leftIds.has(a.id) && leftIds.has(b.id) && !rightIds.has(b.id));

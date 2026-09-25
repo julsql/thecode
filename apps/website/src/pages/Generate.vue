@@ -329,7 +329,7 @@ export default defineComponent({
     const { t, localePath } = useI18n();
     /** Traduction avec valeurs : `{n}` et consorts remplacés tels quels. */
     const tf = (key: TranslationKey, values: Record<string, string | number>) =>
-      Object.entries(values).reduce((text, [k, v]) => text.replaceAll(`{${k}}`, String(v)), t(key));
+      Object.entries(values).reduce((text, [k, v]) => text.split(`{${k}}`).join(String(v)), t(key));
 
     const clef = ref("");
     const site = ref("");
