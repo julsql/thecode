@@ -20,6 +20,30 @@ function newPasswordError(password, confirmation) {
   return null;
 }
 
+/** Entrees affichees : non supprimees, par libelle puis identifiant. */
+function visibleEntries(vault) {
+  return (vault?.entries || [])
+    .filter((e) => !e.deleted)
+    .sort(
+      (a, b) =>
+        (a.label || a.siteKey).localeCompare(b.label || b.siteKey) ||
+        (a.login || "").localeCompare(b.login || ""),
+    );
+}
+
+/** Jeux de caracteres actifs, en clair. */
+function charsetLabel(charset = {}) {
+  const names = [
+    ["lower", "minuscules"],
+    ["upper", "majuscules"],
+    ["numbers", "chiffres"],
+    ["symbols", "symboles"],
+  ]
+    .filter(([key]) => charset[key])
+    .map(([, name]) => name);
+  return names.length ? names.join(", ") : "aucun";
+}
+
 function send(message) {
   return new Promise((resolve) => browser.runtime.sendMessage(message, resolve));
 }
@@ -164,9 +188,161 @@ function initVaultPage() {
     say("Mot de passe de carnet changé.");
   });
 
-  // Branches pour l'ecran de gestion.
-  function onUnlock() {}
-  function onLock() {}
+  // Gestion : liste, detail, suppression, renouvellement.
+  const entriesSection = $("entriesSection");
+  const entriesList = $("entriesList");
+  const detailView = $("detailView");
+  const detailStatus = $("detailStatus");
+  let entries = [];
+  let current = null;
+  let lastOpenedId = null;
+
+  function onUnlock() {
+    showDetail(null);
+    loadEntries();
+  }
+
+  function onLock() {
+    // Rien ne reste affiche derriere le verrou.
+    entries = [];
+    current = null;
+    entriesList.replaceChildren();
+    showDetail(null, false);
+  }
+
+  async function loadEntries(message) {
+    const resp = await send({ action: "getVault" });
+    if (!unlocked) return;
+    if (!resp?.ok) {
+      say(`Erreur : ${resp?.error || "inconnue"}`);
+      return;
+    }
+    entries = visibleEntries(resp.vault);
+    renderList();
+    if (message) say(message);
+  }
+
+  function renderList() {
+    $("entriesEmpty").hidden = entries.length > 0;
+    entriesList.replaceChildren(
+      ...entries.map((entry) => {
+        const item = document.createElement("li");
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "entry";
+        button.dataset.id = entry.id;
+        const label = document.createElement("strong");
+        label.textContent = entry.label || entry.siteKey;
+        const login = document.createElement("span");
+        login.textContent = entry.login || "sans identifiant";
+        const domains = document.createElement("span");
+        domains.className = "hint";
+        domains.textContent = entry.domains.join(", ");
+        button.append(label, login, domains);
+        button.addEventListener("click", () => showDetail(entry));
+        item.appendChild(button);
+        return item;
+      }),
+    );
+  }
+
+  function showDetail(entry, moveFocus = true) {
+    current = entry;
+    entriesSection.hidden = Boolean(entry);
+    detailView.hidden = !entry;
+    $("renewPreview").hidden = true;
+    $("deleteConfirm").hidden = true;
+    detailStatus.textContent = "";
+    if (!entry) {
+      if (moveFocus && lastOpenedId) {
+        entriesList.querySelector(`[data-id="${CSS.escape(lastOpenedId)}"]`)?.focus();
+      }
+      return;
+    }
+    lastOpenedId = entry.id;
+    $("detailTitle").textContent = entry.label || entry.siteKey;
+    $("detailSiteKey").textContent = entry.siteKey;
+    $("detailDomains").textContent = entry.domains.join(", ");
+    $("detailLogin").textContent = entry.login || "—";
+    $("detailLength").textContent = String(entry.length);
+    $("detailCharset").textContent = charsetLabel(entry.charset);
+    $("detailCounter").textContent = String(entry.counter);
+    $("detailVersion").textContent = `v${entry.v}`;
+    $("detailUpdatedAt").textContent = new Date(entry.updatedAt).toLocaleString("fr-FR");
+    if (moveFocus) $("detailTitle").focus();
+  }
+
+  $("detailBack").addEventListener("click", () => showDetail(null));
+  detailView.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    e.preventDefault();
+    if (!$("deleteConfirm").hidden) {
+      $("deleteConfirm").hidden = true;
+      $("deleteBtn").focus();
+    } else if (!$("renewPreview").hidden) {
+      $("renewPreview").hidden = true;
+      $("renewBtn").focus();
+    } else {
+      showDetail(null);
+    }
+  });
+
+  $("deleteBtn").addEventListener("click", () => {
+    $("renewPreview").hidden = true;
+    $("deleteConfirm").hidden = false;
+    $("deleteTitle").focus();
+  });
+  $("deleteCancelBtn").addEventListener("click", () => {
+    $("deleteConfirm").hidden = true;
+    $("deleteBtn").focus();
+  });
+  $("deleteConfirmBtn").addEventListener("click", async () => {
+    if (!unlocked || !current) return;
+    const label = current.label || current.siteKey;
+    // Pierre tombale ecrite par le service worker : deleted + updatedAt.
+    const resp = await send({ action: "deleteEntry", id: current.id });
+    if (!resp?.ok) {
+      detailStatus.textContent = `Échec : ${resp?.error || "inconnu"}`;
+      return;
+    }
+    lastOpenedId = null;
+    showDetail(null, false);
+    await loadEntries(`Entrée « ${label} » supprimée.`);
+    pageTitle.focus();
+  });
+
+  // Renouvellement : meme parcours que la popup (previewChange / applyChange).
+  $("renewBtn").addEventListener("click", async () => {
+    if (!unlocked || !current) return;
+    $("deleteConfirm").hidden = true;
+    detailStatus.textContent = "Calcul en cours…";
+    const resp = await send({ action: "previewChange", id: current.id });
+    if (!resp?.ok) {
+      detailStatus.textContent = `Échec : ${resp?.error || "inconnu"}`;
+      return;
+    }
+    $("renewBefore").textContent = resp.before;
+    $("renewAfter").textContent = resp.after;
+    $("renewPreview").hidden = false;
+    detailStatus.textContent = "";
+  });
+  $("renewCancel").addEventListener("click", () => {
+    $("renewPreview").hidden = true;
+    $("renewBtn").focus();
+  });
+  $("renewConfirm").addEventListener("click", async () => {
+    if (!unlocked || !current) return;
+    const id = current.id;
+    const resp = await send({ action: "applyChange", id });
+    if (!resp?.ok) {
+      detailStatus.textContent = `Échec : ${resp?.error || "inconnu"}`;
+      return;
+    }
+    await loadEntries();
+    showDetail(entries.find((e) => e.id === id) || null, false);
+    detailStatus.textContent = `Entrée renouvelée, compteur ${resp.counter}.`;
+    $("renewBtn").focus();
+  });
 
   start();
 }
@@ -176,5 +352,5 @@ if (typeof document !== "undefined") {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { newPasswordError, VAULT_LOCK_MIN };
+  module.exports = { newPasswordError, visibleEntries, charsetLabel, VAULT_LOCK_MIN };
 }

@@ -74,6 +74,72 @@
     <main id="unlockedView" hidden>
       <section id="entriesSection" class="panel" aria-labelledby="entriesTitle">
         <h2 id="entriesTitle">Entrées</h2>
+        <p id="entriesEmpty" class="hint" hidden>Le carnet est vide.</p>
+        <ul id="entriesList" class="entries" aria-labelledby="entriesTitle"></ul>
+      </section>
+
+      <section id="detailView" class="panel" aria-labelledby="detailTitle" hidden>
+        <div class="row">
+          <button id="detailBack" type="button">Retour à la liste</button>
+        </div>
+        <h2 id="detailTitle" tabindex="-1"></h2>
+        <dl class="detail">
+          <dt>siteKey</dt>
+          <dd><code id="detailSiteKey"></code></dd>
+          <dt>Domaines</dt>
+          <dd id="detailDomains"></dd>
+          <dt>Identifiant</dt>
+          <dd id="detailLogin"></dd>
+          <dt>Longueur</dt>
+          <dd id="detailLength"></dd>
+          <dt>Caractères</dt>
+          <dd id="detailCharset"></dd>
+          <dt>Compteur</dt>
+          <dd id="detailCounter"></dd>
+          <dt>Version</dt>
+          <dd id="detailVersion"></dd>
+          <dt>Mis à jour</dt>
+          <dd id="detailUpdatedAt"></dd>
+        </dl>
+
+        <div class="row">
+          <button id="renewBtn" type="button">Renouveler</button>
+          <button id="deleteBtn" type="button" class="danger" aria-controls="deleteConfirm">
+            Supprimer
+          </button>
+        </div>
+        <p id="detailStatus" class="status" role="status" aria-live="polite"></p>
+
+        <!-- Les deux cote a cote : le nouveau ne sert qu'une fois pose sur le
+             site, l'ancien reste celui qui connecte jusque-la. -->
+        <div id="renewPreview" class="change-preview" hidden>
+          <p class="hint">Actuel</p>
+          <p><code id="renewBefore"></code></p>
+          <p class="hint">Nouveau</p>
+          <p><code id="renewAfter"></code></p>
+          <p class="hint">Changez-le sur le site, puis confirmez.</p>
+          <div class="row">
+            <button id="renewConfirm" type="button">Confirmer</button>
+            <button id="renewCancel" type="button">Annuler</button>
+          </div>
+        </div>
+
+        <div
+          id="deleteConfirm"
+          class="danger-zone"
+          role="group"
+          aria-labelledby="deleteTitle"
+          hidden
+        >
+          <h3 id="deleteTitle" tabindex="-1">Supprimer cette entrée ?</h3>
+          <p class="hint">
+            La suppression se propagera aux autres appareils à la prochaine synchronisation.
+          </p>
+          <div class="row">
+            <button id="deleteConfirmBtn" type="button" class="danger">Supprimer</button>
+            <button id="deleteCancelBtn" type="button">Annuler</button>
+          </div>
+        </div>
       </section>
 
       <section class="panel" aria-labelledby="changeLockTitle">
