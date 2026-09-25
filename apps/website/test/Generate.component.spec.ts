@@ -170,7 +170,7 @@ describe("carnet et empreinte", () => {
     expect(wrapper.text()).toContain("Enregistrer ce site");
   });
 
-  it("propose de renouveler une entree v2", async () => {
+  it("renvoie vers l'écran carnet pour gérer les entrées", async () => {
     const { saveVault, emptyVault, newEntry } = await import("@/vault");
 
     const vault = emptyVault();
@@ -181,83 +181,10 @@ describe("carnet et empreinte", () => {
     await wrapper.find("#id_site").setValue("google.com");
     await wrapper.vm.$nextTick();
 
-    expect(wrapper.text()).toContain("Renouveler");
-    expect(wrapper.text()).not.toContain("Passer en v2");
+    // La gestion vit derrière le verrou : plus de liste ni de renouvellement ici.
+    expect(wrapper.text()).not.toContain("Renouveler");
+    expect(wrapper.find('a[href="/fr/vault"]').exists()).toBe(true);
   });
-
-  /**
-   * Le renouvellement passe par le compteur, qui fait partie de l'offre
-   * complète. L'offre connue vit avec la session : la génération se fait hors
-   * ligne, il n'y a personne à interroger au moment du clic.
-   */
-  function signInAs(plan: string) {
-    localStorage.setItem(
-      "thecode.session",
-      JSON.stringify({
-        endpoint: "https://thecode-api.julsql.fr",
-        accessToken: "jeton",
-        refreshToken: "renouvellement",
-        plan,
-      }),
-    );
-  }
-
-  it("montre les deux mots de passe avant d'ecrire quoi que ce soit", async () => {
-    const { saveVault, emptyVault, newEntry, loadVault, findAllByDomain } = await import("@/vault");
-
-    const vault = emptyVault();
-    vault.entries.push(newEntry("google.com", { domains: ["google.com"] }));
-    saveVault(vault);
-    signInAs("pro");
-
-    const wrapper = await mountGenerate();
-    await wrapper.find("#id_clef").setValue("clef");
-    await wrapper.find("#id_site").setValue("google.com");
-    await wrapper.vm.$nextTick();
-
-    const renew = wrapper.findAll("button").find((b) => b.text() === "Renouveler");
-    await renew!.trigger("click");
-
-    await vi.waitFor(() => expect(wrapper.text()).toContain("Nouveau"), { timeout: 10000 });
-    expect(wrapper.text()).toContain("Mot de passe actuel");
-
-    // Rien n'est ecrit tant que ce n'est pas confirme : l'ancien mot de passe
-    // est encore celui du site.
-    expect(findAllByDomain(loadVault(), "google.com")[0].counter).toBe(1);
-
-    const confirm = wrapper.findAll("button").find((b) => b.text() === "Confirmer");
-    await confirm!.trigger("click");
-    await wrapper.vm.$nextTick();
-
-    expect(findAllByDomain(loadVault(), "google.com")[0].counter).toBe(2);
-  });
-
-  it("refuse le renouvellement a l'offre gratuite", async () => {
-    const { saveVault, emptyVault, newEntry } = await import("@/vault");
-
-    const vault = emptyVault();
-    vault.entries.push(newEntry("google.com", { domains: ["google.com"] }));
-    saveVault(vault);
-    // Sans compte, donc offre gratuite : le compteur est ce qui permet de
-    // changer un mot de passe sans changer sa clef, et c'est ce qui se paie.
-    const wrapper = await mountGenerate();
-
-    await wrapper.find("#id_clef").setValue("clef");
-    await wrapper.find("#id_site").setValue("google.com");
-    await wrapper.vm.$nextTick();
-
-    // Le bouton reste cliquable : un bouton éteint n'explique rien et ne
-    // propose rien. C'est le refus qui dit ce que l'offre complète apporte.
-    const renew = wrapper.findAll("button").find((b) => b.text() === "Renouveler");
-    expect(renew!.attributes("disabled")).toBeUndefined();
-
-    await renew!.trigger("click");
-    await wrapper.vm.$nextTick();
-
-    expect(wrapper.text()).toContain("offre complète");
-    // Et rien n'a été calculé ni écrit.
-    expect(wrapper.text()).not.toContain("Nouveau mot de passe");
-  }, 20000);
 
   it("enregistre en v2 meme depuis l'ecran regle en v1", async () => {
     const wrapper = await mountGenerate();

@@ -194,52 +194,12 @@
               {{ tf("vault_known", { n: vaultEntries.length }) }}
             </p>
 
-            <!-- Renouveler : la seule action qui change un mot de passe deja
-                 en service. Le carnet ne contient que des entrees v2. -->
-            <ul v-if="vaultEntries.length && !pending" class="entry-list">
-              <li v-for="entry in vaultEntries" :key="entry.id">
-                <span class="entry-name">
-                  {{ entry.label || entry.siteKey }}
-                  <small v-if="entry.login" class="entry-login">{{ entry.login }}</small>
-                </span>
-                <!-- Jamais désactivé : un bouton éteint n'explique rien et ne
-                     propose rien. C'est le clic qui dit ce que l'offre
-                     complète apporte, et où l'obtenir. -->
-                <button type="button" class="ghost-btn small" @click="proposeRenew(entry)">
-                  {{ t("vault_renew") }}
-                </button>
-              </li>
-            </ul>
-
-            <!-- Le compteur est ce qui permet de changer un mot de passe sans
-                 changer sa clef maitresse : il fait partie de l'offre
-                 complete. -->
-            <p v-if="!renewAllowed && vaultEntries.length" class="hint">
-              {{ t("gen_renew_paid") }}
-              <router-link :to="localePath('pricing')">{{ t("nav_pricing") }}</router-link>
+            <!-- La gestion (liste, détail, suppression, renouvellement) vit
+                 derrière le verrou de l'écran carnet : le générateur ne fait
+                 qu'enregistrer. Voir shared/spec/vault-lock.md. -->
+            <p class="hint">
+              <router-link :to="localePath('vault')">{{ t("gen_vault_manage") }}</router-link>
             </p>
-
-            <!-- Les deux cote a cote : le nouveau ne sert a rien tant qu'il n'a
-                 pas ete pose sur le site, et l'ancien reste celui qui connecte. -->
-            <div v-if="pending" class="change-box">
-              <p class="hint">{{ t("vault_current") }}</p>
-              <p>
-                <code>{{ pending.before }}</code>
-              </p>
-              <p class="hint">{{ t("vault_new") }}</p>
-              <p>
-                <code>{{ pending.after }}</code>
-              </p>
-              <p class="hint">{{ t("vault_change_hint") }}</p>
-              <div class="panel-actions">
-                <button type="button" class="ghost-btn primary" @click="applyChange">
-                  {{ t("vault_confirm") }}
-                </button>
-                <button type="button" class="ghost-btn" @click="pending = null">
-                  {{ t("vault_cancel") }}
-                </button>
-              </div>
-            </div>
           </section>
 
           <!-- Transfert hors serveur : le QR pour envoyer vers un téléphone,
@@ -328,7 +288,7 @@ import { generatePassword, calculateEntropyBits, getSecurityLevel } from "@/util
 import { canonicalSite, loadPublicSuffixList } from "@/canonicalSite";
 import { keyFingerprint, type Fingerprint } from "@/fingerprint";
 import { clearSession, loadSession, saveSession, syncVault } from "@/sync";
-import { isPaidPlan, refreshPlan } from "@/account";
+import { refreshPlan } from "@/account";
 import {
   emptyVault,
   findAllByDomain,
@@ -342,6 +302,7 @@ import {
   type VaultEntry,
 } from "@/vault";
 import { generatePasswordV2 } from "@/coreV2";
+import { passwordForEntry } from "@/renew";
 import { exportVault, importVault } from "@/transfer";
 import { encodeQr } from "@/qr.js";
 import { useI18n } from "@/i18n";
@@ -353,9 +314,6 @@ export default defineComponent({
     // La PSL est servie depuis public/ : on la charge une fois au montage, puis
     // on regenere, car la canonicalisation change le resultat.
     onMounted(async () => {
-      const session = loadSession();
-      if (session) refreshPlan(session).then((plan) => (renewAllowed.value = isPaidPlan(plan)));
-
       try {
         const res = await fetch("/public_suffix_list.dat");
         if (res.ok) {
@@ -439,21 +397,8 @@ export default defineComponent({
     }
     /** Modules du QR affiché, vide tant qu'on n'en demande pas. */
     const qrRows = ref<number[][]>([]);
-    /** Changement propose, en attente de confirmation. */
-    const pending = ref<{
-      entryId: string;
-      before: string;
-      after: string;
-    } | null>(null);
     const syncConnected = ref(Boolean(loadSession()));
     const syncMessage = ref("");
-    /**
-     * Le renouvellement demande l'offre complète.
-     *
-     * Décidé sur l'appareil, forcément : le compteur voyage à l'intérieur du
-     * bloc chiffré, le serveur ne le voit pas et ne peut donc rien en dire.
-     */
-    const renewAllowed = ref(isPaidPlan(loadSession()?.plan));
 
     const scoreSecurite = ref(0);
     const couleurSecurite = ref("");
@@ -513,7 +458,7 @@ export default defineComponent({
       const version = enV1.value ? 1 : 2;
       const entry = matchedEntry.value;
       const mdp = entry
-        ? await passwordForEntry(entry, entry.counter, version)
+        ? await passwordForEntry(entry, clef.value, entry.counter, version)
         : version === 1
           ? await generatePassword(
               domain,
@@ -539,85 +484,6 @@ export default defineComponent({
     watch(clef, async (value) => {
       fingerprint.value = await keyFingerprint(value);
     });
-
-    /**
-     * Derive le mot de passe d'une entree.
-     *
-     * Le carnet ne contient que des entrees v2 ; `version` = 1 ne sert qu'a la
-     * generation ponctuelle demandee depuis l'ecran regle en v1.
-     */
-    async function passwordForEntry(entry: VaultEntry, counter?: number, version?: number) {
-      const v = version ?? entry.v;
-      if (v >= 2) {
-        return generatePasswordV2(entry.siteKey, clef.value, entry.length, {
-          useLower: entry.charset.lower,
-          useUpper: entry.charset.upper,
-          useSymbols: entry.charset.symbols,
-          useNumbers: entry.charset.numbers,
-          login: entry.login ?? "",
-          counter: counter ?? entry.counter,
-        });
-      }
-      // v1 : ni login ni compteur n'entrent dans la derivation.
-      return generatePassword(
-        entry.siteKey,
-        clef.value,
-        entry.length,
-        entry.charset.lower,
-        entry.charset.upper,
-        entry.charset.symbols,
-        entry.charset.numbers,
-      );
-    }
-
-    /**
-     * Prepare un renouvellement, sans rien ecrire.
-     *
-     * Les deux mots de passe s'affichent cote a cote : le nouveau ne sert a
-     * rien tant qu'il n'a pas ete pose sur le site, et l'ancien reste celui qui
-     * connecte. Ecrire d'abord rendrait le compte inaccessible.
-     */
-    async function proposeRenew(entry: VaultEntry) {
-      if (!clef.value) {
-        vaultMessage.value = t("gen_need_key");
-        return;
-      }
-      if (!renewAllowed.value) {
-        vaultMessage.value = t("gen_renew_paid");
-        return;
-      }
-      vaultMessage.value = t("gen_computing");
-
-      pending.value = {
-        entryId: entry.id,
-        before: (await passwordForEntry(entry)) ?? "",
-        after: (await passwordForEntry(entry, entry.counter + 1)) ?? "",
-      };
-      vaultMessage.value = "";
-    }
-
-    function applyChange() {
-      const change = pending.value;
-      if (!change) return;
-
-      const vault = loadVault() ?? emptyVault();
-      const entry = vault.entries.find((e) => e.id === change.entryId);
-      if (!entry) {
-        pending.value = null;
-        return;
-      }
-
-      entry.counter += 1;
-      // Sans rehorodatage, la fusion ferait gagner l'autre appareil et le
-      // changement serait perdu a la synchronisation suivante.
-      entry.updatedAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
-
-      saveVault(vault);
-      pending.value = null;
-      vaultMessage.value = tf("vault_renewed", { n: entry.counter });
-      refreshVault();
-      genererMotDePasse();
-    }
 
     /**
      * Affiche le carnet chiffré en QR code.
@@ -795,7 +661,7 @@ export default defineComponent({
         saveVault(result.vault);
         saveSession(result.session);
         // Un abonnement pris entre-temps doit se voir sans recharger la page.
-        refreshPlan(result.session).then((plan) => (renewAllowed.value = isPaidPlan(plan)));
+        void refreshPlan(result.session);
         refreshVault();
         const conflicts = result.conflicts.length
           ? tf("sync_conflicts", { n: result.conflicts.length })
@@ -832,9 +698,6 @@ export default defineComponent({
       vaultEntries,
       vaultMessage,
       saveEntry,
-      pending,
-      proposeRenew,
-      applyChange,
       enV1,
       showV2Notice,
       v2NoticeNeverAgain,
@@ -846,7 +709,6 @@ export default defineComponent({
       importFile,
       syncConnected,
       syncMessage,
-      renewAllowed,
       runSync,
       disconnectSync,
       clef,
@@ -1124,56 +986,9 @@ input[type="text"]:read-only {
   margin-bottom: 16px;
 }
 
-.entry-list {
-  list-style: none;
-  margin: 12px 0 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.entry-list li {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 8px 12px;
-  border-radius: 12px;
-  background: var(--surface-elevated);
-  border: 1px solid var(--border-soft);
-}
-
-.entry-name {
-  font-size: 0.9rem;
-  word-break: break-all;
-}
-
-.entry-login {
-  margin-left: 6px;
-  opacity: 0.7;
-}
-
 .login-hint {
   margin: 6px 0 0;
   font-size: 0.8rem;
-}
-
-.change-box {
-  margin-top: 14px;
-  padding: 14px;
-  border-radius: 14px;
-  background: var(--surface-elevated);
-  border: 1px solid var(--border-strong);
-}
-
-.change-box code {
-  display: inline-block;
-  padding: 6px 10px;
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.35);
-  font-size: 0.95rem;
-  word-break: break-all;
 }
 
 .range-group {

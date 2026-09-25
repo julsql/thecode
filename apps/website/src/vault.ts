@@ -141,6 +141,26 @@ export function loginToPrefill(entries: VaultEntry[], login: string): string | n
   return entries[0]?.login ?? null;
 }
 
+/** Entrées visibles dans l'écran de gestion : tout sauf les pierres tombales. */
+export function liveEntries(vault: Vault): VaultEntry[] {
+  return vault.entries.filter((e) => !e.deleted);
+}
+
+/**
+ * Supprime une entrée en posant une pierre tombale.
+ *
+ * L'entrée reste dans le carnet, `deleted = true` et rehorodatée : effacée
+ * pour de bon, l'autre appareil la ressusciterait à la synchronisation
+ * suivante. Voir shared/spec/vault-merge.md.
+ */
+export function tombstoneEntry(vault: Vault, id: string, now = nowIso()): boolean {
+  const entry = vault.entries.find((e) => e.id === id && !e.deleted);
+  if (!entry) return false;
+  entry.deleted = true;
+  entry.updatedAt = now;
+  return true;
+}
+
 /** Représentation stable, pour départager sans dépendre de l'ordre. */
 
 /**

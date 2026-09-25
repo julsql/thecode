@@ -51,6 +51,14 @@
             {{ t("nav_generator") }}
           </router-link>
           <router-link
+            :to="localePath('vault')"
+            class="nav-link"
+            active-class="is-active"
+            @click="closeMenu"
+          >
+            {{ t("nav_vault") }}
+          </router-link>
+          <router-link
             :to="localePath('tutorial')"
             class="nav-link"
             active-class="is-active"
@@ -141,6 +149,14 @@
             {{ t("nav_generator") }}
           </router-link>
           <router-link
+            :to="localePath('vault')"
+            class="mobile-link"
+            active-class="is-active"
+            @click="closeMenu"
+          >
+            {{ t("nav_vault") }}
+          </router-link>
+          <router-link
             :to="localePath('tutorial')"
             class="mobile-link"
             active-class="is-active"
@@ -198,6 +214,7 @@
             <router-link :to="localePath('')">{{ t("nav_home") }}</router-link>
             <router-link :to="localePath('about')">{{ t("nav_about") }}</router-link>
             <router-link :to="localePath('generate')">{{ t("nav_generator") }}</router-link>
+            <router-link :to="localePath('vault')">{{ t("nav_vault") }}</router-link>
             <router-link :to="localePath('pricing')">{{ t("nav_pricing") }}</router-link>
             <router-link :to="localePath('account')">{{ t("nav_account") }}</router-link>
           </div>
