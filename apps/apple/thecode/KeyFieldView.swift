@@ -109,7 +109,7 @@ struct KeyFieldView: View {
     private func authenticate(thenReveal reveal: Bool) {
         let context = LAContext()
         var error: NSError?
-        guard context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics,
+        guard context.canEvaluatePolicy(.deviceOwnerAuthentication,
                                         error: &error) else {
             return
         }
@@ -118,7 +118,7 @@ struct KeyFieldView: View {
                      "Authenticate to view the key")
             : L10n.t("Authentifiez-vous pour modifier la clé",
                      "Authenticate to edit the key")
-        context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics,
+        context.evaluatePolicy(.deviceOwnerAuthentication,
                                localizedReason: reason) { success, _ in
             DispatchQueue.main.async {
                 guard success else { return }

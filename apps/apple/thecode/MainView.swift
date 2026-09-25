@@ -675,13 +675,13 @@ struct MainView: View {
     private func authenticateForGeneration() {
         let context = LAContext()
         var error: NSError?
-        guard context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics,
+        guard context.canEvaluatePolicy(.deviceOwnerAuthentication,
                                         error: &error) else {
             return
         }
         let reason = L10n.t("Authentifiez-vous pour générer un mot de passe",
                             "Authenticate to generate a password")
-        context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics,
+        context.evaluatePolicy(.deviceOwnerAuthentication,
                                localizedReason: reason) { success, _ in
             DispatchQueue.main.async {
                 if success {

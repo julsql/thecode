@@ -254,15 +254,13 @@ struct MainView: View {
                 .buttonStyle(.borderless)
                 .help(L10n.t("Partager", "Share"))
 
-                // Le carnet dit sur quels sites on a un compte et sous quel
-                // identifiant : aussi sensible qu'un coffre de mots de passe,
-                // donc jamais accessible sans authentification.
-                Button(action: { if unlocked { showVault = true } }) {
+                // Le carnet a son propre verrou (voir vault-lock.md) : l'exiger
+                // ici aussi le rendait inaccessible sans Touch ID.
+                Button(action: { showVault = true }) {
                     Image(systemName: "list.bullet.rectangle")
                 }
                 .buttonStyle(.borderless)
                 .help(L10n.t("Carnet", "Vault"))
-                .disabled(!unlocked)
 
                 // Le mode en cours se lit dans la barre, comme le thème :
                 // c'est lui qui décide quel mot de passe sort.
@@ -688,13 +686,13 @@ struct MainView: View {
     private func authenticateForGeneration() {
         let context = LAContext()
         var error: NSError?
-        guard context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics,
+        guard context.canEvaluatePolicy(.deviceOwnerAuthentication,
                                         error: &error) else {
             return
         }
         let reason = L10n.t("Authentifiez-vous pour générer un mot de passe",
                             "Authenticate to generate a password")
-        context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics,
+        context.evaluatePolicy(.deviceOwnerAuthentication,
                                localizedReason: reason) { success, _ in
             DispatchQueue.main.async {
                 if success {
