@@ -56,6 +56,8 @@ public class MainActivity extends AppCompatActivity {
     private android.view.View fingerprintRow;
     private android.widget.TextView fingerprintChip;
     private TextInputEditText siteEditText;
+    private TextInputLayout loginInputLayout;
+    private TextInputEditText loginEditText;
     private TextInputLayout passwordInputLayout;
     private TextInputEditText passwordEditText;
     private EditText lengthEditText;
@@ -124,6 +126,16 @@ public class MainActivity extends AppCompatActivity {
     /** Évite la boucle slider → champ → slider lors de la synchronisation. */
     private boolean syncingLength = false;
 
+    /** Carnet relu au retour sur l'écran : sert à préremplir l'identifiant. */
+    private Vault vault = new Vault();
+    /**
+     * Vrai quand l'identifiant affiché vient du carnet et non d'une frappe :
+     * il suit alors le site saisi, alors qu'une saisie de l'utilisateur reste.
+     */
+    private boolean loginPrefilled = false;
+    /** Évite que le préremplissage passe pour une frappe de l'utilisateur. */
+    private boolean settingLogin = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -141,6 +153,7 @@ public class MainActivity extends AppCompatActivity {
         updateFingerprint(preferences.getEncodingKey());
 
         showV2NoticeIfNeeded();
+        applyLoginMode();
 
         regenerate();
     }
@@ -149,6 +162,9 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         refreshAutofillStatus();
+        // Le carnet a pu changer ailleurs (écran du carnet, synchronisation).
+        vault = Vault.load(this);
+        prefillLogin();
         // Le pendant de onPause() est onResume(), pas onStart() : une activité
         // qui ne fait que recouvrir la nôtre (le code PIN du déverrouillage,
         // par exemple) provoque onPause() sans onStop(), donc sans onStart()
@@ -189,6 +205,8 @@ public class MainActivity extends AppCompatActivity {
         fingerprintRow = findViewById(R.id.fingerprintRow);
         fingerprintChip = findViewById(R.id.fingerprintChip);
         siteEditText = findViewById(R.id.siteEditText);
+        loginInputLayout = findViewById(R.id.loginInputLayout);
+        loginEditText = findViewById(R.id.loginEditText);
         passwordInputLayout = findViewById(R.id.passwordInputLayout);
         passwordEditText = findViewById(R.id.passwordEditText);
         lengthEditText = findViewById(R.id.lengthEditText);
@@ -236,6 +254,15 @@ public class MainActivity extends AppCompatActivity {
         siteEditText.addTextChangedListener(new SimpleTextWatcher() {
             @Override
             public void afterTextChanged(Editable s) {
+                prefillLogin();
+                regenerate();
+            }
+        });
+
+        loginEditText.addTextChangedListener(new SimpleTextWatcher() {
+            @Override
+            public void afterTextChanged(Editable s) {
+                if (!settingLogin) loginPrefilled = false;
                 regenerate();
             }
         });
@@ -645,6 +672,8 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
+        // Vide = le comportement d'avant le champ, au caractère près.
+        final String login = textOf(loginEditText).trim();
         final int ticket = ++generation;
         worker.execute(() -> {
             try {
@@ -652,7 +681,7 @@ public class MainActivity extends AppCompatActivity {
                     masterV2 = CodeV2.deriveMasterKey(key);
                     masterV2For = key;
                 }
-                String result = CodeV2.getCode(code, key, site, "", 1, masterV2);
+                String result = CodeV2.getCode(code, key, site, login, 1, masterV2);
                 // Une réponse arrivée après une frappe plus récente
                 // afficherait le mot de passe d'un autre site.
                 main.post(() -> {
@@ -761,10 +790,41 @@ public class MainActivity extends AppCompatActivity {
     private void toggleAlgo() {
         useV1 = !useV1;
         applyAlgoLabel();
+        applyLoginMode();
         Snackbar.make(findViewById(android.R.id.content),
                 useV1 ? R.string.algo_now_v1 : R.string.algo_now_v2,
                 Snackbar.LENGTH_LONG).show();
         regenerate();
+    }
+
+    /**
+     * La v1 ignore l'identifiant : le champ reste lisible mais éteint, avec la
+     * raison, plutôt que de laisser croire qu'il change le mot de passe.
+     */
+    private void applyLoginMode() {
+        loginInputLayout.setEnabled(!useV1);
+        loginInputLayout.setHelperText(useV1 ? getString(R.string.login_helper_v1) : null);
+    }
+
+    /**
+     * Préremplit l'identifiant depuis l'entrée du carnet qui couvre le site.
+     *
+     * Un identifiant tapé par l'utilisateur n'est jamais écrasé ; un
+     * identifiant prérempli suit le site, et disparaît s'il n'est plus couvert.
+     */
+    private void prefillLogin() {
+        String current = textOf(loginEditText);
+        if (!current.isEmpty() && !loginPrefilled) return;
+
+        String site = textOf(siteEditText).trim();
+        VaultEntry match = site.isEmpty() ? null : vault.findByDomain(site);
+        String next = match == null ? "" : Vault.loginOf(match.login);
+        if (!next.equals(current)) {
+            settingLogin = true;
+            loginEditText.setText(next);
+            settingLogin = false;
+        }
+        loginPrefilled = !next.isEmpty();
     }
 
     private void applyAlgoLabel() {
@@ -817,8 +877,12 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        Vault vault = Vault.load(this);
-        VaultEntry entry = vault.upsert(site, (int) lengthSlider.getValue(),
+        String login = textOf(loginEditText).trim();
+        // Relu juste avant d'écrire : la copie de l'écran peut dater.
+        vault = Vault.load(this);
+        // Domaine et identifiant désignent le compte : un autre identifiant
+        // sur le même site est une autre entrée.
+        VaultEntry entry = vault.upsertAccount(site, login, (int) lengthSlider.getValue(),
                 minSwitch.isChecked(), majSwitch.isChecked(),
                 symSwitch.isChecked(), chiSwitch.isChecked());
         // Le carnet n'admet que la v2 : upsert l'impose, même depuis l'écran
@@ -828,9 +892,10 @@ public class MainActivity extends AppCompatActivity {
         // Une entrée existante garde son siteKey : le réécrire changerait un
         // mot de passe déjà en service. On le dit plutôt que de laisser croire
         // que le mot de passe affiché est celui de l'entrée.
+        String shown = login.isEmpty() ? site : site + " · " + login;
         String message = entry.siteKey.equals(site)
-                ? getString(R.string.vault_saved, site)
-                : getString(R.string.vault_saved_other_key, site, entry.siteKey);
+                ? getString(R.string.vault_saved, shown)
+                : getString(R.string.vault_saved_other_key, shown, entry.siteKey);
         Snackbar.make(findViewById(android.R.id.content), message, Snackbar.LENGTH_LONG).show();
     }
 

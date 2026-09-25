@@ -16,6 +16,8 @@
     <string name="symbols">Symbols</string>
     <string name="digits">Digits</string>
     <string name="site_hint">Website name</string>
+    <string name="login_hint">Login (optional)</string>
+    <string name="login_helper_v1">Ignored in v1: the old algorithm does not use the login.</string>
     <string name="generated_password_hint">Generated password</string>
     <string name="copy">Copy</string>
     <string name="clipboard_label">Password</string>

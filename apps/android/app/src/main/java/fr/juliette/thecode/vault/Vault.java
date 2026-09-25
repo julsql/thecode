@@ -109,6 +109,52 @@ public final class Vault {
         return entry;
     }
 
+    /** Identifiant tel qu'il entre dans la dérivation : absent vaut vide. */
+    @NonNull
+    public static String loginOf(@Nullable String login) {
+        return login == null ? "" : login;
+    }
+
+    /** L'entrée de ce compte sur ce site : même domaine et même identifiant. */
+    @Nullable
+    public VaultEntry findAccount(String domain, @Nullable String login) {
+        String wanted = loginOf(login);
+        for (VaultEntry e : findAllByDomain(domain)) {
+            if (loginOf(e.login).equals(wanted)) return e;
+        }
+        return null;
+    }
+
+    /**
+     * Enregistre un compte : les réglages de l'entrée de ce domaine et de cet
+     * identifiant, créée en v2 si elle n'existe pas.
+     *
+     * L'identifiant entre dans la dérivation v2 : deux identifiants sur un
+     * même site sont deux comptes, donc deux entrées. Comme pour
+     * {@link #upsert(String, int, boolean, boolean, boolean, boolean)}, le
+     * siteKey d'une entrée existante n'est jamais réécrit.
+     */
+    public VaultEntry upsertAccount(String site, @Nullable String login, int length,
+                                    boolean lower, boolean upper,
+                                    boolean symbols, boolean numbers) {
+        VaultEntry entry = findAccount(site, login);
+        if (entry == null) {
+            entry = VaultEntry.create(site, null);
+            String value = loginOf(login);
+            entry.login = value.isEmpty() ? null : value;
+            entries.add(entry);
+        }
+
+        entry.v = VaultEntry.VERSION;
+        entry.length = length;
+        entry.lower = lower;
+        entry.upper = upper;
+        entry.symbols = symbols;
+        entry.numbers = numbers;
+        entry.updatedAt = nowIso();
+        return entry;
+    }
+
     /**
      * Fusionne deux carnets. Commutative et idempotente : l'ordre de
      * synchronisation des appareils ne doit pas changer le résultat.

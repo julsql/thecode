@@ -16,6 +16,8 @@
     <string name="symbols">Symboles</string>
     <string name="digits">Chiffres</string>
     <string name="site_hint">Nom du site</string>
+    <string name="login_hint">Identifiant (facultatif)</string>
+    <string name="login_helper_v1">Ignoré en v1 : l\'ancien algorithme n\'utilise pas l\'identifiant.</string>
     <string name="generated_password_hint">Mot de passe généré</string>
     <string name="copy">Copier</string>
     <string name="clipboard_label">Mot de passe</string>
