@@ -46,13 +46,35 @@
             <!-- Affiche tant que la session n'est pas authentifiee. Le contenu
                  du carnet n'est jamais rendu avant : une capture du selecteur
                  d'applications suffirait a le reveler. -->
-            <TextView
+            <LinearLayout
                 android:id="@+id/vaultLocked"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/vault_locked_subtitle"
-                android:textAppearance="?attr/textAppearanceBodyMedium"
-                android:visibility="gone" />
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/vault_locked_subtitle"
+                    android:textAppearance="?attr/textAppearanceBodyMedium" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/vaultUnlockAction"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="@string/vault_unlock" />
+
+                <!-- Seule issue quand le verrou ne s'ouvre plus : efface le
+                     carnet local et le verrou, apres confirmation. -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/vaultForgotAction"
+                    style="?attr/borderlessButtonStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/vault_lock_forgot" />
+            </LinearLayout>
 
             <!-- Affiche tant qu'aucun compte n'est lie : la synchronisation
                  est la principale raison d'en creer un, et rien ne le disait.

@@ -400,6 +400,17 @@ public final class Vault {
         }
     }
 
+    /**
+     * Efface le carnet local (« mot de passe oublié »). Si la synchronisation
+     * est active, il revient à la prochaine synchronisation.
+     */
+    public static void wipe(Context context) {
+        File file = new File(context.getFilesDir(), FILENAME);
+        if (file.exists() && !file.delete()) {
+            Log.e(TAG, "Echec de l'effacement du carnet");
+        }
+    }
+
     public void save(Context context) {
         File file = new File(context.getFilesDir(), FILENAME);
         File tmp = new File(context.getFilesDir(), FILENAME + ".tmp");

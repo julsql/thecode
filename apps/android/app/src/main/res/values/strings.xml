@@ -146,4 +146,32 @@
     <!-- Mode de generation, affiche dans la barre. -->
     <string name="algo_mode_v1">v1</string>
     <string name="algo_mode_v2">v2</string>
+    <!-- Verrou de l'ecran carnet (shared/spec/vault-lock.md). -->
+    <string name="vault_unlock">Unlock</string>
+    <string name="vault_lock_forgot">Forgot password</string>
+    <string name="vault_lock_forgot_title">Erase the local vault?</string>
+    <string name="vault_lock_forgot_body">Nothing else can open the lock. This erases the vault stored on this device, and its lock. If sync is on, the vault comes back at the next sync.</string>
+    <string name="vault_lock_forgot_confirm">Erase</string>
+    <string name="vault_lock_forgot_done">Local vault erased.</string>
+    <string name="vault_lock_setup_title">Protect the vault</string>
+    <string name="vault_lock_setup_body">Choose how to unlock the vault on this device. This choice stays on this device and is never synced.</string>
+    <string name="vault_lock_use_biometric">Biometrics</string>
+    <string name="vault_lock_use_password">Vault password</string>
+    <string name="vault_lock_create_title">Create a vault password</string>
+    <string name="vault_lock_enter_title">Vault password</string>
+    <string name="vault_lock_password">Password</string>
+    <string name="vault_lock_password_current">Current password</string>
+    <string name="vault_lock_password_new">New password</string>
+    <string name="vault_lock_password_confirm">Type it again</string>
+    <string name="vault_lock_password_rule">At least 8 characters.</string>
+    <string name="vault_lock_mismatch">The two passwords differ.</string>
+    <string name="vault_lock_wrong">Wrong password.</string>
+    <string name="vault_lock_checking">Checking…</string>
+    <string name="vault_lock_settings">Vault lock</string>
+    <string name="vault_lock_change_password">Change the vault password</string>
+    <string name="vault_lock_switch_biometric">Use biometrics instead</string>
+    <string name="vault_lock_switch_password">Use a vault password instead</string>
+    <string name="vault_lock_password_changed">Vault password changed.</string>
+    <string name="vault_lock_method_changed">Unlock method changed.</string>
+    <string name="vault_lock_biometric_unavailable">Biometrics and the device screen lock are unavailable. Set up a screen lock, or erase the local vault.</string>
 </resources>

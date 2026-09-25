@@ -13,6 +13,7 @@ import java.security.GeneralSecurityException;
 import java.io.IOException;
 
 import fr.juliette.thecode.vault.Sync;
+import fr.juliette.thecode.vault.VaultLock;
 
 /**
  * Stockage local des préférences utilisateur (clé secrète et options).
@@ -35,6 +36,8 @@ public final class Preferences {
     public static final String KEY_SYNC_ACCESS = "syncAccessToken";
     public static final String KEY_SYNC_REFRESH = "syncRefreshToken";
     public static final String KEY_SYNC_PLAN = "syncPlan";
+    public static final String KEY_VAULT_LOCK_METHOD = "vaultLockMethod";
+    public static final String KEY_VAULT_LOCK_PASSWORD = "vaultLockPassword";
 
     private static final String TAG = "TheCode";
     /** Fichier chiffré, distinct de l'ancien pour permettre la migration. */
@@ -167,6 +170,53 @@ public final class Preferences {
                 .remove(KEY_SYNC_REFRESH)
                 .remove(KEY_SYNC_PLAN)
                 .apply();
+    }
+
+    /**
+     * Verrou de l'écran carnet : méthode choisie et empreinte du mot de passe.
+     *
+     * Dans le fichier chiffré quand le Keystore est là, sinon dans le fichier
+     * ordinaire : l'empreinte n'est pas le mot de passe, et sans elle l'écran
+     * ne pourrait pas être verrouillé du tout. Jamais synchronisé.
+     */
+    @NonNull
+    public VaultLock.Store vaultLockStore() {
+        final SharedPreferences store = securePrefs != null ? securePrefs : prefs;
+        return new VaultLock.Store() {
+            @NonNull
+            @Override
+            public String method() {
+                return store.getString(KEY_VAULT_LOCK_METHOD, "");
+            }
+
+            @Override
+            public void setMethod(@NonNull String method) {
+                store.edit().putString(KEY_VAULT_LOCK_METHOD, method).apply();
+            }
+
+            @Nullable
+            @Override
+            public String passwordRecord() {
+                return store.getString(KEY_VAULT_LOCK_PASSWORD, null);
+            }
+
+            @Override
+            public void setPasswordRecord(@Nullable String record) {
+                if (record == null) {
+                    store.edit().remove(KEY_VAULT_LOCK_PASSWORD).apply();
+                } else {
+                    store.edit().putString(KEY_VAULT_LOCK_PASSWORD, record).apply();
+                }
+            }
+
+            @Override
+            public void clear() {
+                store.edit()
+                        .remove(KEY_VAULT_LOCK_METHOD)
+                        .remove(KEY_VAULT_LOCK_PASSWORD)
+                        .apply();
+            }
+        };
     }
 
     /** Horodatage (epoch ms) de la dernière session authentifiée. Cf. {@link SessionLock}. */

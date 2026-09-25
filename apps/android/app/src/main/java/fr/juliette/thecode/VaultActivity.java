@@ -15,6 +15,8 @@ import android.widget.Toast;
 import android.os.Build;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.biometric.BiometricManager;
 import androidx.biometric.BiometricPrompt;
@@ -22,11 +24,14 @@ import androidx.core.content.ContextCompat;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.textfield.TextInputLayout;
 
 import fr.juliette.thecode.vault.SiteResolution;
 import fr.juliette.thecode.vault.Sync;
 import fr.juliette.thecode.vault.Vault;
 import fr.juliette.thecode.vault.VaultEntry;
+import fr.juliette.thecode.vault.VaultLock;
+import fr.juliette.thecode.vault.VaultPassword;
 
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -51,10 +56,17 @@ public class VaultActivity extends AppCompatActivity {
     private final Handler main = new Handler(Looper.getMainLooper());
 
     private Preferences preferences;
-    private SessionLock sessionLock;
-    /** Vrai une fois la session authentifiée : rien n'est rendu avant. */
-    private boolean unlocked = false;
+    /** Verrou de l'écran (shared/spec/vault-lock.md) : ouvert en mémoire seulement. */
+    private VaultLock lock;
     private boolean authInFlight = false;
+    /**
+     * Incrémenté à chaque reverrouillage : un calcul PBKDF2 lancé avant que
+     * l'écran soit quitté ne doit pas le rouvrir en revenant.
+     */
+    private int lockEpoch = 0;
+    /** Dialogue en cours, fermé au reverrouillage pour ne rien laisser voir. */
+    @Nullable
+    private AlertDialog openDialog;
     /** Le carnet affiché : les actions le modifient et le réenregistrent. */
     private Vault vault = new Vault();
 
@@ -64,105 +76,32 @@ public class VaultActivity extends AppCompatActivity {
         setContentView(R.layout.activity_vault);
 
         preferences = new Preferences(this);
-        sessionLock = new SessionLock(preferences);
+        lock = new VaultLock(preferences.vaultLockStore());
 
         MaterialToolbar toolbar = findViewById(R.id.vaultToolbar);
         toolbar.setNavigationOnClickListener(v -> finish());
         toolbar.inflateMenu(R.menu.menu_vault);
         toolbar.setOnMenuItemClickListener(this::onMenuItem);
 
-        // Rien n'est affiché avant l'authentification : le carnet dit sur
-        // quels sites on a un compte et sous quel identifiant. C'est aussi
-        // sensible qu'un coffre de mots de passe.
+        findViewById(R.id.vaultUnlockAction).setOnClickListener(v -> promptUnlock());
+        findViewById(R.id.vaultForgotAction).setOnClickListener(v -> confirmForget());
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
         applyLockState();
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
-        applyLockState();
-    }
-
-    @Override
-    protected void onPause() {
-        // La fenêtre de grâce court à partir de la mise en arrière-plan, comme
-        // pour la clef : revenir tout de suite ne redemande pas l'auth.
-        if (unlocked) sessionLock.stamp();
-        super.onPause();
-    }
-
-    /**
-     * Affiche le carnet si la session est valide, demande l'auth sinon.
-     *
-     * Le contenu n'est jamais rendu avant : une capture d'écran du sélecteur
-     * d'applications suffirait à le révéler.
-     */
-    private void applyLockState() {
-        if (sessionLock.isValid()) {
-            unlocked = true;
-            findViewById(R.id.vaultLocked).setVisibility(View.GONE);
-            render(Vault.load(this));
-            return;
-        }
-
-        unlocked = false;
-        ((LinearLayout) findViewById(R.id.vaultList)).removeAllViews();
-        findViewById(R.id.vaultEmpty).setVisibility(View.GONE);
-        findViewById(R.id.vaultLocked).setVisibility(View.VISIBLE);
-        promptUnlock();
-    }
-
-    /**
-     * Demande l'authentification de l'appareil.
-     *
-     * Sans matériel d'auth disponible — rare — on considère le terminal déjà
-     * déverrouillé : refuser l'accès rendrait le carnet inutilisable sur un
-     * appareil sans code.
-     */
-    private void promptUnlock() {
-        if (authInFlight) return;
-
-        int authenticators = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
-                ? (BiometricManager.Authenticators.BIOMETRIC_WEAK
-                    | BiometricManager.Authenticators.DEVICE_CREDENTIAL)
-                : BiometricManager.Authenticators.BIOMETRIC_WEAK;
-
-        BiometricManager manager = BiometricManager.from(this);
-        if (manager.canAuthenticate(authenticators) != BiometricManager.BIOMETRIC_SUCCESS) {
-            sessionLock.stamp();
-            applyLockState();
-            return;
-        }
-
-        authInFlight = true;
-        BiometricPrompt prompt = new BiometricPrompt(this,
-                ContextCompat.getMainExecutor(this),
-                new BiometricPrompt.AuthenticationCallback() {
-                    @Override
-                    public void onAuthenticationSucceeded(
-                            @NonNull BiometricPrompt.AuthenticationResult result) {
-                        authInFlight = false;
-                        sessionLock.stamp();
-                        applyLockState();
-                    }
-
-                    @Override
-                    public void onAuthenticationError(int code, @NonNull CharSequence message) {
-                        authInFlight = false;
-                        // Refuser l'auth ferme l'écran : rester dessus laisserait
-                        // croire que le carnet est vide.
-                        finish();
-                    }
-                });
-
-        BiometricPrompt.PromptInfo.Builder info = new BiometricPrompt.PromptInfo.Builder()
-                .setTitle(getString(R.string.vault_locked_title))
-                .setSubtitle(getString(R.string.vault_locked_subtitle))
-                .setAllowedAuthenticators(authenticators);
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-            info.setNegativeButtonText(getString(android.R.string.cancel));
-        }
-        prompt.authenticate(info.build());
+    protected void onStop() {
+        // Pas de déverrouillage mémorisé : quitter l'écran ou passer en
+        // arrière-plan referme le carnet.
+        lock.lock();
+        lockEpoch++;
+        dismissOpenDialog();
+        hideContent();
+        super.onStop();
     }
 
     @Override
@@ -171,12 +110,317 @@ public class VaultActivity extends AppCompatActivity {
         super.onDestroy();
     }
 
+    // ---------------------------------------------------------------- verrou
+
+    /**
+     * Affiche le carnet si l'écran est déverrouillé, demande l'auth sinon.
+     *
+     * Le contenu n'est jamais rendu avant : une capture d'écran du sélecteur
+     * d'applications suffirait à le révéler.
+     */
+    private void applyLockState() {
+        switch (lock.state()) {
+            case UNLOCKED:
+                findViewById(R.id.vaultLocked).setVisibility(View.GONE);
+                render(Vault.load(this));
+                return;
+            case LOCKED:
+                hideContent();
+                findViewById(R.id.vaultForgotAction).setVisibility(View.VISIBLE);
+                if (!authInFlight && openDialog == null) promptUnlock();
+                return;
+            case SETUP:
+            default:
+                hideContent();
+                findViewById(R.id.vaultForgotAction).setVisibility(View.GONE);
+                if (!authInFlight && openDialog == null) startSetup();
+        }
+    }
+
+    private void hideContent() {
+        ((LinearLayout) findViewById(R.id.vaultList)).removeAllViews();
+        findViewById(R.id.vaultEmpty).setVisibility(View.GONE);
+        findViewById(R.id.vaultSyncPitch).setVisibility(View.GONE);
+        findViewById(R.id.vaultLocked).setVisibility(View.VISIBLE);
+    }
+
+    private void promptUnlock() {
+        switch (lock.state()) {
+            case SETUP:
+                startSetup();
+                return;
+            case UNLOCKED:
+                applyLockState();
+                return;
+            default:
+        }
+        if (lock.method() == VaultLock.Method.BIOMETRIC) {
+            if (!biometricAvailable()) {
+                toast(getString(R.string.vault_lock_biometric_unavailable));
+                return;
+            }
+            runBiometric(() -> {
+                lock.unlock(VaultLock.Method.BIOMETRIC);
+                applyLockState();
+            });
+        } else {
+            showPasswordDialog(PasswordMode.UNLOCK, false);
+        }
+    }
+
+    /**
+     * Première ouverture : biométrie ou mot de passe si l'OS en propose une,
+     * mot de passe obligatoire sinon.
+     */
+    private void startSetup() {
+        if (!biometricAvailable()) {
+            showPasswordDialog(PasswordMode.CREATE, true);
+            return;
+        }
+        AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.vault_lock_setup_title)
+                .setMessage(R.string.vault_lock_setup_body)
+                .setPositiveButton(R.string.vault_lock_use_biometric,
+                        (d, w) -> runBiometric(() -> {
+                            if (lock.state() == VaultLock.State.SETUP) lock.chooseBiometric();
+                            applyLockState();
+                        }))
+                .setNegativeButton(R.string.vault_lock_use_password,
+                        (d, w) -> showPasswordDialog(PasswordMode.CREATE, true))
+                .setOnCancelListener(d -> finish())
+                .create();
+        track(dialog);
+        dialog.show();
+    }
+
+    /**
+     * Biométrie forte, avec le code de l'appareil en repli comme le fait
+     * l'OS. Le repli n'est combinable qu'à partir d'Android 11.
+     */
+    private static int biometricAuthenticators() {
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+                ? BiometricManager.Authenticators.BIOMETRIC_STRONG
+                        | BiometricManager.Authenticators.DEVICE_CREDENTIAL
+                : BiometricManager.Authenticators.BIOMETRIC_STRONG;
+    }
+
+    private boolean biometricAvailable() {
+        return BiometricManager.from(this).canAuthenticate(biometricAuthenticators())
+                == BiometricManager.BIOMETRIC_SUCCESS;
+    }
+
+    private void runBiometric(Runnable onSuccess) {
+        if (authInFlight) return;
+        authInFlight = true;
+        BiometricPrompt prompt = new BiometricPrompt(this,
+                ContextCompat.getMainExecutor(this),
+                new BiometricPrompt.AuthenticationCallback() {
+                    @Override
+                    public void onAuthenticationSucceeded(
+                            @NonNull BiometricPrompt.AuthenticationResult result) {
+                        authInFlight = false;
+                        onSuccess.run();
+                    }
+
+                    @Override
+                    public void onAuthenticationError(int code, @NonNull CharSequence message) {
+                        // L'écran reste verrouillé, avec de quoi réessayer ou
+                        // effacer le carnet.
+                        authInFlight = false;
+                    }
+                });
+
+        BiometricPrompt.PromptInfo.Builder info = new BiometricPrompt.PromptInfo.Builder()
+                .setTitle(getString(R.string.vault_locked_title))
+                .setSubtitle(getString(R.string.vault_locked_subtitle))
+                .setAllowedAuthenticators(biometricAuthenticators());
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            info.setNegativeButtonText(getString(android.R.string.cancel));
+        }
+        prompt.authenticate(info.build());
+    }
+
+    private enum PasswordMode { UNLOCK, CREATE, CHANGE }
+
+    /**
+     * Saisie du mot de passe de carnet. Le bouton valide sans fermer : une
+     * erreur s'affiche sous le champ, le dialogue ne se ferme qu'au succès.
+     */
+    private void showPasswordDialog(PasswordMode mode, boolean finishOnCancel) {
+        View form = LayoutInflater.from(this).inflate(R.layout.dialog_vault_password, null);
+        TextInputLayout currentLayout = form.findViewById(R.id.vaultPasswordCurrentLayout);
+        TextInputLayout newLayout = form.findViewById(R.id.vaultPasswordNewLayout);
+        TextInputLayout confirmLayout = form.findViewById(R.id.vaultPasswordConfirmLayout);
+        EditText current = form.findViewById(R.id.vaultPasswordCurrent);
+        EditText next = form.findViewById(R.id.vaultPasswordNew);
+        EditText confirm = form.findViewById(R.id.vaultPasswordConfirm);
+
+        boolean askCurrent = mode != PasswordMode.CREATE;
+        boolean askNew = mode != PasswordMode.UNLOCK;
+        currentLayout.setVisibility(askCurrent ? View.VISIBLE : View.GONE);
+        newLayout.setVisibility(askNew ? View.VISIBLE : View.GONE);
+        confirmLayout.setVisibility(askNew ? View.VISIBLE : View.GONE);
+        if (mode == PasswordMode.UNLOCK) currentLayout.setHint(R.string.vault_lock_password);
+
+        int title = mode == PasswordMode.UNLOCK ? R.string.vault_lock_enter_title
+                : mode == PasswordMode.CREATE ? R.string.vault_lock_create_title
+                : R.string.vault_lock_change_password;
+
+        AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+                .setTitle(title)
+                .setView(form)
+                .setNegativeButton(android.R.string.cancel, (d, w) -> {
+                    if (finishOnCancel) finish();
+                })
+                .setPositiveButton(android.R.string.ok, null)
+                .setOnCancelListener(d -> {
+                    if (finishOnCancel) finish();
+                })
+                .create();
+        dialog.setOnShowListener(d -> {
+            View ok = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            ok.setOnClickListener(v -> {
+                currentLayout.setError(null);
+                newLayout.setError(null);
+                confirmLayout.setError(null);
+
+                if (askNew) {
+                    VaultPassword.Check check = VaultPassword.checkNew(
+                            next.getText().toString(), confirm.getText().toString());
+                    if (check == VaultPassword.Check.TOO_SHORT) {
+                        newLayout.setError(getString(R.string.vault_lock_password_rule));
+                        return;
+                    }
+                    if (check == VaultPassword.Check.MISMATCH) {
+                        confirmLayout.setError(getString(R.string.vault_lock_mismatch));
+                        return;
+                    }
+                }
+                ok.setEnabled(false);
+                char[] currentChars = current.getText().toString().toCharArray();
+                char[] newChars = next.getText().toString().toCharArray();
+                submitPassword(mode, dialog, ok, currentLayout, currentChars, newChars);
+            });
+        });
+        track(dialog);
+        dialog.show();
+    }
+
+    /** PBKDF2 sur le fil de travail, application du résultat sur le fil principal. */
+    private void submitPassword(PasswordMode mode, AlertDialog dialog, View ok,
+                                TextInputLayout currentLayout,
+                                char[] currentChars, char[] newChars) {
+        int epoch = lockEpoch;
+        toast(getString(R.string.vault_lock_checking));
+        worker.execute(() -> {
+            boolean verified = mode == PasswordMode.CREATE || lock.verifyPassword(currentChars);
+            String record = verified && mode != PasswordMode.UNLOCK
+                    ? VaultPassword.hash(newChars) : null;
+            VaultPassword.wipe(currentChars);
+            VaultPassword.wipe(newChars);
+
+            main.post(() -> {
+                // L'écran a été quitté pendant le calcul : il reste fermé.
+                if (epoch != lockEpoch || isFinishing()) return;
+                if (!verified) {
+                    ok.setEnabled(true);
+                    currentLayout.setError(getString(R.string.vault_lock_wrong));
+                    return;
+                }
+                switch (mode) {
+                    case UNLOCK:
+                        lock.unlock(VaultLock.Method.PASSWORD);
+                        break;
+                    case CREATE:
+                        boolean switching = lock.isUnlocked();
+                        lock.choosePassword(record);
+                        if (switching) toast(getString(R.string.vault_lock_method_changed));
+                        break;
+                    case CHANGE:
+                        lock.changePassword(record);
+                        toast(getString(R.string.vault_lock_password_changed));
+                        break;
+                }
+                dialog.dismiss();
+                applyLockState();
+            });
+        });
+    }
+
+    /** Changer le mot de passe, ou basculer biométrie ↔ mot de passe. */
+    private void showLockSettings() {
+        List<String> labels = new java.util.ArrayList<>();
+        List<Runnable> actions = new java.util.ArrayList<>();
+        if (lock.method() == VaultLock.Method.PASSWORD) {
+            labels.add(getString(R.string.vault_lock_change_password));
+            actions.add(() -> showPasswordDialog(PasswordMode.CHANGE, false));
+            if (biometricAvailable()) {
+                labels.add(getString(R.string.vault_lock_switch_biometric));
+                actions.add(() -> runBiometric(() -> {
+                    // Un repli sur le code de l'appareil peut avoir fait
+                    // quitter l'écran : il est alors reverrouillé, on ne
+                    // change rien.
+                    if (!lock.isUnlocked()) return;
+                    lock.chooseBiometric();
+                    toast(getString(R.string.vault_lock_method_changed));
+                }));
+            }
+        } else {
+            labels.add(getString(R.string.vault_lock_switch_password));
+            actions.add(() -> showPasswordDialog(PasswordMode.CREATE, false));
+        }
+
+        AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.vault_lock_settings)
+                .setItems(labels.toArray(new CharSequence[0]),
+                        (d, which) -> actions.get(which).run())
+                .setNegativeButton(android.R.string.cancel, null)
+                .create();
+        track(dialog);
+        dialog.show();
+    }
+
+    /** « Mot de passe oublié » : seule issue, efface le carnet local et le verrou. */
+    private void confirmForget() {
+        AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.vault_lock_forgot_title)
+                .setMessage(R.string.vault_lock_forgot_body)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.vault_lock_forgot_confirm, (d, w) -> {
+                    Vault.wipe(this);
+                    vault = new Vault();
+                    lock.forget();
+                    toast(getString(R.string.vault_lock_forgot_done));
+                    main.post(this::applyLockState);
+                })
+                .create();
+        track(dialog);
+        dialog.show();
+    }
+
+    private void track(AlertDialog dialog) {
+        openDialog = dialog;
+        dialog.setOnDismissListener(d -> {
+            if (openDialog == dialog) openDialog = null;
+        });
+    }
+
+    private void dismissOpenDialog() {
+        if (openDialog != null) {
+            AlertDialog dialog = openDialog;
+            openDialog = null;
+            // Fermer sans déclencher « annuler », qui quitterait l'écran.
+            dialog.setOnCancelListener(null);
+            dialog.dismiss();
+        }
+    }
+
     // ------------------------------------------------------- synchronisation
 
     private boolean onMenuItem(MenuItem item) {
         // Synchroniser ou transférer depuis un écran verrouillé contournerait
         // l'authentification.
-        if (!unlocked) return true;
+        if (!lock.isUnlocked()) return true;
 
         int id = item.getItemId();
         if (id == R.id.action_transfer) {
@@ -188,6 +432,10 @@ public class VaultActivity extends AppCompatActivity {
         }
         if (id == R.id.action_sync) {
             startSync();
+            return true;
+        }
+        if (id == R.id.action_vault_security) {
+            showLockSettings();
             return true;
         }
         if (id == R.id.action_sync_unlink) {
@@ -317,6 +565,9 @@ public class VaultActivity extends AppCompatActivity {
 
     private void render(Vault vault) {
         this.vault = vault;
+        // Une synchronisation qui se termine après le reverrouillage ne doit
+        // rien afficher.
+        if (!lock.isUnlocked()) return;
         LinearLayout list = findViewById(R.id.vaultList);
         View empty = findViewById(R.id.vaultEmpty);
         list.removeAllViews();
