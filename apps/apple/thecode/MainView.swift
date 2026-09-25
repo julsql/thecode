@@ -43,6 +43,11 @@ struct MainView: View {
     
     // UI state
     @State private var siteName: String = ""
+    /// Identifiant du compte : il entre dans la dérivation v2, vide = sans.
+    @State private var loginName: String = ""
+    /// Dernier identifiant prérempli depuis le carnet, pour ne jamais écraser
+    /// ce que l'utilisatrice a tapé elle-même.
+    @State private var suggestedLogin: String = ""
     @State private var generatedValue: String = ""
     @State private var securityLabel: String = ""
     @State private var securityColor: Color = .black
@@ -303,6 +308,21 @@ struct MainView: View {
                         TextField(L10n.t("Nom du site", "Website name"), text: $siteName)
                             .textFieldStyle(RoundedBorderTextFieldStyle())
 
+                        TextField(L10n.t("Identifiant (facultatif)", "Login (optional)"),
+                                  text: $loginName)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .autocapitalization(.none)
+                            .disableAutocorrection(true)
+
+                        // La v1 ne connaît que le site et la clef : le dire
+                        // plutôt que de laisser croire que l'identifiant compte.
+                        if useV1 && !loginName.isEmpty {
+                            Text(L10n.t("L'identifiant n'est pas utilisé en v1.",
+                                        "The login is not used in v1."))
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+
                         if !generatedValue.isEmpty {
                             VStack(alignment: .leading, spacing: 4) {
                                 HStack {
@@ -444,7 +464,14 @@ struct MainView: View {
                 Button("OK", role: .cancel) { }
             }
         }
-        .onChange(of: siteName) { _ in vaultSaveMessage = nil }
+        .onChange(of: siteName) { newSite in
+            vaultSaveMessage = nil
+            prefillLogin(for: newSite)
+        }
+        .onChange(of: loginName) { _ in
+            vaultSaveMessage = nil
+            generatePassword()
+        }
         .onChange(of: useV1) { _ in generatePassword() }
         .onChange(of: encodingKey) { newValue in
             SecureKeyStore.write(newValue)
@@ -492,9 +519,11 @@ struct MainView: View {
 
         // Le carnet n'admet que la v2 : enregistrer depuis l'écran réglé en v1
         // crée ou garde une entrée v2, jamais l'inverse.
+        // Apparié sur domaine + identifiant : un autre compte du même site est
+        // une autre entrée, puisque l'identifiant change le mot de passe.
         var vault = VaultStore.load()
         let entry = vault.upsert(
-            site: site, length: lengthNumber,
+            site: site, login: trimmedLogin, length: lengthNumber,
             charset: Charset(
                 lower: minState, upper: majState, symbols: symState, numbers: chiState))
 
@@ -517,6 +546,19 @@ struct MainView: View {
                     + "depuis « \(entry.siteKey) », pas depuis ce que vous avez saisi.",
                 "\"\(site)\" saved. Careful: this entry generates its password from "
                     + "\"\(entry.siteKey)\", not from what you typed.")
+    }
+
+    /// L'identifiant tel qu'il entre dans la dérivation et au carnet.
+    private var trimmedLogin: String {
+        loginName.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Reprend l'identifiant que le carnet connaît pour ce site.
+    private func prefillLogin(for site: String) {
+        let suggestion = VaultStore.load().suggestedLogin(for: site)
+        loginName = Vault.prefilledLogin(
+            typed: loginName, previousSuggestion: suggestedLogin, suggestion: suggestion)
+        suggestedLogin = suggestion ?? ""
     }
 
     private func localizedSecurityLabel(_ frenchLabel: String) -> String {
@@ -667,13 +709,14 @@ struct MainView: View {
         generationTicket += 1
         let ticket = generationTicket
         let site = siteName
+        let login = trimmedLogin
         let key = encodingKey
         let reuse = masterV2For == key ? masterV2 : nil
 
         Task.detached {
             let derived = reuse ?? (try? CoreV2.deriveMasterKey(key))
             let result = utils.generatePasswordV2(
-                masterKey: key, siteKey: site, master: derived)
+                masterKey: key, siteKey: site, login: login, master: derived)
 
             await MainActor.run {
                 // Une réponse arrivée après une frappe plus récente

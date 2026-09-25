@@ -201,6 +201,55 @@ public struct Vault: Codable {
         return created
     }
 
+    /// Enregistre les réglages d'un compte, apparié sur domaine + identifiant.
+    ///
+    /// L'identifiant entre dans la dérivation v2 : deux comptes d'un même site
+    /// sont deux entrées, et enregistrer l'un ne doit jamais toucher l'autre.
+    /// Un identifiant vide désigne l'entrée sans identifiant.
+    ///
+    /// Comme `upsert(site:length:charset:)`, `siteKey` n'est jamais réécrit.
+    @discardableResult
+    public mutating func upsert(
+        site: String, login: String, length: Int, charset: Charset
+    ) -> VaultEntry {
+        if let index = entries.firstIndex(where: {
+            $0.isStorable && $0.deleted != true && $0.covers(domain: site)
+                && ($0.login ?? "") == login
+        }) {
+            entries[index].length = length
+            entries[index].charset = charset
+            entries[index].updatedAt = Vault.nowIso()
+            return entries[index]
+        }
+
+        var created = VaultEntry(
+            siteKey: site, domains: [site], login: login.isEmpty ? nil : login)
+        created.length = length
+        created.charset = charset
+        entries.append(created)
+        return created
+    }
+
+    /// L'identifiant que le carnet connaît pour ce site, s'il en connaît un.
+    ///
+    /// Plusieurs comptes : le premier, comme `find(domain:)`. L'écran de
+    /// génération ne fait que préremplir, l'utilisatrice peut le changer.
+    public func suggestedLogin(for site: String) -> String? {
+        let domain = site.trimmingCharacters(in: .whitespaces)
+        guard !domain.isEmpty else { return nil }
+        return find(domain: domain)?.login
+    }
+
+    /// Nouvelle valeur du champ identifiant quand le site change.
+    ///
+    /// Ce qui a été tapé à la main l'emporte : on ne remplace que ce que le
+    /// carnet avait lui-même prérempli, ou un champ vide.
+    public static func prefilledLogin(
+        typed: String, previousSuggestion: String, suggestion: String?
+    ) -> String {
+        typed.isEmpty || typed == previousSuggestion ? (suggestion ?? "") : typed
+    }
+
     public static func merge(_ left: Vault, _ right: Vault) -> (Vault, [VaultConflict]) {
         var conflicts: [VaultConflict] = []
         var byId: [String: VaultEntry] = [:]
