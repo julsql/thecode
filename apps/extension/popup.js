@@ -1,3 +1,38 @@
+/**
+ * Message traduit selon la langue du navigateur. Le francais reste en secours
+ * quand l'API manque (tests) ou que la clef n'existe pas. `values` remplit
+ * $1, $2… dans l'ordre.
+ */
+function msg(key, fallback, ...values) {
+  const subs = values.map(String);
+  const text = browser.i18n?.getMessage(key, subs.length ? subs : undefined);
+  return text || subs.reduce((out, v, i) => out.replace(`$${i + 1}`, v), fallback);
+}
+
+/**
+ * Traduit la page d'apres ses attributs data-i18n*. Le francais du HTML reste
+ * en place pour toute clef absente.
+ */
+function translatePage() {
+  document.documentElement.lang = browser.i18n?.getUILanguage?.().split("-")[0] || "fr";
+  const attributes = {
+    i18n: null,
+    i18nAriaLabel: "aria-label",
+    i18nTitle: "title",
+    i18nHref: "href",
+  };
+  for (const [data, attribute] of Object.entries(attributes)) {
+    const selector = `[data-${data.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}]`;
+    document.querySelectorAll(selector).forEach((el) => {
+      const text = browser.i18n?.getMessage(el.dataset[data]);
+      if (!text) return;
+      if (attribute) el.setAttribute(attribute, text);
+      else el.textContent = text;
+    });
+  }
+}
+translatePage();
+
 // Références aux éléments de la popup
 const passInput = document.getElementById("passphrase");
 const setBtn = document.getElementById("setKey");
@@ -48,6 +83,20 @@ const symInput = document.getElementById("symbols");
 const chiInput = document.getElementById("numbers");
 const versionGroup = document.getElementById("versionGroup");
 
+/** Niveaux de securite rendus par le background, en francais. */
+const SECURITY_KEYS = {
+  Aucune: "security_none",
+  "Très Faible": "security_very_weak",
+  Faible: "security_weak",
+  Moyenne: "security_medium",
+  Forte: "security_strong",
+  "Très Forte": "security_very_strong",
+};
+
+function securityLabel(level) {
+  return SECURITY_KEYS[level] ? msg(SECURITY_KEYS[level], level) : level;
+}
+
 /** Statut de la clef. `tone` colore sans dependre du theme : ok, error. */
 function setStatus(text, tone = "") {
   statusDiv.textContent = text;
@@ -77,7 +126,7 @@ window.addEventListener("DOMContentLoaded", () => {
   hideError();
   browser.runtime.sendMessage({ action: "checkEncodingKey" }, (resp) => {
     if (resp && resp.hasEncodingKey) {
-      setStatus("Clef définie.", "ok");
+      setStatus(msg("popup_key_set", "Clef définie."), "ok");
       browser.runtime.sendMessage({ action: "getEncodingKey" }, (resp) => {
         passInput.value = resp.encodingKey;
         refreshFingerprint(passInput.value.trim());
@@ -106,7 +155,7 @@ function applyParams(params) {
 function updateParams(options) {
   browser.runtime.sendMessage({ action: "setParams", data: options }, (resp) => {
     if (!resp || !resp.ok) {
-      setStatus("Erreur : " + ((resp && resp.error) || "n/a"), "error");
+      setStatus(msg("popup_error_detail", "Erreur : $1", (resp && resp.error) || "n/a"), "error");
       return;
     }
     // Reflète la valeur réellement retenue (ex. 99 saisi → borné à 40).
@@ -150,7 +199,7 @@ lengthInput.addEventListener("blur", () => updateParams(getParams()));
 toggleBtn.addEventListener("click", () => {
   const isHidden = passInput.type === "password";
   passInput.type = isHidden ? "text" : "password";
-  toggleBtn.textContent = isHidden ? "Cacher" : "Voir";
+  toggleBtn.textContent = isHidden ? msg("popup_hide", "Cacher") : msg("popup_show", "Voir");
   toggleBtn.setAttribute("aria-pressed", String(isHidden));
 });
 
@@ -176,14 +225,14 @@ function setPassword() {
     return;
   }
 
-  setStatus("Dérivation en cours…");
+  setStatus(msg("popup_deriving", "Dérivation en cours…"));
 
   browser.runtime.sendMessage({ action: "setEncodingKey", encodingKey: pass }, (resp) => {
     if (resp && resp.ok) {
-      setStatus("Clef définie.", "ok");
+      setStatus(msg("popup_key_set", "Clef définie."), "ok");
       generatePassword();
     } else {
-      setStatus("Erreur : " + ((resp && resp.error) || "n/a"), "error");
+      setStatus(msg("popup_error_detail", "Erreur : $1", (resp && resp.error) || "n/a"), "error");
     }
   });
 }
@@ -192,7 +241,7 @@ function setPassword() {
 clearBtn.addEventListener("click", () => {
   browser.runtime.sendMessage({ action: "clearEncodingKey" }, (resp) => {
     if (resp && resp.ok) {
-      setStatus("Clef effacée.");
+      setStatus(msg("popup_key_cleared", "Clef effacée."));
       passInput.value = "";
       refreshFingerprint("");
       hideResult();
@@ -206,8 +255,8 @@ document.getElementById("copyPasswordBtn").addEventListener("click", () => {
   const pwd = passwordResult.textContent;
   if (!pwd) return;
   navigator.clipboard.writeText(pwd).then(
-    () => (copyStatus.textContent = "Copié."),
-    () => (copyStatus.textContent = "Copie impossible."),
+    () => (copyStatus.textContent = msg("popup_copied", "Copié.")),
+    () => (copyStatus.textContent = msg("popup_copy_failed", "Copie impossible.")),
   );
 });
 
@@ -266,7 +315,7 @@ function generatePassword(vaultMessage) {
       (response) => {
         if (!response || response.error) {
           hideResult();
-          showError(response?.error || "Pas de réponse.");
+          showError(response?.error || msg("popup_no_response", "Pas de réponse."));
         } else if (response.password) {
           hideError();
           showResult();
@@ -281,10 +330,10 @@ function generatePassword(vaultMessage) {
           // La couleur du niveau va sur une pastille : en texte, le vert vif
           // ne se lirait pas sur fond clair.
           passwordSecurity.style.setProperty("--level", response.color);
-          passwordSecurity.textContent = `${response.security} (${response.bits} bits)`;
+          passwordSecurity.textContent = `${securityLabel(response.security)} (${response.bits} bits)`;
         } else {
           hideResult();
-          showError("Pas de réponse.");
+          showError(msg("popup_no_response", "Pas de réponse."));
         }
       },
     );
@@ -344,12 +393,19 @@ function refreshVault(domain, message) {
 
     const known = Boolean(currentEntryId);
     vaultStatus.textContent = known
-      ? `Compte enregistré pour ${currentDomain}.`
+      ? msg("popup_account_saved_for", "Compte enregistré pour $1.", currentDomain)
       : matches.length
-        ? `${matches.length} compte(s) connu(s) pour ${currentDomain}, pas celui-ci.`
-        : `${currentDomain} n'est pas encore dans le carnet.`;
+        ? msg(
+            "popup_accounts_known",
+            "$1 compte(s) connu(s) pour $2, pas celui-ci.",
+            matches.length,
+            currentDomain,
+          )
+        : msg("popup_not_in_vault", "$1 n'est pas encore dans le carnet.", currentDomain);
     if (message) vaultStatus.textContent = message;
-    saveEntryBtn.textContent = known ? "Mettre à jour l'entrée" : "Enregistrer";
+    saveEntryBtn.textContent = known
+      ? msg("popup_update_entry", "Mettre à jour l'entrée")
+      : msg("popup_save", "Enregistrer");
 
     // Rien a renouveler tant que le compte n'est pas dans le carnet.
     refreshChangeButton();
@@ -380,11 +436,15 @@ changeEntryBtn.addEventListener("click", () => {
   const id = currentEntryId;
   if (!id) return;
 
-  vaultStatus.textContent = "Calcul en cours…";
+  vaultStatus.textContent = msg("popup_computing", "Calcul en cours…");
 
   browser.runtime.sendMessage({ action: "previewChange", id }, (resp) => {
     if (!resp?.ok) {
-      vaultStatus.textContent = `Échec : ${resp?.error || "inconnu"}`;
+      vaultStatus.textContent = msg(
+        "sync_failed",
+        "Échec : $1",
+        resp?.error || msg("sync_unknown_error", "inconnu"),
+      );
       return;
     }
     pendingChange = { id };
@@ -406,18 +466,22 @@ changeConfirmBtn.addEventListener("click", () => {
 
   browser.runtime.sendMessage({ action: "applyChange", id: pendingChange.id }, (resp) => {
     if (!resp?.ok) {
-      vaultStatus.textContent = `Échec : ${resp?.error || "inconnu"}`;
+      vaultStatus.textContent = msg(
+        "sync_failed",
+        "Échec : $1",
+        resp?.error || msg("sync_unknown_error", "inconnu"),
+      );
       return;
     }
     pendingChange = null;
     changePreview.hidden = true;
-    generatePassword(`Entrée renouvelée, compteur ${resp.counter}.`);
+    generatePassword(msg("popup_renewed", "Entrée renouvelée, compteur $1.", resp.counter));
   });
 });
 
 saveEntryBtn.addEventListener("click", () => {
   if (!currentDomain) {
-    vaultStatus.textContent = "Aucun site détecté.";
+    vaultStatus.textContent = msg("popup_no_site", "Aucun site détecté.");
     return;
   }
 
@@ -428,21 +492,20 @@ saveEntryBtn.addEventListener("click", () => {
   browser.runtime.sendMessage({ action: "saveSite", domain: currentDomain, login }, (resp) => {
     if (resp && resp.ok) {
       loginResolved = true;
-      generatePassword(resp.updated ? "Entrée mise à jour." : "Compte enregistré.");
+      generatePassword(
+        resp.updated
+          ? msg("popup_entry_updated", "Entrée mise à jour.")
+          : msg("popup_account_saved", "Compte enregistré."),
+      );
     } else {
-      vaultStatus.textContent = `Échec : ${resp?.error || "inconnu"}`;
+      vaultStatus.textContent = msg(
+        "sync_failed",
+        "Échec : $1",
+        resp?.error || msg("sync_unknown_error", "inconnu"),
+      );
     }
   });
 });
-
-/**
- * Message traduit selon la langue du navigateur. Le francais reste en secours
- * quand l'API manque (tests) ou que la clef n'existe pas.
- */
-function msg(key, fallback, value) {
-  const text = browser.i18n?.getMessage(key, value === undefined ? undefined : [String(value)]);
-  return text || fallback.replace("$1", String(value));
-}
 
 /** Montre la connexion ou les actions, selon qu'une session existe. */
 function refreshSyncState() {
@@ -591,13 +654,6 @@ document.getElementById("openTransfer").addEventListener("click", () => {
 const V2_NOTICE_KEY = "v2NoticeSeen";
 const v2Notice = document.getElementById("v2Notice");
 const v2NeverAgain = document.getElementById("v2NoticeNeverAgain");
-
-// Traduite selon la langue du navigateur ; le francais du HTML reste en
-// secours si une clef manque.
-v2Notice.querySelectorAll("[data-i18n]").forEach((el) => {
-  const message = browser.i18n?.getMessage(el.dataset.i18n);
-  if (message) el.textContent = message;
-});
 
 browser.storage?.local?.get([V2_NOTICE_KEY], (stored) => {
   if (stored?.[V2_NOTICE_KEY]) return;

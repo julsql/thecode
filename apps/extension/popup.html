@@ -12,7 +12,7 @@
     <script defer src="fingerprint.js"></script>
     <script defer src="algo-theme.js"></script>
     <script defer src="popup.js"></script>
-    <title>TheCode - Clef</title>
+    <title data-i18n="popup_title">TheCode - Clef</title>
   </head>
 
   <body>
@@ -52,6 +52,8 @@
           class="icon-btn"
           aria-label="Gérer le carnet (nouvel onglet)"
           title="Carnet"
+          data-i18n-aria-label="popup_open_vault"
+          data-i18n-title="popup_vault"
         >
           <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" width="20" height="20">
             <path
@@ -66,6 +68,8 @@
           class="icon-btn"
           aria-label="Paramètres"
           title="Paramètres"
+          data-i18n-aria-label="popup_settings"
+          data-i18n-title="popup_settings"
           aria-controls="settingsView"
           aria-expanded="false"
         >
@@ -80,22 +84,29 @@
 
       <!-- Clef -->
       <section class="field">
-        <label for="passphrase">Clef</label>
+        <label for="passphrase" data-i18n="popup_key">Clef</label>
         <div class="row">
           <input type="password" id="passphrase" autocomplete="off" spellcheck="false" />
-          <button id="toggleKey" type="button" aria-pressed="false" aria-controls="passphrase">
+          <button
+            id="toggleKey"
+            type="button"
+            aria-pressed="false"
+            aria-controls="passphrase"
+            data-i18n="popup_show"
+          >
             Voir
           </button>
         </div>
         <div class="row">
-          <button id="setKey" type="button">Définir</button>
-          <button id="clearKey" type="button">Effacer</button>
+          <button id="setKey" type="button" data-i18n="popup_set_key">Définir</button>
+          <button id="clearKey" type="button" data-i18n="popup_clear_key">Effacer</button>
         </div>
         <p id="status" class="status" role="status" aria-live="polite"></p>
         <!-- L'empreinte se memorise a force d'etre vue : une valeur differente
              signale une faute de frappe avant qu'elle ne coute un acces. -->
         <p id="fingerprintRow" class="fingerprint" hidden>
-          Empreinte <span id="fingerprint" class="chip"></span>
+          <span data-i18n="popup_fingerprint">Empreinte</span>
+          <span id="fingerprint" class="chip"></span>
         </p>
       </section>
 
@@ -103,7 +114,7 @@
            v1). Pre-rempli depuis le carnet ; les autres comptes du site sont
            proposes dans la liste. -->
       <section class="field">
-        <label for="login">Identifiant</label>
+        <label for="login" data-i18n="popup_login">Identifiant</label>
         <input
           type="text"
           id="login"
@@ -115,7 +126,7 @@
           aria-describedby="loginHint"
         />
         <datalist id="loginOptions"></datalist>
-        <p id="loginHint" class="hint">
+        <p id="loginHint" class="hint" data-i18n="popup_login_hint">
           Facultatif. En v1, l'identifiant n'entre pas dans le calcul.
         </p>
       </section>
@@ -124,23 +135,30 @@
            le mot de passe n'a pas encore ete change. Le choix n'est donc pas
            retenu. -->
       <fieldset id="versionGroup" class="version-group">
-        <legend>Algorithme</legend>
+        <legend data-i18n="popup_algorithm">Algorithme</legend>
         <label><input type="radio" name="version" value="2" checked /> v2</label>
-        <label><input type="radio" name="version" value="1" /> v1 (ancien)</label>
+        <label
+          ><input type="radio" name="version" value="1" />
+          <span data-i18n="popup_v1_legacy">v1 (ancien)</span></label
+        >
       </fieldset>
 
-      <button id="generatePassword" type="button" class="primary">Générer le mot de passe</button>
+      <button id="generatePassword" type="button" class="primary" data-i18n="popup_generate">
+        Générer le mot de passe
+      </button>
 
-      <p id="errorContainer" class="error" role="alert" hidden>Erreur : <span id="error"></span></p>
+      <p id="errorContainer" class="error" role="alert" hidden>
+        <span data-i18n="popup_error">Erreur :</span> <span id="error"></span>
+      </p>
 
       <section id="result" class="result" aria-live="polite" hidden>
         <dl>
           <div class="result-row">
-            <dt>Site</dt>
+            <dt data-i18n="popup_site">Site</dt>
             <dd id="site"></dd>
           </div>
           <div class="result-row">
-            <dt>Mot de passe</dt>
+            <dt data-i18n="popup_password">Mot de passe</dt>
             <dd class="password-line">
               <code id="passwordResult"></code>
               <button
@@ -149,6 +167,8 @@
                 class="icon-btn"
                 aria-label="Copier le mot de passe"
                 title="Copier"
+                data-i18n-aria-label="popup_copy_password"
+                data-i18n-title="popup_copy"
               >
                 <svg
                   aria-hidden="true"
@@ -166,7 +186,7 @@
             </dd>
           </div>
           <div class="result-row">
-            <dt>Sécurité</dt>
+            <dt data-i18n="popup_security">Sécurité</dt>
             <dd id="passwordSecurity"></dd>
           </div>
         </dl>
@@ -176,15 +196,24 @@
              souvenir qu'un compte avait ete cree sans symboles. -->
         <div class="vault">
           <div class="row">
-            <button id="saveEntry" type="button">Enregistrer</button>
+            <button id="saveEntry" type="button" data-i18n="popup_save">Enregistrer</button>
             <!-- Renouveler : change un mot de passe deja en service. -->
-            <button id="changeEntry" type="button" hidden>Renouveler</button>
+            <button id="changeEntry" type="button" data-i18n="popup_renew" hidden>
+              Renouveler
+            </button>
           </div>
           <!-- Dit ce que l'offre complete apporte avant meme le clic : un bouton
                qui refuse sans prevenir ne propose rien. -->
           <p id="renewPitch" class="hint" hidden>
-            Renouveler sans changer de clef maîtresse fait partie de l'offre complète.
-            <a href="https://thecode.julsql.fr/fr/account" target="_blank" rel="noopener"
+            <span data-i18n="popup_renew_pitch"
+              >Renouveler sans changer de clef maîtresse fait partie de l'offre complète.</span
+            >
+            <a
+              href="https://thecode.julsql.fr/fr/account"
+              target="_blank"
+              rel="noopener"
+              data-i18n="popup_unlock"
+              data-i18n-href="popup_account_url"
               >Débloquer</a
             >.
           </p>
@@ -193,14 +222,16 @@
           <!-- Les deux cote a cote : le nouveau ne sert a rien tant qu'il n'a pas
                ete pose sur le site, et l'ancien reste celui qui connecte. -->
           <div id="changePreview" class="change-preview" hidden>
-            <p class="hint">Actuel</p>
+            <p class="hint" data-i18n="popup_current">Actuel</p>
             <p><code id="changeBefore"></code></p>
-            <p class="hint">Nouveau</p>
+            <p class="hint" data-i18n="popup_new">Nouveau</p>
             <p><code id="changeAfter"></code></p>
-            <p class="hint">Changez-le sur le site, puis confirmez.</p>
+            <p class="hint" data-i18n="popup_change_hint">
+              Changez-le sur le site, puis confirmez.
+            </p>
             <div class="row">
-              <button id="changeConfirm" type="button">Confirmer</button>
-              <button id="changeCancel" type="button">Annuler</button>
+              <button id="changeConfirm" type="button" data-i18n="popup_confirm">Confirmer</button>
+              <button id="changeCancel" type="button" data-i18n="popup_cancel">Annuler</button>
             </div>
           </div>
         </div>
@@ -216,6 +247,8 @@
           class="icon-btn"
           aria-label="Retour"
           title="Retour"
+          data-i18n-aria-label="popup_back"
+          data-i18n-title="popup_back"
         >
           <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" width="20" height="20">
             <path
@@ -224,49 +257,72 @@
             />
           </svg>
         </button>
-        <h2 id="settingsTitle" tabindex="-1">Paramètres</h2>
+        <h2 id="settingsTitle" tabindex="-1" data-i18n="popup_settings">Paramètres</h2>
       </header>
 
       <section class="panel" aria-labelledby="paramsTitle">
-        <h3 id="paramsTitle">Mot de passe</h3>
-        <p class="hint">
+        <h3 id="paramsTitle" data-i18n="popup_password">Mot de passe</h3>
+        <p class="hint" data-i18n="popup_params_hint">
           Ces réglages sont enregistrés et s'appliquent à tous les mots de passe générés, y compris
           depuis le menu affiché dans les pages.
         </p>
-        <label for="length">Longueur</label>
+        <label for="length" data-i18n="popup_length">Longueur</label>
         <input type="number" id="length" min="4" max="40" step="1" value="20" />
         <fieldset class="checkbox-group">
-          <legend>Caractères</legend>
-          <label><input type="checkbox" id="lowercase" checked /> Minuscules</label>
-          <label><input type="checkbox" id="uppercase" checked /> Majuscules</label>
-          <label><input type="checkbox" id="numbers" checked /> Chiffres</label>
-          <label><input type="checkbox" id="symbols" checked /> Symboles</label>
+          <legend data-i18n="popup_characters">Caractères</legend>
+          <label
+            ><input type="checkbox" id="lowercase" checked />
+            <span data-i18n="popup_lowercase">Minuscules</span></label
+          >
+          <label
+            ><input type="checkbox" id="uppercase" checked />
+            <span data-i18n="popup_uppercase">Majuscules</span></label
+          >
+          <label
+            ><input type="checkbox" id="numbers" checked />
+            <span data-i18n="popup_numbers">Chiffres</span></label
+          >
+          <label
+            ><input type="checkbox" id="symbols" checked />
+            <span data-i18n="popup_symbols">Symboles</span></label
+          >
         </fieldset>
       </section>
 
       <!-- Le carnet est chiffre avant de quitter le navigateur : le serveur
            ne recoit que des blocs opaques. -->
       <section id="syncSection" class="panel" aria-labelledby="syncTitle">
-        <h3 id="syncTitle">Synchronisation</h3>
+        <h3 id="syncTitle" data-i18n="popup_sync">Synchronisation</h3>
         <div id="syncLoggedOut">
-          <label for="syncEmail">Adresse e-mail</label>
+          <label for="syncEmail" data-i18n="popup_email">Adresse e-mail</label>
           <input id="syncEmail" type="email" autocomplete="off" />
-          <label for="syncPassword">Mot de passe du compte</label>
+          <label for="syncPassword" data-i18n="popup_account_password"
+            >Mot de passe du compte</label
+          >
           <input id="syncPassword" type="password" autocomplete="off" />
-          <button id="syncLoginBtn" type="button">Connecter la synchronisation</button>
+          <button id="syncLoginBtn" type="button" data-i18n="popup_sync_login">
+            Connecter la synchronisation
+          </button>
           <!-- Le compte, l'offre et les appareils se gerent sur le site, et
                nulle part ailleurs : sans ce lien, quelqu'un sans compte reste
                devant un formulaire de connexion sans rien a y mettre. -->
           <p class="hint">
-            Pas encore de compte ?
-            <a href="https://thecode.julsql.fr/fr/account" target="_blank" rel="noopener"
+            <span data-i18n="popup_no_account">Pas encore de compte ?</span>
+            <a
+              href="https://thecode.julsql.fr/fr/account"
+              target="_blank"
+              rel="noopener"
+              data-i18n="popup_create_account"
+              data-i18n-href="popup_account_url"
               >Créez-le sur le site</a
             >.
           </p>
         </div>
         <div id="syncLoggedIn" class="row" hidden>
-          <button id="syncNowBtn" type="button">Synchroniser</button>
-          <button id="syncLogoutBtn" type="button">Déconnecter</button>
+          <button id="syncNowBtn" type="button" data-i18n="popup_sync_now">Synchroniser</button>
+          <button id="syncLogoutBtn" type="button" data-i18n="popup_sync_logout">
+            Déconnecter
+          </button>
         </div>
         <p id="syncStatus" class="hint" role="status" aria-live="polite"></p>
       </section>
@@ -274,8 +330,10 @@
       <!-- Le transfert vit dans un onglet : un popup se ferme des qu'il perd
            le focus, et on perdrait le QR en allant le scanner. -->
       <section class="panel" aria-labelledby="vaultTitle">
-        <h3 id="vaultTitle">Carnet</h3>
-        <button id="openTransfer" type="button">Transférer le carnet…</button>
+        <h3 id="vaultTitle" data-i18n="popup_vault">Carnet</h3>
+        <button id="openTransfer" type="button" data-i18n="popup_transfer">
+          Transférer le carnet…
+        </button>
       </section>
     </section>
   </body>

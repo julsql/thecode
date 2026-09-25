@@ -86,5 +86,313 @@
   "sync_forgotten": {
     "message": "Session oubliée sur cet appareil.",
     "description": "Sync status in the popup."
+  },
+  "popup_title": {
+    "message": "TheCode - Clef",
+    "description": "Popup."
+  },
+  "popup_open_vault": {
+    "message": "Gérer le carnet (nouvel onglet)",
+    "description": "Popup."
+  },
+  "popup_vault": {
+    "message": "Carnet",
+    "description": "Popup."
+  },
+  "popup_settings": {
+    "message": "Paramètres",
+    "description": "Popup."
+  },
+  "popup_key": {
+    "message": "Clef",
+    "description": "Popup."
+  },
+  "popup_show": {
+    "message": "Voir",
+    "description": "Popup."
+  },
+  "popup_hide": {
+    "message": "Cacher",
+    "description": "Popup."
+  },
+  "popup_set_key": {
+    "message": "Définir",
+    "description": "Popup."
+  },
+  "popup_clear_key": {
+    "message": "Effacer",
+    "description": "Popup."
+  },
+  "popup_fingerprint": {
+    "message": "Empreinte",
+    "description": "Popup."
+  },
+  "popup_login": {
+    "message": "Identifiant",
+    "description": "Popup."
+  },
+  "popup_login_hint": {
+    "message": "Facultatif. En v1, l'identifiant n'entre pas dans le calcul.",
+    "description": "Popup."
+  },
+  "popup_algorithm": {
+    "message": "Algorithme",
+    "description": "Popup."
+  },
+  "popup_v1_legacy": {
+    "message": "v1 (ancien)",
+    "description": "Popup."
+  },
+  "popup_generate": {
+    "message": "Générer le mot de passe",
+    "description": "Popup."
+  },
+  "popup_error": {
+    "message": "Erreur :",
+    "description": "Popup."
+  },
+  "popup_site": {
+    "message": "Site",
+    "description": "Popup."
+  },
+  "popup_password": {
+    "message": "Mot de passe",
+    "description": "Popup."
+  },
+  "popup_copy_password": {
+    "message": "Copier le mot de passe",
+    "description": "Popup."
+  },
+  "popup_copy": {
+    "message": "Copier",
+    "description": "Popup."
+  },
+  "popup_security": {
+    "message": "Sécurité",
+    "description": "Popup."
+  },
+  "popup_save": {
+    "message": "Enregistrer",
+    "description": "Popup."
+  },
+  "popup_renew": {
+    "message": "Renouveler",
+    "description": "Popup."
+  },
+  "popup_renew_pitch": {
+    "message": "Renouveler sans changer de clef maîtresse fait partie de l'offre complète.",
+    "description": "Popup."
+  },
+  "popup_unlock": {
+    "message": "Débloquer",
+    "description": "Popup."
+  },
+  "popup_account_url": {
+    "message": "https://thecode.julsql.fr/fr/account",
+    "description": "Popup."
+  },
+  "popup_current": {
+    "message": "Actuel",
+    "description": "Popup."
+  },
+  "popup_new": {
+    "message": "Nouveau",
+    "description": "Popup."
+  },
+  "popup_change_hint": {
+    "message": "Changez-le sur le site, puis confirmez.",
+    "description": "Popup."
+  },
+  "popup_confirm": {
+    "message": "Confirmer",
+    "description": "Popup."
+  },
+  "popup_cancel": {
+    "message": "Annuler",
+    "description": "Popup."
+  },
+  "popup_back": {
+    "message": "Retour",
+    "description": "Popup."
+  },
+  "popup_params_hint": {
+    "message": "Ces réglages sont enregistrés et s'appliquent à tous les mots de passe générés, y compris depuis le menu affiché dans les pages.",
+    "description": "Popup."
+  },
+  "popup_length": {
+    "message": "Longueur",
+    "description": "Popup."
+  },
+  "popup_characters": {
+    "message": "Caractères",
+    "description": "Popup."
+  },
+  "popup_lowercase": {
+    "message": "Minuscules",
+    "description": "Popup."
+  },
+  "popup_uppercase": {
+    "message": "Majuscules",
+    "description": "Popup."
+  },
+  "popup_numbers": {
+    "message": "Chiffres",
+    "description": "Popup."
+  },
+  "popup_symbols": {
+    "message": "Symboles",
+    "description": "Popup."
+  },
+  "popup_sync": {
+    "message": "Synchronisation",
+    "description": "Popup."
+  },
+  "popup_email": {
+    "message": "Adresse e-mail",
+    "description": "Popup."
+  },
+  "popup_account_password": {
+    "message": "Mot de passe du compte",
+    "description": "Popup."
+  },
+  "popup_sync_login": {
+    "message": "Connecter la synchronisation",
+    "description": "Popup."
+  },
+  "popup_no_account": {
+    "message": "Pas encore de compte ?",
+    "description": "Popup."
+  },
+  "popup_create_account": {
+    "message": "Créez-le sur le site",
+    "description": "Popup."
+  },
+  "popup_sync_now": {
+    "message": "Synchroniser",
+    "description": "Popup."
+  },
+  "popup_sync_logout": {
+    "message": "Déconnecter",
+    "description": "Popup."
+  },
+  "popup_transfer": {
+    "message": "Transférer le carnet…",
+    "description": "Popup."
+  },
+  "popup_key_set": {
+    "message": "Clef définie.",
+    "description": "Popup."
+  },
+  "popup_error_detail": {
+    "message": "Erreur : $FIRST$",
+    "description": "Popup.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      }
+    }
+  },
+  "popup_deriving": {
+    "message": "Dérivation en cours…",
+    "description": "Popup."
+  },
+  "popup_key_cleared": {
+    "message": "Clef effacée.",
+    "description": "Popup."
+  },
+  "popup_copied": {
+    "message": "Copié.",
+    "description": "Popup."
+  },
+  "popup_copy_failed": {
+    "message": "Copie impossible.",
+    "description": "Popup."
+  },
+  "popup_no_response": {
+    "message": "Pas de réponse.",
+    "description": "Popup."
+  },
+  "popup_account_saved_for": {
+    "message": "Compte enregistré pour $FIRST$.",
+    "description": "Popup.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      }
+    }
+  },
+  "popup_accounts_known": {
+    "message": "$FIRST$ compte(s) connu(s) pour $SECOND$, pas celui-ci.",
+    "description": "Popup.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      },
+      "second": {
+        "content": "$2"
+      }
+    }
+  },
+  "popup_not_in_vault": {
+    "message": "$FIRST$ n'est pas encore dans le carnet.",
+    "description": "Popup.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      }
+    }
+  },
+  "popup_update_entry": {
+    "message": "Mettre à jour l'entrée",
+    "description": "Popup."
+  },
+  "popup_computing": {
+    "message": "Calcul en cours…",
+    "description": "Popup."
+  },
+  "popup_renewed": {
+    "message": "Entrée renouvelée, compteur $FIRST$.",
+    "description": "Popup.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      }
+    }
+  },
+  "popup_no_site": {
+    "message": "Aucun site détecté.",
+    "description": "Popup."
+  },
+  "popup_entry_updated": {
+    "message": "Entrée mise à jour.",
+    "description": "Popup."
+  },
+  "popup_account_saved": {
+    "message": "Compte enregistré.",
+    "description": "Popup."
+  },
+  "security_none": {
+    "message": "Aucune",
+    "description": "Popup."
+  },
+  "security_very_weak": {
+    "message": "Très Faible",
+    "description": "Popup."
+  },
+  "security_weak": {
+    "message": "Faible",
+    "description": "Popup."
+  },
+  "security_medium": {
+    "message": "Moyenne",
+    "description": "Popup."
+  },
+  "security_strong": {
+    "message": "Forte",
+    "description": "Popup."
+  },
+  "security_very_strong": {
+    "message": "Très Forte",
+    "description": "Popup."
   }
 }

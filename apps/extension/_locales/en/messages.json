@@ -86,5 +86,313 @@
   "sync_forgotten": {
     "message": "Session forgotten on this device.",
     "description": "Sync status in the popup."
+  },
+  "popup_title": {
+    "message": "TheCode - Key",
+    "description": "Popup."
+  },
+  "popup_open_vault": {
+    "message": "Manage the vault (new tab)",
+    "description": "Popup."
+  },
+  "popup_vault": {
+    "message": "Vault",
+    "description": "Popup."
+  },
+  "popup_settings": {
+    "message": "Settings",
+    "description": "Popup."
+  },
+  "popup_key": {
+    "message": "Key",
+    "description": "Popup."
+  },
+  "popup_show": {
+    "message": "Show",
+    "description": "Popup."
+  },
+  "popup_hide": {
+    "message": "Hide",
+    "description": "Popup."
+  },
+  "popup_set_key": {
+    "message": "Set",
+    "description": "Popup."
+  },
+  "popup_clear_key": {
+    "message": "Clear",
+    "description": "Popup."
+  },
+  "popup_fingerprint": {
+    "message": "Fingerprint",
+    "description": "Popup."
+  },
+  "popup_login": {
+    "message": "Login",
+    "description": "Popup."
+  },
+  "popup_login_hint": {
+    "message": "Optional. In v1, the login is not part of the computation.",
+    "description": "Popup."
+  },
+  "popup_algorithm": {
+    "message": "Algorithm",
+    "description": "Popup."
+  },
+  "popup_v1_legacy": {
+    "message": "v1 (legacy)",
+    "description": "Popup."
+  },
+  "popup_generate": {
+    "message": "Generate the password",
+    "description": "Popup."
+  },
+  "popup_error": {
+    "message": "Error:",
+    "description": "Popup."
+  },
+  "popup_site": {
+    "message": "Site",
+    "description": "Popup."
+  },
+  "popup_password": {
+    "message": "Password",
+    "description": "Popup."
+  },
+  "popup_copy_password": {
+    "message": "Copy the password",
+    "description": "Popup."
+  },
+  "popup_copy": {
+    "message": "Copy",
+    "description": "Popup."
+  },
+  "popup_security": {
+    "message": "Security",
+    "description": "Popup."
+  },
+  "popup_save": {
+    "message": "Save",
+    "description": "Popup."
+  },
+  "popup_renew": {
+    "message": "Renew",
+    "description": "Popup."
+  },
+  "popup_renew_pitch": {
+    "message": "Renewing without changing your master key is part of the full plan.",
+    "description": "Popup."
+  },
+  "popup_unlock": {
+    "message": "Unlock",
+    "description": "Popup."
+  },
+  "popup_account_url": {
+    "message": "https://thecode.julsql.fr/en/account",
+    "description": "Popup."
+  },
+  "popup_current": {
+    "message": "Current",
+    "description": "Popup."
+  },
+  "popup_new": {
+    "message": "New",
+    "description": "Popup."
+  },
+  "popup_change_hint": {
+    "message": "Change it on the site, then confirm.",
+    "description": "Popup."
+  },
+  "popup_confirm": {
+    "message": "Confirm",
+    "description": "Popup."
+  },
+  "popup_cancel": {
+    "message": "Cancel",
+    "description": "Popup."
+  },
+  "popup_back": {
+    "message": "Back",
+    "description": "Popup."
+  },
+  "popup_params_hint": {
+    "message": "These settings are saved and apply to every generated password, including from the menu shown in pages.",
+    "description": "Popup."
+  },
+  "popup_length": {
+    "message": "Length",
+    "description": "Popup."
+  },
+  "popup_characters": {
+    "message": "Characters",
+    "description": "Popup."
+  },
+  "popup_lowercase": {
+    "message": "Lowercase",
+    "description": "Popup."
+  },
+  "popup_uppercase": {
+    "message": "Uppercase",
+    "description": "Popup."
+  },
+  "popup_numbers": {
+    "message": "Numbers",
+    "description": "Popup."
+  },
+  "popup_symbols": {
+    "message": "Symbols",
+    "description": "Popup."
+  },
+  "popup_sync": {
+    "message": "Sync",
+    "description": "Popup."
+  },
+  "popup_email": {
+    "message": "Email address",
+    "description": "Popup."
+  },
+  "popup_account_password": {
+    "message": "Account password",
+    "description": "Popup."
+  },
+  "popup_sync_login": {
+    "message": "Connect sync",
+    "description": "Popup."
+  },
+  "popup_no_account": {
+    "message": "No account yet?",
+    "description": "Popup."
+  },
+  "popup_create_account": {
+    "message": "Create one on the website",
+    "description": "Popup."
+  },
+  "popup_sync_now": {
+    "message": "Sync",
+    "description": "Popup."
+  },
+  "popup_sync_logout": {
+    "message": "Disconnect",
+    "description": "Popup."
+  },
+  "popup_transfer": {
+    "message": "Transfer the vault…",
+    "description": "Popup."
+  },
+  "popup_key_set": {
+    "message": "Key set.",
+    "description": "Popup."
+  },
+  "popup_error_detail": {
+    "message": "Error: $FIRST$",
+    "description": "Popup.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      }
+    }
+  },
+  "popup_deriving": {
+    "message": "Deriving…",
+    "description": "Popup."
+  },
+  "popup_key_cleared": {
+    "message": "Key cleared.",
+    "description": "Popup."
+  },
+  "popup_copied": {
+    "message": "Copied.",
+    "description": "Popup."
+  },
+  "popup_copy_failed": {
+    "message": "Could not copy.",
+    "description": "Popup."
+  },
+  "popup_no_response": {
+    "message": "No response.",
+    "description": "Popup."
+  },
+  "popup_account_saved_for": {
+    "message": "Account saved for $FIRST$.",
+    "description": "Popup.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      }
+    }
+  },
+  "popup_accounts_known": {
+    "message": "$FIRST$ known account(s) for $SECOND$, not this one.",
+    "description": "Popup.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      },
+      "second": {
+        "content": "$2"
+      }
+    }
+  },
+  "popup_not_in_vault": {
+    "message": "$FIRST$ is not in the vault yet.",
+    "description": "Popup.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      }
+    }
+  },
+  "popup_update_entry": {
+    "message": "Update the entry",
+    "description": "Popup."
+  },
+  "popup_computing": {
+    "message": "Computing…",
+    "description": "Popup."
+  },
+  "popup_renewed": {
+    "message": "Entry renewed, counter $FIRST$.",
+    "description": "Popup.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      }
+    }
+  },
+  "popup_no_site": {
+    "message": "No site detected.",
+    "description": "Popup."
+  },
+  "popup_entry_updated": {
+    "message": "Entry updated.",
+    "description": "Popup."
+  },
+  "popup_account_saved": {
+    "message": "Account saved.",
+    "description": "Popup."
+  },
+  "security_none": {
+    "message": "None",
+    "description": "Popup."
+  },
+  "security_very_weak": {
+    "message": "Very weak",
+    "description": "Popup."
+  },
+  "security_weak": {
+    "message": "Weak",
+    "description": "Popup."
+  },
+  "security_medium": {
+    "message": "Medium",
+    "description": "Popup."
+  },
+  "security_strong": {
+    "message": "Strong",
+    "description": "Popup."
+  },
+  "security_very_strong": {
+    "message": "Very strong",
+    "description": "Popup."
   }
 }
