@@ -283,7 +283,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, watch, computed, onMounted } from "vue";
+import { defineComponent, ref, watch, computed, onMounted, onUnmounted } from "vue";
 import { generatePassword, calculateEntropyBits, getSecurityLevel } from "@/utils";
 import { canonicalSite, loadPublicSuffixList } from "@/canonicalSite";
 import { keyFingerprint, type Fingerprint } from "@/fingerprint";
@@ -600,6 +600,20 @@ export default defineComponent({
     watch(site, onSiteChange, { immediate: true });
     watch(enV1, () => genererMotDePasse());
 
+    // Le thème suit l'algorithme : rose en v1, bleu en v2. Posé sur <html>
+    // pour que l'en-tête change aussi, retiré en quittant la page — la v1 ne
+    // doit pas teinter le reste du site.
+    watch(
+      enV1,
+      (v1) => {
+        document.documentElement.dataset.algo = v1 ? "v1" : "v2";
+      },
+      { immediate: true },
+    );
+    onUnmounted(() => {
+      delete document.documentElement.dataset.algo;
+    });
+
     /**
      * Enregistre le site et ses reglages.
      *
@@ -769,7 +783,7 @@ export default defineComponent({
   width: 72px;
   height: 72px;
   border-radius: 20px;
-  background: linear-gradient(135deg, rgba(166, 77, 121, 0.35), rgba(106, 17, 203, 0.35));
+  background: linear-gradient(135deg, rgb(var(--accent-rgb) / 0.35), rgb(var(--glow-rgb) / 0.35));
   border: 1px solid rgba(255, 255, 255, 0.15);
   margin-bottom: 18px;
 }
@@ -865,7 +879,7 @@ input[type="text"]:focus,
 input[type="password"]:focus {
   outline: none;
   border-color: var(--c4);
-  box-shadow: 0 0 0 4px rgba(166, 77, 121, 0.18);
+  box-shadow: 0 0 0 4px rgb(var(--accent-rgb) / 0.18);
   background: rgba(0, 0, 0, 0.35);
 }
 
@@ -1026,9 +1040,9 @@ input[type="range"]::-webkit-slider-thumb {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--c4), var(--c3));
+  background: var(--fill-gradient);
   border: 2px solid #fff;
-  box-shadow: 0 4px 10px rgba(166, 77, 121, 0.4);
+  box-shadow: 0 4px 10px rgb(var(--accent-rgb) / 0.4);
   cursor: pointer;
 }
 
@@ -1036,7 +1050,7 @@ input[type="range"]::-moz-range-thumb {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--c4), var(--c3));
+  background: var(--fill-gradient);
   border: 2px solid #fff;
   cursor: pointer;
 }
@@ -1075,7 +1089,7 @@ input[type="range"]:disabled {
 }
 
 .check-pill:hover {
-  border-color: rgba(166, 77, 121, 0.45);
+  border-color: rgb(var(--accent-rgb) / 0.45);
   color: var(--text);
 }
 
@@ -1095,7 +1109,7 @@ input[type="range"]:disabled {
 }
 
 .check-pill input[type="checkbox"]:checked {
-  background: linear-gradient(135deg, var(--c4), var(--c3));
+  background: var(--fill-gradient);
   border-color: transparent;
 }
 
@@ -1112,8 +1126,8 @@ input[type="range"]:disabled {
 }
 
 .check-pill:has(input:checked) {
-  background: rgba(166, 77, 121, 0.15);
-  border-color: rgba(166, 77, 121, 0.5);
+  background: rgb(var(--accent-rgb) / 0.15);
+  border-color: rgb(var(--accent-rgb) / 0.5);
   color: var(--text);
 }
 

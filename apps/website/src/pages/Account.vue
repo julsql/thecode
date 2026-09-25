@@ -985,7 +985,7 @@ export default defineComponent({
    laisseraient douter de ce qu'on est en train de prendre. */
 .plan-option.active {
   border-color: var(--c4);
-  background: rgba(166, 77, 121, 0.18);
+  background: rgb(var(--accent-rgb) / 0.18);
 }
 
 .plan-option--featured {

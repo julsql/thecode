@@ -286,7 +286,7 @@ export default defineComponent({
 
 .hero-illustration img:hover {
   transform: translateY(-5px);
-  filter: drop-shadow(0 18px 40px rgba(166, 77, 121, 0.4));
+  filter: drop-shadow(0 18px 40px rgb(var(--accent-rgb) / 0.4));
 }
 
 .install {
@@ -305,10 +305,10 @@ export default defineComponent({
   border-radius: 999px;
   text-decoration: none;
   color: #fff;
-  background: linear-gradient(135deg, var(--c4), var(--c3));
+  background: var(--fill-gradient);
   border: 1px solid rgba(255, 255, 255, 0.18);
   box-shadow:
-    0 14px 40px rgba(166, 77, 121, 0.45),
+    0 14px 40px rgb(var(--accent-rgb) / 0.45),
     inset 0 1px 0 rgba(255, 255, 255, 0.18);
   font-weight: 700;
   transition:
@@ -320,7 +320,7 @@ export default defineComponent({
 .btn-install:hover {
   transform: translateY(-3px);
   box-shadow:
-    0 22px 55px rgba(166, 77, 121, 0.55),
+    0 22px 55px rgb(var(--accent-rgb) / 0.55),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
   filter: brightness(1.05);
 }
@@ -480,7 +480,7 @@ export default defineComponent({
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(400px 200px at 0% 0%, rgba(166, 77, 121, 0.18), transparent 60%);
+  background: radial-gradient(400px 200px at 0% 0%, rgb(var(--accent-rgb) / 0.18), transparent 60%);
   opacity: 0;
   transition: opacity 0.3s ease;
   pointer-events: none;
@@ -488,7 +488,7 @@ export default defineComponent({
 
 .feature:hover {
   transform: translateY(-6px);
-  border-color: rgba(166, 77, 121, 0.45);
+  border-color: rgb(var(--accent-rgb) / 0.45);
   box-shadow: var(--shadow-soft);
 }
 
@@ -514,7 +514,7 @@ export default defineComponent({
   height: 56px;
   padding: 12px;
   border-radius: 14px;
-  background: linear-gradient(135deg, rgba(106, 17, 203, 0.25), rgba(166, 77, 121, 0.25));
+  background: linear-gradient(135deg, rgb(var(--glow-rgb) / 0.25), rgb(var(--accent-rgb) / 0.25));
   border: 1px solid var(--border-soft);
 }
 

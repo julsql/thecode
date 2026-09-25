@@ -420,8 +420,8 @@ export default defineComponent({
 
 .nav-link.is-active {
   color: var(--text);
-  background: linear-gradient(135deg, rgba(166, 77, 121, 0.35), rgba(106, 30, 85, 0.35));
-  box-shadow: inset 0 0 0 1px rgba(166, 77, 121, 0.45);
+  background: linear-gradient(135deg, rgb(var(--accent-rgb) / 0.35), rgb(var(--deep-rgb) / 0.35));
+  box-shadow: inset 0 0 0 1px rgb(var(--accent-rgb) / 0.45);
 }
 
 .header-actions {
@@ -460,8 +460,8 @@ export default defineComponent({
 
 .lang-btn.is-active {
   color: #fff;
-  background: linear-gradient(135deg, var(--c4), var(--c3));
-  box-shadow: 0 4px 14px rgba(166, 77, 121, 0.4);
+  background: var(--fill-gradient);
+  box-shadow: 0 4px 14px rgb(var(--accent-rgb) / 0.4);
 }
 
 .hamburger {
@@ -526,7 +526,7 @@ export default defineComponent({
 }
 
 .mobile-link.is-active {
-  background: linear-gradient(135deg, rgba(166, 77, 121, 0.3), rgba(106, 30, 85, 0.3));
+  background: linear-gradient(135deg, rgb(var(--accent-rgb) / 0.3), rgb(var(--deep-rgb) / 0.3));
 }
 
 .panel-fade-enter-active,

@@ -105,7 +105,7 @@ export default defineComponent({
   width: 72px;
   height: 72px;
   border-radius: 20px;
-  background: linear-gradient(135deg, rgba(166, 77, 121, 0.35), rgba(106, 17, 203, 0.35));
+  background: linear-gradient(135deg, rgb(var(--accent-rgb) / 0.35), rgb(var(--glow-rgb) / 0.35));
   border: 1px solid rgba(255, 255, 255, 0.15);
   margin-bottom: 18px;
 }
@@ -166,8 +166,8 @@ export default defineComponent({
 
 .contact-card:hover {
   transform: translateY(-4px);
-  border-color: rgba(166, 77, 121, 0.5);
-  background: linear-gradient(160deg, rgba(166, 77, 121, 0.12), rgba(255, 255, 255, 0.03));
+  border-color: rgb(var(--accent-rgb) / 0.5);
+  background: linear-gradient(160deg, rgb(var(--accent-rgb) / 0.12), rgba(255, 255, 255, 0.03));
 }
 
 .contact-card-icon {
@@ -177,7 +177,7 @@ export default defineComponent({
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, rgba(166, 77, 121, 0.28), rgba(106, 17, 203, 0.22));
+  background: linear-gradient(135deg, rgb(var(--accent-rgb) / 0.28), rgb(var(--glow-rgb) / 0.22));
   border: 1px solid var(--border-soft);
   margin-bottom: 4px;
 }

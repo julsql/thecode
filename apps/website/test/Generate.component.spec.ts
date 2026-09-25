@@ -109,6 +109,27 @@ describe("page de generation", () => {
     expect(generated(wrapper)).toBe(canonical.expected);
   }, 25000);
 
+  it("teinte la page en rose en v1, en bleu en v2", async () => {
+    const root = document.documentElement;
+    expect(root.dataset.algo).toBe("v2");
+
+    await wrapper
+      .findAll("button")
+      .find((b) => b.text() === "v1")!
+      .trigger("click");
+    expect(root.dataset.algo).toBe("v1");
+
+    await wrapper
+      .findAll("button")
+      .find((b) => b.text() === "v2")!
+      .trigger("click");
+    expect(root.dataset.algo).toBe("v2");
+
+    // Le reste du site reprend le thème par défaut.
+    wrapper.unmount();
+    expect(root.dataset.algo).toBeUndefined();
+  });
+
   it("regenere quand la longueur change", async () => {
     const short = vectors.v2.cases.find((c: any) => c.id === "v2-len-min");
 
