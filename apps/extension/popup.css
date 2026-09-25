@@ -7,15 +7,337 @@
 
 :root {
   color-scheme: light dark;
+  --bg: #ffffff;
+  --surface: #f4f5f7;
+  --fg: #1b1d22;
+  --muted: #5b6070;
+  --border: #c9ccd4;
+  --accent: #2456d6;
+  --accent-fg: #ffffff;
+  --ok: #1a7f37;
+  --danger: #c62828;
+  --focus: #2456d6;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #16181d;
+    --surface: #1f2430;
+    --fg: #e8eaf0;
+    --muted: #a3a9b8;
+    --border: #3a4050;
+    --accent: #6b93ff;
+    --accent-fg: #0d1020;
+    --ok: #5fd07a;
+    --danger: #ff7b72;
+    --focus: #8fb0ff;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
 body {
-  font-family: system-ui;
-  padding: 0 12px;
+  margin: 0;
+  padding: 0 12px 12px;
   width: 320px;
   max-width: 100%;
-  box-sizing: border-box;
-  text-align: center;
+  font-family: system-ui, sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--fg);
+  background: var(--bg);
+}
+
+.view {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* En-tete : titre a gauche, action a droite. */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  border-bottom: 1px solid var(--border);
+}
+
+.topbar h1,
+.topbar h2 {
+  flex: 1;
+  margin: 0;
+  font-size: 15px;
+}
+
+#openSettings {
+  margin-left: auto;
+}
+
+h3 {
+  margin: 0 0 4px;
+  font-size: 13px;
+}
+
+label {
+  display: block;
+  font-weight: 600;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.row input {
+  flex: 1;
+  min-width: 0;
+}
+
+input[type="password"],
+input[type="text"],
+input[type="email"],
+input[type="number"] {
+  width: 100%;
+  padding: 7px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+  color: inherit;
+  background: var(--bg);
+}
+
+.row input[type="password"],
+.row input[type="text"] {
+  width: auto;
+}
+
+button {
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+  color: inherit;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: var(--muted);
+}
+
+button.primary {
+  border-color: var(--accent);
+  font-weight: 600;
+  color: var(--accent-fg);
+  background: var(--accent);
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+}
+
+.icon-btn:hover {
+  background: var(--surface);
+}
+
+/* Le focus doit se voir au clavier, quel que soit le theme. */
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Titre qui recoit le focus a l'ouverture des parametres : il annonce la vue,
+   il n'est pas une commande. */
+[tabindex="-1"]:focus {
+  outline: none;
+}
+
+a {
+  color: var(--accent);
+}
+
+.hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.status {
+  margin: 0;
+  min-height: 1em;
+  font-size: 12px;
+}
+
+.status[data-tone="ok"] {
+  color: var(--ok);
+}
+
+.status[data-tone="error"],
+.error {
+  color: var(--danger);
+}
+
+.error {
+  margin: 0;
+}
+
+.version-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.version-group legend {
+  float: left;
+  padding: 0 4px 0 0;
+  font-weight: 600;
+}
+
+.version-group label,
+.checkbox-group label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: normal;
+}
+
+.checkbox-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+  margin: 8px 0 0;
+  padding: 0;
+  border: none;
+}
+
+.checkbox-group legend {
+  padding: 0 0 4px;
+  font-weight: 600;
+}
+
+/* Empreinte de clef : un repere visuel, pas une decoration. Elle doit
+   sauter aux yeux quand elle change. */
+.fingerprint {
+  margin: 0;
+  font-size: 12px;
+}
+
+.chip {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: ui-monospace, monospace;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #fff;
+}
+
+.result {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.result dl {
+  margin: 0;
+}
+
+.result-row {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 8px;
+  align-items: center;
+  padding: 2px 0;
+}
+
+.result dt {
+  color: var(--muted);
+}
+
+.result dd {
+  margin: 0;
+  min-width: 0;
+}
+
+.password-line {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+#passwordSecurity::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--level, transparent);
+}
+
+#passwordResult {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+  word-break: break-all;
+}
+
+.vault,
+.change-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.change-preview p {
+  margin: 0;
+}
+
+.change-preview code {
+  word-break: break-all;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.panel:last-child {
+  border-bottom: none;
+}
+
+.panel button {
+  align-self: flex-start;
 }
 
 @media (pointer: coarse) {
@@ -25,151 +347,22 @@ body {
   }
 
   input[type="password"],
+  input[type="text"],
+  input[type="email"],
   input[type="number"] {
-    font-size: 16px;
     padding: 10px;
+    font-size: 16px;
   }
 
   button {
     padding: 10px 14px;
     font-size: 15px;
   }
-}
 
-h3 {
-  display: block;
-  font-size: 14px;
-}
-
-p,
-label {
-  display: block;
-  font-size: 13px;
-}
-
-label {
-  display: block;
-}
-
-input[type="password"],
-input[type="text"],
-input[type="number"] {
-  width: calc(100% - 20px);
-  padding: 8px;
-  margin: 8px 0;
-}
-
-.advanced-wrapper {
-  text-align: center; /* centre le groupe */
-}
-
-.checkbox-group {
-  display: inline-block; /* ne prend que la largeur du contenu */
-  text-align: left; /* garde les labels alignés à gauche */
-}
-
-.checkbox-group label {
-  display: block; /* chaque checkbox sur une ligne */
-  margin: 4px 0; /* un peu d'espacement entre les lignes */
-}
-
-.version-group {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  border: none;
-  margin: 0;
-  padding: 0;
-}
-
-.version-group legend {
-  padding: 0 6px 0 0;
-  float: left;
-}
-
-button {
-  margin-top: 10px;
-  padding: 8px 12px;
-  cursor: pointer;
-}
-
-#status {
-  margin-top: 10px;
-  color: green;
-}
-
-#generatePassword {
-  margin-bottom: 8px;
-}
-
-#passwordContainer {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-#passwordResult {
-  font-weight: bold;
-  word-break: break-all;
-  flex: 1;
-}
-
-#copyPasswordBtn {
-  padding: 4px;
-  margin: 0 4px;
-}
-
-#copyIcon {
-  height: 12px;
-  width: 12px;
-}
-
-#warning {
-  color: #b33;
-  margin-top: 8px;
-}
-
-@media (prefers-color-scheme: dark) {
-  /* Dark Mode styles go here. */
-}
-
-.hint {
-  margin: 0 0 8px;
-  font-size: 12px;
-  opacity: 0.75;
-}
-
-/* Empreinte de clef : un repere visuel, pas une decoration. Elle doit
-   sauter aux yeux quand elle change. */
-.fingerprint {
-  margin: 0.25rem 0 0;
-  font-size: 0.8125rem;
-}
-
-.chip {
-  display: inline-block;
-  padding: 0.05rem 0.4rem;
-  border-radius: 0.25rem;
-  color: #fff;
-  font-family: monospace;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-}
-
-.vault {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.hint {
-  margin: 0;
-  font-size: 0.78125rem;
-  opacity: 0.75;
-}
-
-#login::-webkit-calendar-picker-indicator {
-  opacity: 0.6;
+  .icon-btn {
+    width: 44px;
+    height: 44px;
+  }
 }
 
 /* Annonce du passage a la v2, en fenetre modale a l'ouverture. */
@@ -185,12 +378,12 @@ button {
 }
 
 .modal {
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  background: #1f2430;
-  padding: 16px;
   max-height: 100%;
   overflow: auto;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
 }
 
 .modal h4 {
@@ -209,6 +402,7 @@ button {
   align-items: center;
   gap: 6px;
   font-size: 12px;
+  font-weight: normal;
   cursor: pointer;
 }
 
@@ -216,8 +410,4 @@ button {
   display: flex;
   justify-content: flex-end;
   margin-top: 12px;
-}
-
-[hidden] {
-  display: none !important;
 }

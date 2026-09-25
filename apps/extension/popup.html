@@ -15,8 +15,6 @@
   </head>
 
   <body>
-    <h3>TheCode</h3>
-
     <!-- Annonce du passage a la v2, a l'ouverture. Fermer la fait revenir la
          prochaine fois ; seule la case a cocher la retire pour de bon. -->
     <div id="v2Notice" class="modal-backdrop" hidden>
@@ -40,158 +38,228 @@
       </div>
     </div>
 
-    <!-- Clef -->
-    <div>
-      <label for="passphrase">Clef :</label>
-      <input type="password" id="passphrase" />
-      <button id="toggleKey" type="button" aria-pressed="false">Voir</button>
-      <button id="setKey">Définir</button>
-      <button id="clearKey">Effacer</button>
-      <p id="status"></p>
-      <!-- L'empreinte se memorise a force d'etre vue : une valeur differente
-           signale une faute de frappe avant qu'elle ne coute un acces. -->
-      <p id="fingerprintRow" class="fingerprint" hidden>
-        Empreinte <span id="fingerprint" class="chip"></span>
-      </p>
-    </div>
-
-    <hr />
-
-    <!-- Paramètres avancés -->
-    <div class="advanced-wrapper">
-      <h3>Paramètres avancés</h3>
-      <p class="hint">
-        Ces réglages sont enregistrés et s'appliquent à tous les mots de passe générés, y compris
-        depuis le menu affiché dans les pages.
-      </p>
-      <label>
-        Longueur :
-        <input type="number" id="length" min="4" max="40" step="1" value="20" />
-      </label>
-      <div class="checkbox-group">
-        <label><input type="checkbox" id="lowercase" checked /> Minuscules</label>
-        <label><input type="checkbox" id="uppercase" checked /> Majuscules</label>
-        <label><input type="checkbox" id="numbers" checked /> Chiffres</label>
-        <label><input type="checkbox" id="symbols" checked /> Symboles</label>
-      </div>
-    </div>
-
-    <hr />
-
-    <!-- v2 a chaque ouverture : la v1 ne sert qu'en secours, pour un site dont
-         le mot de passe n'a pas encore ete change. Le choix n'est donc pas
-         retenu. -->
-    <fieldset id="versionGroup" class="version-group">
-      <legend>Algorithme</legend>
-      <label><input type="radio" name="version" value="2" checked /> v2</label>
-      <label><input type="radio" name="version" value="1" /> v1 (ancien)</label>
-    </fieldset>
-
-    <!-- Identifiant du compte : il entre dans la derivation v2 (ignore en
-         v1). Pre-rempli depuis le carnet ; les autres comptes du site sont
-         proposes dans la liste. -->
-    <div>
-      <label for="login">Identifiant :</label>
-      <input
-        type="text"
-        id="login"
-        list="loginOptions"
-        maxlength="120"
-        autocomplete="off"
-        autocapitalize="off"
-        spellcheck="false"
-      />
-      <datalist id="loginOptions"></datalist>
-    </div>
-
-    <!-- Bouton de génération -->
-    <button id="generatePassword">Générer mot de passe</button>
-
-    <p id="siteContainer">Site : <span id="site"></span></p>
-    <p id="passwordResultContainer">
-      Mot de passe : <span id="passwordResult"></span>
-      <button id="copyPasswordBtn" title="Copier">
-        <svg
-          id="copyIcon"
-          xmlns="http://www.w3.org/2000/svg"
-          height="24px"
-          viewBox="0 -960 960 960"
-          width="24px"
-          fill="#e3e3e3"
+    <!-- Ecran principal : uniquement ce qui sert a generer. Le reste vit
+         dans les parametres, derriere la roue dentee. -->
+    <main id="mainView" class="view">
+      <header class="topbar">
+        <h1>TheCode</h1>
+        <button
+          id="openSettings"
+          type="button"
+          class="icon-btn"
+          aria-label="Paramètres"
+          title="Paramètres"
+          aria-controls="settingsView"
+          aria-expanded="false"
         >
-          <path
-            d="M360-240q-33 0-56.5-23.5T280-320v-480q0-33 23.5-56.5T360-880h360q33 0 56.5 23.5T800-800v480q0 33-23.5 56.5T720-240H360Zm0-80h360v-480H360v480ZM200-80q-33 0-56.5-23.5T120-160v-560h80v560h440v80H200Zm160-240v-480 480Z"
-          />
-        </svg>
-      </button>
-    </p>
-    <p id="passwordSecurityContainer">Sécurité : <span id="passwordSecurity"></span></p>
-    <p id="errorContainer">Erreur : <span id="error"></span></p>
+          <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" width="20" height="20">
+            <path
+              fill="currentColor"
+              d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.03 7.03 0 0 0-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.48.48 0 0 0-.48.41l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96a.48.48 0 0 0-.59.22L2.72 8.87a.48.48 0 0 0 .12.61l2.03 1.58c-.05.31-.07.63-.07.94s.02.63.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.01-1.58ZM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2Z"
+            />
+          </svg>
+        </button>
+      </header>
 
-    <hr />
+      <!-- Clef -->
+      <section class="field">
+        <label for="passphrase">Clef</label>
+        <div class="row">
+          <input type="password" id="passphrase" autocomplete="off" spellcheck="false" />
+          <button id="toggleKey" type="button" aria-pressed="false" aria-controls="passphrase">
+            Voir
+          </button>
+        </div>
+        <div class="row">
+          <button id="setKey" type="button">Définir</button>
+          <button id="clearKey" type="button">Effacer</button>
+        </div>
+        <p id="status" class="status" role="status" aria-live="polite"></p>
+        <!-- L'empreinte se memorise a force d'etre vue : une valeur differente
+             signale une faute de frappe avant qu'elle ne coute un acces. -->
+        <p id="fingerprintRow" class="fingerprint" hidden>
+          Empreinte <span id="fingerprint" class="chip"></span>
+        </p>
+      </section>
 
-    <!-- Le carnet retient les reglages par site : plus besoin de se
-         souvenir qu'un compte avait ete cree sans symboles. -->
-    <div class="vault">
-      <button id="saveEntry" type="button">Enregistrer</button>
+      <!-- Identifiant du compte : il entre dans la derivation v2 (ignore en
+           v1). Pre-rempli depuis le carnet ; les autres comptes du site sont
+           proposes dans la liste. -->
+      <section class="field">
+        <label for="login">Identifiant</label>
+        <input
+          type="text"
+          id="login"
+          list="loginOptions"
+          maxlength="120"
+          autocomplete="off"
+          autocapitalize="off"
+          spellcheck="false"
+          aria-describedby="loginHint"
+        />
+        <datalist id="loginOptions"></datalist>
+        <p id="loginHint" class="hint">
+          Facultatif. En v1, l'identifiant n'entre pas dans le calcul.
+        </p>
+      </section>
 
-      <!-- Renouveler : change un mot de passe deja en service. -->
-      <button id="changeEntry" type="button" hidden>Renouveler</button>
-      <!-- Dit ce que l'offre complete apporte avant meme le clic : un bouton
-           qui refuse sans prevenir ne propose rien. -->
-      <p id="renewPitch" class="hint" hidden>
-        Renouveler sans changer de clef maîtresse fait partie de l'offre complète.
-        <a href="https://thecode.julsql.fr/fr/account" target="_blank" rel="noopener"> Débloquer</a
-        >.
-      </p>
-      <p id="vaultStatus" class="hint"></p>
+      <!-- v2 a chaque ouverture : la v1 ne sert qu'en secours, pour un site dont
+           le mot de passe n'a pas encore ete change. Le choix n'est donc pas
+           retenu. -->
+      <fieldset id="versionGroup" class="version-group">
+        <legend>Algorithme</legend>
+        <label><input type="radio" name="version" value="2" checked /> v2</label>
+        <label><input type="radio" name="version" value="1" /> v1 (ancien)</label>
+      </fieldset>
 
-      <!-- Les deux cote a cote : le nouveau ne sert a rien tant qu'il n'a pas
-           ete pose sur le site, et l'ancien reste celui qui connecte. -->
-      <div id="changePreview" hidden>
-        <p class="hint">Actuel</p>
-        <p><code id="changeBefore"></code></p>
-        <p class="hint">Nouveau</p>
-        <p><code id="changeAfter"></code></p>
-        <p class="hint">Changez-le sur le site, puis confirmez.</p>
-        <button id="changeConfirm" type="button">Confirmer</button>
-        <button id="changeCancel" type="button">Annuler</button>
-      </div>
+      <button id="generatePassword" type="button" class="primary">Générer le mot de passe</button>
+
+      <p id="errorContainer" class="error" role="alert" hidden>Erreur : <span id="error"></span></p>
+
+      <section id="result" class="result" aria-live="polite" hidden>
+        <dl>
+          <div class="result-row">
+            <dt>Site</dt>
+            <dd id="site"></dd>
+          </div>
+          <div class="result-row">
+            <dt>Mot de passe</dt>
+            <dd class="password-line">
+              <code id="passwordResult"></code>
+              <button
+                id="copyPasswordBtn"
+                type="button"
+                class="icon-btn"
+                aria-label="Copier le mot de passe"
+                title="Copier"
+              >
+                <svg
+                  aria-hidden="true"
+                  focusable="false"
+                  viewBox="0 -960 960 960"
+                  width="16"
+                  height="16"
+                >
+                  <path
+                    fill="currentColor"
+                    d="M360-240q-33 0-56.5-23.5T280-320v-480q0-33 23.5-56.5T360-880h360q33 0 56.5 23.5T800-800v480q0 33-23.5 56.5T720-240H360Zm0-80h360v-480H360v480ZM200-80q-33 0-56.5-23.5T120-160v-560h80v560h440v80H200Zm160-240v-480 480Z"
+                  />
+                </svg>
+              </button>
+            </dd>
+          </div>
+          <div class="result-row">
+            <dt>Sécurité</dt>
+            <dd id="passwordSecurity"></dd>
+          </div>
+        </dl>
+        <p id="copyStatus" class="hint" role="status" aria-live="polite"></p>
+
+        <!-- Le carnet retient les reglages par compte : plus besoin de se
+             souvenir qu'un compte avait ete cree sans symboles. -->
+        <div class="vault">
+          <div class="row">
+            <button id="saveEntry" type="button">Enregistrer</button>
+            <!-- Renouveler : change un mot de passe deja en service. -->
+            <button id="changeEntry" type="button" hidden>Renouveler</button>
+          </div>
+          <!-- Dit ce que l'offre complete apporte avant meme le clic : un bouton
+               qui refuse sans prevenir ne propose rien. -->
+          <p id="renewPitch" class="hint" hidden>
+            Renouveler sans changer de clef maîtresse fait partie de l'offre complète.
+            <a href="https://thecode.julsql.fr/fr/account" target="_blank" rel="noopener"
+              >Débloquer</a
+            >.
+          </p>
+          <p id="vaultStatus" class="hint" role="status" aria-live="polite"></p>
+
+          <!-- Les deux cote a cote : le nouveau ne sert a rien tant qu'il n'a pas
+               ete pose sur le site, et l'ancien reste celui qui connecte. -->
+          <div id="changePreview" class="change-preview" hidden>
+            <p class="hint">Actuel</p>
+            <p><code id="changeBefore"></code></p>
+            <p class="hint">Nouveau</p>
+            <p><code id="changeAfter"></code></p>
+            <p class="hint">Changez-le sur le site, puis confirmez.</p>
+            <div class="row">
+              <button id="changeConfirm" type="button">Confirmer</button>
+              <button id="changeCancel" type="button">Annuler</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Parametres : ce qui ne sert pas a chaque generation. -->
+    <section id="settingsView" class="view" aria-labelledby="settingsTitle" hidden>
+      <header class="topbar">
+        <button
+          id="closeSettings"
+          type="button"
+          class="icon-btn"
+          aria-label="Retour"
+          title="Retour"
+        >
+          <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" width="20" height="20">
+            <path
+              fill="currentColor"
+              d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2Z"
+            />
+          </svg>
+        </button>
+        <h2 id="settingsTitle" tabindex="-1">Paramètres</h2>
+      </header>
+
+      <section class="panel" aria-labelledby="paramsTitle">
+        <h3 id="paramsTitle">Mot de passe</h3>
+        <p class="hint">
+          Ces réglages sont enregistrés et s'appliquent à tous les mots de passe générés, y compris
+          depuis le menu affiché dans les pages.
+        </p>
+        <label for="length">Longueur</label>
+        <input type="number" id="length" min="4" max="40" step="1" value="20" />
+        <fieldset class="checkbox-group">
+          <legend>Caractères</legend>
+          <label><input type="checkbox" id="lowercase" checked /> Minuscules</label>
+          <label><input type="checkbox" id="uppercase" checked /> Majuscules</label>
+          <label><input type="checkbox" id="numbers" checked /> Chiffres</label>
+          <label><input type="checkbox" id="symbols" checked /> Symboles</label>
+        </fieldset>
+      </section>
+
+      <!-- Le carnet est chiffre avant de quitter le navigateur : le serveur
+           ne recoit que des blocs opaques. -->
+      <section id="syncSection" class="panel" aria-labelledby="syncTitle">
+        <h3 id="syncTitle">Synchronisation</h3>
+        <div id="syncLoggedOut">
+          <label for="syncEmail">Adresse e-mail</label>
+          <input id="syncEmail" type="email" autocomplete="off" />
+          <label for="syncPassword">Mot de passe du compte</label>
+          <input id="syncPassword" type="password" autocomplete="off" />
+          <button id="syncLoginBtn" type="button">Connecter la synchronisation</button>
+          <!-- Le compte, l'offre et les appareils se gerent sur le site, et
+               nulle part ailleurs : sans ce lien, quelqu'un sans compte reste
+               devant un formulaire de connexion sans rien a y mettre. -->
+          <p class="hint">
+            Pas encore de compte ?
+            <a href="https://thecode.julsql.fr/fr/account" target="_blank" rel="noopener"
+              >Créez-le sur le site</a
+            >.
+          </p>
+        </div>
+        <div id="syncLoggedIn" class="row" hidden>
+          <button id="syncNowBtn" type="button">Synchroniser</button>
+          <button id="syncLogoutBtn" type="button">Déconnecter</button>
+        </div>
+        <p id="syncStatus" class="hint" role="status" aria-live="polite"></p>
+      </section>
 
       <!-- Le transfert vit dans un onglet : un popup se ferme des qu'il perd
            le focus, et on perdrait le QR en allant le scanner. -->
-      <button id="openTransfer" type="button">Transférer le carnet…</button>
-    </div>
-
-    <hr />
-
-    <!-- Le carnet est chiffre avant de quitter le navigateur : le serveur
-         ne recoit que des blocs opaques. -->
-    <div id="syncSection" class="vault">
-      <div id="syncLoggedOut">
-        <input id="syncEmail" type="email" placeholder="Adresse e-mail" autocomplete="off" />
-        <input
-          id="syncPassword"
-          type="password"
-          placeholder="Mot de passe du compte"
-          autocomplete="off"
-        />
-        <button id="syncLoginBtn" type="button">Connecter la synchronisation</button>
-        <!-- Le compte, l'offre et les appareils se gerent sur le site, et
-             nulle part ailleurs : sans ce lien, quelqu'un sans compte reste
-             devant un formulaire de connexion sans rien a y mettre. -->
-        <p class="hint">
-          Pas encore de compte ?
-          <a href="https://thecode.julsql.fr/fr/account" target="_blank" rel="noopener">
-            Créez-le sur le site</a
-          >.
-        </p>
-      </div>
-      <div id="syncLoggedIn" hidden>
-        <button id="syncNowBtn" type="button">Synchroniser</button>
-        <button id="syncLogoutBtn" type="button">Déconnecter</button>
-      </div>
-      <p id="syncStatus" class="hint"></p>
-    </div>
+      <section class="panel" aria-labelledby="vaultTitle">
+        <h3 id="vaultTitle">Carnet</h3>
+        <button id="openTransfer" type="button">Transférer le carnet…</button>
+      </section>
+    </section>
   </body>
 </html>

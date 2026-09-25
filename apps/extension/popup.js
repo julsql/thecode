@@ -9,9 +9,8 @@ const site = document.getElementById("site");
 const passwordResult = document.getElementById("passwordResult");
 const passwordSecurity = document.getElementById("passwordSecurity");
 const error = document.getElementById("error");
-const siteContainer = document.getElementById("siteContainer");
-const passwordResultContainer = document.getElementById("passwordResultContainer");
-const passwordSecurityContainer = document.getElementById("passwordSecurityContainer");
+const resultBox = document.getElementById("result");
+const copyStatus = document.getElementById("copyStatus");
 const errorContainer = document.getElementById("errorContainer");
 const fingerprintRow = document.getElementById("fingerprintRow");
 const fingerprintChip = document.getElementById("fingerprint");
@@ -49,6 +48,12 @@ const symInput = document.getElementById("symbols");
 const chiInput = document.getElementById("numbers");
 const versionGroup = document.getElementById("versionGroup");
 
+/** Statut de la clef. `tone` colore sans dependre du theme : ok, error. */
+function setStatus(text, tone = "") {
+  statusDiv.textContent = text;
+  statusDiv.dataset.tone = tone;
+}
+
 /** Version choisie pour la generation depuis la popup : v2 sauf demande. */
 function selectedVersion() {
   return versionGroup.querySelector("input:checked")?.value === "1" ? 1 : 2;
@@ -69,10 +74,10 @@ window.addEventListener("DOMContentLoaded", () => {
   hideError();
   browser.runtime.sendMessage({ action: "checkEncodingKey" }, (resp) => {
     if (resp && resp.hasEncodingKey) {
-      statusDiv.style.color = "green";
-      statusDiv.textContent = "Clef définie.";
+      setStatus("Clef définie.", "ok");
       browser.runtime.sendMessage({ action: "getEncodingKey" }, (resp) => {
         passInput.value = resp.encodingKey;
+        refreshFingerprint(passInput.value.trim());
       });
     }
   });
@@ -98,8 +103,7 @@ function applyParams(params) {
 function updateParams(options) {
   browser.runtime.sendMessage({ action: "setParams", data: options }, (resp) => {
     if (!resp || !resp.ok) {
-      statusDiv.style.color = "red";
-      statusDiv.textContent = "Erreur: " + ((resp && resp.error) || "n/a");
+      setStatus("Erreur : " + ((resp && resp.error) || "n/a"), "error");
       return;
     }
     // Reflète la valeur réellement retenue (ex. 99 saisi → borné à 40).
@@ -169,17 +173,14 @@ function setPassword() {
     return;
   }
 
-  statusDiv.style.color = "black";
-  statusDiv.textContent = "Dérivation en cours...";
+  setStatus("Dérivation en cours…");
 
   browser.runtime.sendMessage({ action: "setEncodingKey", encodingKey: pass }, (resp) => {
     if (resp && resp.ok) {
-      statusDiv.style.color = "green";
-      statusDiv.textContent = "Clef définie.";
+      setStatus("Clef définie.", "ok");
       generatePassword();
     } else {
-      statusDiv.style.color = "red";
-      statusDiv.textContent = "Erreur: " + ((resp && resp.error) || "n/a");
+      setStatus("Erreur : " + ((resp && resp.error) || "n/a"), "error");
     }
   });
 }
@@ -188,9 +189,9 @@ function setPassword() {
 clearBtn.addEventListener("click", () => {
   browser.runtime.sendMessage({ action: "clearEncodingKey" }, (resp) => {
     if (resp && resp.ok) {
-      statusDiv.style.color = "black";
-      statusDiv.textContent = "Clef effacée.";
+      setStatus("Clef effacée.");
       passInput.value = "";
+      refreshFingerprint("");
       hideResult();
       hideError();
     }
@@ -199,13 +200,15 @@ clearBtn.addEventListener("click", () => {
 
 // Copier le mot de passe
 document.getElementById("copyPasswordBtn").addEventListener("click", () => {
-  const pwd = document.getElementById("passwordResult").textContent;
-  if (pwd) {
-    navigator.clipboard.writeText(pwd).then(() => {});
-  }
+  const pwd = passwordResult.textContent;
+  if (!pwd) return;
+  navigator.clipboard.writeText(pwd).then(
+    () => (copyStatus.textContent = "Copié."),
+    () => (copyStatus.textContent = "Copie impossible."),
+  );
 });
 
-// Générer un mot de passe pour l'onglet actif avec les paramètres avancés
+// Générer un mot de passe pour l'onglet actif
 generateBtn.addEventListener("click", () => {
   generatePassword();
 });
@@ -258,11 +261,9 @@ function generatePassword(vaultMessage) {
         login: requestedLogin(),
       },
       (response) => {
-        if (response.error) {
+        if (!response || response.error) {
           hideResult();
-          showError();
-          error.style.display = "block";
-          error.textContent = response.error;
+          showError(response?.error || "Pas de réponse.");
         } else if (response.password) {
           hideError();
           showResult();
@@ -274,13 +275,13 @@ function generatePassword(vaultMessage) {
           site.textContent = response.site;
           refreshVault(response.site, vaultMessage);
           passwordResult.textContent = response.password;
-          passwordSecurity.style.color = response.color;
+          // La couleur du niveau va sur une pastille : en texte, le vert vif
+          // ne se lirait pas sur fond clair.
+          passwordSecurity.style.setProperty("--level", response.color);
           passwordSecurity.textContent = `${response.security} (${response.bits} bits)`;
         } else {
           hideResult();
-          showError();
-          error.style.display = "block";
-          error.textContent = "Pas de réponse.";
+          showError("Pas de réponse.");
         }
       },
     );
@@ -487,28 +488,57 @@ syncLogoutBtn.addEventListener("click", () => {
 });
 
 function hideError() {
-  errorContainer.style.display = "none";
+  errorContainer.hidden = true;
   error.textContent = "";
 }
 
-function showError() {
-  errorContainer.style.display = "block";
+function showError(message) {
+  error.textContent = message;
+  errorContainer.hidden = false;
 }
 
 function hideResult() {
-  siteContainer.style.display = "none";
+  resultBox.hidden = true;
   site.textContent = "";
-  passwordResultContainer.style.display = "none";
   passwordResult.textContent = "";
-  passwordSecurityContainer.style.display = "none";
   passwordSecurity.textContent = "";
+  copyStatus.textContent = "";
 }
 
 function showResult() {
-  siteContainer.style.display = "block";
-  passwordResultContainer.style.display = "block";
-  passwordSecurityContainer.style.display = "block";
+  resultBox.hidden = false;
+  copyStatus.textContent = "";
 }
+
+/**
+ * Parametres : une seconde vue, derriere la roue dentee.
+ *
+ * Le focus suit la navigation, sinon un utilisateur au clavier ou au lecteur
+ * d'ecran resterait sur un bouton devenu invisible.
+ */
+const mainView = document.getElementById("mainView");
+const settingsView = document.getElementById("settingsView");
+const openSettingsBtn = document.getElementById("openSettings");
+
+function showSettings(open) {
+  mainView.hidden = open;
+  settingsView.hidden = !open;
+  openSettingsBtn.setAttribute("aria-expanded", String(open));
+  if (open) {
+    document.getElementById("settingsTitle").focus();
+  } else {
+    openSettingsBtn.focus();
+  }
+}
+
+openSettingsBtn.addEventListener("click", () => showSettings(true));
+document.getElementById("closeSettings").addEventListener("click", () => showSettings(false));
+settingsView.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    e.preventDefault();
+    showSettings(false);
+  }
+});
 
 document.getElementById("openTransfer").addEventListener("click", () => {
   browser.tabs.create({ url: browser.runtime.getURL("transfer-page.html") });
@@ -533,7 +563,9 @@ v2Notice.querySelectorAll("[data-i18n]").forEach((el) => {
 });
 
 browser.storage?.local?.get([V2_NOTICE_KEY], (stored) => {
-  if (!stored?.[V2_NOTICE_KEY]) v2Notice.hidden = false;
+  if (stored?.[V2_NOTICE_KEY]) return;
+  v2Notice.hidden = false;
+  document.getElementById("v2NoticeClose").focus();
 });
 
 document.getElementById("v2NoticeClose").addEventListener("click", () => {
