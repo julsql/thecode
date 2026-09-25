@@ -62,11 +62,6 @@ js/qr.js|apps/website/src
 vault-fixtures/qr-vectors.json|apps/extension/js-test
 vault-fixtures/qr-vectors.json|apps/website/test
 apple/QrCode.swift|apps/apple/Shared
-vault-fixtures/v2-only.json|apps/cli/tests
-vault-fixtures/v2-only.json|apps/extension/js-test
-vault-fixtures/v2-only.json|apps/website/test
-vault-fixtures/v2-only.json|apps/android/app/src/test/resources
-vault-fixtures/v2-only.json|apps/apple/thecodeTests/Resources
 vault-fixtures/sync-selection.json|apps/cli/tests
 vault-fixtures/sync-selection.json|apps/extension/js-test
 vault-fixtures/sync-selection.json|apps/website/test

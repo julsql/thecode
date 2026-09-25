@@ -21,7 +21,8 @@
   "$defs": {
     "entry": {
       "type": "object",
-      "required": ["id", "siteKey", "domains", "counter", "length", "charset", "v", "updatedAt"],
+      "description": "Une entree ne porte pas de version d'algorithme : toute entree du carnet derive en v2. La v1 ne subsiste qu'en generation ponctuelle, hors carnet. Un champ 'v' residuel en entree (chargement, import, synchronisation) est ignore et jamais reecrit.",
+      "required": ["id", "siteKey", "domains", "counter", "length", "charset", "updatedAt"],
       "additionalProperties": false,
       "properties": {
         "id": {
@@ -38,7 +39,7 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 255,
-          "description": "Chaine REELLEMENT passee a la derivation. Figee a la creation : elle ne suit pas les evolutions de la canonicalisation, sinon un changement de PSL modifierait des mots de passe existants. Permet aussi de distinguer deux comptes sur un meme site en v1 (google.com et google.com#pro)."
+          "description": "Chaine REELLEMENT passee a la derivation. Figee a la creation : elle ne suit pas les evolutions de la canonicalisation, sinon un changement de PSL modifierait des mots de passe existants."
         },
         "domains": {
           "type": "array",
@@ -49,12 +50,12 @@
         "login": {
           "type": "string",
           "maxLength": 255,
-          "description": "Identifiant du compte. Affiche et pre-rempli. N'entre dans la derivation qu'a partir de la v2."
+          "description": "Identifiant du compte. Affiche et pre-rempli. Entre dans la derivation."
         },
         "counter": {
           "type": "integer",
           "minimum": 1,
-          "description": "Numero de revision du mot de passe. L'incrementer en produit un nouveau sans toucher a la clef maitresse. N'entre dans la derivation qu'a partir de la v2."
+          "description": "Numero de revision du mot de passe. L'incrementer en produit un nouveau sans toucher a la clef maitresse. Entre dans la derivation."
         },
         "length": { "type": "integer", "minimum": 4, "maximum": 40 },
         "charset": {
@@ -68,11 +69,6 @@
             "numbers": { "type": "boolean" }
           },
           "description": "Parametres PAR ENTREE. C'etait le probleme : ils etaient globaux, donc changer la longueur pour un site cassait tous les autres."
-        },
-        "v": {
-          "type": "integer",
-          "const": 2,
-          "description": "Version de l'algorithme de derivation. Le carnet n'accepte que la v2 : une entree v1 est refusee a l'ecriture et ecartee a la lecture (chargement, import, synchronisation). La v1 ne subsiste qu'en generation ponctuelle, hors carnet."
         },
         "notes": { "type": "string", "maxLength": 2000 },
         "createdAt": {

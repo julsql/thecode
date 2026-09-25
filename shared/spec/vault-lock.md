@@ -57,7 +57,7 @@ Une fois déverrouillé :
 
 - liste des entrées non supprimées (libellé, identifiant, domaines) ;
 - détail d'une entrée : `siteKey`, domaines, identifiant, longueur, jeux de
-  caractères, compteur, version, date de mise à jour ;
+  caractères, compteur, date de mise à jour ;
 - suppression, après confirmation : pierre tombale `deleted = true` et
   `updatedAt` à maintenant, pour que la suppression se propage à la
   synchronisation (voir vault-merge.md) ;
