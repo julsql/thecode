@@ -119,6 +119,30 @@ il pousserait une fusion faite sur une base périmée.
 Un 401 signifie que le jeton d'accès a expiré : le client le renouvelle et
 rejoue le cycle **entier**, pour la même raison.
 
+## Synchronisation automatique
+
+Dès qu'un compte est lié, chaque client synchronise **de lui-même** le carnet
+puis les réglages par défaut (voir `default-settings.md`) :
+
+- à l'ouverture : lancement de l'app, retour au premier plan, ouverture de la
+  popup ou d'une page du site ;
+- après chaque écriture locale : entrée enregistrée, mise à jour, supprimée,
+  renouvelée, import ;
+- après un changement de réglage par défaut.
+
+Règles :
+
+- **Regroupement** : les déclencheurs rapprochés sont fusionnés (attente de
+  2 secondes après le dernier) ; une synchronisation en cours n'est jamais
+  doublée, une demande pendant qu'elle tourne en relance une seule après.
+- **Espacement** : à l'ouverture, pas plus d'une fois toutes les 30 secondes.
+- **Discrétion** : rien ne bloque l'écran. Un échec (réseau, 401 après
+  renouvellement, 402/403 de plafond) laisse un message court dans la zone de
+  synchronisation, jamais une fenêtre ; les données locales ne sont pas
+  touchées.
+- **Sans clef maîtresse** saisie, rien ne part : le carnet est chiffré avec elle.
+- Le bouton « Synchroniser » reste, pour forcer une synchronisation immédiate.
+
 ## Limites
 
 Le serveur refuse une entrée dépassant `max_blob_bytes` et un compte dépassant
