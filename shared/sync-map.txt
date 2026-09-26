@@ -42,6 +42,9 @@ apple/Transfer.swift|apps/apple/Shared
 vault-fixtures/transfer-vector.json|apps/apple/thecodeTests/Resources
 apple/VaultStore.swift|apps/apple/Shared
 apple/Sync.swift|apps/apple/Shared
+apple/GoogleAuth.swift|apps/apple/Shared
+apple/GoogleSignIn.swift|apps/apple/thecode
+apple/GoogleSignIn.swift|apps/apple/thecode-macos
 apple/SyncCredentialsStore.swift|apps/apple/Shared
 vault-fixtures/sync-row.json|apps/android/app/src/test/resources
 vault-fixtures/sync-row.json|apps/apple/thecodeTests/Resources

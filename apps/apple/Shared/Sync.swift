@@ -191,6 +191,19 @@ public struct Sync {
         return try credentials(from: body, endpoint: endpoint)
     }
 
+    /// Connexion (ou création du compte) à partir d'un jeton d'identité Google.
+    /// Mêmes jetons en retour que `login`, à enregistrer de la même façon.
+    public func googleSignIn(
+        endpoint: String, idToken: String, lang: String, deviceLabel: String = "",
+        inviteCode: String = ""
+    ) async throws -> SyncCredentials {
+        let body = try await call(
+            "\(endpoint)/v1/auth/google", method: "POST",
+            payload: GoogleAuth.apiBody(
+                idToken: idToken, lang: lang, deviceLabel: deviceLabel, inviteCode: inviteCode))
+        return try credentials(from: body, endpoint: endpoint)
+    }
+
     /// Relit l'offre du compte, en renouvelant le jeton s'il a expiré.
     ///
     /// Rend les identifiants mis à jour : l'appelant doit les réenregistrer,

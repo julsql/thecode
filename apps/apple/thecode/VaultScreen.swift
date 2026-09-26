@@ -28,6 +28,10 @@ struct VaultScreen: View {
     @State private var endpoint = Sync.defaultEndpoint
     @State private var email = ""
     @State private var password = ""
+    @State private var isGoogleWorking = false
+
+    /// `nil` tant que l'identifiant client n'est pas renseigné : pas de bouton.
+    private let google = GoogleAuth.configured()
 
     /// Neuf à chaque présentation ; repart déverrouillé si l'écran a été
     /// quitté ouvert il y a moins de 3 minutes (voir `VaultLockController`).
@@ -272,6 +276,21 @@ struct VaultScreen: View {
                         text: $password)
                 }
 
+                if google != nil {
+                    Section {
+                        Button(action: signInWithGoogle) {
+                            HStack {
+                                Text(L10n.t("Continuer avec Google", "Continue with Google"))
+                                if isGoogleWorking {
+                                    Spacer()
+                                    ProgressView()
+                                }
+                            }
+                        }
+                        .disabled(endpoint.isEmpty || isGoogleWorking)
+                    }
+                }
+
                 // Sans ce lien, un nouveau venu reste devant un formulaire de
                 // connexion sans compte à y mettre. Le lien mène à la création
                 // de compte, et ne dit rien d'une offre payante.
@@ -453,6 +472,41 @@ struct VaultScreen: View {
             SyncCredentialsStore.save(credentials)
             return try await sync.syncRenewing(
                 VaultStore.load(), masterKey: masterKey, credentials: credentials)
+        }
+    }
+
+    /// Même suite que `signIn`, avec un jeton Google au lieu du mot de passe.
+    /// La feuille reste ouverte pendant la fenêtre de Google : fermée sans
+    /// rien choisir, on revient au formulaire, sans message.
+    private func signInWithGoogle() {
+        guard let google else { return }
+        let endpoint = self.endpoint.trimmingCharacters(in: .whitespaces)
+        isGoogleWorking = true
+
+        Task {
+            let idToken: String
+            do {
+                idToken = try await GoogleSignIn.idToken(using: google)
+            } catch {
+                isGoogleWorking = false
+                if let message = GoogleSignIn.message(for: error) {
+                    showSignIn = false
+                    status = message
+                }
+                return
+            }
+            isGoogleWorking = false
+            showSignIn = false
+
+            run {
+                let sync = Sync()
+                let credentials = try await sync.googleSignIn(
+                    endpoint: endpoint, idToken: idToken, lang: L10n.t("fr", "en"),
+                    deviceLabel: await UIDevice.current.name)
+                SyncCredentialsStore.save(credentials)
+                return try await sync.syncRenewing(
+                    VaultStore.load(), masterKey: masterKey, credentials: credentials)
+            }
         }
     }
 
