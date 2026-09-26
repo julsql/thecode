@@ -304,6 +304,11 @@
           <button id="syncLoginBtn" type="button" data-i18n="popup_sync_login">
             Connecter la synchronisation
           </button>
+          <!-- Cache tant que le service ne publie pas de client Google, et
+               sur Safari, qui n'a pas browser.identity. -->
+          <button id="syncGoogleBtn" type="button" data-i18n="popup_sync_google" hidden>
+            Continuer avec Google
+          </button>
           <!-- Le compte, l'offre et les appareils se gerent sur le site, et
                nulle part ailleurs : sans ce lien, quelqu'un sans compte reste
                devant un formulaire de connexion sans rien a y mettre. -->

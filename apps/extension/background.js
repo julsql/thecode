@@ -14,6 +14,7 @@ if (typeof importScripts === "function") {
     "core-v2.js",
     "vault-lock.js",
     "vault-session.js",
+    "google-auth.js",
   );
 }
 // En test, core-v2.js est charge en fin de fichier : il require background.js,
@@ -28,6 +29,7 @@ else if (typeof require === "function") {
     require("./sync.js"),
     require("./vault-lock.js"),
     require("./vault-session.js"),
+    require("./google-auth.js"),
   );
 }
 
@@ -229,6 +231,8 @@ const PRIVILEGED_ACTIONS = new Set([
   "exportVault",
   "importVault",
   "syncLogin",
+  "syncGoogleAvailable",
+  "syncGoogleLogin",
   "syncLogout",
   "syncNow",
   "syncStatus",
@@ -275,6 +279,41 @@ async function renewAllowed() {
 const RENEW_IS_PAID =
   "Renouveler un mot de passe sans changer de clef maitresse fait partie de " +
   "l'offre complete : https://thecode.julsql.fr/fr/account";
+
+/** Enregistre une session neuve avec son offre, quelle que soit la connexion. */
+async function storeSyncSession(session) {
+  const withPlan = await syncAccountPlan(session);
+  await saveSession(browser?.storage?.local, {
+    ...withPlan.session,
+    plan: withPlan.plan,
+  });
+}
+
+/**
+ * Connexion avec Google, menee ici et pas dans la popup : celle-ci se ferme
+ * des que la fenetre Google prend le focus, le service worker va au bout.
+ *
+ * L'annulation rend `cancelled` (la popup se tait) ; les erreurs du flux
+ * rendent un `code` que la popup traduit ; celles du service, leur detail.
+ */
+async function googleSyncLogin(request) {
+  const endpoint = request.endpoint || SYNC_DEFAULT_ENDPOINT;
+  const lang = request.lang || browser?.i18n?.getUILanguage?.()?.split("-")[0] || "en";
+  try {
+    const identity = identityApi(browser);
+    const clientId = identity ? await syncGoogleClientId(endpoint) : "";
+    const { idToken, nonce } = await googleSignIn({ identity, clientId });
+    await storeSyncSession(await syncGoogleLogin(endpoint, idToken, nonce, lang));
+    return { ok: true };
+  } catch (e) {
+    if (e instanceof GoogleAuthError) {
+      return e.code === "cancelled"
+        ? { ok: false, cancelled: true }
+        : { ok: false, code: e.code, error: e.message };
+    }
+    return { ok: false, error: e.message };
+  }
+}
 
 browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
   (async () => {
@@ -409,15 +448,18 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
           request.email,
           request.password,
         );
-        const withPlan = await syncAccountPlan(session);
-        await saveSession(browser?.storage?.local, {
-          ...withPlan.session,
-          plan: withPlan.plan,
-        });
+        await storeSyncSession(session);
         sendResponse({ ok: true });
       } catch (e) {
         sendResponse({ ok: false, error: e.message });
       }
+    } else if (request.action === "syncGoogleAvailable") {
+      const endpoint = request.endpoint || SYNC_DEFAULT_ENDPOINT;
+      const available =
+        Boolean(identityApi(browser)) && Boolean(await syncGoogleClientId(endpoint));
+      sendResponse({ ok: true, available });
+    } else if (request.action === "syncGoogleLogin") {
+      sendResponse(await googleSyncLogin(request));
     } else if (request.action === "syncLogout") {
       await clearSession(browser?.storage?.local);
       sendResponse({ ok: true });
@@ -1027,6 +1069,7 @@ if (typeof module !== "undefined") {
     registrableDomain,
     PRIVILEGED_ACTIONS,
     isFromExtensionPage,
+    googleSyncLogin,
     buildCharset,
     calculateEntropyBits,
     getSecurityLevel,

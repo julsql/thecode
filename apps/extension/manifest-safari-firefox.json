@@ -13,7 +13,7 @@
       "strict_min_version": "120.0"
     }
   },
-  "permissions": ["storage", "activeTab"],
+  "permissions": ["storage", "activeTab", "identity"],
   "icons": {
     "48": "images/48.png",
     "96": "images/96.png",
@@ -36,6 +36,7 @@
       "core-v2.js",
       "vault-lock.js",
       "vault-session.js",
+      "google-auth.js",
       "background.js"
     ]
   },

@@ -82,6 +82,41 @@ async function syncLogin(endpoint, email, password, deviceLabel = "extension") {
   };
 }
 
+/** Corps de POST /v1/auth/google : le nonce lie l'id_token a cette demande. */
+function googleSignInBody(idToken, nonce, lang, deviceLabel = "extension") {
+  return {
+    id_token: idToken,
+    nonce,
+    lang: String(lang || "en").slice(0, 5),
+    device_label: deviceLabel,
+  };
+}
+
+/** Echange un id_token Google contre une session, comme syncLogin. */
+async function syncGoogleLogin(endpoint, idToken, nonce, lang, deviceLabel = "extension") {
+  const body = await syncRequest(`${endpoint}/v1/auth/google`, {
+    payload: googleSignInBody(idToken, nonce, lang, deviceLabel),
+  });
+  return {
+    endpoint,
+    accessToken: body.access_token,
+    refreshToken: body.refresh_token,
+  };
+}
+
+/**
+ * Client Google (web) publie par le service, ou "" s'il n'en a pas ou ne
+ * repond pas : le bouton Google reste alors cache.
+ */
+async function syncGoogleClientId(endpoint) {
+  try {
+    const body = await syncRequest(`${endpoint}/v1/auth/registration`);
+    return typeof body?.googleClientId === "string" ? body.googleClientId : "";
+  } catch {
+    return "";
+  }
+}
+
 async function syncRegister(endpoint, email, password, inviteCode = "") {
   const body = await syncRequest(`${endpoint}/v1/auth/register`, {
     payload: { email, password, invite_code: inviteCode },
@@ -310,6 +345,9 @@ if (typeof module !== "undefined") {
     clearSession,
     syncLogin,
     syncRegister,
+    googleSignInBody,
+    syncGoogleLogin,
+    syncGoogleClientId,
     syncVault,
     syncSettings,
     normalizeSettings,

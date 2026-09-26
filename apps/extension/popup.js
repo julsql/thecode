@@ -35,6 +35,7 @@ const syncLoggedIn = document.getElementById("syncLoggedIn");
 const syncEmail = document.getElementById("syncEmail");
 const syncPassword = document.getElementById("syncPassword");
 const syncLoginBtn = document.getElementById("syncLoginBtn");
+const syncGoogleBtn = document.getElementById("syncGoogleBtn");
 const syncNowBtn = document.getElementById("syncNowBtn");
 const syncLogoutBtn = document.getElementById("syncLogoutBtn");
 const syncStatus = document.getElementById("syncStatus");
@@ -484,8 +485,41 @@ function refreshSyncState() {
     if (!connected) syncStatus.textContent = "";
     canRenew = Boolean(resp?.canRenew);
     refreshChangeButton();
+    if (!connected) refreshGoogleButton();
   });
 }
+
+/** Montre « Continuer avec Google » seulement si le navigateur et le service le permettent. */
+function refreshGoogleButton() {
+  browser.runtime.sendMessage({ action: "syncGoogleAvailable" }, (resp) => {
+    syncGoogleBtn.hidden = !resp?.available;
+  });
+}
+
+/** Message d'echec de la connexion Google ; "" pour une annulation. */
+function googleFailure(resp) {
+  if (resp?.cancelled) return "";
+  if (resp?.code === "unavailable") {
+    return msg("sync_google_unavailable", "Connexion Google indisponible.");
+  }
+  if (resp?.code) return msg("sync_google_failed", "La connexion Google a échoué.");
+  return msg("sync_failed", "Échec : $1", resp?.error || msg("sync_unknown_error", "inconnu"));
+}
+
+syncGoogleBtn.addEventListener("click", () => {
+  syncStatus.textContent = msg("sync_connecting", "Connexion…");
+  // Le flux tourne dans le service worker : la popup peut se fermer quand la
+  // fenetre Google prend le focus, la session sera la a la reouverture.
+  const lang = uiLocale().split("-")[0];
+  browser.runtime.sendMessage({ action: "syncGoogleLogin", lang }, (resp) => {
+    if (resp?.ok) {
+      syncStatus.textContent = msg("sync_connected", "Connecté.");
+      refreshSyncState();
+    } else {
+      syncStatus.textContent = googleFailure(resp);
+    }
+  });
+});
 
 syncLoginBtn.addEventListener("click", () => {
   const email = syncEmail.value.trim();

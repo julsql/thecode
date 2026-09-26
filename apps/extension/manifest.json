@@ -6,7 +6,8 @@
   "version": "3.0.0",
   "permissions": [
     "storage",
-    "activeTab"
+    "activeTab",
+    "identity"
   ],
   "icons": {
     "48": "images/48.png",

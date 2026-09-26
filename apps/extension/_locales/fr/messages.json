@@ -87,6 +87,14 @@
     "message": "Session oubliée sur cet appareil.",
     "description": "Sync status in the popup."
   },
+  "sync_google_unavailable": {
+    "message": "Connexion Google indisponible.",
+    "description": "Sync status in the popup."
+  },
+  "sync_google_failed": {
+    "message": "La connexion Google a échoué.",
+    "description": "Sync status in the popup."
+  },
   "popup_title": {
     "message": "TheCode - Clef",
     "description": "Popup."
@@ -257,6 +265,10 @@
   },
   "popup_sync_login": {
     "message": "Connecter la synchronisation",
+    "description": "Popup."
+  },
+  "popup_sync_google": {
+    "message": "Continuer avec Google",
     "description": "Popup."
   },
   "popup_no_account": {

@@ -87,6 +87,14 @@
     "message": "Session forgotten on this device.",
     "description": "Sync status in the popup."
   },
+  "sync_google_unavailable": {
+    "message": "Google sign-in is unavailable.",
+    "description": "Sync status in the popup."
+  },
+  "sync_google_failed": {
+    "message": "Google sign-in failed.",
+    "description": "Sync status in the popup."
+  },
   "popup_title": {
     "message": "TheCode - Key",
     "description": "Popup."
@@ -257,6 +265,10 @@
   },
   "popup_sync_login": {
     "message": "Connect sync",
+    "description": "Popup."
+  },
+  "popup_sync_google": {
+    "message": "Continue with Google",
     "description": "Popup."
   },
   "popup_no_account": {
