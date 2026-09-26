@@ -1,9 +1,11 @@
 /**
  * Ecran carnet : verrou, puis gestion des entrees.
  *
- * L'etat deverrouille vit dans cette page. Le service worker ne retient que
- * l'instant ou elle a ete quittee : revenu dans les 3 minutes, le carnet est
- * toujours ouvert (vault-session.js). Voir shared/spec/vault-lock.md.
+ * Le carnet s'ouvre avec la clef maitresse : le service worker la compare a
+ * celle de la session, ou l'y pose si aucune n'est encore definie. L'etat
+ * deverrouille vit dans cette page. Le service worker ne retient que l'instant
+ * ou elle a ete quittee : revenu dans les 3 minutes, le carnet est toujours
+ * ouvert (vault-session.js). Voir shared/spec/vault-lock.md.
  */
 if (typeof browser === "undefined" && typeof chrome !== "undefined") {
   var browser = chrome;
@@ -12,23 +14,6 @@ if (typeof browser === "undefined" && typeof chrome !== "undefined") {
 // avant ce fichier ; en test, on les requiert.
 if (typeof module !== "undefined" && typeof require === "function") {
   Object.assign(globalThis, require("./i18n.js"), require("./vault-session.js"));
-}
-
-const VAULT_LOCK_MIN = 8;
-
-/** Controle d'un nouveau mot de passe saisi deux fois. Rend un message ou null. */
-function newPasswordError(password, confirmation) {
-  if (!password || password.length < VAULT_LOCK_MIN) {
-    return msg(
-      "vault_error_too_short",
-      "Le mot de passe doit contenir au moins $1 caractères.",
-      VAULT_LOCK_MIN,
-    );
-  }
-  if (password !== confirmation) {
-    return msg("vault_error_mismatch", "Les deux mots de passe ne correspondent pas.");
-  }
-  return null;
 }
 
 /** Entrees affichees : non supprimees, par libelle puis identifiant. */
@@ -69,6 +54,14 @@ function failureText(resp) {
     : msg("vault_failure", "Échec.");
 }
 
+/** Message d'une reponse a `vaultUnlock` qui n'ouvre pas le carnet. */
+function unlockErrorText(resp) {
+  if (resp?.ok && resp.reason === "otherKey") {
+    return msg("vault_other_key", "Ce n'est pas la même clef que celle en cours d'utilisation.");
+  }
+  return resp?.ok ? msg("vault_failure", "Échec.") : errorText(resp);
+}
+
 function send(message) {
   return new Promise((resolve) => browser.runtime.sendMessage(message, resolve));
 }
@@ -82,7 +75,6 @@ function initVaultPage() {
   const pageStatus = $("pageStatus");
   const lockNowBtn = $("lockNow");
   const views = {
-    create: $("createView"),
     unlock: $("unlockView"),
     unlocked: $("unlockedView"),
   };
@@ -93,38 +85,35 @@ function initVaultPage() {
     pageStatus.textContent = text;
   }
 
+  /** Signale qu'aucune clef n'est encore definie : la saisie la posera. */
+  async function refreshKeyHint() {
+    const resp = await send({ action: "checkEncodingKey" });
+    $("unlockNewSession").hidden = Boolean(resp?.hasEncodingKey);
+  }
+
   function show(name) {
     for (const [key, el] of Object.entries(views)) el.hidden = key !== name;
     lockNowBtn.hidden = name !== "unlocked";
     unlocked = name === "unlocked";
-    if (name === "create") $("createPassword").focus();
-    else if (name === "unlock") $("unlockPassword").focus();
-    else pageTitle.focus();
+    if (name === "unlock") {
+      refreshKeyHint();
+      $("unlockKey").focus();
+    } else pageTitle.focus();
   }
 
   function lock(message = "") {
     unlocked = false;
     leftAt = null;
     send({ action: "vaultSessionClear" });
-    $("unlockPassword").value = "";
+    $("unlockKey").value = "";
     $("unlockError").textContent = "";
-    showForget(false, false);
     onLock();
     show("unlock");
     say(message);
   }
 
   async function start() {
-    const resp = await send({ action: "vaultLockStatus" });
-    if (!resp?.ok) {
-      say(errorText(resp));
-      return;
-    }
-    if (!resp.configured) {
-      show("create");
-      return;
-    }
-    // Revenu dans la grace : pas de nouvelle demande de mot de passe.
+    // Revenu dans la grace : pas de nouvelle demande de clef.
     const session = await send({ action: "vaultSessionResume" });
     if (session?.ok && session.unlocked) {
       show("unlocked");
@@ -165,106 +154,32 @@ function initVaultPage() {
     if (e.persisted) comeBack();
   });
 
-  // Premiere ouverture : creation du mot de passe de carnet.
-  views.create.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const password = $("createPassword").value;
-    const problem = newPasswordError(password, $("createConfirm").value);
-    $("createError").textContent = problem || "";
-    if (problem) return;
-
-    say(msg("vault_creating", "Création en cours…"));
-    const resp = await send({ action: "vaultLockCreate", password });
-    $("createPassword").value = "";
-    $("createConfirm").value = "";
-    if (!resp?.ok) {
-      say("");
-      $("createError").textContent = resp?.error || msg("vault_failure", "Échec.");
-      return;
-    }
-    say(msg("vault_created", "Mot de passe de carnet créé."));
-    show("unlocked");
-    onUnlock();
-  });
-
   views.unlock.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const input = $("unlockPassword");
+    const input = $("unlockKey");
     if (!input.value) return;
     say(msg("vault_checking", "Vérification…"));
-    const resp = await send({ action: "vaultLockVerify", password: input.value });
+    const resp = await send({ action: "vaultUnlock", encodingKey: input.value });
     input.value = "";
     if (!resp?.ok || !resp.unlocked) {
       say("");
-      $("unlockError").textContent =
-        resp?.error || msg("vault_wrong_password", "Mot de passe incorrect.");
+      $("unlockError").textContent = unlockErrorText(resp);
+      input.setAttribute("aria-invalid", "true");
       input.focus();
       return;
     }
+    input.removeAttribute("aria-invalid");
     $("unlockError").textContent = "";
-    say(msg("vault_unlocked", "Carnet déverrouillé."));
+    say(
+      resp.keySet
+        ? msg("vault_unlocked_key_set", "Carnet déverrouillé. Cette clef sert aussi au générateur.")
+        : msg("vault_unlocked", "Carnet déverrouillé."),
+    );
     show("unlocked");
     onUnlock();
   });
 
   lockNowBtn.addEventListener("click", () => lock(msg("vault_locked", "Carnet verrouillé.")));
-
-  // Oubli : confirmation explicite, puis effacement du carnet local.
-  function showForget(open, moveFocus = true) {
-    $("forgetConfirm").hidden = !open;
-    $("forgotBtn").setAttribute("aria-expanded", String(open));
-    if (!moveFocus) return;
-    if (open) $("forgetTitle").focus();
-    else $("forgotBtn").focus();
-  }
-
-  $("forgotBtn").addEventListener("click", () => showForget(true));
-  $("forgetCancelBtn").addEventListener("click", () => showForget(false));
-  $("forgetConfirm").addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      e.preventDefault();
-      showForget(false);
-    }
-  });
-  $("forgetConfirmBtn").addEventListener("click", async () => {
-    const resp = await send({ action: "vaultLockForget" });
-    if (!resp?.ok) {
-      say(failureText(resp));
-      return;
-    }
-    showForget(false, false);
-    show("create");
-    say(
-      msg(
-        "vault_forgotten",
-        "Carnet effacé de cet appareil. Choisissez un nouveau mot de passe de carnet.",
-      ),
-    );
-  });
-
-  // Changement : l'actuel est exige, meme deverrouille.
-  $("changeLockForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    if (!unlocked) return;
-    const current = $("changeCurrent").value;
-    const next = $("changeNext").value;
-    const problem = !current
-      ? msg("vault_enter_current", "Saisissez le mot de passe actuel.")
-      : newPasswordError(next, $("changeConfirm").value);
-    $("changeLockError").textContent = problem || "";
-    if (problem) return;
-
-    say(msg("vault_changing", "Changement en cours…"));
-    const resp = await send({ action: "vaultLockChange", current, next });
-    for (const id of ["changeCurrent", "changeNext", "changeConfirm"]) $(id).value = "";
-    if (!resp?.ok) {
-      say("");
-      $("changeLockError").textContent = resp?.error || msg("vault_failure", "Échec.");
-      $("changeCurrent").focus();
-      return;
-    }
-    say(msg("vault_changed", "Mot de passe de carnet changé."));
-  });
 
   // Gestion : liste, detail, suppression, renouvellement.
   const entriesSection = $("entriesSection");
@@ -433,5 +348,5 @@ if (typeof document !== "undefined") {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { newPasswordError, visibleEntries, charsetLabel, VAULT_LOCK_MIN };
+  module.exports = { visibleEntries, charsetLabel, unlockErrorText };
 }

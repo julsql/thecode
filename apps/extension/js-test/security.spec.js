@@ -49,16 +49,12 @@ describe("cloisonnement des actions sensibles", () => {
       "syncLogout",
       "syncNow",
       "syncStatus",
-      // Verrou de l'ecran carnet : l'oubli efface le carnet.
-      "vaultLockChange",
-      "vaultLockCreate",
-      "vaultLockForget",
-      "vaultLockStatus",
-      "vaultLockVerify",
-      // Grace de 3 minutes : rouvrirait l'ecran carnet sans mot de passe.
+      // Grace de 3 minutes : rouvrirait l'ecran carnet sans la clef.
       "vaultSessionClear",
       "vaultSessionLeave",
       "vaultSessionResume",
+      // Verrou de l'ecran carnet : poserait la clef de la session.
+      "vaultUnlock",
     ]);
   });
 

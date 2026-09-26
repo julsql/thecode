@@ -415,48 +415,36 @@
     "message": "Verrouiller",
     "description": "Vault page."
   },
-  "vault_create_title": {
-    "message": "Protéger le carnet",
-    "description": "Vault page."
-  },
-  "vault_create_hint": {
-    "message": "Choisissez un mot de passe de carnet (8 caractères minimum). Il reste sur cet appareil et n'est jamais synchronisé. Il protège cet écran, pas le remplissage automatique.",
-    "description": "Vault page."
-  },
-  "vault_password_label": {
-    "message": "Mot de passe de carnet",
-    "description": "Vault page."
-  },
-  "vault_confirm_label": {
-    "message": "Confirmer le mot de passe",
-    "description": "Vault page."
-  },
-  "vault_create_submit": {
-    "message": "Créer le mot de passe",
-    "description": "Vault page."
-  },
   "vault_locked_title": {
     "message": "Carnet verrouillé",
     "description": "Vault page."
   },
+  "vault_unlock_hint": {
+    "message": "Déverrouillez le carnet avec votre clef maîtresse.",
+    "description": "Vault page."
+  },
+  "vault_unlock_new_session": {
+    "message": "Aucune clef n'est encore définie dans cette session : celle-ci servira aussi à générer vos mots de passe.",
+    "description": "Vault page."
+  },
+  "vault_key_label": {
+    "message": "Clef maîtresse",
+    "description": "Vault page."
+  },
+  "vault_forgotten_key_hint": {
+    "message": "Une clef maîtresse oubliée ne peut pas être retrouvée : elle n'est stockée nulle part.",
+    "description": "Vault page."
+  },
+  "vault_other_key": {
+    "message": "Ce n'est pas la même clef que celle en cours d'utilisation.",
+    "description": "Vault page."
+  },
+  "vault_unlocked_key_set": {
+    "message": "Carnet déverrouillé. Cette clef sert aussi au générateur.",
+    "description": "Vault page."
+  },
   "vault_unlock_submit": {
     "message": "Déverrouiller",
-    "description": "Vault page."
-  },
-  "vault_forgot": {
-    "message": "Mot de passe oublié ?",
-    "description": "Vault page."
-  },
-  "vault_forget_title": {
-    "message": "Effacer le carnet de cet appareil ?",
-    "description": "Vault page."
-  },
-  "vault_forget_hint": {
-    "message": "Toutes les entrées enregistrées sur cet appareil et le mot de passe de carnet seront effacés. Si la synchronisation est active, le carnet reviendra à la prochaine synchronisation. Cette action est irréversible.",
-    "description": "Vault page."
-  },
-  "vault_forget_confirm": {
-    "message": "Effacer le carnet",
     "description": "Vault page."
   },
   "vault_cancel": {
@@ -531,35 +519,6 @@
     "message": "La suppression se propagera aux autres appareils à la prochaine synchronisation.",
     "description": "Vault page."
   },
-  "vault_change_current": {
-    "message": "Mot de passe actuel",
-    "description": "Vault page."
-  },
-  "vault_change_next": {
-    "message": "Nouveau mot de passe",
-    "description": "Vault page."
-  },
-  "vault_change_confirm": {
-    "message": "Confirmer le nouveau mot de passe",
-    "description": "Vault page."
-  },
-  "vault_change_submit": {
-    "message": "Changer le mot de passe",
-    "description": "Vault page."
-  },
-  "vault_error_too_short": {
-    "message": "Le mot de passe doit contenir au moins $FIRST$ caractères.",
-    "description": "Vault page.",
-    "placeholders": {
-      "first": {
-        "content": "$1"
-      }
-    }
-  },
-  "vault_error_mismatch": {
-    "message": "Les deux mots de passe ne correspondent pas.",
-    "description": "Vault page."
-  },
   "vault_charset_lower": {
     "message": "minuscules",
     "description": "Vault page."
@@ -606,20 +565,8 @@
     "message": "Échec.",
     "description": "Vault page."
   },
-  "vault_creating": {
-    "message": "Création en cours…",
-    "description": "Vault page."
-  },
-  "vault_created": {
-    "message": "Mot de passe de carnet créé.",
-    "description": "Vault page."
-  },
   "vault_checking": {
     "message": "Vérification…",
-    "description": "Vault page."
-  },
-  "vault_wrong_password": {
-    "message": "Mot de passe incorrect.",
     "description": "Vault page."
   },
   "vault_unlocked": {
@@ -628,22 +575,6 @@
   },
   "vault_locked": {
     "message": "Carnet verrouillé.",
-    "description": "Vault page."
-  },
-  "vault_forgotten": {
-    "message": "Carnet effacé de cet appareil. Choisissez un nouveau mot de passe de carnet.",
-    "description": "Vault page."
-  },
-  "vault_enter_current": {
-    "message": "Saisissez le mot de passe actuel.",
-    "description": "Vault page."
-  },
-  "vault_changing": {
-    "message": "Changement en cours…",
-    "description": "Vault page."
-  },
-  "vault_changed": {
-    "message": "Mot de passe de carnet changé.",
     "description": "Vault page."
   },
   "vault_no_login": {

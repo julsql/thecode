@@ -415,48 +415,36 @@
     "message": "Lock",
     "description": "Vault page."
   },
-  "vault_create_title": {
-    "message": "Protect the vault",
-    "description": "Vault page."
-  },
-  "vault_create_hint": {
-    "message": "Choose a vault password (at least 8 characters). It stays on this device and is never synced. It protects this screen, not autofill.",
-    "description": "Vault page."
-  },
-  "vault_password_label": {
-    "message": "Vault password",
-    "description": "Vault page."
-  },
-  "vault_confirm_label": {
-    "message": "Confirm the password",
-    "description": "Vault page."
-  },
-  "vault_create_submit": {
-    "message": "Create the password",
-    "description": "Vault page."
-  },
   "vault_locked_title": {
     "message": "Vault locked",
     "description": "Vault page."
   },
+  "vault_unlock_hint": {
+    "message": "Unlock the vault with your master key.",
+    "description": "Vault page."
+  },
+  "vault_unlock_new_session": {
+    "message": "No key is set in this session yet: this one will also be used to generate your passwords.",
+    "description": "Vault page."
+  },
+  "vault_key_label": {
+    "message": "Master key",
+    "description": "Vault page."
+  },
+  "vault_forgotten_key_hint": {
+    "message": "A forgotten master key cannot be recovered: it is not stored anywhere.",
+    "description": "Vault page."
+  },
+  "vault_other_key": {
+    "message": "This is not the same key as the one in use.",
+    "description": "Vault page."
+  },
+  "vault_unlocked_key_set": {
+    "message": "Vault unlocked. This key is also used by the generator.",
+    "description": "Vault page."
+  },
   "vault_unlock_submit": {
     "message": "Unlock",
-    "description": "Vault page."
-  },
-  "vault_forgot": {
-    "message": "Forgot the password?",
-    "description": "Vault page."
-  },
-  "vault_forget_title": {
-    "message": "Erase the vault from this device?",
-    "description": "Vault page."
-  },
-  "vault_forget_hint": {
-    "message": "Every entry saved on this device and the vault password will be erased. If sync is on, the vault will come back at the next sync. This cannot be undone.",
-    "description": "Vault page."
-  },
-  "vault_forget_confirm": {
-    "message": "Erase the vault",
     "description": "Vault page."
   },
   "vault_cancel": {
@@ -531,35 +519,6 @@
     "message": "The deletion will reach your other devices at the next sync.",
     "description": "Vault page."
   },
-  "vault_change_current": {
-    "message": "Current password",
-    "description": "Vault page."
-  },
-  "vault_change_next": {
-    "message": "New password",
-    "description": "Vault page."
-  },
-  "vault_change_confirm": {
-    "message": "Confirm the new password",
-    "description": "Vault page."
-  },
-  "vault_change_submit": {
-    "message": "Change the password",
-    "description": "Vault page."
-  },
-  "vault_error_too_short": {
-    "message": "The password must be at least $FIRST$ characters long.",
-    "description": "Vault page.",
-    "placeholders": {
-      "first": {
-        "content": "$1"
-      }
-    }
-  },
-  "vault_error_mismatch": {
-    "message": "The two passwords do not match.",
-    "description": "Vault page."
-  },
   "vault_charset_lower": {
     "message": "lowercase",
     "description": "Vault page."
@@ -606,20 +565,8 @@
     "message": "Failed.",
     "description": "Vault page."
   },
-  "vault_creating": {
-    "message": "Creating…",
-    "description": "Vault page."
-  },
-  "vault_created": {
-    "message": "Vault password created.",
-    "description": "Vault page."
-  },
   "vault_checking": {
     "message": "Checking…",
-    "description": "Vault page."
-  },
-  "vault_wrong_password": {
-    "message": "Wrong password.",
     "description": "Vault page."
   },
   "vault_unlocked": {
@@ -628,22 +575,6 @@
   },
   "vault_locked": {
     "message": "Vault locked.",
-    "description": "Vault page."
-  },
-  "vault_forgotten": {
-    "message": "Vault erased from this device. Choose a new vault password.",
-    "description": "Vault page."
-  },
-  "vault_enter_current": {
-    "message": "Enter the current password.",
-    "description": "Vault page."
-  },
-  "vault_changing": {
-    "message": "Changing…",
-    "description": "Vault page."
-  },
-  "vault_changed": {
-    "message": "Vault password changed.",
     "description": "Vault page."
   },
   "vault_no_login": {

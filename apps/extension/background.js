@@ -13,7 +13,6 @@ if (typeof importScripts === "function") {
     "sync.js",
     "sync-scheduler.js",
     "core-v2.js",
-    "vault-lock.js",
     "vault-session.js",
     "google-auth.js",
   );
@@ -29,7 +28,6 @@ else if (typeof require === "function") {
     require("./transfer.js"),
     require("./sync.js"),
     require("./sync-scheduler.js"),
-    require("./vault-lock.js"),
     require("./vault-session.js"),
     require("./google-auth.js"),
   );
@@ -271,11 +269,7 @@ const PRIVILEGED_ACTIONS = new Set([
   "syncNow",
   "syncAutoOpen",
   "syncStatus",
-  "vaultLockStatus",
-  "vaultLockCreate",
-  "vaultLockVerify",
-  "vaultLockChange",
-  "vaultLockForget",
+  "vaultUnlock",
   "vaultSessionLeave",
   "vaultSessionResume",
   "vaultSessionClear",
@@ -763,72 +757,54 @@ async function saveCurrentSite(sender, login) {
 }
 
 const VAULT_LOCK_ACTIONS = new Set([
-  "vaultLockStatus",
-  "vaultLockCreate",
-  "vaultLockVerify",
-  "vaultLockChange",
-  "vaultLockForget",
+  "vaultUnlock",
   "vaultSessionLeave",
   "vaultSessionResume",
   "vaultSessionClear",
 ]);
 
+/** Ancien enregistrement du mot de passe de carnet : il n'existe plus. */
+const LEGACY_VAULT_LOCK_KEY = "vaultLock";
+Promise.resolve()
+  .then(() => browser?.storage?.local?.remove?.([LEGACY_VAULT_LOCK_KEY]))
+  .catch(() => {});
+
 /**
  * Verrou de l'ecran carnet (shared/spec/vault-lock.md).
  *
- * Verifie ici plutot que dans la page : l'empreinte stockee ne transite pas
- * jusqu'a elle. L'etat deverrouille vit dans la page ; ici n'est retenu que
- * l'instant ou elle a ete quittee, pour la grace de 3 minutes (vault-session.js).
+ * Le carnet s'ouvre avec la clef maitresse, comparee ici a celle de la
+ * session : la clef de la session ne transite pas jusqu'a la page. L'etat
+ * deverrouille vit dans la page ; ici n'est retenu que l'instant ou elle a ete
+ * quittee, pour la grace de 3 minutes (vault-session.js).
  */
 const vaultSession = createVaultSession(browser?.storage?.session);
 
 async function handleVaultLock(request) {
-  const store = browser?.storage?.local;
-  const record = await loadVaultLock(store);
-
   switch (request.action) {
-    case "vaultLockStatus":
-      return { ok: true, configured: Boolean(record) };
-
-    case "vaultLockCreate": {
-      // Une fois pose, le verrou ne se remplace qu'avec l'actuel ou en
-      // effacant le carnet : sinon n'importe quelle page de l'extension
-      // pourrait le reinitialiser.
-      if (record) return { ok: false, error: "un mot de passe de carnet existe deja" };
-      const weak = vaultLockPasswordError(request.password);
-      if (weak) return { ok: false, error: weak };
-      await saveVaultLock(store, await hashVaultPassword(request.password));
-      return { ok: true };
-    }
-
-    case "vaultLockVerify":
-      return { ok: true, unlocked: await verifyVaultPassword(request.password, record) };
-
-    case "vaultLockChange": {
-      if (!(await verifyVaultPassword(request.current, record))) {
-        return { ok: false, error: "mot de passe actuel incorrect" };
+    case "vaultUnlock": {
+      const key = request.encodingKey;
+      if (typeof key !== "string" || !key) return { ok: false, error: "aucune clef saisie" };
+      if (encodingKey) {
+        return sameMasterKey(key, encodingKey)
+          ? { ok: true, unlocked: true }
+          : { ok: true, unlocked: false, reason: "otherKey" };
       }
-      const weak = vaultLockPasswordError(request.next);
-      if (weak) return { ok: false, error: weak };
-      await saveVaultLock(store, await hashVaultPassword(request.next));
-      return { ok: true };
+      // Nouvelle session : la clef saisie devient celle de la session.
+      await rememberKey(key);
+      return { ok: true, unlocked: true, keySet: true };
     }
-
-    case "vaultLockForget":
-      // Seule issue sans le mot de passe : le carnet local part avec le
-      // verrou. La synchronisation le rapportera s'il existe sur le serveur.
-      await store.remove([VAULT_STORAGE_KEY]);
-      await clearVaultLock(store);
-      await vaultSession.clear();
-      return { ok: true };
 
     case "vaultSessionLeave":
       // L'heure est celle du fond, pas celle que la page annoncerait.
-      if (record) await vaultSession.leave(Date.now());
+      if (encodingKey) await vaultSession.leave(Date.now());
       return { ok: true };
 
     case "vaultSessionResume":
-      return { ok: true, unlocked: Boolean(record) && (await vaultSession.resume(Date.now())) };
+      // Sans clef dans la session, la grace ne rouvre rien.
+      return {
+        ok: true,
+        unlocked: Boolean(encodingKey) && (await vaultSession.resume(Date.now())),
+      };
 
     case "vaultSessionClear":
       await vaultSession.clear();
