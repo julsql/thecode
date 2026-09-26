@@ -422,6 +422,167 @@ struct SignOutTests {
     }
 }
 
+// MARK: - Suppression du compte
+
+/// Transport qui note chaque appel et rend les réponses prévues, dans l'ordre.
+private actor ScriptedTransport: SyncTransport {
+    struct Offline: Error {}
+
+    private var responses: [(Int, String)]
+    private let offline: Bool
+    private(set) var calls: [(url: String, method: String, body: String?, bearer: String?)] = []
+
+    init(_ responses: [(Int, String)] = [], offline: Bool = false) {
+        self.responses = responses
+        self.offline = offline
+    }
+
+    func send(url: String, method: String, body: Data?, bearer: String?) async throws
+        -> SyncResponse
+    {
+        calls.append((url, method, body.map { String(decoding: $0, as: UTF8.self) }, bearer))
+        if offline { throw Offline() }
+        guard !responses.isEmpty else { return SyncResponse(status: 500, body: Data()) }
+        let (status, body) = responses.removeFirst()
+        return SyncResponse(status: status, body: Data(body.utf8))
+    }
+}
+
+/// Ce que l'utilisateur a saisi comme secret du compte : une valeur de test.
+private let typedSecret = "typed-fixture"
+
+@Suite("Suppression du compte")
+struct DeleteAccountTests {
+
+    private func payload(_ body: String?) throws -> [String: String] {
+        let body = try #require(body)
+        return try #require(
+            try JSONSerialization.jsonObject(with: Data(body.utf8)) as? [String: String])
+    }
+
+    @Test("L'adresse recopiée et le secret partent vers DELETE /v1/account")
+    func deleteSendsTheProofs() async throws {
+        let transport = ScriptedTransport([(204, "")])
+
+        try await Sync(transport: transport).deleteAccount(
+            credentials: credentials, confirmEmail: "  Someone@Example.test ",
+            password: typedSecret)
+
+        let calls = await transport.calls
+        #expect(calls.count == 1)
+        #expect(calls.first?.url == "https://example.test/api/v1/account")
+        #expect(calls.first?.method == "DELETE")
+        #expect(calls.first?.bearer == "access-1")
+        #expect(
+            try payload(calls.first?.body)
+                == ["confirm_email": "Someone@Example.test", "password": typedSecret])
+    }
+
+    @Test("Un jeton expiré est renouvelé, puis la suppression rejouée")
+    func deleteRenewsAnExpiredToken() async throws {
+        let transport = ScriptedTransport([
+            (401, #"{"detail":"Jeton expiré"}"#),
+            (200, #"{"access_token":"access-2","refresh_token":"refresh-8"}"#),
+            (204, ""),
+        ])
+
+        try await Sync(transport: transport).deleteAccount(
+            credentials: credentials, confirmEmail: "someone@example.test", password: "")
+
+        let calls = await transport.calls
+        #expect(calls.map(\.method) == ["DELETE", "POST", "DELETE"])
+        #expect(calls[1].url.hasSuffix("/v1/auth/refresh"))
+        #expect(calls[2].bearer == "access-2")
+    }
+
+    @Test("Succès : les jetons locaux sont oubliés")
+    func deleteForgetsOnSuccess() async throws {
+        let transport = ScriptedTransport([(204, "")])
+        var forgotten = false
+
+        try await AutoSync.deleteAccount(
+            credentials: credentials, confirmEmail: "someone@example.test",
+            password: typedSecret, sync: Sync(transport: transport)
+        ) { forgotten = true }
+
+        #expect(forgotten)
+    }
+
+    @Test(
+        "Refus ou panne : l'appareil reste lié et l'erreur va au bon endroit",
+        arguments: [
+            (403, AutoSync.DeleteFailure.wrongPassword),
+            (400, AutoSync.DeleteFailure.emailMismatch),
+        ])
+    func refusalKeepsTheSession(status: Int, expected: AutoSync.DeleteFailure) async {
+        let transport = ScriptedTransport([(status, #"{"detail":"refusé"}"#)])
+        var forgotten = false
+
+        do {
+            try await AutoSync.deleteAccount(
+                credentials: credentials, confirmEmail: "someone@example.test",
+                password: typedSecret, sync: Sync(transport: transport)
+            ) { forgotten = true }
+            Issue.record("la suppression aurait dû échouer")
+        } catch {
+            #expect(AutoSync.deleteFailure(error) == expected)
+        }
+        #expect(!forgotten)
+    }
+
+    @Test("Service injoignable : l'appareil reste lié")
+    func offlineKeepsTheSession() async {
+        let transport = ScriptedTransport(offline: true)
+        var forgotten = false
+
+        do {
+            try await AutoSync.deleteAccount(
+                credentials: credentials, confirmEmail: "someone@example.test",
+                password: typedSecret, sync: Sync(transport: transport)
+            ) { forgotten = true }
+            Issue.record("la suppression aurait dû échouer")
+        } catch {
+            guard case .other = AutoSync.deleteFailure(error) else {
+                Issue.record("erreur inattendue : \(error)")
+                return
+            }
+        }
+        #expect(!forgotten)
+    }
+
+    @Test("Le compte dit son adresse et s'il a un mot de passe")
+    func identityReadsTheAccount() async throws {
+        let transport = ScriptedTransport([
+            (200, #"{"email":"someone@example.test","plan":"pro","has_password":false}"#)
+        ])
+
+        let identity = try await Sync(transport: transport).accountIdentity(
+            credentials: credentials)
+
+        #expect(await transport.calls.first?.url == "https://example.test/api/v1/auth/me")
+        #expect(identity.email == "someone@example.test")
+        #expect(!identity.hasPassword)
+        #expect(identity.credentials.plan == SyncPlan.pro)
+    }
+
+    @Test("Un ancien service qui ne le dit pas : le mot de passe est demandé")
+    func identityDefaultsToAskingTheSecret() async throws {
+        let transport = ScriptedTransport([(200, #"{"email":"someone@example.test"}"#)])
+
+        let identity = try await Sync(transport: transport).accountIdentity(
+            credentials: credentials)
+
+        #expect(identity.hasPassword)
+    }
+
+    @Test("L'adresse recopiée se compare sans casse ni blancs")
+    func emailMatching() {
+        #expect(Sync.emailMatches(" Someone@Example.TEST ", "someone@example.test"))
+        #expect(!Sync.emailMatches("someone@example.tes", "someone@example.test"))
+        #expect(!Sync.emailMatches("", ""))
+    }
+}
+
 // MARK: - Réglages par défaut
 
 private func settings(

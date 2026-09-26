@@ -271,3 +271,42 @@ struct SignOutTests {
         #expect(forgotten)
     }
 }
+
+@MainActor
+struct DeleteAccountTests {
+
+    @Test func deletesTheAccountThenForgetsTheSession() async throws {
+        let transport = RecordingTransport(status: 204)
+        var forgotten = false
+
+        try await AutoSync.deleteAccount(
+            credentials: linked, confirmEmail: "someone@example.test", password: "",
+            sync: Sync(transport: transport)
+        ) { forgotten = true }
+
+        #expect(transport.calls.count == 1)
+        #expect(transport.calls.first?.url == "https://sync.example.test/v1/account")
+        #expect(transport.calls.first?.method == "DELETE")
+        #expect(forgotten)
+    }
+
+    @Test(arguments: [nil, 400, 403, 502] as [Int?])
+    func keepsTheSessionWhenTheServiceRefuses(status: Int?) async {
+        let transport = RecordingTransport(status: status)
+        var forgotten = false
+
+        do {
+            try await AutoSync.deleteAccount(
+                credentials: linked, confirmEmail: "someone@example.test", password: "",
+                sync: Sync(transport: transport)
+            ) { forgotten = true }
+            Issue.record("la suppression aurait dû échouer")
+        } catch {}
+        #expect(!forgotten)
+    }
+
+    @Test func tellsWhichFieldIsWrong() {
+        #expect(AutoSync.deleteFailure(SyncError(status: 403, message: "")) == .wrongPassword)
+        #expect(AutoSync.deleteFailure(SyncError(status: 400, message: "")) == .emailMismatch)
+    }
+}
