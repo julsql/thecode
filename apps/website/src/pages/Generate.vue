@@ -338,6 +338,7 @@ import { generatePassword, calculateEntropyBits, getSecurityLevel } from "@/util
 import { canonicalSite, loadPublicSuffixList } from "@/canonicalSite";
 import { keyFingerprint, type Fingerprint } from "@/fingerprint";
 import { keyStrength } from "@/keyStrength";
+import { masterKey } from "@/masterKey";
 import { loadSession, signOutSession } from "@/sync";
 import { loadSettings, rememberSettings, sameSettings, type DefaultSettings } from "@/settings";
 import { lastSyncFailure, runSyncNow, scheduleAutoSync, useAutoSync } from "@/autoSync";
@@ -386,7 +387,8 @@ export default defineComponent({
     const tf = (key: TranslationKey, values: Record<string, string | number>) =>
       Object.entries(values).reduce((text, [k, v]) => text.split(`{${k}}`).join(String(v)), t(key));
 
-    const clef = ref("");
+    // Clef de la session, partagée avec l'écran carnet qui s'ouvre avec elle.
+    const clef = masterKey;
     const site = ref("");
     /**
      * Identifiant du compte sur le site. Entre dans la derivation v2 tel que

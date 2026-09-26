@@ -13,6 +13,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import Generate from "@/pages/Generate.vue";
+import { resetMasterKeyForTests } from "@/masterKey";
 
 // Le resultat est masque a l'ecran : on lit la valeur generee sur le composant.
 const generated = (w: { vm: unknown }) => (w.vm as { motDePasse: string }).motDePasse;
@@ -28,6 +29,10 @@ async function generateFor(w: any, site: string) {
   // La copie n'apparait qu'une fois le mot de passe genere, en v1 comme en v2.
   await vi.waitFor(() => expect(w.find("#copyPassword").exists()).toBe(true), { timeout: 15000 });
 }
+
+// La clef maîtresse vit en mémoire le temps de la session : chaque cas repart
+// sans clef.
+beforeEach(() => resetMasterKeyForTests());
 
 const vectors = JSON.parse(
   readFileSync(join(dirname(fileURLToPath(import.meta.url)), "test-vectors.json"), "utf8"),

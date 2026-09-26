@@ -1,6 +1,6 @@
 /**
- * Écran carnet : verrou, liste, détail, suppression et renouvellement.
- * Voir shared/spec/vault-lock.md.
+ * Écran carnet : verrou par la clef maîtresse, liste, détail, suppression et
+ * renouvellement. Voir shared/spec/vault-lock.md.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { resetAutoSyncForTests } from "@/autoSync";
@@ -8,10 +8,11 @@ import { mount } from "@vue/test-utils";
 import { createRouter, createMemoryHistory } from "vue-router";
 import Vault from "@/pages/Vault.vue";
 import { emptyVault, loadVault, newEntry, saveVault } from "@/vault";
-import { createLock, hasLock, verifyLock } from "@/vaultLock";
+import { masterKey, resetMasterKeyForTests } from "@/masterKey";
 import { VAULT_GRACE_MS, VAULT_SESSION_KEY } from "@/vaultSession";
 
-const PASSWORD = "mot de passe";
+const SESSION_KEY = "clef";
+const OTHER_KEY = "autre clef";
 
 async function mountVault(lang = "fr") {
   const router = createRouter({
@@ -33,10 +34,10 @@ const button = (w: Wrapper, label: string) => {
   return found;
 };
 
-async function unlock(w: Wrapper) {
-  await w.find("#vault_unlock").setValue(PASSWORD);
+async function unlock(w: Wrapper, key = SESSION_KEY) {
+  await w.find("#vault_unlock").setValue(key);
   await w.find("form").trigger("submit");
-  await vi.waitFor(() => expect(w.text()).toContain("Entrées"), { timeout: 10000 });
+  await vi.waitFor(() => expect(w.text()).toContain("Entrées"));
 }
 
 function seed() {
@@ -61,65 +62,97 @@ beforeEach(() => {
   sessionStorage.clear();
   vi.restoreAllMocks();
   resetAutoSyncForTests();
+  resetMasterKeyForTests();
   document.body.innerHTML = "";
   // refreshPlan interroge le service : on le rend injoignable, l'offre connue
   // reste celle de la session.
   vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("hors ligne")));
 });
 
-describe("première ouverture", () => {
-  it("exige un mot de passe saisi deux fois, 8 caractères minimum", async () => {
-    const w = await mountVault();
-    expect(w.text()).toContain("Créer un mot de passe de carnet");
-    expect(w.find("label[for=vault_new]").exists()).toBe(true);
-
-    await w.find("#vault_new").setValue("court");
-    await w.find("#vault_new_confirm").setValue("court");
-    await w.find("form").trigger("submit");
-    await vi.waitFor(() => expect(w.find("[role=alert]").text()).toContain("8 caractères"));
-    expect(w.find("#vault_new").attributes("aria-invalid")).toBe("true");
-
-    await w.find("#vault_new").setValue(PASSWORD);
-    await w.find("#vault_new_confirm").setValue("autre chose");
-    await w.find("form").trigger("submit");
-    await vi.waitFor(() => expect(w.find("[role=alert]").text()).toContain("diffèrent"));
-    expect(hasLock()).toBe(false);
-
-    await w.find("#vault_new_confirm").setValue(PASSWORD);
-    await w.find("form").trigger("submit");
-    await vi.waitFor(() => expect(w.text()).toContain("Entrées"), { timeout: 10000 });
-    expect(await verifyLock(PASSWORD)).toBe(true);
-    expect(document.activeElement?.id).toBe("vaultListTitle");
-  }, 20000);
-});
-
-describe("verrou", () => {
-  beforeEach(async () => {
-    await createLock(PASSWORD, PASSWORD);
-  });
-
-  it("refuse un mauvais mot de passe", async () => {
-    seed();
+describe("verrou par la clef maîtresse", () => {
+  it("ne propose ni mot de passe de carnet, ni oubli", async () => {
     const w = await mountVault();
     expect(w.text()).toContain("Carnet verrouillé");
-    expect(w.text()).not.toContain("google.com");
-
-    await w.find("#vault_unlock").setValue("mauvais mdp");
-    await w.find("form").trigger("submit");
-    await vi.waitFor(() => expect(w.find("[role=alert]").text()).toContain("incorrect"));
-    expect(w.text()).not.toContain("google.com");
+    expect(w.text()).toContain("Déverrouillez le carnet avec votre clef maîtresse.");
+    expect(w.find("label[for=vault_unlock]").text()).toBe("Clef maîtresse");
+    expect(w.text()).not.toContain("Mot de passe oublié");
+    expect(w.text()).not.toContain("mot de passe de carnet");
+    expect(w.findAll("input[type=password]")).toHaveLength(1);
   });
 
-  it("liste les entrées non supprimées une fois déverrouillé", async () => {
+  it("nouvelle session : la clef saisie ouvre et devient celle de la session", async () => {
+    seed();
+    const w = await mountVault();
+    expect(w.text()).toContain("Aucune clef n'est encore définie dans cette session");
+
+    await unlock(w);
+    expect(masterKey.value).toBe(SESSION_KEY);
+    expect(w.find("[role=status]").text()).toContain("générateur");
+    expect(w.text()).toContain("google.com");
+    expect(document.activeElement?.id).toBe("vaultListTitle");
+    // Rien n'est stocké : ni la clef, ni une empreinte.
+    expect(JSON.stringify({ ...localStorage })).not.toContain(SESSION_KEY);
+    expect(localStorage.getItem("thecode.vaultLock")).toBeNull();
+  });
+
+  it("ouvre avec la clef déjà définie dans la session", async () => {
+    masterKey.value = SESSION_KEY;
+    seed();
+    const w = await mountVault();
+    expect(w.text()).not.toContain("Aucune clef n'est encore définie");
+    await unlock(w);
+    expect(w.find("[role=status]").text()).toBe("Carnet déverrouillé.");
+    expect(masterKey.value).toBe(SESSION_KEY);
+  });
+
+  it("refuse une autre clef que celle en cours d'utilisation", async () => {
+    masterKey.value = SESSION_KEY;
+    seed();
+    const w = await mountVault();
+
+    await w.find("#vault_unlock").setValue(OTHER_KEY);
+    await w.find("form").trigger("submit");
+    await vi.waitFor(() =>
+      expect(w.find("[role=alert]").text()).toBe(
+        "Ce n'est pas la même clef que celle en cours d'utilisation.",
+      ),
+    );
+    expect(w.find("#vault_unlock").attributes("aria-invalid")).toBe("true");
+    expect(w.text()).not.toContain("google.com");
+    expect(masterKey.value).toBe(SESSION_KEY);
+    expect(document.activeElement?.id).toBe("vault_unlock");
+  });
+
+  it("refuse une saisie vide sans poser de clef", async () => {
+    const w = await mountVault();
+    await w.find("form").trigger("submit");
+    await vi.waitFor(() => expect(w.find("[role=alert]").text()).toContain("clef maîtresse"));
+    expect(masterKey.value).toBe("");
+  });
+
+  it("liste les entrées non supprimées, sous le rappel « même clef »", async () => {
     seed();
     const w = await mountVault();
     await unlock(w);
 
-    const items = w.findAll(".entry-list li");
-    expect(items).toHaveLength(2);
-    expect(w.text()).toContain("google.com");
+    expect(w.findAll(".entry-list li")).toHaveLength(2);
     expect(w.text()).toContain("alice");
     expect(w.text()).not.toContain("gone.com");
+    const html = w.html();
+    expect(html.indexOf("same-key-hint")).toBeLessThan(html.indexOf("entry-list"));
+  });
+
+  it("efface l'ancien verrou au chargement du site", async () => {
+    localStorage.setItem("thecode.vaultLock", JSON.stringify({ v: 1, salt: "c2Fs", hash: "aGFz" }));
+    const { removeLegacyVaultLock } = await import("@/vaultSession");
+    removeLegacyVaultLock();
+    expect(localStorage.getItem("thecode.vaultLock")).toBeNull();
+  });
+});
+
+describe("grâce de 3 minutes", () => {
+  beforeEach(() => {
+    masterKey.value = SESSION_KEY;
   });
 
   it("reste ouvert si l'on revient dans les 3 minutes", async () => {
@@ -138,7 +171,7 @@ describe("verrou", () => {
     expect(again.text()).toContain("google.com");
   });
 
-  it("redemande le mot de passe au-delà de 3 minutes", async () => {
+  it("redemande la clef au-delà de 3 minutes", async () => {
     const now = vi.spyOn(Date, "now");
     now.mockReturnValue(1_000_000);
     const first = await mountVault();
@@ -146,8 +179,20 @@ describe("verrou", () => {
     first.unmount();
 
     now.mockReturnValue(1_000_000 + VAULT_GRACE_MS + 1);
-    const again = await mountVault();
-    expect(again.text()).toContain("Carnet verrouillé");
+    expect((await mountVault()).text()).toContain("Carnet verrouillé");
+  });
+
+  it("ne rouvre rien sans clef dans la session", async () => {
+    const now = vi.spyOn(Date, "now");
+    now.mockReturnValue(1_000_000);
+    const first = await mountVault();
+    await unlock(first);
+    first.unmount();
+
+    // Rechargement de la page : la clef, en mémoire, est perdue.
+    resetMasterKeyForTests();
+    now.mockReturnValue(1_000_000 + 1000);
+    expect((await mountVault()).text()).toContain("Carnet verrouillé");
   });
 
   it("referme si l'horloge a reculé", async () => {
@@ -185,67 +230,20 @@ describe("verrou", () => {
     expect(w.text()).toContain("Carnet verrouillé");
   });
 
-  it("se reverrouille à la demande, sans grâce", async () => {
+  it("« Verrouiller » referme aussitôt, sans grâce, et garde la clef", async () => {
     const w = await mountVault();
     await unlock(w);
     await button(w, "Verrouiller").trigger("click");
     expect(w.text()).toContain("Carnet verrouillé");
+    expect(masterKey.value).toBe(SESSION_KEY);
     w.unmount();
 
     expect(sessionStorage.getItem(VAULT_SESSION_KEY)).toBeNull();
     expect((await mountVault()).text()).toContain("Carnet verrouillé");
   });
-
-  it("efface le carnet local après confirmation si le mot de passe est oublié", async () => {
-    seed();
-    const w = await mountVault();
-
-    await button(w, "Mot de passe oublié").trigger("click");
-    await w.vm.$nextTick();
-    expect(w.text()).toContain("Effacer le carnet local ?");
-    expect(document.activeElement?.id).toBe("vaultForgetTitle");
-
-    // Annuler ne touche à rien.
-    await button(w, "Annuler").trigger("click");
-    expect(hasLock()).toBe(true);
-
-    await button(w, "Mot de passe oublié").trigger("click");
-    await button(w, "Effacer le carnet et le mot de passe").trigger("click");
-    await w.vm.$nextTick();
-
-    expect(hasLock()).toBe(false);
-    expect(loadVault().entries).toHaveLength(0);
-    expect(w.text()).toContain("Créer un mot de passe de carnet");
-  });
-
-  it("change le mot de passe en exigeant l'actuel", async () => {
-    const w = await mountVault();
-    await unlock(w);
-
-    await w.find("#vault_current").setValue("mauvais mdp");
-    await w.find("#vault_next").setValue("nouveau mdp");
-    await w.find("#vault_next_confirm").setValue("nouveau mdp");
-    await button(w, "Changer le mot de passe").trigger("submit");
-    await vi.waitFor(() => expect(w.find("[role=alert]").text()).toContain("incorrect"), {
-      timeout: 10000,
-    });
-
-    await w.find("#vault_current").setValue(PASSWORD);
-    await w.find("#vault_next").setValue("nouveau mdp");
-    await w.find("#vault_next_confirm").setValue("nouveau mdp");
-    await button(w, "Changer le mot de passe").trigger("submit");
-    await vi.waitFor(() => expect(w.find("[role=status]").text()).toContain("changé"), {
-      timeout: 10000,
-    });
-    expect(await verifyLock("nouveau mdp")).toBe(true);
-  }, 30000);
 });
 
 describe("détail d'une entrée", () => {
-  beforeEach(async () => {
-    await createLock(PASSWORD, PASSWORD);
-  });
-
   it("montre les paramètres de l'entrée", async () => {
     const { google } = seed();
     const w = await mountVault();
@@ -294,7 +292,6 @@ describe("détail d'une entrée", () => {
     await w.findAll(".entry-btn")[0]!.trigger("click");
     await w.vm.$nextTick();
 
-    await w.find("#vault_clef").setValue("clef");
     await button(w, "Renouveler").trigger("submit");
     await vi.waitFor(() => expect(w.text()).toContain("Nouveau mot de passe"), {
       timeout: 10000,
@@ -314,7 +311,6 @@ describe("détail d'une entrée", () => {
     await w.findAll(".entry-btn")[0]!.trigger("click");
     await w.vm.$nextTick();
 
-    await w.find("#vault_clef").setValue("clef");
     await button(w, "Renouveler").trigger("submit");
     await w.vm.$nextTick();
     expect(w.find("[role=alert]").text()).toContain("offre complète");
@@ -326,9 +322,6 @@ describe("synchronisation automatique", () => {
   const vaultCalls = () =>
     vi.mocked(fetch).mock.calls.filter(([url]) => String(url).includes("/v1/vault"));
 
-  beforeEach(async () => {
-    await createLock(PASSWORD, PASSWORD);
-  });
   afterEach(() => {
     vi.useRealTimers();
   });
@@ -340,7 +333,6 @@ describe("synchronisation automatique", () => {
     await unlock(w);
     await w.findAll(".entry-btn")[0]!.trigger("click");
     await w.vm.$nextTick();
-    await w.find("#vault_clef").setValue("clef");
     await button(w, "Renouveler").trigger("submit");
     await vi.waitFor(() => expect(w.text()).toContain("Nouveau mot de passe"), {
       timeout: 10000,
@@ -356,28 +348,12 @@ describe("synchronisation automatique", () => {
     await vi.waitFor(() => expect(vaultCalls().length).toBeGreaterThan(0), { timeout: 10000 });
     await vi.waitFor(() => expect(w.find(".sync-auto-status").text()).toContain("injoignable"));
   }, 30000);
-
-  it("ne synchronise pas une suppression sans clef maîtresse", async () => {
-    seed();
-    signInAs("pro");
-    const w = await mountVault();
-    await unlock(w);
-    await w.findAll(".entry-btn")[0]!.trigger("click");
-
-    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
-    await button(w, "Supprimer cette entrée").trigger("click");
-    await w.vm.$nextTick();
-    await button(w, "Supprimer").trigger("click");
-    await vi.advanceTimersByTimeAsync(5000);
-
-    expect(vaultCalls()).toHaveLength(0);
-  });
 });
 
 describe("langue", () => {
   it("se traduit en anglais", async () => {
     const w = await mountVault("en");
-    expect(w.text()).toContain("Create a vault password");
-    expect(w.text()).toContain("At least 8 characters.");
+    expect(w.text()).toContain("Unlock the vault with your master key.");
+    expect(w.find("label[for=vault_unlock]").text()).toBe("Master key");
   });
 });
