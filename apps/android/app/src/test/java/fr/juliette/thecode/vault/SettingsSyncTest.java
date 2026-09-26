@@ -78,6 +78,17 @@ public class SettingsSyncTest {
     }
 
     @Test
+    public void neverPushesSettingsThatWereNeverChanged() throws Exception {
+        FakeVaultServer server = new FakeVaultServer();
+        Sync sync = new Sync(server);
+
+        sync.syncSettings(new DefaultSettings(20, true, true, true, true, DefaultSettings.NEVER),
+                "clef", CREDS);
+
+        assertEquals(0, server.settingsPuts);
+    }
+
+    @Test
     public void aTieKeepsTheRemote() throws Exception {
         FakeVaultServer server = new FakeVaultServer();
         Sync sync = new Sync(server);

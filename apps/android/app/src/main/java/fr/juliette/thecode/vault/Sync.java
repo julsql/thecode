@@ -340,7 +340,9 @@ public final class Sync {
         }
 
         DefaultSettings winner = remote == null ? local : DefaultSettings.newest(local, remote);
-        if (winner == local) {
+        // Jamais modifiés ici : ce sont les valeurs d'usine, pas un choix. Les
+        // pousser les imposerait aux autres appareils du compte.
+        if (winner == local && !DefaultSettings.NEVER.equals(local.updatedAt)) {
             try {
                 Transfer.Sealed sealed = Transfer.seal(key, local.toJson().toString());
                 call(url, "PUT", new JSONObject()
