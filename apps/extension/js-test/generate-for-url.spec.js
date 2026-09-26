@@ -227,7 +227,7 @@ describe("transfert du carnet par le service worker", () => {
 
     const exported = await worker.exportVaultPayload();
     expect(exported.ok).toBe(true);
-    expect(exported.payload.startsWith("TC1.")).toBe(true);
+    expect(exported.payload.startsWith("TC2.")).toBe(true);
     // Rien de lisible : c'est ce qui rend une photo de l'ecran inoffensive.
     expect(exported.payload).not.toContain("banque-secrete");
 

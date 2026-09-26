@@ -13,8 +13,24 @@ const statusLine = document.getElementById("status");
 const qrBox = document.getElementById("qr");
 const qrModules = document.getElementById("qrModules");
 
+const QR_CYCLE_MS = 800;
+let qrTimer = null;
+
 function say(message) {
   statusLine.textContent = message;
+}
+
+function drawQr(modules) {
+  qrModules.innerHTML = "";
+  for (const row of modules) {
+    const line = document.createElement("div");
+    for (const module of row) {
+      const cell = document.createElement("span");
+      cell.className = module ? "dark" : "light";
+      line.appendChild(cell);
+    }
+    qrModules.appendChild(line);
+  }
 }
 
 /** Demande au service worker le carnet chiffre, pret a transporter. */
@@ -33,17 +49,18 @@ document.getElementById("showQr").addEventListener("click", async () => {
     return;
   }
 
+  clearInterval(qrTimer);
   try {
-    const { modules } = encodeQr(resp.payload);
-    qrModules.innerHTML = "";
-    for (const row of modules) {
-      const line = document.createElement("div");
-      for (const module of row) {
-        const cell = document.createElement("span");
-        cell.className = module ? "dark" : "light";
-        line.appendChild(cell);
-      }
-      qrModules.appendChild(line);
+    // Au-dela d'un QR, les fragments TC2m defilent en boucle : le lecteur
+    // les accumule jusqu'a les avoir tous (shared/spec/vault-transfer.md).
+    const codes = splitPayload(resp.payload).map((code) => encodeQr(code).modules);
+    let shown = 0;
+    drawQr(codes[0]);
+    if (codes.length > 1) {
+      qrTimer = setInterval(() => {
+        shown = (shown + 1) % codes.length;
+        drawQr(codes[shown]);
+      }, QR_CYCLE_MS);
     }
     qrBox.hidden = false;
     say("");

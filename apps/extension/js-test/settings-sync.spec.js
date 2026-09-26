@@ -5,13 +5,14 @@
  * quelle valeur l'emporte, et qu'un blob illisible n'ecrase rien.
  */
 const path = require("node:path");
-const { webcrypto } = require("node:crypto");
+const { webcrypto, pbkdf2Sync } = require("node:crypto");
 if (!global.crypto) global.crypto = webcrypto;
 
 const SESSION = {
   endpoint: "https://example.test/api",
   accessToken: "a",
   refreshToken: "r",
+  kdfSalt: "0WveVfSRJyzta8UsTh5DFw",
 };
 
 const OLD = "2026-01-01T00:00:00Z";
@@ -65,21 +66,35 @@ function fakeServer(initial = null) {
   };
 }
 
+/** Clef de synchronisation du compte de SESSION, derivee independamment du code teste. */
+function syncKeyFor(masterKey) {
+  const salt = Buffer.concat([
+    Buffer.from("thecode-sync/v2"),
+    Buffer.from(SESSION.kdfSalt, "base64url"),
+  ]);
+  const raw = pbkdf2Sync(masterKey, salt, 600000, 32, "sha256");
+  return crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["encrypt", "decrypt"]);
+}
+
+const SETTINGS_AAD = new TextEncoder().encode("thecode/settings/v2");
+
 async function encryptFor(value, masterKey) {
-  const { deriveTransferKey } = require("../transfer");
-  const key = await deriveTransferKey(masterKey);
+  const key = await syncKeyFor(masterKey);
   const nonce = crypto.getRandomValues(new Uint8Array(12));
   const plain = new TextEncoder().encode(JSON.stringify(value));
-  const cipher = await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce }, key, plain);
+  const cipher = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv: nonce, additionalData: SETTINGS_AAD },
+    key,
+    plain,
+  );
   const b64 = (buf) => Buffer.from(buf).toString("base64url");
   return { nonce: b64(nonce), blob: b64(cipher) };
 }
 
 async function decryptWith(row, masterKey) {
-  const { deriveTransferKey } = require("../transfer");
-  const key = await deriveTransferKey(masterKey);
+  const key = await syncKeyFor(masterKey);
   const plain = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv: Buffer.from(row.nonce, "base64url") },
+    { name: "AES-GCM", iv: Buffer.from(row.nonce, "base64url"), additionalData: SETTINGS_AAD },
     key,
     Buffer.from(row.blob, "base64url"),
   );
