@@ -518,7 +518,9 @@ export default defineComponent({
       // Sans clef, le mot de passe ne dependrait que du site : il serait donc
       // identique pour tout le monde et calculable par n'importe qui. Le
       // service worker de l'extension refuse deja ce cas ; on s'aligne.
-      if (!clef.value) {
+      // Sans site non plus : le mot de passe serait celui d'un site vide, qui
+      // n'existe pas et ne peut pas etre enregistre.
+      if (!clef.value || !site.value.trim()) {
         motDePasse.value = "";
         motDePasseVisible.value = false;
         copyMessage.value = "";

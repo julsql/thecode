@@ -209,6 +209,17 @@ describe("carnet et empreinte", () => {
     expect(wrapper.find('a[href="/fr/vault"]').exists()).toBe(true);
   });
 
+  it("ne genere rien sans site", async () => {
+    const wrapper = await mountGenerate();
+
+    await wrapper.find("#id_clef").setValue(sampleKey);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    // Un mot de passe pour un site vide n'appartient a aucun compte.
+    expect(wrapper.find("#copyPassword").exists()).toBe(false);
+    expect(wrapper.find("#saveEntry").exists()).toBe(false);
+  });
+
   it("ne propose pas d'enregistrer depuis l'ecran regle en v1", async () => {
     const wrapper = await mountGenerate();
 
