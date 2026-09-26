@@ -10,6 +10,7 @@ import { mount } from "@vue/test-utils";
 import { createRouter, createMemoryHistory, type Router } from "vue-router";
 import Account from "@/pages/Account.vue";
 import { renderGoogleButton } from "@/google";
+import { sha256Hex } from "@/apple";
 import { resetService } from "@/service";
 
 /**
@@ -27,6 +28,24 @@ async function returnFromGoogle(idToken: string) {
   await callback?.(idToken);
 }
 
+/**
+ * Le script d'Apple non plus : on pose un faux `AppleID` global, qui retient
+ * la dernière configuration et rend la réponse qu'on lui dicte.
+ */
+function fakeApple(answer?: (init: Record<string, string>) => Promise<unknown>) {
+  const inits: Record<string, string>[] = [];
+  const signIn = vi.fn(() => {
+    const init = inits[inits.length - 1];
+    return answer
+      ? answer(init)
+      : Promise.resolve({ authorization: { id_token: "jeton-apple", state: init.state } });
+  });
+  vi.stubGlobal("AppleID", {
+    auth: { init: vi.fn((options: Record<string, string>) => inits.push(options)), signIn },
+  });
+  return { inits, signIn };
+}
+
 /** Ce que le faux service a reçu : c'est la vraie matière du test. */
 interface Call {
   url: string;
@@ -34,7 +53,10 @@ interface Call {
   body: Record<string, unknown> | null;
 }
 
-function fakeService(overrides: Record<string, unknown> = {}) {
+function fakeService(
+  overrides: Record<string, unknown> = {},
+  registration: Record<string, unknown> = {},
+) {
   const calls: Call[] = [];
   const state = {
     devices: [
@@ -98,11 +120,16 @@ function fakeService(overrides: Record<string, unknown> = {}) {
         needsCode: false,
         freeSlots: 3,
         googleClientId: "client-de-test",
+        ...registration,
       });
     }
     if (url.endsWith("/v1/auth/google")) {
       state.me = { ...state.me, google_linked: true, has_password: false };
       return json(200, { access_token: "jeton", refresh_token: "renouvellement" });
+    }
+    if (url.endsWith("/v1/auth/apple")) {
+      state.me = { ...state.me, apple_linked: true, has_password: false };
+      return json(200, { access_token: "jeton-apple", refresh_token: "renouvellement" });
     }
     if (url.endsWith("/v1/auth/password/forgot")) return json(202, { sent: true });
     if (url.endsWith("/v1/account/password")) return json(200, { changed: true });
@@ -125,6 +152,10 @@ function fakeService(overrides: Record<string, unknown> = {}) {
     }
     if (url.endsWith("/v1/account/google") && method === "DELETE") {
       state.me = { ...state.me, google_linked: false };
+      return json(204, null);
+    }
+    if (url.endsWith("/v1/account/apple") && method === "DELETE") {
+      state.me = { ...state.me, apple_linked: false };
       return json(204, null);
     }
     if (url.endsWith("/v1/account") && method === "DELETE") return json(204, null);
@@ -296,6 +327,103 @@ describe("page du compte", () => {
       expect(service.calls.find((c) => c.url.endsWith("/v1/auth/google"))?.body).toMatchObject({
         invite_code: "PARRAIN",
       });
+    });
+  });
+
+  describe("Apple", () => {
+    const appleOn = { appleEnabled: true, appleWebClientId: "fr.julsql.thecode.web" };
+
+    it("cache le bouton quand le service n'annonce pas Apple", async () => {
+      const apple = fakeApple();
+      fakeService({}, { appleEnabled: false, appleWebClientId: "fr.julsql.thecode.web" });
+      const wrapper = await mountAccount();
+
+      expect(wrapper.find(".apple-button").exists()).toBe(false);
+      expect(apple.inits).toHaveLength(0);
+    });
+
+    it("cache le bouton sans Services ID", async () => {
+      fakeApple();
+      fakeService({}, { appleEnabled: true, appleWebClientId: "" });
+      const wrapper = await mountAccount();
+
+      expect(wrapper.find(".apple-button").exists()).toBe(false);
+    });
+
+    it("prépare Apple avec l'empreinte du nonce, en fenêtre surgissante", async () => {
+      const apple = fakeApple();
+      fakeService({}, appleOn);
+      const wrapper = await mountAccount();
+
+      expect(button(wrapper, "Se connecter avec Apple")).toBeDefined();
+      expect(apple.inits[0]).toMatchObject({
+        clientId: "fr.julsql.thecode.web",
+        scope: "email",
+        redirectURI: `${window.location.origin}/`,
+        usePopup: true,
+      });
+      expect(apple.inits[0].nonce).toMatch(/^[0-9a-f]{64}$/);
+      expect(apple.inits[0].state).toBeTruthy();
+    });
+
+    it("envoie le jeton et le nonce brut, puis ouvre la session", async () => {
+      const apple = fakeApple();
+      const service = fakeService({}, appleOn);
+      const wrapper = await mountAccount();
+      const init = apple.inits[0];
+
+      await button(wrapper, "Se connecter avec Apple")!.trigger("click");
+      await flush();
+
+      const sent = service.calls.find((c) => c.url.endsWith("/v1/auth/apple"));
+      expect(sent?.body).toMatchObject({
+        identity_token: "jeton-apple",
+        client: "web",
+        lang: "fr",
+      });
+      // Le service reçoit le nonce brut, Apple n'en a vu que l'empreinte.
+      const raw = sent?.body?.nonce as string;
+      expect(raw).not.toBe(init.nonce);
+      expect(await sha256Hex(raw)).toBe(init.nonce);
+      expect(localStorage.getItem("thecode.session")).toContain("jeton-apple");
+      expect(wrapper.find("#acc_email").exists()).toBe(false);
+    });
+
+    it("refuse une réponse dont l'état ne correspond pas", async () => {
+      fakeApple(() => Promise.resolve({ authorization: { id_token: "vole", state: "autre" } }));
+      const service = fakeService({}, appleOn);
+      const wrapper = await mountAccount();
+
+      await button(wrapper, "Se connecter avec Apple")!.trigger("click");
+      await flush();
+
+      expect(service.calls.some((c) => c.url.endsWith("/v1/auth/apple"))).toBe(false);
+      expect(localStorage.getItem("thecode.session")).toBeNull();
+      expect(wrapper.find("#acc_message_auth").text()).toContain("n'a pas abouti");
+    });
+
+    it("se tait quand on ferme la fenêtre d'Apple", async () => {
+      fakeApple(() => Promise.reject({ error: "popup_closed_by_user" }));
+      const service = fakeService({}, appleOn);
+      const wrapper = await mountAccount();
+
+      await button(wrapper, "Se connecter avec Apple")!.trigger("click");
+      await flush();
+
+      expect(service.calls.some((c) => c.url.endsWith("/v1/auth/apple"))).toBe(false);
+      expect(wrapper.find("#acc_message_auth").exists()).toBe(false);
+    });
+
+    it("prend un nouveau nonce à chaque tentative", async () => {
+      const apple = fakeApple(() => Promise.reject({ error: "popup_closed_by_user" }));
+      fakeService({}, appleOn);
+      const wrapper = await mountAccount();
+
+      await button(wrapper, "Se connecter avec Apple")!.trigger("click");
+      await flush();
+
+      expect(apple.inits).toHaveLength(2);
+      expect(apple.inits[1].nonce).not.toBe(apple.inits[0].nonce);
     });
   });
 
@@ -677,6 +805,33 @@ describe("page du compte", () => {
       expect(button(wrapper, "Délier Google")!.attributes("disabled")).toBeDefined();
       expect(wrapper.text()).toContain("Définissez d'abord un mot de passe");
       expect(service.calls.some((c) => c.url.endsWith("/v1/account/google"))).toBe(false);
+    });
+
+    it("propose de délier Apple une fois un mot de passe défini", async () => {
+      const service = fakeService({ apple_linked: true, has_password: true });
+      const wrapper = await mountAccount();
+
+      expect(wrapper.text()).toContain("Compte Apple lié");
+      const unlink = button(wrapper, "Délier Apple")!;
+      expect(unlink.attributes("disabled")).toBeUndefined();
+
+      await unlink.trigger("click");
+      await flush();
+
+      expect(
+        service.calls.some((c) => c.method === "DELETE" && c.url.endsWith("/v1/account/apple")),
+      ).toBe(true);
+      expect(wrapper.text()).toContain("Aucun compte Apple lié");
+      expect(wrapper.find("#acc_message_apple").text()).toContain("Apple délié");
+    });
+
+    it("interdit de délier Apple tant qu'il n'y a pas de mot de passe", async () => {
+      const service = fakeService({ apple_linked: true, has_password: false });
+      const wrapper = await mountAccount();
+
+      expect(button(wrapper, "Délier Apple")!.attributes("disabled")).toBeDefined();
+      expect(wrapper.text()).toContain("délier Apple fermerait");
+      expect(service.calls.some((c) => c.url.endsWith("/v1/account/apple"))).toBe(false);
     });
 
     it("montre les deux portes d'entrée du compte", async () => {

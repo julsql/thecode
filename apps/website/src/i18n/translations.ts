@@ -308,6 +308,14 @@ export const translations = {
     acc_google_unlinked: "Google unlinked. Sign in with your address and password from now on.",
     acc_google_needs_password:
       "Set a password first: without one, unlinking Google would close the only way into this account.",
+    acc_apple: "Sign in with Apple",
+    acc_apple_failed: "Sign in with Apple did not go through. Try again, or use your address.",
+    acc_apple_linked: "Apple account linked",
+    acc_apple_none: "No Apple account linked",
+    acc_apple_unlink: "Unlink Apple",
+    acc_apple_unlinked: "Apple unlinked. Sign in with your address and password from now on.",
+    acc_apple_needs_password:
+      "Set a password first: without one, unlinking Apple would close the only way into this account.",
     acc_password_set_yes: "Password set",
     acc_password_set_no: "No password yet",
     acc_password_title: "Password",
@@ -317,7 +325,7 @@ export const translations = {
     acc_password_change: "Change my password",
     acc_password_changed: "Password changed. Other devices have been signed out.",
     acc_password_none:
-      "This account signs in with Google. Set a password to use it in the apps, which sign in with an address and a password.",
+      "This account signs in with Google or Apple. Set a password to use it in the apps, which sign in with an address and a password.",
     acc_email_title: "Email address",
     acc_email_new: "New address",
     acc_email_change: "Change my address",
@@ -759,6 +767,16 @@ export const translations = {
       "Google délié. Connectez-vous désormais avec votre adresse et votre mot de passe.",
     acc_google_needs_password:
       "Définissez d'abord un mot de passe : sans lui, délier Google fermerait la seule porte d'entrée de ce compte.",
+    acc_apple: "Se connecter avec Apple",
+    acc_apple_failed:
+      "La connexion avec Apple n'a pas abouti. Réessayez, ou utilisez votre adresse.",
+    acc_apple_linked: "Compte Apple lié",
+    acc_apple_none: "Aucun compte Apple lié",
+    acc_apple_unlink: "Délier Apple",
+    acc_apple_unlinked:
+      "Apple délié. Connectez-vous désormais avec votre adresse et votre mot de passe.",
+    acc_apple_needs_password:
+      "Définissez d'abord un mot de passe : sans lui, délier Apple fermerait la seule porte d'entrée de ce compte.",
     acc_password_set_yes: "Mot de passe défini",
     acc_password_set_no: "Pas encore de mot de passe",
     acc_password_title: "Mot de passe",
@@ -768,7 +786,7 @@ export const translations = {
     acc_password_change: "Changer mon mot de passe",
     acc_password_changed: "Mot de passe changé. Les autres appareils ont été déconnectés.",
     acc_password_none:
-      "Ce compte se connecte avec Google. Définissez un mot de passe pour l'utiliser dans les applications, qui se connectent avec une adresse et un mot de passe.",
+      "Ce compte se connecte avec Google ou Apple. Définissez un mot de passe pour l'utiliser dans les applications, qui se connectent avec une adresse et un mot de passe.",
     acc_email_title: "Adresse e-mail",
     acc_email_new: "Nouvelle adresse",
     acc_email_change: "Changer mon adresse",
