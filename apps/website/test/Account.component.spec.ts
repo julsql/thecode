@@ -345,6 +345,18 @@ describe("page du compte", () => {
       expect(text).toContain("20 appareils connectés au maximum");
       expect(text).not.toContain("débloquez");
     });
+
+    it("montre le refus dans le formulaire de connexion, pas en bas de page", async () => {
+      refuseLogin(402);
+      const wrapper = await signIn();
+
+      const shown = wrapper.find("#acc_message_auth");
+      expect(shown.exists()).toBe(true);
+      expect(shown.text()).toContain("L'offre gratuite permet 2 appareils connectés");
+      expect(shown.attributes("role")).toBe("status");
+      expect(shown.attributes("aria-live")).toBe("polite");
+      expect(wrapper.find("#acc_message_page").exists()).toBe(false);
+    });
   });
 
   describe("mot de passe oublié", () => {
@@ -501,6 +513,37 @@ describe("page du compte", () => {
 
       expect(button(wrapper, "Gérer mon abonnement")).toBeDefined();
       expect(button(wrapper, "Prendre l'offre complète")).toBeUndefined();
+    });
+
+    it("montre un nouveau mot de passe trop court sous ses champs", async () => {
+      const service = fakeService();
+      const wrapper = await mountAccount();
+      const sample = "court";
+
+      await wrapper.find("#acc_new_password").setValue(sample);
+      await wrapper.find("#acc_new_password_confirm").setValue(sample);
+      await button(wrapper, "Changer mon mot de passe")!.trigger("click");
+      await flush();
+
+      const shown = wrapper.find("#acc_message_password");
+      expect(shown.text()).toContain("12 caractères");
+      // Dans la section du mot de passe, juste après les champs concernés…
+      const confirm = wrapper.find("#acc_new_password_confirm");
+      const section = confirm.element.closest("section")!;
+      expect(section.contains(shown.element)).toBe(true);
+      expect(
+        confirm.element.compareDocumentPosition(shown.element) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      // …et pas au bas de la page.
+      const card = wrapper.find(".account-card").element;
+      expect(card.lastElementChild?.classList.contains("account-message")).toBe(false);
+      expect(wrapper.findAll(".account-message")).toHaveLength(1);
+      // Les champs fautifs le disent aux lecteurs d'écran.
+      for (const id of ["#acc_new_password", "#acc_new_password_confirm"]) {
+        expect(wrapper.find(id).attributes("aria-invalid")).toBe("true");
+        expect(wrapper.find(id).attributes("aria-describedby")).toBe("acc_message_password");
+      }
+      expect(service.calls.some((c) => c.url.endsWith("/v1/account/password"))).toBe(false);
     });
 
     it("refuse deux nouveaux mots de passe différents", async () => {

@@ -99,6 +99,9 @@
             <h2 id="vaultListTitle" ref="heading" tabindex="-1" class="panel-title">
               {{ t("vault_list_title") }}
             </h2>
+            <!-- Chaque entrée est chiffrée avec la clef : une autre clef ne
+                 voit pas celles des autres appareils, sans erreur visible. -->
+            <p class="hint same-key-hint">{{ t("vault_same_key_hint") }}</p>
             <p v-if="!entries.length" class="panel-lead">{{ t("vault_empty") }}</p>
             <ul v-else class="entry-list">
               <li v-for="entry in entries" :key="entry.id">
@@ -641,7 +644,9 @@ export default defineComponent({
 }
 
 .content-container {
-  max-width: 640px;
+  /* Assez large pour lire une entrée (domaines, identifiant, réglages) sur une
+     ligne ; le téléphone garde toute la largeur disponible. */
+  max-width: 960px;
   margin: -50px auto 0;
   padding: 0 24px 80px;
   position: relative;

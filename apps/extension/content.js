@@ -12,58 +12,117 @@ if (typeof browser === "undefined") {
     listInput.push(input);
 
     // Demander une proposition au background
-    browser.runtime.sendMessage({ action: "generatePassword", url: location.href }, (response) => {
-      const menu = document.createElement("div");
-      menu.className = "pw-suggester-menu";
-      menu.style.position = "absolute";
-      menu.style.zIndex = 2147483647;
-      menu.style.background = "rgba(0,0,0,0.5";
-      menu.style.borderRadius = "4px";
-      menu.style.minWidth = "200px";
-      menu.style.boxShadow = "0px 2px 6px rgba(0,0,0,0.2)";
-      menu.style.cursor = "default";
-      menu.style.padding = "10px";
-      menu.style.gap = "10px";
-      menu.style.display = "inline-flex";
+    // L'identifiant deja saisi entre dans le calcul, comme dans la popup : sans
+    // lui, le mot de passe propose ici differait de celui de la popup, et
+    // celui enregistre ensuite (avec l'identifiant) ne l'aurait pas redonne.
+    const login = findLogin(input);
+    browser.runtime.sendMessage(
+      // Rien de saisi : on n'envoie rien, et le premier compte du site sert.
+      { action: "generatePassword", url: location.href, login: login || undefined },
+      (response) => {
+        const menu = document.createElement("div");
+        menu.className = "pw-suggester-menu";
+        menu.style.position = "absolute";
+        menu.style.zIndex = 2147483647;
+        menu.style.background = "rgba(0,0,0,0.5";
+        menu.style.borderRadius = "4px";
+        menu.style.minWidth = "200px";
+        menu.style.boxShadow = "0px 2px 6px rgba(0,0,0,0.2)";
+        menu.style.cursor = "default";
+        menu.style.padding = "10px";
+        menu.style.gap = "10px";
+        menu.style.display = "inline-flex";
 
-      menu.style.backdropFilter = "blur(3px)";
-      menu.style.boxShadow = "0 4px 15px #0006";
+        menu.style.backdropFilter = "blur(3px)";
+        menu.style.boxShadow = "0 4px 15px #0006";
 
-      // Position sous l'input
-      const rect = input.getBoundingClientRect();
-      menu.style.top = `${window.scrollY + rect.bottom + 4}px`;
-      menu.style.left = `${window.scrollX + rect.left}px`;
+        // Position sous l'input
+        const rect = input.getBoundingClientRect();
+        menu.style.top = `${window.scrollY + rect.bottom + 4}px`;
+        menu.style.left = `${window.scrollX + rect.left}px`;
 
-      document.body.appendChild(menu);
-      input.__pwSuggesterMenu = menu;
+        document.body.appendChild(menu);
+        input.__pwSuggesterMenu = menu;
 
-      menu.innerHTML = ""; // Nettoyage
-      const container = document.createElement("div");
-      container.style.padding = "4px";
-      container.style.borderRadius = "4px";
-      container.style.display = "flex";
-      container.style.gap = "10px";
+        menu.innerHTML = ""; // Nettoyage
+        const container = document.createElement("div");
+        container.style.padding = "4px";
+        container.style.borderRadius = "4px";
+        container.style.display = "flex";
+        container.style.gap = "10px";
 
-      // Logo TheCode
-      const logo = document.createElement("img");
-      logo.src = browser.runtime.getURL("images/128.png");
-      logo.style.width = "18px";
-      logo.style.height = "18px";
-      logo.style.objectFit = "contain";
+        // Logo TheCode
+        const logo = document.createElement("img");
+        logo.src = browser.runtime.getURL("images/128.png");
+        logo.style.width = "18px";
+        logo.style.height = "18px";
+        logo.style.objectFit = "contain";
 
-      // ➤  AUCUNE CLEF DISPONIBLE
-      if (!response || response.error) {
-        const noKey = document.createElement("div");
-        noKey.innerText = "Aucune clef n'est renseignée. Cliquer pour rentrer une clef";
-        noKey.style.color = "#eaeaeaff";
-        noKey.style.cursor = "pointer";
-        noKey.style.fontFamily = "font-family";
-        noKey.style.fontSize = "14px";
-        noKey.style.margin = "auto";
+        // ➤  AUCUNE CLEF DISPONIBLE
+        if (!response || response.error) {
+          const noKey = document.createElement("div");
+          noKey.innerText = "Aucune clef n'est renseignée. Cliquer pour rentrer une clef";
+          noKey.style.color = "#eaeaeaff";
+          noKey.style.cursor = "pointer";
+          noKey.style.fontFamily = "font-family";
+          noKey.style.fontSize = "14px";
+          noKey.style.margin = "auto";
+          container.style.cursor = "pointer";
+          container.appendChild(logo);
+          container.appendChild(noKey);
+          menu.appendChild(container);
+
+          container.addEventListener("mouseover", () => {
+            container.style.background = "#427ee7";
+          });
+          container.addEventListener("mouseout", () => {
+            container.style.background = "unset";
+          });
+          container.addEventListener("mousedown", (e) => {
+            e.preventDefault();
+          });
+          container.addEventListener("click", (e) => {
+            e.stopPropagation();
+            browser.runtime.sendMessage({ action: "openPopup" });
+            removeMenu(input);
+          });
+
+          // Disparition quand input perd le focus
+          input.addEventListener(
+            "blur",
+            () => {
+              setTimeout(() => removeMenu(input), 150);
+            },
+            { once: true },
+          );
+          return;
+        }
         container.style.cursor = "pointer";
-        container.appendChild(logo);
-        container.appendChild(noKey);
-        menu.appendChild(container);
+
+        // Mot de passe cliquable
+        const pwdText = document.createElement("span");
+        pwdText.innerText = response.password;
+        pwdText.style.flexGrow = "1";
+        pwdText.style.margin = "auto";
+        pwdText.style.whiteSpace = "nowrap";
+        pwdText.style.cursor = "pointer";
+        pwdText.style.fontFamily = "font-family";
+        pwdText.style.color = "white";
+        pwdText.style.fontSize = "14px";
+
+        container.addEventListener("click", (e) => {
+          e.stopPropagation();
+          input.value = response.password;
+          input.dispatchEvent(new Event("input", { bubbles: true }));
+          input.dispatchEvent(new Event("change", { bubbles: true }));
+
+          // Le carnet connait deja ce site : le reproposer serait du bruit.
+          if (response.known) {
+            removeMenu(input);
+            return;
+          }
+          offerToSave(menu, input);
+        });
 
         container.addEventListener("mouseover", () => {
           container.style.background = "#427ee7";
@@ -71,132 +130,81 @@ if (typeof browser === "undefined") {
         container.addEventListener("mouseout", () => {
           container.style.background = "unset";
         });
-        container.addEventListener("mousedown", (e) => {
-          e.preventDefault();
+
+        // Bouton copier
+        const copyBtn = document.createElement("img");
+        copyBtn.src = browser.runtime.getURL("images/copy.svg");
+        copyBtn.style.height = "22px";
+        copyBtn.style.objectFit = "contain";
+        copyBtn.style.background = "transparent";
+        copyBtn.style.cursor = "pointer";
+        copyBtn.style.border = "none";
+        copyBtn.style.padding = "3px";
+        copyBtn.style.borderRadius = "4px";
+        copyBtn.style.margin = "auto";
+
+        // POPUP + BACKGROUND
+        let popup;
+        function showCopiedPopup() {
+          popup?.remove();
+
+          // Popup
+          popup = document.createElement("div");
+          popup.innerText = "Mot de passe copié";
+          popup.style.fontSize = "14px";
+          popup.style.position = "fixed";
+          popup.style.bottom = "20px";
+          popup.style.left = "50%";
+          popup.style.transform = "translate(-50%)";
+          popup.style.padding = "14px 22px";
+          popup.style.fontFamily = "system-ui";
+          popup.style.color = "white";
+          popup.style.fontSize = "15px";
+          popup.style.zIndex = 2147483647;
+          popup.style.background = "rgba(0,0,0,0.5)";
+          popup.style.borderRadius = "4px";
+          popup.style.boxShadow = "0px 2px 6px rgba(0,0,0,0.2)";
+
+          document.body.appendChild(popup);
+
+          // Fade out + suppression après 1s
+          setTimeout(() => {
+            setTimeout(() => popup.remove(), 1500);
+          }, 50);
+        }
+
+        copyBtn.addEventListener("mouseover", () => {
+          copyBtn.style.background = "rgba(0,0,0,0.3)";
         });
-        container.addEventListener("click", (e) => {
-          e.stopPropagation();
-          browser.runtime.sendMessage({ action: "openPopup" });
-          removeMenu(input);
+        copyBtn.addEventListener("mouseout", () => {
+          copyBtn.style.background = "transparent";
         });
 
-        // Disparition quand input perd le focus
+        copyBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          navigator.clipboard.writeText(response.password);
+          showCopiedPopup();
+        });
+
+        // Assemblage du menu
+        container.appendChild(logo);
+        container.appendChild(pwdText);
+        menu.appendChild(container);
+        menu.appendChild(copyBtn);
+
+        // Disparition quand input perd le focus — sauf pendant la question :
+        // cliquer « Oui » fait justement perdre le focus au champ.
         input.addEventListener(
           "blur",
           () => {
-            setTimeout(() => removeMenu(input), 150);
+            setTimeout(() => {
+              if (!input.__pwAsking) removeMenu(input);
+            }, 150);
           },
           { once: true },
         );
-        return;
-      }
-      container.style.cursor = "pointer";
-
-      // Mot de passe cliquable
-      const pwdText = document.createElement("span");
-      pwdText.innerText = response.password;
-      pwdText.style.flexGrow = "1";
-      pwdText.style.margin = "auto";
-      pwdText.style.whiteSpace = "nowrap";
-      pwdText.style.cursor = "pointer";
-      pwdText.style.fontFamily = "font-family";
-      pwdText.style.color = "white";
-      pwdText.style.fontSize = "14px";
-
-      container.addEventListener("click", (e) => {
-        e.stopPropagation();
-        input.value = response.password;
-        input.dispatchEvent(new Event("input", { bubbles: true }));
-        input.dispatchEvent(new Event("change", { bubbles: true }));
-
-        // Le carnet connait deja ce site : le reproposer serait du bruit.
-        if (response.known) {
-          removeMenu(input);
-          return;
-        }
-        offerToSave(menu, input);
-      });
-
-      container.addEventListener("mouseover", () => {
-        container.style.background = "#427ee7";
-      });
-      container.addEventListener("mouseout", () => {
-        container.style.background = "unset";
-      });
-
-      // Bouton copier
-      const copyBtn = document.createElement("img");
-      copyBtn.src = browser.runtime.getURL("images/copy.svg");
-      copyBtn.style.height = "22px";
-      copyBtn.style.objectFit = "contain";
-      copyBtn.style.background = "transparent";
-      copyBtn.style.cursor = "pointer";
-      copyBtn.style.border = "none";
-      copyBtn.style.padding = "3px";
-      copyBtn.style.borderRadius = "4px";
-      copyBtn.style.margin = "auto";
-
-      // POPUP + BACKGROUND
-      let popup;
-      function showCopiedPopup() {
-        popup?.remove();
-
-        // Popup
-        popup = document.createElement("div");
-        popup.innerText = "Mot de passe copié";
-        popup.style.fontSize = "14px";
-        popup.style.position = "fixed";
-        popup.style.bottom = "20px";
-        popup.style.left = "50%";
-        popup.style.transform = "translate(-50%)";
-        popup.style.padding = "14px 22px";
-        popup.style.fontFamily = "system-ui";
-        popup.style.color = "white";
-        popup.style.fontSize = "15px";
-        popup.style.zIndex = 2147483647;
-        popup.style.background = "rgba(0,0,0,0.5)";
-        popup.style.borderRadius = "4px";
-        popup.style.boxShadow = "0px 2px 6px rgba(0,0,0,0.2)";
-
-        document.body.appendChild(popup);
-
-        // Fade out + suppression après 1s
-        setTimeout(() => {
-          setTimeout(() => popup.remove(), 1500);
-        }, 50);
-      }
-
-      copyBtn.addEventListener("mouseover", () => {
-        copyBtn.style.background = "rgba(0,0,0,0.3)";
-      });
-      copyBtn.addEventListener("mouseout", () => {
-        copyBtn.style.background = "transparent";
-      });
-
-      copyBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        navigator.clipboard.writeText(response.password);
-        showCopiedPopup();
-      });
-
-      // Assemblage du menu
-      container.appendChild(logo);
-      container.appendChild(pwdText);
-      menu.appendChild(container);
-      menu.appendChild(copyBtn);
-
-      // Disparition quand input perd le focus — sauf pendant la question :
-      // cliquer « Oui » fait justement perdre le focus au champ.
-      input.addEventListener(
-        "blur",
-        () => {
-          setTimeout(() => {
-            if (!input.__pwAsking) removeMenu(input);
-          }, 150);
-        },
-        { once: true },
-      );
-    });
+      },
+    );
   }
 
   /**
