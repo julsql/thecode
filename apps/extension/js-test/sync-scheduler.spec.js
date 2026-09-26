@@ -164,10 +164,19 @@ function loadWorker(storage = {}) {
 const syncCalls = () =>
   global.fetch.mock.calls.filter(([url]) => String(url).startsWith(SESSION.endpoint));
 
-/** Attend une condition pendant que le chiffrement reel avance. */
-async function until(cond) {
-  for (let i = 0; i < 20000 && !cond(); i += 1) {
+/**
+ * Attend une condition pendant que le chiffrement reel avance.
+ *
+ * Borne en temps reel (hrtime n'est pas simule) et non en nombre de tours : le
+ * PBKDF2 a 600 000 iterations tourne hors de la boucle d'evenements, et sur un
+ * runner de CI plus lent un nombre fixe de tours finissait avant lui.
+ */
+async function until(cond, timeoutMs = 30000) {
+  const start = process.hrtime.bigint();
+  const limit = BigInt(timeoutMs) * 1000000n;
+  while (!cond() && process.hrtime.bigint() - start < limit) {
     await new Promise((r) => setImmediate(r));
+    await jest.advanceTimersByTimeAsync(0);
   }
 }
 
@@ -181,6 +190,9 @@ async function settle(ms) {
 }
 
 describe("synchronisation automatique dans le service worker", () => {
+  // Chiffrement reel : laisse de la marge aux runners lents.
+  jest.setTimeout(60000);
+
   beforeEach(() => {
     jest.useFakeTimers({ doNotFake: ["setImmediate", "nextTick", "queueMicrotask"] });
     global.fetch = jest.fn(() => Promise.reject(new Error("coupure")));
