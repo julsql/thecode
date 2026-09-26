@@ -6,7 +6,7 @@
  * ou une erreur de cablage passerait inapercue (mauvais parametre transmis,
  * mot de passe affiche en clair, champ non reactif).
  */
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import { createRouter, createMemoryHistory, type Router } from "vue-router";
 import { readFileSync } from "node:fs";
@@ -592,4 +592,106 @@ describe("annonce du passage à la v2", () => {
       Storage.prototype.getItem = original;
     }
   });
+});
+
+describe("synchronisation automatique", () => {
+  const ENDPOINT = "https://sync.test";
+  let fetchMock: ReturnType<typeof vi.fn>;
+  const vaultCalls = () =>
+    fetchMock.mock.calls.filter(([url]) => String(url).startsWith(`${ENDPOINT}/v1/vault`));
+
+  async function signIn() {
+    const { saveSession } = await import("@/sync");
+    saveSession({ endpoint: ENDPOINT, accessToken: "a", refreshToken: "r" });
+  }
+
+  beforeEach(async () => {
+    localStorage.clear();
+    (await import("@/autoSync")).resetAutoSyncForTests();
+    // Service injoignable : l'échec doit rester une ligne discrète.
+    fetchMock = vi.fn(async (url: string) => {
+      if (String(url).startsWith(ENDPOINT)) throw new TypeError("coupure");
+      return new Response("", { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it("synchronise 2 s après un enregistrement et signale l'échec sans alerte", async () => {
+    await signIn();
+    const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
+    const wrapper = await mountGenerate();
+    await generateFor(wrapper, "example.com");
+
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    await wrapper.find("#saveEntry").trigger("click");
+    await vi.advanceTimersByTimeAsync(1999);
+    expect(vaultCalls()).toHaveLength(0);
+    await vi.advanceTimersByTimeAsync(1);
+    vi.useRealTimers();
+
+    await vi.waitFor(() => expect(vaultCalls().length).toBeGreaterThan(0), { timeout: 10000 });
+    await vi.waitFor(() =>
+      expect(wrapper.find(".sync-auto-status").text()).toContain("service injoignable"),
+    );
+    expect(alert).not.toHaveBeenCalled();
+  }, 30000);
+
+  it("synchronise après un changement de réglage par défaut", async () => {
+    await signIn();
+    const wrapper = await mountGenerate();
+    await wrapper.find("#id_clef").setValue(sampleKey);
+
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    await wrapper.find("#id_longueur").setValue(27);
+    await vi.advanceTimersByTimeAsync(2000);
+    vi.useRealTimers();
+
+    await vi.waitFor(() => expect(vaultCalls().length).toBeGreaterThan(0), { timeout: 10000 });
+  }, 30000);
+
+  it("ne synchronise rien sans clef maîtresse", async () => {
+    await signIn();
+    const wrapper = await mountGenerate();
+
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    await wrapper.find("#id_longueur").setValue(27);
+    await vi.advanceTimersByTimeAsync(5000);
+
+    expect(vaultCalls()).toHaveLength(0);
+  });
+
+  it("ne synchronise rien sans session", async () => {
+    const wrapper = await mountGenerate();
+    await wrapper.find("#id_clef").setValue(sampleKey);
+    await wrapper.find("#id_clef").trigger("change");
+
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    await wrapper.find("#id_longueur").setValue(27);
+    await vi.advanceTimersByTimeAsync(5000);
+
+    const calls = fetchMock.mock.calls.filter(([url]) => String(url).startsWith(ENDPOINT));
+    expect(calls).toHaveLength(0);
+  });
+
+  it("synchronise une fois la clef saisie, pas plus d'une fois par 30 s", async () => {
+    await signIn();
+    const wrapper = await mountGenerate();
+    await wrapper.find("#id_clef").setValue(sampleKey);
+
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    await wrapper.find("#id_clef").trigger("change");
+    await vi.advanceTimersByTimeAsync(2000);
+    vi.useRealTimers();
+    await vi.waitFor(() => expect(vaultCalls()).toHaveLength(1), { timeout: 10000 });
+
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    await wrapper.find("#id_clef").trigger("change");
+    await vi.advanceTimersByTimeAsync(5000);
+    vi.useRealTimers();
+    expect(vaultCalls()).toHaveLength(1);
+  }, 30000);
 });

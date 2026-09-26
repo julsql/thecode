@@ -13,6 +13,9 @@
              du message n'est pas annoncée par tous les lecteurs d'écran. -->
         <p class="hint status" role="status" aria-live="polite">{{ status }}</p>
         <p class="error" role="alert">{{ error }}</p>
+        <p v-if="syncConnected && lastSyncFailure" class="hint sync-auto-status">
+          {{ t(`sync_auto_failed_${lastSyncFailure}`) }}
+        </p>
 
         <!-- Première ouverture : création obligatoire du mot de passe. -->
         <form v-if="view === 'setup'" novalidate @submit.prevent="onCreate">
@@ -266,6 +269,7 @@ import { useI18n } from "@/i18n";
 import type { TranslationKey } from "@/i18n";
 import { isPaidPlan, refreshPlan } from "@/account";
 import { loadSession } from "@/sync";
+import { lastSyncFailure, scheduleAutoSync, useAutoSync } from "@/autoSync";
 import { liveEntries, loadVault, saveVault, tombstoneEntry, type VaultEntry } from "@/vault";
 import { changeLock, createLock, forgetLock, hasLock, LockError, verifyLock } from "@/vaultLock";
 import { applyRenewal, proposeRenewal, type RenewProposal } from "@/renew";
@@ -308,6 +312,13 @@ export default defineComponent({
     const clef = ref("");
     const pending = ref<RenewProposal | null>(null);
     const renewAllowed = ref(isPaidPlan(loadSession()?.plan));
+    const syncConnected = Boolean(loadSession());
+
+    // Synchronisation automatique : la clef maîtresse n'est saisie ici que
+    // pour renouveler ; sans elle, rien ne part.
+    useAutoSync(clef, () => {
+      if (view.value === "unlocked") refreshEntries();
+    });
 
     const heading = ref<HTMLElement | null>(null);
     const unlockInput = ref<HTMLInputElement | null>(null);
@@ -485,7 +496,10 @@ export default defineComponent({
       const id = selectedId.value;
       if (!id) return;
       const vault = loadVault();
-      if (tombstoneEntry(vault, id)) saveVault(vault);
+      if (tombstoneEntry(vault, id)) {
+        saveVault(vault);
+        scheduleAutoSync();
+      }
       confirmingDelete.value = false;
       status.value = t("vault_deleted");
       refreshEntries();
@@ -518,6 +532,7 @@ export default defineComponent({
       pending.value = null;
       refreshEntries();
       if (entry) {
+        scheduleAutoSync();
         status.value = t("vault_renewed").replace("{n}", String(entry.counter));
       }
     }
@@ -556,6 +571,8 @@ export default defineComponent({
       clef,
       pending,
       renewAllowed,
+      syncConnected,
+      lastSyncFailure,
       heading,
       unlockInput,
       renewConfirm,
