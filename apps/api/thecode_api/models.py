@@ -10,6 +10,7 @@ d'entrées d'un compte et la fréquence de ses synchronisations.
 
 from __future__ import annotations
 
+import os
 import uuid
 from datetime import UTC, datetime
 
@@ -38,6 +39,15 @@ class Base(DeclarativeBase):
     pass
 
 
+#: Taille du sel de dérivation de chaque compte (shared/spec/vault-sync.md).
+KDF_SALT_BYTES = 16
+
+
+def new_kdf_salt() -> bytes:
+    """Tire le sel de dérivation d'un nouveau compte."""
+    return os.urandom(KDF_SALT_BYTES)
+
+
 class Account(Base):
     """Un compte de synchronisation.
 
@@ -64,6 +74,16 @@ class Account(Base):
     #: Compteur monotone : le client demande ce qui a changé depuis sa dernière
     #: révision, plutôt que de tout retélécharger.
     revision: Mapped[int] = mapped_column(BigInteger, default=0)
+
+    #: Sel de dérivation de la clef de synchronisation, tiré à la création du
+    #: compte et jamais modifié : en changer rendrait le carnet illisible.
+    #:
+    #: Pas un secret — il est rendu au client à chaque connexion. Il rend
+    #: seulement la clef propre au compte : sans lui, une même clef maîtresse
+    #: donnerait la même clef partout, et une table précalculée vaudrait pour
+    #: tous les comptes. Généré ici, au niveau du modèle, pour qu'aucun chemin
+    #: de création (inscription, Google, Apple) ne puisse l'oublier.
+    kdf_salt: Mapped[bytes] = mapped_column(LargeBinary(KDF_SALT_BYTES), default=new_kdf_salt)
 
     plan: Mapped[str] = mapped_column(String(32), default="free")
     subscription_status: Mapped[str] = mapped_column(String(32), default="active")

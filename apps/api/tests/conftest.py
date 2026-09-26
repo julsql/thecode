@@ -13,10 +13,12 @@ from __future__ import annotations
 
 import os
 import uuid
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, text
+from sqlalchemy.engine import make_url
 from sqlalchemy.orm import sessionmaker
 
 import thecode_api
@@ -179,3 +181,39 @@ def sent_emails(monkeypatch):
     monkeypatch.setattr(auth_routes, "send_password_reset_email", capture)
     monkeypatch.setattr(account_routes, "send_email_change_email", capture)
     return sent
+
+
+@pytest.fixture
+def fresh_url(postgres_url, monkeypatch):
+    """Une base neuve et vide, pour dérouler les migrations."""
+    name = f"migr_{uuid.uuid4().hex[:8]}"
+    admin = create_engine(postgres_url, isolation_level="AUTOCOMMIT")
+    with admin.connect() as connection:
+        connection.execute(text(f'CREATE DATABASE "{name}"'))
+    url = make_url(postgres_url).set(database=name)
+    rendered = url.render_as_string(hide_password=False)
+    monkeypatch.setenv("THECODE_DATABASE_URL", rendered)
+    # `migrations/env.py` lit la vraie configuration : elle doit passer
+    # ses propres contrôles de démarrage.
+    monkeypatch.setenv("THECODE_REGISTRATION_MODE", "open")
+    monkeypatch.setenv("THECODE_ENVIRONMENT", "test")
+    yield rendered
+    with admin.connect() as connection:
+        connection.execute(text(f'DROP DATABASE "{name}" WITH (FORCE)'))
+    admin.dispose()
+
+
+@pytest.fixture
+def alembic_config():
+    """Configuration d'Alembic pointant les migrations du service.
+
+    Sans fichier : `env.py` appliquerait sinon la configuration des journaux
+    d'`alembic.ini`, qui coupe ceux déjà créés par les autres tests.
+    """
+    from alembic.config import Config
+
+    config = Config()
+    config.set_main_option(
+        "script_location", str(Path(__file__).resolve().parent.parent / "migrations")
+    )
+    return config

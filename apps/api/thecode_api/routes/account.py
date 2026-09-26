@@ -235,6 +235,9 @@ def export_account(
             # c'est lui qui relie cette personne à ses factures.
             "stripe_customer_id": account.stripe_customer_id,
             "revision": account.revision,
+            # Le sel sans lequel la clef maîtresse ne suffit pas à relire le
+            # carnet exporté ci-dessous.
+            "kdf_salt": b64encode(account.kdf_salt),
         },
         "devices": [
             {

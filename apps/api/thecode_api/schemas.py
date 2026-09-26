@@ -68,6 +68,10 @@ class TokenResponse(BaseModel):
     refresh_token: str
     token_type: str = "bearer"
     expires_in: int
+    #: Sel de dérivation du compte, en base64url (shared/spec/vault-sync.md).
+    #: Rendu avec les jetons : le client en a besoin pour chiffrer, et le
+    #: connaît ainsi dès la connexion.
+    kdf_salt: str
 
 
 class EntryPayload(BaseModel):
@@ -148,6 +152,8 @@ class AccountResponse(BaseModel):
     plan: str
     subscription_status: str
     revision: int
+    #: Sel de dérivation du compte, en base64url.
+    kdf_salt: str
     entry_count: int
     max_entries: int
     #: Nul tant que l'adresse n'est pas confirmée.
