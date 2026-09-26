@@ -37,8 +37,15 @@ comparaison se fait en temps constant quand la plateforme le permet.
 
 ## Session
 
-Déverrouillé jusqu'à la sortie de l'écran carnet, la mise en arrière-plan de
-l'app ou la fermeture de la popup / de l'onglet. Pas de déverrouillage mémorisé.
+Même fenêtre de grâce que la clef : **3 minutes**. Le carnet reste déverrouillé
+tant qu'on y est ; quitter l'écran, passer l'app en arrière-plan, perdre le focus
+ou fermer l'onglet fait courir la fenêtre. Revenu dans les 3 minutes, le carnet
+est toujours ouvert ; au-delà, il redemande l'authentification.
+
+L'instant de sortie est retenu hors de l'écran (préférences de l'app, stockage de
+session du navigateur) pour survivre à la fermeture de l'écran carnet. Il n'est
+qu'un horodatage : aucun secret n'y est stocké. « Verrouiller » et « Mot de passe
+oublié » l'effacent : le carnet se referme aussitôt.
 
 ## Oubli
 
