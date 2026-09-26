@@ -331,6 +331,15 @@ describe("page du compte", () => {
   });
 
   describe("Apple", () => {
+    /**
+     * Le bouton n'apparaît qu'une fois le script Apple chargé et le nonce
+     * haché : deux étapes asynchrones qu'on attend au lieu de compter des tours.
+     */
+    async function appleButton(w: Awaited<ReturnType<typeof mountAccount>>) {
+      await vi.waitFor(() => expect(button(w, "Se connecter avec Apple")).toBeDefined());
+      return button(w, "Se connecter avec Apple")!;
+    }
+
     const appleOn = { appleEnabled: true, appleWebClientId: "fr.julsql.thecode.web" };
 
     it("cache le bouton quand le service n'annonce pas Apple", async () => {
@@ -370,9 +379,15 @@ describe("page du compte", () => {
       const apple = fakeApple();
       const service = fakeService({}, appleOn);
       const wrapper = await mountAccount();
+      // Le nonce est haché par WebCrypto, de façon asynchrone : on attend
+      // qu'Apple soit initialisé plutôt que de compter sur un nombre de tours.
+      await vi.waitFor(() => expect(apple.inits.length).toBeGreaterThan(0));
       const init = apple.inits[0];
 
-      await button(wrapper, "Se connecter avec Apple")!.trigger("click");
+      await (await appleButton(wrapper)).trigger("click");
+      await vi.waitFor(() =>
+        expect(service.calls.some((c) => c.url.endsWith("/v1/auth/apple"))).toBe(true),
+      );
       await flush();
 
       const sent = service.calls.find((c) => c.url.endsWith("/v1/auth/apple"));
@@ -394,7 +409,7 @@ describe("page du compte", () => {
       const service = fakeService({}, appleOn);
       const wrapper = await mountAccount();
 
-      await button(wrapper, "Se connecter avec Apple")!.trigger("click");
+      await (await appleButton(wrapper)).trigger("click");
       await flush();
 
       expect(service.calls.some((c) => c.url.endsWith("/v1/auth/apple"))).toBe(false);
@@ -407,7 +422,7 @@ describe("page du compte", () => {
       const service = fakeService({}, appleOn);
       const wrapper = await mountAccount();
 
-      await button(wrapper, "Se connecter avec Apple")!.trigger("click");
+      await (await appleButton(wrapper)).trigger("click");
       await flush();
 
       expect(service.calls.some((c) => c.url.endsWith("/v1/auth/apple"))).toBe(false);
@@ -418,11 +433,10 @@ describe("page du compte", () => {
       const apple = fakeApple(() => Promise.reject({ error: "popup_closed_by_user" }));
       fakeService({}, appleOn);
       const wrapper = await mountAccount();
+      await vi.waitFor(() => expect(apple.inits.length).toBeGreaterThan(0));
 
-      await button(wrapper, "Se connecter avec Apple")!.trigger("click");
-      await flush();
-
-      expect(apple.inits).toHaveLength(2);
+      await (await appleButton(wrapper)).trigger("click");
+      await vi.waitFor(() => expect(apple.inits).toHaveLength(2));
       expect(apple.inits[1].nonce).not.toBe(apple.inits[0].nonce);
     });
   });
