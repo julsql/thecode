@@ -409,14 +409,13 @@ struct MainView: View {
                     }
                     .accessibilityLabel(L10n.t("Partager", "Share"))
 
-                    // Le carnet dit sur quels sites on a un compte et sous
-                    // quel identifiant : aussi sensible qu'un coffre de mots
-                    // de passe, donc jamais accessible sans authentification.
-                    Button(action: { if unlocked { showVault = true } }) {
+                    // Toujours accessible, clef verrouillée ou non : le carnet
+                    // a son propre verrou (voir vault-lock.md) et c'est lui qui
+                    // demande le déverrouillage. Un bouton grisé n'expliquait rien.
+                    Button(action: { showVault = true }) {
                         Image(systemName: "list.bullet.rectangle")
                     }
                     .accessibilityLabel(L10n.t("Carnet", "Vault"))
-                    .disabled(!unlocked)
 
                     // Le mode en cours se lit dans la barre, comme le thème :
                     // c'est lui qui décide quel mot de passe sort.
