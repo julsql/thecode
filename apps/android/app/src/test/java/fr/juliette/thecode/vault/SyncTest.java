@@ -13,6 +13,7 @@ import org.junit.Test;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 public class SyncTest {
@@ -223,6 +224,42 @@ public class SyncTest {
         } catch (Sync.SyncException e) {
             assertTrue(tampered.sentBodies.isEmpty());
         }
+    }
+
+    @Test
+    public void anEntryUnderAnotherIdStopsTheWholeSync() throws Exception {
+        JSONObject vector = SyncInteropTest.vector();
+        JSONObject mismatch = null;
+        JSONArray rejected = vector.getJSONArray("rejected");
+        for (int i = 0; i < rejected.length(); i++) {
+            if ("id-mismatch".equals(rejected.getJSONObject(i).getString("name"))) {
+                mismatch = rejected.getJSONObject(i);
+            }
+        }
+        assertNotNull(mismatch);
+        FakeVaultServer tampered = new FakeVaultServer();
+        tampered.seed(mismatch.getJSONObject("row"));
+        Vault local = vaultWith("gitlab.com", "moi");
+        String before = local.toJson().toString();
+
+        Locale previous = Locale.getDefault();
+        try {
+            for (Locale locale : new Locale[] {Locale.FRANCE, Locale.US}) {
+                Locale.setDefault(locale);
+                try {
+                    new Sync(tampered).sync(local, vector.getString("masterKey"), CREDS);
+                    throw new AssertionError("une entrée rangée sous un autre id a été acceptée");
+                } catch (Sync.VaultTamperedException e) {
+                    assertEquals(locale == Locale.FRANCE
+                            ? Sync.VaultTamperedException.MESSAGE_FR
+                            : Sync.VaultTamperedException.MESSAGE_EN, e.getMessage());
+                }
+            }
+        } finally {
+            Locale.setDefault(previous);
+        }
+        assertTrue(tampered.sentBodies.isEmpty());
+        assertEquals(before, local.toJson().toString());
     }
 
     @Test

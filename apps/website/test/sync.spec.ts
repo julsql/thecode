@@ -5,7 +5,7 @@
  * être lisible par le CLI et l'extension, sinon la synchronisation entre
  * appareils ne veut rien dire.
  */
-import { describe, it, expect, beforeAll, beforeEach, vi } from "vitest";
+import { describe, it, expect, afterEach, beforeAll, beforeEach, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -27,6 +27,8 @@ import {
   encryptEntry,
   openSettings,
   syncVault,
+  VAULT_TAMPERED_MESSAGES,
+  VaultTamperedError,
 } from "@/sync";
 import { emptyVault, newEntry, type Vault } from "@/vault";
 
@@ -345,6 +347,42 @@ describe("synchronisation", () => {
 
     const merged = await syncVault(emptyVault(), syncVector.masterKey, SESSION);
     expect(merged.vault.entries[0]).toStrictEqual(syncVector.entry);
+  });
+
+  describe("entrée rangée sous un autre identifiant (id-mismatch)", () => {
+    const mismatch = (syncVector.rejected as Array<{ name: string; row: unknown }>).find(
+      (c) => c.name === "id-mismatch",
+    )!;
+
+    afterEach(() => window.history.replaceState(null, "", "/"));
+
+    it.each([
+      ["/fr/compte", VAULT_TAMPERED_MESSAGES.fr],
+      ["/en/account", VAULT_TAMPERED_MESSAGES.en],
+    ])("fait échouer toute la synchronisation (%s)", async (path, message) => {
+      window.history.replaceState(null, "", path);
+      const pushed: string[] = [];
+      vi.stubGlobal("fetch", (url: string, init?: RequestInit) => {
+        if (init?.body) pushed.push(String(init.body));
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve(
+              init?.body ? { revision: 1, accepted: 1 } : { revision: 0, entries: [mismatch.row] },
+            ),
+        } as Response);
+      });
+      const local = vaultWith("gitlab.com", "moi");
+      const before = JSON.parse(JSON.stringify(local));
+
+      const run = syncVault(local, syncVector.masterKey, SESSION);
+
+      await expect(run).rejects.toThrow(VaultTamperedError);
+      await expect(run).rejects.toThrow(message);
+      expect(pushed).toHaveLength(0);
+      expect(local).toStrictEqual(before);
+    });
   });
 
   it("relit le sel du compte sur /v1/auth/me quand la session ne l'a pas", async () => {

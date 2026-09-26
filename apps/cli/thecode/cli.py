@@ -16,8 +16,11 @@ from .sync import (
     SETTINGS_IGNORED,
     SETTINGS_PULLED,
     SETTINGS_PUSHED,
+    TAMPERED_EN,
+    TAMPERED_FR,
     Credentials,
     SyncError,
+    VaultTamperedError,
     is_paid_plan,
     sync_settings,
 )
@@ -464,8 +467,10 @@ def main(argv: list[str] | None = None) -> int:
         try:
             merged, conflicts, local_only, creds = sync_vault(vault_data, args.password, creds)
         except (SyncError, TransferError) as exc:
+            detail = _t(TAMPERED_FR, TAMPERED_EN) if isinstance(exc, VaultTamperedError) else exc
             print(
-                _t(f"Échec de synchronisation : {exc}", f"Sync failed: {exc}"), file=sys.stderr
+                _t(f"Échec de synchronisation : {detail}", f"Sync failed: {detail}"),
+                file=sys.stderr,
             )
             return 1
 

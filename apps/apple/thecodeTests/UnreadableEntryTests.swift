@@ -213,7 +213,6 @@ struct UnreadableEntryTests {
         let key = try Sync.deriveKey(
             masterKey: "clef", kdfSalt: #require(credentials.decodedKdfSalt))
         let good = VaultEntry(siteKey: "google.com")
-        let other = VaultEntry(siteKey: "github.com")
         func row(_ id: String, _ plain: Data) throws -> [String: Any] {
             let sealed = try Transfer.seal(plain, with: key, aad: Sync.entryAAD(id))
             return [
@@ -224,8 +223,6 @@ struct UnreadableEntryTests {
         let server = FrozenServer(rows: [
             try row(good.id, JSONEncoder().encode(good)),
             try row("abimee", Data("{\"id\": \"abimee\"}".utf8)),
-            // Bonne AAD pour la ligne, mais l'entrée dit un autre id.
-            try row("usurpee", JSONEncoder().encode(other)),
         ])
         let local = VaultEntry(siteKey: "gitlab.com")
 
@@ -236,7 +233,29 @@ struct UnreadableEntryTests {
         // L'entrée illisible n'est pas repoussée : le serveur la garde telle quelle.
         let pushed = await server.pushedIds
         #expect(!pushed.contains("abimee"))
-        #expect(!pushed.contains("usurpee"))
-        #expect(!pushed.contains(other.id))
+    }
+
+    @Test("Une entrée rangée sous un autre identifiant fait échouer toute la synchronisation")
+    func syncFailsOnAnEntryUnderAnotherId() async throws {
+        let key = try Sync.deriveKey(
+            masterKey: "clef", kdfSalt: #require(credentials.decodedKdfSalt))
+        let other = VaultEntry(siteKey: "github.com")
+        // Bonne AAD pour la ligne, mais l'entrée dit un autre id.
+        let sealed = try Transfer.seal(
+            JSONEncoder().encode(other), with: key, aad: Sync.entryAAD("usurpee"))
+        let server = FrozenServer(rows: [
+            [
+                "entry_id": "usurpee", "nonce": Base64URL.encode(sealed.nonce),
+                "blob": Base64URL.encode(sealed.blob), "deleted": false,
+            ]
+        ])
+
+        await #expect(throws: SyncError.vaultTampered) {
+            _ = try await Sync(transport: server)
+                .sync(
+                    Vault(entries: [VaultEntry(siteKey: "gitlab.com")]), masterKey: "clef",
+                    credentials: credentials)
+        }
+        #expect(await server.pushedIds.isEmpty)
     }
 }

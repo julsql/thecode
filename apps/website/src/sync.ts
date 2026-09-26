@@ -35,6 +35,25 @@ export class SyncError extends Error {
   }
 }
 
+export const VAULT_TAMPERED_MESSAGES = {
+  fr: "Le carnet reçu du serveur a été modifié : synchronisation interrompue, rien n'a été écrit.",
+  en: "The vault received from the server was tampered with: sync stopped, nothing was written.",
+} as const;
+
+/**
+ * Une ligne déchiffrée ne porte pas l'identifiant sous lequel elle est rangée.
+ * Seule une altération côté serveur y mène : toute la synchronisation échoue,
+ * comme pour un tag GCM invalide, plutôt que d'écarter l'entrée en silence
+ * (shared/spec/vault-sync.md).
+ */
+export class VaultTamperedError extends SyncError {
+  constructor() {
+    // La langue du site est le premier segment de l'URL (/fr/…, /en/…).
+    const fr = /^\/fr(\/|$)/.test(globalThis.location?.pathname ?? "");
+    super(VAULT_TAMPERED_MESSAGES[fr ? "fr" : "en"]);
+  }
+}
+
 export interface Session {
   endpoint: string;
   accessToken: string;
@@ -433,7 +452,7 @@ export async function decryptEntry(
   // en plus dire la même chose d'elle-même, pour ne jamais être fusionnée
   // sous un autre identifiant que le sien.
   if (!entry || typeof entry !== "object" || (entry as VaultEntry).id !== row.entry_id) {
-    throw new SyncError("Entrée incohérente : son identifiant ne correspond pas à la ligne.");
+    throw new VaultTamperedError();
   }
   return entry as VaultEntry;
 }

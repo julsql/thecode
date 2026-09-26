@@ -11,6 +11,7 @@ if (!global.crypto) global.crypto = webcrypto;
 const {
   syncVault,
   SyncError,
+  VaultTamperedError,
   deriveSyncBits,
   deriveSyncKey,
   decryptEntry,
@@ -196,6 +197,47 @@ describe("synchronisation", () => {
 
   it("expose une erreur dediee", () => {
     expect(new SyncError("x")).toBeInstanceOf(Error);
+  });
+
+  describe("entree rangee sous un autre identifiant (id-mismatch)", () => {
+    const mismatch = vector.rejected.find((c) => c.name === "id-mismatch");
+    let pushed;
+
+    beforeEach(() => {
+      pushed = [];
+      global.fetch = (url, init) => {
+        if (init?.body) pushed.push(init.body);
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve(
+              init?.body ? { revision: 1, accepted: 1 } : { revision: 0, entries: [mismatch.row] },
+            ),
+        });
+      };
+    });
+
+    afterEach(() => {
+      delete global.chrome;
+    });
+
+    it.each([
+      ["fr", /Le carnet reçu du serveur a été modifié/],
+      ["en-US", /The vault received from the server was tampered with/],
+    ])("fait echouer toute la synchronisation (%s)", async (lang, message) => {
+      global.chrome = { i18n: { getUILanguage: () => lang } };
+      const local = vaultWith("gitlab.com", "moi");
+      const before = JSON.parse(JSON.stringify(local));
+
+      const run = syncVault(local, vector.masterKey, SESSION);
+
+      await expect(run).rejects.toThrow(VaultTamperedError);
+      await expect(run).rejects.toThrow(message);
+      await expect(run).rejects.toMatchObject({ code: "vault-tampered" });
+      expect(pushed).toHaveLength(0);
+      expect(local).toStrictEqual(before);
+    });
   });
 
   it("relit le sel du compte sur /v1/auth/me quand la session ne l'a pas", async () => {

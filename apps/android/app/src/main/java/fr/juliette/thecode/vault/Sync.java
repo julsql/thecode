@@ -17,6 +17,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 import javax.crypto.SecretKey;
 
@@ -52,6 +53,30 @@ public final class Sync {
         public SyncException(int status, String message) {
             super(message);
             this.status = status;
+        }
+    }
+
+    /**
+     * Une ligne déchiffrée ne porte pas l'identifiant sous lequel elle est
+     * rangée. Seule une altération côté serveur y mène : toute la
+     * synchronisation échoue, comme pour un tag GCM invalide, plutôt que
+     * d'écarter l'entrée en silence (shared/spec/vault-sync.md).
+     */
+    public static final class VaultTamperedException extends SyncException {
+        static final String MESSAGE_FR = "Le carnet reçu du serveur a été modifié : "
+                + "synchronisation interrompue, rien n'a été écrit.";
+        static final String MESSAGE_EN = "The vault received from the server was tampered "
+                + "with: sync stopped, nothing was written.";
+
+        VaultTamperedException() {
+            super("fr".equals(Locale.getDefault().getLanguage()) ? MESSAGE_FR : MESSAGE_EN);
+        }
+    }
+
+    /** L'entrée déchiffrée ne porte pas l'{@code entry_id} de sa ligne. */
+    static final class EntryIdMismatchException extends GeneralSecurityException {
+        EntryIdMismatchException() {
+            super("Entrée incohérente : son identifiant ne correspond pas à la ligne.");
         }
     }
 
@@ -574,6 +599,8 @@ public final class Sync {
                 entry.deleted = entry.deleted || row.optBoolean("deleted", false);
                 remote.entries.add(entry);
             }
+        } catch (EntryIdMismatchException e) {
+            throw new VaultTamperedException();
         } catch (GeneralSecurityException e) {
             throw new SyncException("Déchiffrement impossible : la clef maîtresse n'est pas "
                     + "celle qui a servi à synchroniser ce carnet.");
@@ -599,8 +626,7 @@ public final class Sync {
                 Transfer.entryAad(entryId));
         JSONObject json = new JSONObject(new String(plain, StandardCharsets.UTF_8));
         if (!entryId.equals(json.optString("id", null))) {
-            throw new JSONException("Entrée incohérente : son identifiant ne correspond pas "
-                    + "à la ligne.");
+            throw new EntryIdMismatchException();
         }
         return VaultEntry.fromJson(json);
     }

@@ -151,4 +151,42 @@ struct SyncInteropTests {
                 blob: data(mismatch.row.blob), key: sharedKey)
         }
     }
+
+    @Test("Le cas id-mismatch arrête toute la synchronisation, sans rien pousser")
+    func idMismatchStopsTheWholeSync() async throws {
+        let vector = try vector()
+        let mismatch = try #require(vector.rejected.first { $0.name == "id-mismatch" })
+        let server = PullOnlyServer(row: [
+            "entry_id": try #require(mismatch.row.entryId), "nonce": mismatch.row.nonce,
+            "blob": mismatch.row.blob, "deleted": false,
+        ])
+        let credentials = SyncCredentials(
+            endpoint: "https://example.test/api", accessToken: "access-1",
+            refreshToken: "refresh-0", kdfSalt: vector.kdfSalt)
+        let local = Vault(entries: [VaultEntry(siteKey: "gitlab.com")])
+
+        await #expect(throws: SyncError.vaultTampered) {
+            _ = try await Sync(transport: server)
+                .sync(local, masterKey: vector.masterKey, credentials: credentials)
+        }
+        #expect(await server.posts == 0)
+    }
+}
+
+/// Rend une seule ligne au pull ; compte les poussées, qui ne doivent pas avoir lieu.
+private actor PullOnlyServer: SyncTransport {
+    let row: [String: Any]
+    private(set) var posts = 0
+
+    init(row: [String: Any]) { self.row = row }
+
+    func send(url: String, method: String, body: Data?, bearer: String?) async throws
+        -> SyncResponse
+    {
+        if method != "GET" { posts += 1 }
+        let body: [String: Any] =
+            method == "GET" ? ["revision": 1, "entries": [row]] : ["revision": 2, "accepted": 0]
+        return SyncResponse(
+            status: 200, body: (try? JSONSerialization.data(withJSONObject: body)) ?? Data())
+    }
 }

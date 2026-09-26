@@ -265,6 +265,55 @@ def test_a_blob_moved_to_another_entry_is_refused(server):
         sync(empty_vault(), "clef", CREDS)
 
 
+def test_an_entry_under_another_id_stops_the_whole_sync(server):
+    """Cas partagé ``id-mismatch`` : rien n'est poussé, le carnet local reste tel quel."""
+    vector = _vector()
+    case = next(c for c in vector["rejected"] if c["name"] == "id-mismatch")
+    server.kdf_salt = vector["kdfSalt"]
+    server.rows[case["row"]["entry_id"]] = case["row"]
+    local = vault_with("gitlab.com", "moi")
+    before = json.loads(json.dumps(local))
+
+    creds = Credentials(CREDS.endpoint, "access-1", "refresh-0", kdf_salt=vector["kdfSalt"])
+
+    with pytest.raises(sync_module.VaultTamperedError, match="modifié"):
+        sync(local, vector["masterKey"], creds)
+
+    assert server.sent == []
+    assert server.revision == 0
+    assert local == before
+
+
+@pytest.mark.parametrize(
+    ("lang", "expected"), [("fr_FR.UTF-8", "a été modifié"), ("en_US.UTF-8", "tampered with")]
+)
+def test_cli_sync_writes_nothing_when_an_entry_was_moved(
+    server, monkeypatch, tmp_path, capsys, lang, expected
+):
+    from thecode.cli import main
+    from thecode.vault import save
+
+    vector = _vector()
+    case = next(c for c in vector["rejected"] if c["name"] == "id-mismatch")
+    for var in ("LC_ALL", "LC_MESSAGES"):
+        monkeypatch.delenv(var, raising=False)
+    monkeypatch.setenv("LANG", lang)
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
+    Credentials(CREDS.endpoint, "access-1", "refresh-0", kdf_salt=vector["kdfSalt"]).save()
+    server.kdf_salt = vector["kdfSalt"]
+    server.rows[case["row"]["entry_id"]] = case["row"]
+    vault_path = tmp_path / "vault.json"
+    save(vault_with("gitlab.com", "moi"), vault_path)
+    before = vault_path.read_bytes()
+
+    code = main(["-p", vector["masterKey"], "--sync", "--vault", str(vault_path)])
+
+    assert code == 1
+    assert expected in capsys.readouterr().err
+    assert vault_path.read_bytes() == before
+    assert server.sent == []
+
+
 def test_settings_blob_is_not_readable_as_an_entry():
     key = sync_module.derive_sync_key("clef", bytes(16))
     entry = new_entry("google.com")

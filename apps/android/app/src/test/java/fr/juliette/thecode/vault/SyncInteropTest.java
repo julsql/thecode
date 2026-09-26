@@ -27,7 +27,7 @@ import javax.crypto.SecretKey;
  */
 public class SyncInteropTest {
 
-    private static JSONObject vector() throws Exception {
+    static JSONObject vector() throws Exception {
         try (InputStream in = SyncInteropTest.class.getClassLoader()
                 .getResourceAsStream("sync-row.json")) {
             assertTrue("sync-row.json absent", in != null);

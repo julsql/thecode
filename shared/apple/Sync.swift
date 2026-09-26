@@ -31,6 +31,17 @@ public struct SyncError: Error, Equatable {
         self.status = status
         self.message = message
     }
+
+    /// Une ligne déchiffrée ne porte pas l'identifiant sous lequel elle est
+    /// rangée : le carnet reçu a été altéré, la synchronisation s'arrête.
+    public static var vaultTampered: SyncError {
+        SyncError(
+            message: L10nSync.t(
+                "Le carnet reçu du serveur a été modifié : synchronisation interrompue, "
+                    + "rien n'a été écrit.",
+                "The vault received from the server was tampered with: sync stopped, "
+                    + "nothing was written."))
+    }
 }
 
 /// Jetons de session. Stockés à part du carnet, et jamais dans le carnet.
@@ -619,11 +630,16 @@ public struct Sync {
                             + "qui a servi à synchroniser ce carnet, ou le bloc a été altéré.",
                         "Cannot decrypt: this is not the master key that was used to sync "
                             + "this vault, or the block was altered."))
+            } catch EntryError.idMismatch {
+                // Un blob valide rangé sous un autre identifiant ne peut venir
+                // que d'une altération côté serveur : comme pour un tag
+                // invalide, toute la synchronisation échoue, rien n'est écrit
+                // ni poussé (shared/spec/vault-sync.md).
+                throw SyncError.vaultTampered
             } catch {
-                // Une entrée illisible, ou qui ne porte pas l'identifiant de
-                // sa ligne, est écartée, pas le carnet entier : elle reste
-                // telle quelle sur le serveur, qui ne retire rien de ce qu'on
-                // ne lui repousse pas.
+                // Une entrée illisible est écartée, pas le carnet entier : elle
+                // reste telle quelle sur le serveur, qui ne retire rien de ce
+                // qu'on ne lui repousse pas.
                 continue
             }
             // La pierre tombale du serveur fait foi même si l'entrée chiffrée

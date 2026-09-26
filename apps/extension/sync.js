@@ -24,6 +24,27 @@ const SYNC_SETTINGS_AAD = "thecode/settings/v2";
 class SyncError extends Error {}
 
 /**
+ * Une ligne dechiffree ne porte pas l'identifiant sous lequel elle est rangee.
+ * Seule une alteration cote serveur y mene : toute la synchronisation echoue,
+ * comme pour un tag GCM invalide, plutot que d'ecarter l'entree en silence
+ * (shared/spec/vault-sync.md).
+ */
+class VaultTamperedError extends SyncError {
+  constructor() {
+    super(vaultTamperedMessage());
+    this.code = "vault-tampered";
+  }
+}
+
+function vaultTamperedMessage() {
+  const i18n = (globalThis.browser || globalThis.chrome)?.i18n;
+  const lang = i18n?.getUILanguage?.() || globalThis.navigator?.language || "fr";
+  return lang.toLowerCase().startsWith("fr")
+    ? "Le carnet reçu du serveur a été modifié : synchronisation interrompue, rien n'a été écrit."
+    : "The vault received from the server was tampered with: sync stopped, nothing was written.";
+}
+
+/**
  * Session tiree d'une reponse de jeton. Le sel du compte y voyage : public,
  * il ne sert qu'a rendre la clef de synchronisation propre au compte.
  */
@@ -290,7 +311,7 @@ async function decryptEntry(row, key) {
   // en plus dire la meme chose d'elle-meme, pour ne jamais etre fusionnee
   // sous un autre identifiant que le sien.
   if (!entry || typeof entry !== "object" || entry.id !== row.entry_id) {
-    throw new SyncError("Entree incoherente : son identifiant ne correspond pas a la ligne.");
+    throw new VaultTamperedError();
   }
   return entry;
 }
@@ -435,6 +456,7 @@ if (typeof module !== "undefined") {
   module.exports = {
     SYNC_DEFAULT_ENDPOINT,
     SyncError,
+    VaultTamperedError,
     loadSession,
     saveSession,
     clearSession,

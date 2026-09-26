@@ -103,7 +103,14 @@ Au déchiffrement, le client :
 1. recalcule `aad` à partir de l'`entry_id` **de la ligne** ;
 2. déchiffre — un tag invalide (autre clef maîtresse, autre compte, blob
    déplacé sous un autre `entry_id`, blob altéré) est une erreur ;
-3. **rejette** l'entrée si son `id` n'est pas exactement `entry_id`.
+3. vérifie que l'`id` de l'entrée déchiffrée est exactement `entry_id`. Sinon,
+   comme pour un tag invalide, **toute la synchronisation échoue** : rien n'est
+   écrit dans le carnet local, rien n'est poussé, et l'utilisateur voit
+   « Le carnet reçu du serveur a été modifié : synchronisation interrompue,
+   rien n'a été écrit. » (EN : « The vault received from the server was
+   tampered with: sync stopped, nothing was written. »). On n'écarte pas
+   l'entrée en silence : un blob valide sous le mauvais identifiant trahit une
+   altération, et l'écarter la rendrait invisible.
 
 Les données associées lient le blob à sa ligne : sans elles, le serveur (ou
 quiconque écrit dans sa base) pourrait échanger les blobs de deux entrées, ou

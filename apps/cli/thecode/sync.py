@@ -265,13 +265,34 @@ def _encrypt_entry(entry: dict[str, Any], key: bytes) -> dict[str, str]:
     }
 
 
+#: Message d'une ligne dont l'entrée ne porte pas son ``entry_id`` (vault-sync.md).
+TAMPERED_FR = (
+    "Le carnet reçu du serveur a été modifié : synchronisation interrompue, "
+    "rien n'a été écrit."
+)
+TAMPERED_EN = (
+    "The vault received from the server was tampered with: sync stopped, nothing was written."
+)
+
+
+class VaultTamperedError(TransferError):
+    """Une ligne déchiffrée ne porte pas l'identifiant sous lequel elle est rangée.
+
+    Seule une altération côté serveur y mène : toute la synchronisation échoue,
+    comme pour un tag GCM invalide, plutôt que d'écarter l'entrée en silence.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(TAMPERED_FR)
+
+
 def _decrypt_entry(row: dict[str, str], key: bytes) -> dict[str, Any]:
     entry = _open(row, key, entry_aad(row["entry_id"]))
     # Les données associées lient déjà le blob à l'identifiant ; l'entrée doit
     # en plus dire la même chose d'elle-même, pour ne jamais être fusionnée
     # sous un autre identifiant que le sien.
     if not isinstance(entry, dict) or entry.get("id") != row["entry_id"]:
-        raise TransferError("Entrée incohérente : son identifiant ne correspond pas à la ligne.")
+        raise VaultTamperedError()
     return entry
 
 
