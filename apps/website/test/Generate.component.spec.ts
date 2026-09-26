@@ -630,7 +630,12 @@ describe("synchronisation automatique", () => {
 
   async function signIn() {
     const { saveSession } = await import("@/sync");
-    saveSession({ endpoint: ENDPOINT, accessToken: "a", refreshToken: "r" });
+    saveSession({
+      endpoint: ENDPOINT,
+      accessToken: "a",
+      refreshToken: "r",
+      kdfSalt: "0WveVfSRJyzta8UsTh5DFw",
+    });
   }
 
   beforeEach(async () => {

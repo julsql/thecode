@@ -5,11 +5,10 @@
  * être lisible par le CLI et l'extension, sinon la synchronisation entre
  * appareils ne veut rien dire.
  */
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { KDF_ITERATIONS, KDF_SALT, deriveTransferKey } from "@/transfer";
 import {
   clearSession,
   googleSignIn,
@@ -21,19 +20,26 @@ import {
   saveSession,
   signOutSession,
   SyncError,
+  SYNC_KDF_LABEL,
+  decryptEntry,
+  deriveSyncBits,
+  deriveSyncKey,
+  encryptEntry,
+  openSettings,
   syncVault,
 } from "@/sync";
 import { emptyVault, newEntry, type Vault } from "@/vault";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const vector = JSON.parse(readFileSync(join(here, "transfer-vector.json"), "utf8"));
 const syncVector = JSON.parse(readFileSync(join(here, "sync-row.json"), "utf8"));
 
 const SESSION = {
   endpoint: "https://example.test/api",
   accessToken: "a",
   refreshToken: "r",
+  kdfSalt: syncVector.kdfSalt as string,
 };
+const saltBytes = (text: string) => new Uint8Array(Buffer.from(text, "base64url"));
 
 /**
  * Serveur de carnet en mémoire, aux mêmes règles que l'API réelle.
@@ -89,33 +95,49 @@ function vaultWith(siteKey: string, login: string): Vault {
   return vault;
 }
 
-describe("clef de transfert", () => {
-  it("utilise le sel et le coût de la spécification partagée", () => {
-    // Un sel différent d'une implémentation à l'autre rendrait les carnets
-    // mutuellement illisibles, sans que rien ne le signale.
-    expect(KDF_SALT).toBe("thecode-transfer/v1");
-    expect(KDF_ITERATIONS).toBe(600000);
+describe("vecteurs de synchronisation v2 (sync-row.json)", () => {
+  let key: CryptoKey;
+  beforeAll(async () => {
+    key = await deriveSyncKey(syncVector.masterKey, saltBytes(syncVector.kdfSalt));
   });
 
-  it("déchiffre un payload produit par une autre implémentation", async () => {
-    const key = await deriveTransferKey(vector.masterKey);
+  it("dérive la même clef que les autres implémentations", async () => {
+    // Une étiquette ou un sel différent d'une implémentation à l'autre
+    // rendrait les carnets mutuellement illisibles, sans que rien ne le signale.
+    expect(SYNC_KDF_LABEL).toBe("thecode-sync/v2");
+    const bits = await deriveSyncBits(syncVector.masterKey, saltBytes(syncVector.kdfSalt));
+    expect(Buffer.from(bits).toString("hex")).toBe(syncVector.derivedSyncHex);
+  });
 
-    const raw = vector.payload.split(".");
-    const b64d = (t: string) => {
-      const s = t.replace(/-/g, "+").replace(/_/g, "/");
-      const bin = atob(s + "=".repeat((4 - (s.length % 4)) % 4));
-      return Uint8Array.from(bin, (c) => c.charCodeAt(0));
-    };
+  it("déchiffre la ligne de référence", async () => {
+    expect(await decryptEntry(syncVector.row, key)).toStrictEqual(syncVector.entry);
+  });
 
-    const plain = await crypto.subtle.decrypt(
-      { name: "AES-GCM", iv: b64d(raw[1]) },
-      key,
-      b64d(raw[2]),
+  it("ouvre les réglages de référence", async () => {
+    expect(await openSettings(syncVector.settings.sealed, key)).toStrictEqual(
+      syncVector.settings.value,
     );
+  });
 
-    // Le payload partagé est compressé : on vérifie que le déchiffrement
-    // aboutit, la décompression étant couverte côté CLI.
-    expect(new Uint8Array(plain).length).toBeGreaterThan(0);
+  it("chiffre une entrée que l'on sait relire, liée à son identifiant", async () => {
+    const row = await encryptEntry(syncVector.entry, key);
+    expect(row.entry_id).toBe(syncVector.entry.id);
+    expect(await decryptEntry(row, key)).toStrictEqual(syncVector.entry);
+    await expect(decryptEntry({ ...row, entry_id: "autre" }, key)).rejects.toThrow(SyncError);
+  });
+
+  it("couvre chaque cas refusé", () => {
+    expect(syncVector.rejected.length).toBeGreaterThan(0);
+  });
+
+  it.each(
+    (syncVector.rejected as Array<{ name: string; as: string; row: never }>).map((c) => [
+      c.name,
+      c,
+    ]),
+  )("refuse %s", async (_name, c) => {
+    const opened = c.as === "settings" ? openSettings(c.row, key) : decryptEntry(c.row, key);
+    await expect(opened).rejects.toThrow(SyncError);
   });
 });
 
@@ -324,6 +346,48 @@ describe("synchronisation", () => {
     const merged = await syncVault(emptyVault(), syncVector.masterKey, SESSION);
     expect(merged.vault.entries[0]).toStrictEqual(syncVector.entry);
   });
+
+  it("relit le sel du compte sur /v1/auth/me quand la session ne l'a pas", async () => {
+    const calls: string[] = [];
+    vi.stubGlobal("fetch", (url: string, init?: RequestInit) => {
+      calls.push(url);
+      if (url.endsWith("/v1/auth/me")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ plan: "free", kdf_salt: syncVector.kdfSalt }),
+        } as Response);
+      }
+      return server.fetchImpl(url, init);
+    });
+    const { kdfSalt, ...withoutSalt } = SESSION;
+
+    const result = await syncVault(vaultWith("google.com", "moi"), "clef", withoutSalt);
+
+    expect(calls[0]).toMatch(/\/v1\/auth\/me$/);
+    expect(result.session.kdfSalt).toBe(kdfSalt);
+  });
+
+  it.each([
+    ["absent", undefined],
+    ["trop court", "AAAA"],
+    ["pas du base64url", "!!!!!!!!!!!!!!!!!!!!!!"],
+  ])("ne synchronise pas sans sel valide (%s)", async (_name, salt) => {
+    vi.stubGlobal("fetch", (url: string, init?: RequestInit) =>
+      url.endsWith("/v1/auth/me")
+        ? Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () => Promise.resolve({ kdf_salt: salt }),
+          } as Response)
+        : server.fetchImpl(url, init),
+    );
+
+    await expect(
+      syncVault(vaultWith("google.com", "moi"), "clef", { ...SESSION, kdfSalt: salt }),
+    ).rejects.toThrow(/sel de dérivation/);
+    expect(server.sent).toHaveLength(0);
+  });
 });
 
 describe("inscription", () => {
@@ -347,7 +411,8 @@ describe("inscription", () => {
       return Promise.resolve({
         ok: true,
         status: 201,
-        json: () => Promise.resolve({ access_token: "a", refresh_token: "r" }),
+        json: () =>
+          Promise.resolve({ access_token: "a", refresh_token: "r", kdf_salt: syncVector.kdfSalt }),
       } as Response);
     });
 
@@ -368,6 +433,7 @@ describe("inscription", () => {
       endpoint: "https://example.test/api",
       accessToken: "a",
       refreshToken: "r",
+      kdfSalt: syncVector.kdfSalt,
     });
   });
 

@@ -6,7 +6,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import { createRouter, createMemoryHistory } from "vue-router";
 import Generate from "@/pages/Generate.vue";
-import { deriveTransferKey } from "@/transfer";
+import { pbkdf2Sync } from "node:crypto";
 import { clearSession, saveSession, syncSettings } from "@/sync";
 import {
   factorySettings,
@@ -18,7 +18,12 @@ import {
   type DefaultSettings,
 } from "@/settings";
 
-const SESSION = { endpoint: "https://example.test/api", accessToken: "a", refreshToken: "r" };
+const SESSION = {
+  endpoint: "https://example.test/api",
+  accessToken: "a",
+  refreshToken: "r",
+  kdfSalt: "0WveVfSRJyzta8UsTh5DFw",
+};
 const OLD = "2026-01-01T00:00:00Z";
 const NEW = "2026-02-01T00:00:00Z";
 
@@ -37,20 +42,40 @@ function settings(
 const b64 = (buf: ArrayBuffer | Uint8Array) =>
   Buffer.from(new Uint8Array(buf)).toString("base64url");
 
+/** Clef de synchronisation du compte de SESSION, dérivée indépendamment du code testé. */
+function syncKeyFor(masterKey: string) {
+  const salt = Buffer.concat([
+    Buffer.from("thecode-sync/v2"),
+    Buffer.from(SESSION.kdfSalt, "base64url"),
+  ]);
+  const raw = new Uint8Array(pbkdf2Sync(masterKey, salt, 600000, 32, "sha256"));
+  return crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["encrypt", "decrypt"]);
+}
+
+const SETTINGS_AAD = new TextEncoder().encode("thecode/settings/v2");
+
 async function encryptFor(value: unknown, masterKey: string) {
-  const key = await deriveTransferKey(masterKey);
+  const key = await syncKeyFor(masterKey);
   const nonce = crypto.getRandomValues(new Uint8Array(12));
   const plain = new TextEncoder().encode(JSON.stringify(value));
-  const cipher = await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce }, key, plain);
+  const cipher = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv: nonce, additionalData: SETTINGS_AAD },
+    key,
+    plain,
+  );
   return { nonce: b64(nonce), blob: b64(cipher) };
 }
 
 async function decryptWith(row: { nonce: string; blob: string }, masterKey: string) {
-  const key = await deriveTransferKey(masterKey);
+  const key = await syncKeyFor(masterKey);
   const plain = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv: Buffer.from(row.nonce, "base64url") },
+    {
+      name: "AES-GCM",
+      iv: new Uint8Array(Buffer.from(row.nonce, "base64url")),
+      additionalData: SETTINGS_AAD,
+    },
     key,
-    Buffer.from(row.blob, "base64url"),
+    new Uint8Array(Buffer.from(row.blob, "base64url")),
   );
   return JSON.parse(new TextDecoder().decode(plain));
 }

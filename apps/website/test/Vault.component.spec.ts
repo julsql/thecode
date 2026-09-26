@@ -53,7 +53,13 @@ function seed() {
 function signInAs(plan: string) {
   localStorage.setItem(
     "thecode.session",
-    JSON.stringify({ endpoint: "http://localhost:0", accessToken: "a", refreshToken: "r", plan }),
+    JSON.stringify({
+      endpoint: "http://localhost:0",
+      accessToken: "a",
+      refreshToken: "r",
+      plan,
+      kdfSalt: "0WveVfSRJyzta8UsTh5DFw",
+    }),
   );
 }
 
