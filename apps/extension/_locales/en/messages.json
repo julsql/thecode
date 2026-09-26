@@ -4,7 +4,7 @@
     "description": "The display name for the extension."
   },
   "extension_description": {
-    "message": "Generate secure, unique passwords for every site from a single secret key. No storage, no risk.",
+    "message": "Passwords computed from a single master key, never stored. Optional locked vault, end-to-end encrypted sync and autofill.",
     "description": "Description of what the extension does."
   },
   "v2_notice_title": {
@@ -66,7 +66,7 @@
     }
   },
   "sync_local_only": {
-    "message": ", $VALUE$ kept on this device (free plan limit)",
+    "message": ", $VALUE$ kept on this device (limit of this account)",
     "description": "Sync status in the popup.",
     "placeholders": {
       "value": {
@@ -188,11 +188,7 @@
     "description": "Popup."
   },
   "popup_renew_pitch": {
-    "message": "Renewing without changing your master key is part of the full plan.",
-    "description": "Popup."
-  },
-  "popup_unlock": {
-    "message": "Unlock",
+    "message": "Renewal is not enabled on this account.",
     "description": "Popup."
   },
   "popup_account_url": {
@@ -689,7 +685,7 @@
     "description": "Automatic sync failure, shown in the popup's sync area."
   },
   "sync_auto_failed_plan": {
-    "message": "Last sync: plan limit reached.",
+    "message": "Last sync: limit of this account reached.",
     "description": "Automatic sync failure, shown in the popup's sync area."
   },
   "sync_auto_failed_forbidden": {

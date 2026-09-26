@@ -4,7 +4,7 @@
     "description": "The display name for the extension."
   },
   "extension_description": {
-    "message": "Générez des mots de passe sécurisés et uniques pour chaque site à partir d'une seule clé secrète. Aucun stockage, zéro risque.\n",
+    "message": "Mots de passe calculés depuis une clef maîtresse, jamais stockés. Carnet verrouillé et synchro chiffrée de bout en bout, en option.",
     "description": "Description of what the extension does."
   },
   "v2_notice_title": {
@@ -66,7 +66,7 @@
     }
   },
   "sync_local_only": {
-    "message": ", $VALUE$ restée(s) sur cet appareil (plafond de l'offre gratuite)",
+    "message": ", $VALUE$ restée(s) sur cet appareil (limite de ce compte)",
     "description": "Sync status in the popup.",
     "placeholders": {
       "value": {
@@ -188,11 +188,7 @@
     "description": "Popup."
   },
   "popup_renew_pitch": {
-    "message": "Renouveler sans changer de clef maîtresse fait partie de l'offre complète.",
-    "description": "Popup."
-  },
-  "popup_unlock": {
-    "message": "Débloquer",
+    "message": "Le renouvellement n'est pas activé sur ce compte.",
     "description": "Popup."
   },
   "popup_account_url": {
@@ -689,7 +685,7 @@
     "description": "Automatic sync failure, shown in the popup's sync area."
   },
   "sync_auto_failed_plan": {
-    "message": "Dernière synchronisation : plafond de l'offre atteint.",
+    "message": "Dernière synchronisation : limite de ce compte atteinte.",
     "description": "Automatic sync failure, shown in the popup's sync area."
   },
   "sync_auto_failed_forbidden": {

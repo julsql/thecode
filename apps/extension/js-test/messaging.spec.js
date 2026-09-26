@@ -220,7 +220,7 @@ describe("renouvellement reserve a l'offre complete", () => {
     const response = await send({ action: "applyChange", id: "e1", renew: true }, FROM_POPUP);
 
     expect(response.ok).toBe(false);
-    expect(response.error).toContain("offre complete");
+    expect(response.error).toContain("pas activé");
     expect(store.vault.entries[0].counter).toBe(1);
   });
 
@@ -258,6 +258,6 @@ describe("renouvellement reserve a l'offre complete", () => {
     const response = await send({ action: "previewChange", id: "e1", renew: true }, FROM_POPUP);
 
     expect(response.ok).toBe(false);
-    expect(response.error).toContain("offre complete");
+    expect(response.error).toContain("pas activé");
   });
 });

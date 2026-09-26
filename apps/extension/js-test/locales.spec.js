@@ -68,4 +68,20 @@ describe("traductions du popup", () => {
     expect(locale("en").popup_account_url.message).toContain("/en/");
     expect(locale("fr").popup_account_url.message).toContain("/fr/");
   });
+
+  it.each(["en", "fr"])("la description tient dans la limite de Chrome en %s", (lang) => {
+    const description = locale(lang).extension_description.message;
+    expect(description.length).toBeLessThanOrEqual(132);
+    // Faux depuis le carnet et la synchronisation.
+    expect(description).not.toMatch(/no storage|aucun stockage|no risk|zéro risque/i);
+  });
+
+  it.each(["en", "fr"])("aucun texte n'oriente vers une offre payante en %s", (lang) => {
+    const forbidden =
+      /offre|free plan|full plan|paid plan|premium|abonn|subscri|upgrade|débloquer|tarif|pricing|€/i;
+    const offending = Object.entries(locale(lang))
+      .filter(([, { message }]) => forbidden.test(message))
+      .map(([key]) => key);
+    expect(offending).toStrictEqual([]);
+  });
 });
