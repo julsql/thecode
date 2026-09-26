@@ -1,286 +1,246 @@
 # TheCode — Google Play Store Listing (English)
 
-Ready-to-paste content for the Play Console — English (US/UK/global) locale. All Google character limits are observed.
+Ready-to-paste content for the Play Console — English (US/UK/global) locale. All Google character
+limits are observed.
 
 ---
 
-## 1. App name *(max 30 characters)*
+## 1. App name _(max 30 characters)_
 
 **Primary**
+
 ```
-TheCode — Password Generator
+TheCode — Password Manager
 ```
-*(28 characters)*
+
+_(26 characters)_
 
 **Alternates**
-- `TheCode: Vaultless Passwords` *(28)*
-- `TheCode — Local Password Gen` *(28)*
-- `TheCode Password Manager` *(24)*
+
+- `TheCode: Computed Passwords` _(27)_
+- `TheCode Password Generator` _(26)_
 
 ---
 
-## 2. Short description *(max 80 characters)*
+## 2. Short description _(max 80 characters)_
 
 **Primary**
+
 ```
-Regenerate every password from one secret key. Nothing is ever stored.
+Passwords recomputed on your device from one key. None of them is ever stored.
 ```
-*(70 characters)*
+
+_(78 characters)_
 
 **Alternates**
-- `Deterministic, offline, SHA-256 password generator. No vault, no cloud.` *(70)*
-- `One key. Endless passwords. Zero storage. Fully offline and open source.` *(72)*
-- `A vaultless password manager: every password is rebuilt on demand.` *(66)*
+
+- `One key, one site, one password. Offline, no account required.` _(63)_
+- `A password manager that stores no passwords. Open source.` _(57)_
 
 ---
 
-## 3. Full description *(max 4 000 characters)*
+## 3. Full description _(max 4 000 characters)_
 
 ```
-TheCode reinvents the password manager: no password is ever stored. Every password is regenerated on the fly, locally, from a single secret key only you know.
+TheCode is a password manager that stores no passwords. Each one is recomputed on your phone, on demand, from a master key only you know and the site's name.
 
 ━━━━━━━━━━━━━━━━━━━━━
-ONE KEY. INFINITE PASSWORDS.
+ONE KEY. ONE PASSWORD PER SITE.
 ━━━━━━━━━━━━━━━━━━━━━
 
-The idea is simple: you remember ONE secret key. For every site, TheCode combines your key with the site's name and runs SHA-256 to produce a unique, reproducible password.
+→ Same key + same site = exactly the same password, every time, on every device.
+→ Different sites = unrelated passwords.
+→ Nothing to steal: no password is saved, neither on the phone nor on a server.
 
-→ Same key + same site = exactly the same password, every single time.
-→ Different sites = completely different passwords.
-→ No database. No vault to protect. Nothing to sync.
+The derivation (PBKDF2 with 600,000 iterations, then HMAC-SHA256) is documented, tested and reproducible: your passwords do not depend on any service staying alive.
 
 ━━━━━━━━━━━━━━━━━━━━━
 FEATURES
 ━━━━━━━━━━━━━━━━━━━━━
 
-• Fully local SHA-256 deterministic generation
-• Adjustable length from 4 to 40 characters
-• Choose your character classes: lowercase, uppercase, digits, symbols
-• Real-time entropy meter and security level (in bits)
-• System-wide Autofill Service (Android 8.0+): TheCode suggests a password directly inside any app or website, unlocked with your fingerprint or face
-• Biometric authentication to reveal the key or approve autofill
-• One-tap copy to clipboard
-• Quick share to any app
-• Light, dark, or system theme
-• Material Design 3 — clean and fluid
-• No account required — no ads — no telemetry
+• Android autofill: TheCode offers the password inside apps and web pages, with the account's username
+• Vault: keep each site's username, length and characters — never the password
+• Save suggestions: a new site is offered to the vault
+• Vault lock with biometrics or a dedicated password
+• Password masked by default, revealed with one tap
+• Length from 4 to 40 characters; lowercase, uppercase, digits, symbols
+• Default settings remembered, and shared across your devices with an account
+• Move your vault to another device with an encrypted QR code
+• Optional automatic sync, end-to-end encrypted
+• Sign in with Google or with an email address
+• Dark, light or system theme
+• No ads, no trackers, no analytics
 
 ━━━━━━━━━━━━━━━━━━━━━
-ABSOLUTE PRIVACY
+PRIVACY
 ━━━━━━━━━━━━━━━━━━━━━
 
-• Your key NEVER leaves your phone.
-• No password is saved — neither locally nor in the cloud.
-• No internet connection needed — the app runs entirely offline.
-• Android backups (device transfer, cloud backup) are intentionally disabled for sensitive preferences.
-• Open source under the Apache 2.0 license — everything is auditable.
-
-No vault means no leak is possible. Your passwords don't exist anywhere until you regenerate them.
+• Your master key never leaves your phone. It is encrypted there by the Android Keystore.
+• Without an account, the app contacts no server: everything works offline.
+• With an account, the vault is encrypted on the phone before it leaves: the server sees neither your sites nor your usernames.
+• The camera is only used to read a transfer QR code; no image is saved.
+• Open source under the Apache 2.0 licence: everything can be checked.
 
 ━━━━━━━━━━━━━━━━━━━━━
-A FULL ECOSYSTEM
+EVERYWHERE, WITH THE SAME KEY
 ━━━━━━━━━━━━━━━━━━━━━
 
-TheCode follows you everywhere, with the same key:
+• Android app (you are here)
+• iPhone, iPad and Mac apps
+• Extensions for Chrome, Firefox, Edge, Brave and Safari
+• Website thecode.julsql.fr
 
-• Android app (you're here)
-• iOS and macOS apps
-• Browser extensions: Chrome, Firefox, Safari, Edge, Brave, Opera
-• Online generator at thecode.julsql.fr
-
-The same key on every platform instantly restores all your passwords.
+The same key gives you the same passwords on each of them, even without sync.
 
 ━━━━━━━━━━━━━━━━━━━━━
-WHO IS IT FOR?
+FREE, WITH A COMPLETE PLAN
 ━━━━━━━━━━━━━━━━━━━━━
 
-• You're tired of password vaults getting breached
-• You want to leave LastPass, 1Password, Bitwarden or Dashlane behind
-• You switch phones often and hate reconfiguring everything
-• You want access to your accounts without depending on any third-party service
-• You love elegant, minimalist tools
+Generation, the vault and autofill are free and unlimited, with no ads. A free account syncs a few entries across three devices. The complete plan lifts those limits.
 
 ━━━━━━━━━━━━━━━━━━━━━
 HOW IT WORKS
 ━━━━━━━━━━━━━━━━━━━━━
 
-1. Pick a strong secret key (memorize it — it lives only in your head)
-2. Type a site name (e.g. "google.com")
-3. Tune the length and allowed character classes
-4. The password appears instantly
-5. Copy, share it, or let the autofill service insert it for you
+1. Pick a long master key and remember it: it cannot be recovered.
+2. Type a site (e.g. "google.com") and, if needed, the username.
+3. The password appears. Copy it, or let autofill insert it.
 
-To log back in later: same key, same site name → same password.
-
-━━━━━━━━━━━━━━━━━━━━━
-OPEN SOURCE & FREE
-━━━━━━━━━━━━━━━━━━━━━
-
-TheCode is completely free. No in-app purchases. No subscription. No ads. The source code is published under the Apache 2.0 license and auditable by anyone.
-
-Take back control of your passwords. Download TheCode.
+Later, on any device: same key, same site → same password.
 ```
-*(≈ 3 100 characters — comfortable margin under the 4 000 limit)*
+
+_(≈ 2 900 characters)_
 
 ---
 
-## 4. Promotional text / What's new *(max 500 characters)*
+## 4. What's new _(max 500 characters)_
 
-**For version 2.2**
+**For this release**
+
 ```
-• Android Autofill Service: TheCode suggests passwords inside any app or web page.
-• Biometric authentication to reveal your key or approve autofill.
-• Reworked entropy meter.
-• Light / dark / system theme.
-• Compatible with Android 5.0 → 14, optimized for Android 14.
+• Vault lock: biometrics or a dedicated password
+• v2 vault with a username per account
+• Autofill with the username
+• Offer to add a new site to the vault
+• Password masked by default
+• Automatic, end-to-end encrypted sync
+• Default settings shared across devices
+• Sign in with Google
 ```
-*(≈ 320 characters)*
+
+_(≈ 310 characters)_
 
 ---
 
-## 5. Keywords / ASO (Play Store Optimization)
+## 5. Keywords / ASO
 
-Google Play has no dedicated keyword field — keywords are extracted from the title + short description + long description. The text above is written to naturally include the searches that matter most.
+Google Play has no keyword field: titles and descriptions are indexed. Target queries, woven in
+above:
 
-**Primary targets**
 - password manager
-- vaultless password
 - password generator
-- deterministic password
-- SHA-256 password
-- open source password manager
-- offline password manager
-- no cloud password
-- Android autofill password
+- deterministic / vaultless password
+- Android autofill
 - biometric password
-
-**Competitors to mention naturally**
-LastPass, 1Password, Bitwarden, Dashlane, KeePass — used above in a comparative phrasing that complies with Google Play policy.
+- open source, offline
 
 ---
 
 ## 6. Category & rating
 
-| Field | Value |
-|---|---|
-| Primary category | **Tools** |
-| Secondary category | Productivity |
-| Play Store tags | `Security`, `Productivity` |
-| Target audience | Everyone (3+) |
-| Contains ads | **No** |
-| In-app purchases | **No** |
-| Content access | Unrestricted |
+| Field            | Value                                                  |
+| ---------------- | ------------------------------------------------------ |
+| Primary category | **Tools**                                              |
+| Play tags        | `Security`, `Productivity`                             |
+| Target audience  | 18+ (not designed for children)                        |
+| Contains ads     | **No**                                                 |
+| In-app purchases | **No** (the complete plan is taken out on the website) |
+| Content access   | Unrestricted; an account is never required             |
 
-**IARC questionnaire**
-- No violence, no sensitive content → PEGI 3 / ESRB Everyone.
+**IARC questionnaire**: no sensitive content → PEGI 3 / ESRB Everyone.
+
+**Review access**: the app works without an account. To test sync, provide a demo account (email and
+password) under "App access".
 
 ---
 
 ## 7. Contact details & links
 
-| Field | Value to enter |
-|---|---|
-| App website | https://thecode.julsql.fr |
-| Developer email | *(your public contact address)* |
-| Privacy policy | https://thecode.julsql.fr/privacy *(to confirm / create)* |
-| Source code | GitHub link: https://github.com/julsql/thecode |
-
-> **Important:** Google requires a valid, publicly accessible privacy policy URL. If it doesn't exist yet, create a dedicated page on thecode.julsql.fr before publishing.
+| Field                         | Value                                |
+| ----------------------------- | ------------------------------------ |
+| App website                   | https://thecode.julsql.fr            |
+| Developer email               | contact@thecode.julsql.fr            |
+| Privacy policy                | https://thecode.julsql.fr/en/privacy |
+| Account deletion (web URL)    | https://thecode.julsql.fr/en/account |
+| Source code                   | https://github.com/julsql/thecode    |
 
 ---
 
 ## 8. Data Safety declaration
 
-Required section in Play Console. Correct answers for TheCode:
+Full, justified answers (in French): [`docs/store-privacy.md`](../../docs/store-privacy.md).
 
-### Data collected
-**None.** The app collects, transmits, and shares no user data.
-
-### Data shared with third parties
-**None.**
-
-### Security practices
-- ☑ Data is encrypted in transit *(not applicable — no data is sent)*
-- ☑ Users can request data deletion *(not applicable — no data is stored server-side)*
-- ☑ The app follows Mobile App Security best practices *(MASVS)*
-
-### Sensitive local storage
-- The user's key is stored in the app's private `SharedPreferences`
-- Android backups are disabled (`android:allowBackup="false"` in the manifest)
-- Access is gated by biometric authentication for key reveal and autofill
+In short: data collected **Yes**, only with an optional account; email address and user ID, not
+shared, for app functionality and account management; the vault is end-to-end encrypted and
+therefore not declared; encrypted in transit **Yes**; deletion **Yes**.
 
 ---
 
 ## 9. Permissions to justify
 
-If Google asks why you request sensitive permissions:
-
-| Permission | Justification |
-|---|---|
-| `BIND_AUTOFILL_SERVICE` | Password autofill service — the app's core feature, equivalent to iOS Autofill. |
-| `USE_BIOMETRIC` / `USE_FINGERPRINT` | Protects the secret key and gates sensitive operations via fingerprint/face. |
-| Internet access | **None** — the app does not request the `INTERNET` permission. |
-
-The lack of an Internet permission is a selling point: highlight it in the description and in the Play Console answers.
+| Permission                         | Justification                                                                        |
+| ---------------------------------- | ------------------------------------------------------------------------------------ |
+| `INTERNET`, `ACCESS_NETWORK_STATE` | Optional sync and Google sign-in. Without an account, no server is contacted.        |
+| `CAMERA` (optional)                | Reading the QR code of a vault shown on another device. No image is saved or sent.   |
+| `BIND_AUTOFILL_SERVICE`            | Autofill service, the app's core feature.                                            |
+| Biometrics                         | Unlocking the master key and the vault; checked by the system.                       |
 
 ---
 
 ## 10. Required graphic assets
 
-| Asset | Format | Dimensions | Notes |
-|---|---|---|---|
-| Play Store icon | 32-bit PNG | 512 × 512 px | Reuse the existing TheCode logo |
-| Feature graphic | PNG / JPG | 1024 × 500 px | **Required** — banner at the top of the listing |
-| Phone screenshots | PNG / JPG | min 320 px short side, max 3840 px long side | Min 2, max 8. Recommended: 1080 × 1920 |
-| 7" tablet screenshots | Optional | 1024 × 600 px min | Recommended |
-| 10" tablet screenshots | Optional | 1280 × 800 px min | Recommended |
-| Promo video | YouTube | — | Optional but recommended (30 s to 2 min) |
+| Asset             | Format      | Dimensions                                 | Notes                      |
+| ----------------- | ----------- | ------------------------------------------ | -------------------------- |
+| Play Store icon   | 32-bit PNG  | 512 × 512 px                               | Current TheCode logo       |
+| Feature graphic   | PNG / JPG   | 1024 × 500 px                              | **Required**               |
+| Phone screenshots | PNG / JPG   | min 320 px short side, max 3840 px long side | 2 to 8; 1080 × 1920      |
+| Tablet screenshots | Optional   | 1024 × 600 / 1280 × 800 px min             | Recommended                |
 
-### Screenshots to produce (suggestions)
-1. **Main screen** with a generated password for `google.com`, "Security: Very High" badge
-2. **Length slider** + character class checkboxes
-3. **Autofill activation** + Android system Autofill screen
-4. **Biometric prompt** during autofill
-5. **Dark mode** on the same main screen
-6. **Help screen** explaining the principle in one sentence
+### Screenshots to produce
 
-### Feature graphic suggestions
-- Left text: "One key. No vault. Nothing to leak."
-- Right visual: TheCode logo + phone mockup
-- Colors: app palette (check `colors.xml`)
+1. Main screen: masked password for `google.com`, username filled in
+2. Vault: entry list, sync section on top
+3. Vault lock: biometric prompt
+4. Autofill inside an app, with the username
+5. Offer to add a site to the vault
+6. Dark mode
 
 ---
 
-## 11. Marketing positioning (recap)
+## 11. Positioning
 
-**Unique promise**
-> *"The only password manager that stores nothing."*
+**Promise**: _"The password manager that stores no passwords."_
 
-**Three pillars to hammer home**
-1. **Zero storage** = zero possible leak
-2. **100% local** = no cloud dependency
-3. **Only one key to remember** = no vault to protect
+1. **No stored password** = nothing to leak
+2. **Offline by default** = sync is a choice, end-to-end encrypted
+3. **One key to remember**, which never leaves the device
 
-**Common objections** (to surface in the website FAQ and the developer "About" section):
-- *"What if I lose my key?"* → only you know your key, but you can re-enter it on any device, at any time, and recover everything.
-- *"What if someone guesses my key?"* → SHA-256 is cryptographically strong; pick a long key, like a passphrase.
-- *"Why is this better than an encrypted vault?"* → vaults can leak (Bitwarden, LastPass…). TheCode has nothing to leak.
+Objections:
+
+- _"What if I forget my key?"_ → nobody can recover it, not even the service. Pick a memorable
+  passphrase.
+- _"What if my account leaks?"_ → the vault is encrypted with a key derived from the master key,
+  which the server never has.
 
 ---
 
 ## 12. Pre-publication checklist
 
-- [ ] Bump `versionCode` to 12 and `versionName` to 2.2 *(already done in `app/build.gradle`)*
+- [ ] Align `versionName` / `versionCode` in `app/build.gradle` (2.3 / 13) with the published
+      version (the CHANGELOG says 3.0.0)
 - [ ] Build a signed release AAB (`./gradlew bundleRelease`)
-- [ ] Verify `targetSdk` is ≥ 34 (Android 14) — required by Play Store
-- [ ] Prepare 6 screenshots at 1080 × 1920
-- [ ] Build the 1024 × 500 feature graphic
-- [ ] Publish the privacy policy on thecode.julsql.fr
-- [ ] Fill the IARC questionnaire in the console
-- [ ] Fill the Data Safety section
-- [ ] Submit to internal testing first, then production
-- [ ] Schedule the release alongside website and extension announcements
-
----
-
-*Listing copy generated for the Play Store — app version: 2.2 (versionCode 12).*
+- [ ] Prepare the screenshots
+- [ ] Fill in Data Safety from `docs/store-privacy.md`
+- [ ] Enter the account deletion URL
+- [ ] Provide a demo account for review
+- [ ] Submit to internal testing, then production

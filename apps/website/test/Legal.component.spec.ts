@@ -65,6 +65,22 @@ describe("pages légales", () => {
     expect(text).toContain("Sans compte");
   });
 
+  it("couvre la connexion Apple, les appareils et l'extension", async () => {
+    // Chaque source de données réelle doit y figurer : Apple (et son adresse
+    // relais), le nom d'appareil envoyé par le système, la permission
+    // « identité » de l'extension, et ce qui ne quitte jamais l'appareil.
+    for (const lang of ["fr", "en"]) {
+      const doc = legalDoc("privacy", lang, true);
+      const text = JSON.stringify(doc);
+      expect(text).toContain("Apple Distribution International");
+      expect(text).toMatch(/relais privée|private relay/);
+      expect(text).toMatch(/nom de l'appareil|device name/);
+      expect(text).toMatch(/identité :|identity:/);
+      expect(text).toMatch(/Keystore/);
+      expect(doc.updated).toMatch(/26 (septembre|September) 2026/);
+    }
+  });
+
   it("signale les informations que l'éditrice doit encore fournir", async () => {
     const wrapper = await mountAt(Legal, "/fr/legal");
 

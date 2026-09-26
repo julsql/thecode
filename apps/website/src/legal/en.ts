@@ -10,6 +10,7 @@ import { IDENTITY, PRICE } from "./identity";
 import { missing, type LegalDoc } from "./types";
 
 const UPDATED = "19 September 2026";
+const PRIVACY_UPDATED = "26 September 2026";
 const price = new Intl.NumberFormat("en-GB", {
   style: "currency",
   currency: PRICE.currency,
@@ -175,13 +176,14 @@ const termsDoc: LegalDoc = {
 
 const privacyDoc: LegalDoc = {
   title: "Privacy policy",
-  updated: UPDATED,
+  updated: PRIVACY_UPDATED,
   intro: [
     TRANSLATION_NOTE,
     "TheCode is a password manager that stores no passwords: they are recomputed on your " +
       "device from your master key. This page says exactly what is collected, and what is not.",
     "Without an account, nothing at all is collected: generation, the vault and autofill work " +
-      "offline, without contacting any server.",
+      "offline, without contacting any server. The account serves one optional purpose: " +
+      "syncing your vault between your devices.",
   ],
   sections: [
     {
@@ -195,13 +197,26 @@ const privacyDoc: LegalDoc = {
     {
       heading: "What we collect, if you create an account",
       items: [
-        "your email address, which identifies the account;",
-        "your account password, never in clear: only an Argon2id hash is kept;",
-        "if you sign in with Google: the technical identifier Google sends us, and the " +
-          "associated address;",
-        "connected devices: a label you choose, sign-in and expiry dates;",
-        "your plan, subscription status and Stripe customer id;",
-        "your vault, encrypted: the service receives opaque blocks it cannot decrypt;",
+        "your email address, which identifies the account, and the date you confirmed it;",
+        "your account password, never in clear: only an Argon2id hash is kept. An account " +
+          "opened with Google or Apple has none until you set one;",
+        "if you sign in with Google: the technical identifier Google sends us and the " +
+          "associated address, verified by Google;",
+        "if you sign in with Apple: the technical identifier Apple sends us and the address " +
+          "Apple shares — your Apple ID address, or a private relay address if you chose to " +
+          "hide yours;",
+        "connected devices: the device name as the system reports it (phone model, iPhone or " +
+          'Mac name, "extension", "website"), the kind of client (app or site), sign-in and ' +
+          "expiry dates and whether the session is still valid. The session token is only " +
+          "kept hashed;",
+        "your plan, where it comes from, your subscription status and period end, and your " +
+          "Stripe customer and subscription ids;",
+        "the invitation, referral or lifetime codes you used, and when;",
+        "links sent by email (address confirmation, address change, password reset): a hashed " +
+          "token, its expiry date and, for a change, the new address requested;",
+        "your vault and default settings, encrypted: the service receives opaque blocks it " +
+          "cannot decrypt. Only the entries your plan allows to sync are sent; the others stay " +
+          "on your device;",
         "technical logs containing your IP address, kept a few days to spot abuse and " +
           "diagnose failures.",
       ],
@@ -209,36 +224,79 @@ const privacyDoc: LegalDoc = {
     {
       heading: "What we cannot know",
       paragraphs: [
-        "The vault is encrypted on your device with a key derived from your master key, which " +
-          "we never have. We therefore know neither the sites you save, nor your logins, nor " +
-          "your settings, nor your passwords.",
+        "The vault and default settings are encrypted on your device (AES-256-GCM) with a key " +
+          "derived from your master key, which we never have. We therefore know neither the " +
+          "sites you save, nor your logins, nor your settings, nor your passwords — which are " +
+          "not stored anywhere anyway.",
+        "Your master key and the password that locks the vault screen never leave your " +
+          "device. Biometrics (Face ID, Touch ID, fingerprint) are checked by the system: we " +
+          "receive nothing from them.",
         "What the service does see, and which is worth stating rather than implying perfect " +
-          "secrecy: how many entries your vault holds, which ones change, and how often you " +
-          "sync.",
+          "secrecy: how many entries are synced, which ones change, how often you sync, how " +
+          "many devices you use and the IP addresses they connect from.",
+      ],
+    },
+    {
+      heading: "What stays on your devices",
+      items: [
+        "Your master key: in the keychain on iPhone, iPad and Mac, encrypted by the Keystore " +
+          "on Android. In the extension it is only kept in memory for the browser session and " +
+          "is erased when the browser closes. The website does not keep it.",
+        "The vault, settings and vault lock (a PBKDF2 hash of the password, never the " +
+          "password): in the app's private storage, or in the extension's or browser's local " +
+          "storage.",
+        "Autofill (Android's autofill service, the iOS and macOS credential provider): the " +
+          "system tells TheCode which site or app is asking, the password is computed on the " +
+          "device, and nothing is sent.",
+        "The camera, on phones, is only used to read the QR code of a vault shown on another " +
+          "device: no image is saved or sent.",
+      ],
+    },
+    {
+      heading: "The browser extension",
+      paragraphs: ["The extension asks for the following permissions, and uses them only so:"],
+      items: [
+        "access to all sites and a page script: finding password fields and offering, next " +
+          "to them, the password computed for the site. The page is only read around those " +
+          "fields (the typed login included), and nothing from it is kept or sent;",
+        "active tab: knowing the site of the open tab when you click the extension;",
+        "storage: keeping the vault, settings and sync session on the device, and the master " +
+          "key in memory for the browser session;",
+        'identity: only for "Continue with Google". Google returns a token holding your ' +
+          "identifier and address, nothing else; the extension accesses no other Google " +
+          "service.",
       ],
     },
     {
       heading: "Why, and on what basis",
       items: [
         "Performance of the contract: creating and keeping your account, syncing your vault, " +
-          "handling your subscription.",
+          "sending you the emails the account needs, handling your subscription.",
         "Legal obligation: keeping billing records.",
         "Legitimate interest: protecting the service against abuse, diagnosing failures.",
+      ],
+      paragraphs: [
+        "We send no marketing email: only those the account requires (address confirmation, " +
+          "address change, forgotten password).",
       ],
     },
     {
       heading: "Who else has access",
       items: [
         "Stripe Payments Europe, Ltd. — payment and invoicing. Stripe receives your email " +
-          "address and your payment details, which we never see.",
+          "address, your account identifier and your payment details, which we never see.",
         'Google Ireland Ltd. — only if you choose "Continue with Google".',
+        'Apple Distribution International Ltd. — only if you choose "Sign in with Apple".',
+        "Our email provider, through which account emails are sent: it receives your address " +
+          "and the content of those emails.",
         IDENTITY.host
           ? `Our host, ${IDENTITY.host}, running the server in the European Union.`
           : "Our host, running the server in the European Union.",
       ],
       paragraphs: [
         "Your data is never sold, rented or passed on for advertising. There is no tracker, " +
-          "no analytics and no advertising cookie.",
+          "no analytics, no crash reporting and no advertising cookie — not on the site, not " +
+          "in the apps, not in the extension.",
         "Where a processor handles data outside the European Union, the transfer is covered by " +
           "the European Commission's standard contractual clauses.",
       ],
@@ -246,14 +304,20 @@ const privacyDoc: LegalDoc = {
     {
       heading: "Cookies and local storage",
       paragraphs: [
-        "The site sets no cookies. Your vault and your session live in your browser's local " +
-          "storage: they stay on your device and are never sent as they are.",
+        "The site sets no cookies. Your vault, settings and session live in your browser's " +
+          "local storage: they stay on your device and are never sent as they are.",
+        'The "Continue with Google" and "Sign in with Apple" buttons load a script from ' +
+          "Google or Apple, and only on the account page. Those services then apply their own " +
+          "rules, cookies included.",
       ],
     },
     {
       heading: "How long",
       items: [
-        "Account and vault: as long as the account exists. Deletion is immediate and final.",
+        "Account, vault, settings, devices and codes used: as long as the account exists. " +
+          "Deletion is immediate and final.",
+        "Links sent by email: valid 24 hours, 2 hours for a password reset.",
+        "Device sessions: 30 days without renewal, or until you sign the device out.",
         "Database backups: seven days at most.",
         "Technical logs: a few days.",
         "Billing records: ten years, as accounting law requires.",
@@ -262,8 +326,12 @@ const privacyDoc: LegalDoc = {
     {
       heading: "Your rights",
       paragraphs: [
-        "From the account page you can, at any time: export all of your data to a file, " +
-          "correct your address, change your password and delete your account for good.",
+        "From the account page you can, at any time: export all of your data to a file, see " +
+          "and sign out your devices, correct your address, change your password, unlink " +
+          "Google or Apple and delete your account for good. Deletion also cancels the " +
+          "subscription.",
+        "The exported file holds your vault as we keep it, that is encrypted: only your " +
+          "master key opens it.",
         "You also have the rights of access, rectification, erasure, restriction, objection " +
           "and portability under the GDPR. To exercise them other than from the site: " +
           `${IDENTITY.email}.`,
