@@ -396,19 +396,23 @@ struct MainView: View {
                                     .help(revealLabel)
                                     .accessibilityLabel(revealLabel)
 
-                                    Button(action: saveToVault) {
-                                        Label(
-                                            vaultEntry == nil
-                                                ? L10n.t("Enregistrer cette entrée",
-                                                         "Save this entry")
-                                                : L10n.t("Mettre à jour l'entrée",
-                                                         "Update the entry"),
-                                            systemImage: vaultEntry == nil
-                                                ? "square.and.arrow.down"
-                                                : "arrow.triangle.2.circlepath")
+                                    // Le carnet dérive en v2 : enregistrer depuis la v1
+                                    // donnerait plus tard un autre mot de passe.
+                                    if !useV1 {
+                                        Button(action: saveToVault) {
+                                            Label(
+                                                vaultEntry == nil
+                                                    ? L10n.t("Enregistrer cette entrée",
+                                                             "Save this entry")
+                                                    : L10n.t("Mettre à jour l'entrée",
+                                                             "Update the entry"),
+                                                systemImage: vaultEntry == nil
+                                                    ? "square.and.arrow.down"
+                                                    : "arrow.triangle.2.circlepath")
+                                        }
+                                        .buttonStyle(.bordered)
+                                        .fixedSize()
                                     }
-                                    .buttonStyle(.bordered)
-                                    .fixedSize()
                                 }
                                 // La version en cours doit se lire sans ouvrir
                                 // de menu : c'est elle qui décide quel mot de

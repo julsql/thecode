@@ -360,14 +360,7 @@ struct MainView: View {
                                             ? L10n.t("Cacher", "Hide")
                                             : L10n.t("Voir", "Show"))
 
-                                    Button(action: saveToVault) {
-                                        Text(saveEntryTitle)
-                                            .font(.footnote)
-                                            .multilineTextAlignment(.center)
-                                            .lineLimit(2)
-                                    }
-                                    .buttonStyle(.bordered)
-                                    .controlSize(.small)
+                                    saveEntryButton
                                     .fixedSize(horizontal: false, vertical: true)
                                 }
                                 // La version en cours doit se lire sans ouvrir
@@ -584,6 +577,22 @@ struct MainView: View {
                 showGenerated
                     ? generatedValue
                     : L10n.t("Mot de passe masqué", "Hidden password"))
+    }
+
+    /// Le carnet dérive en v2 : enregistrer depuis la v1 donnerait plus tard un
+    /// autre mot de passe. Sorti du corps pour ménager le vérificateur de types.
+    @ViewBuilder
+    private var saveEntryButton: some View {
+        if !useV1 {
+            Button(action: saveToVault) {
+                Text(saveEntryTitle)
+                    .font(.footnote)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+        }
     }
 
     private var saveEntryTitle: String {
