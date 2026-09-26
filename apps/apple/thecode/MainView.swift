@@ -360,17 +360,24 @@ struct MainView: View {
                                             ? L10n.t("Cacher", "Hide")
                                             : L10n.t("Voir", "Show"))
 
-                                    saveEntryButton
-                                    .fixedSize(horizontal: false, vertical: true)
                                 }
                                 // La version en cours doit se lire sans ouvrir
                                 // de menu : c'est elle qui décide quel mot de
                                 // passe sort.
-                                Text(
-                                    L10n.t("Sécurité : ", "Security: ")
-                                        + localizedSecurityLabel(securityLabel)
-                                        + (useV1 ? "  ·  v1" : "  ·  v2"))
-                                    .foregroundColor(securityColor)
+                                // Enregistrer vit sous le mot de passe, à côté de
+                                // la sécurité, comme sur Android : la ligne du
+                                // mot de passe reste lisible sur petit écran.
+                                HStack(alignment: .center) {
+                                    Text(
+                                        L10n.t("Sécurité : ", "Security: ")
+                                            + localizedSecurityLabel(securityLabel)
+                                            + (useV1 ? "  ·  v1" : "  ·  v2"))
+                                        .foregroundColor(securityColor)
+
+                                    Spacer(minLength: 8)
+
+                                    saveEntryButton
+                                }
 
                                 if let vaultSaveMessage {
                                     Text(vaultSaveMessage)
@@ -587,8 +594,7 @@ struct MainView: View {
             Button(action: saveToVault) {
                 Text(saveEntryTitle)
                     .font(.footnote)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(2)
+                    .lineLimit(1)
             }
             .buttonStyle(.bordered)
             .controlSize(.small)
