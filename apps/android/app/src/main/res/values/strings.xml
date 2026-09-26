@@ -98,7 +98,7 @@
     <string name="sync_done">Vault synced: %1$d entries.</string>
     <string name="sync_status_done">Last synced at %1$s.</string>
     <string name="sync_done_conflicts">Vault synced: %1$d entries, %2$d need your attention.</string>
-    <string name="sync_local_only">%1$d entries stayed on this device (free plan limit).</string>
+    <string name="sync_local_only">%1$d entries stayed on this device (limit of this account).</string>
     <string name="sync_failed">Sync failed: %1$s</string>
     <string name="sync_needs_key">Set your master key first: the vault is encrypted with it before it leaves this device.</string>
     <string name="sync_no_secure_storage">Encrypted storage is unavailable on this device, so sign-in details cannot be kept.</string>
@@ -133,6 +133,7 @@
     <string name="vault_renew">Renew this password</string>
     <string name="vault_renew_paid">Renewal is not enabled on this account.</string>
     <string name="sync_limit_reached">Sync limit reached: the extra entries stay on this device.</string>
+    <string name="sync_device_limit">This account has reached its maximum number of connected devices. Sign out of another device, then try again.</string>
     <string name="vault_renew_title">Renew "%1$s"</string>
     <string name="vault_password_pair">Current\n%1$s\n\nNew\n%2$s\n\nChange it on the site, then confirm. The new one is useless until you have, and the old one is still what signs you in.</string>
     <string name="vault_renew_done">"%1$s" renewed, counter %2$d.</string>

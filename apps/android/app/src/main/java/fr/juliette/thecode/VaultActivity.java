@@ -736,7 +736,7 @@ public class VaultActivity extends AppCompatActivity {
                 });
             } catch (Sync.SyncException e) {
                 String message = e.status == 402
-                        ? getString(R.string.sync_limit_reached)
+                        ? getString(R.string.sync_device_limit)
                         : getString(R.string.sync_google_failed, e.getMessage());
                 main.post(() -> toast(message));
             }
@@ -755,7 +755,13 @@ public class VaultActivity extends AppCompatActivity {
                     runSync();
                 });
             } catch (Sync.SyncException e) {
-                main.post(() -> toast(getString(R.string.sync_failed, e.getMessage())));
+                // 402 : plafond d'appareils. Le message du service nomme l'offre
+                // et renvoie au site, ce qu'une app des magasins ne relaie pas :
+                // on garde le fait, pas l'invitation.
+                String message = e.status == 402
+                        ? getString(R.string.sync_device_limit)
+                        : getString(R.string.sync_failed, e.getMessage());
+                main.post(() -> toast(message));
             }
         });
     }
@@ -1031,9 +1037,9 @@ public class VaultActivity extends AppCompatActivity {
             com.google.android.material.button.MaterialButton action =
                     card.findViewById(R.id.entryAction);
             action.setText(R.string.vault_renew);
-            // Jamais désactivé : un bouton éteint n'explique rien et ne
-            // propose rien. C'est le clic qui dit ce que l'offre complète
-            // apporte.
+            // Jamais désactivé : un bouton éteint n'explique rien. Le clic
+            // constate seulement que la fonction n'est pas activée sur ce
+            // compte, sans renvoyer vers un achat hors du magasin.
             action.setOnClickListener(v -> proposeRenew(entry));
 
             card.setOnClickListener(v -> showDetail(entry));

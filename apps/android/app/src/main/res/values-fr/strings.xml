@@ -98,7 +98,7 @@
     <string name="sync_done">Carnet synchronisé : %1$d entrées.</string>
     <string name="sync_status_done">Dernière synchronisation à %1$s.</string>
     <string name="sync_done_conflicts">Carnet synchronisé : %1$d entrées, %2$d demandent votre attention.</string>
-    <string name="sync_local_only">%1$d entrées restées sur cet appareil (plafond de l\'offre gratuite).</string>
+    <string name="sync_local_only">%1$d entrées restées sur cet appareil (plafond de ce compte).</string>
     <string name="sync_failed">Échec de la synchronisation : %1$s</string>
     <string name="sync_needs_key">Définissez d\'abord votre clef maîtresse : le carnet est chiffré avec elle avant de quitter cet appareil.</string>
     <string name="sync_no_secure_storage">Le stockage chiffré est indisponible sur cet appareil : les identifiants ne peuvent pas être conservés.</string>
@@ -133,6 +133,7 @@
     <string name="vault_renew">Renouveler ce mot de passe</string>
     <string name="vault_renew_paid">Le renouvellement n\'est pas activé sur ce compte.</string>
     <string name="sync_limit_reached">Limite de synchronisation atteinte : les entrées en trop restent sur cet appareil.</string>
+    <string name="sync_device_limit">Ce compte a atteint son nombre maximal d\'appareils connectés. Déconnectez un autre appareil, puis réessayez.</string>
     <string name="vault_renew_title">Renouveler « %1$s »</string>
     <string name="vault_password_pair">Actuel\n%1$s\n\nNouveau\n%2$s\n\nChangez-le sur le site, puis confirmez. Le nouveau ne sert à rien tant que ce n\'est pas fait, et l\'ancien reste celui qui vous connecte.</string>
     <string name="vault_renew_done">« %1$s » renouvelée, compteur %2$d.</string>
