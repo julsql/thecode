@@ -19,48 +19,59 @@ final class AutofillModel: ObservableObject {
     @Published var busy: Bool = false
     @Published var errorMessage: String? = nil
 
-    /// Les comptes que le carnet connaît pour ce domaine.
-    ///
-    /// Plusieurs entrées, c'est plusieurs comptes sur le même site : on les
-    /// propose tous plutôt que d'en choisir un au hasard — c'était le premier
-    /// des problèmes d'usage. Une seule entrée, ou aucune, et il n'y a rien à
-    /// choisir.
+    /// Les comptes que le carnet connaît pour ce domaine (vide s'il n'en
+    /// connaît aucun). Ceux qui ont un identifiant se remplissent en un geste.
     @Published var accounts: [SiteResolution] = []
-    @Published var chosen: SiteResolution? = nil
 
-    /// Vrai quand le carnet ne connaît pas encore ce site : c'est le seul cas
-    /// où proposer de l'enregistrer apporte quelque chose.
-    @Published var canSave = false
+    /// Entrée sans identifiant choisie dans la liste : l'identifiant saisi
+    /// n'est alors rendu qu'au formulaire, le mot de passe reste le sien.
+    @Published var pinned: SiteResolution? = nil
+
+    /// Identifiant saisi. Le système ne dit pas celui du formulaire : sans
+    /// lui, un compte inconnu se dériverait sans identifiant, et le système
+    /// recevrait un identifiant vide.
+    @Published var login: String = ""
+
     /// Réponse de l'utilisatrice. iOS n'a pas d'équivalent au dialogue que le
     /// système Android pose après coup : on demande donc avant de remplir.
     @Published var saveToVault = false
 
-    var mustChoose: Bool { accounts.count > 1 && chosen == nil }
+    /// Ce que le ViewController sait du carnet : de quoi résoudre un
+    /// identifiant saisi.
+    var resolveLogin: (_ login: String, _ pinned: String?) -> AutofillLogin.Fill? = { _, _ in nil }
+
+    /// Le remplissage correspondant à la saisie, `nil` tant qu'il manque
+    /// l'identifiant.
+    var typedFill: AutofillLogin.Fill? { resolveLogin(login, pinned?.entryId) }
+
+    /// Le compte saisi est inconnu du carnet : on propose de l'enregistrer.
+    var canSave: Bool { typedFill?.isNew ?? false }
+
+    /// Le compte en attente d'authentification : gardé ici plutôt que capturé
+    /// par le rappel de LocalAuthentication, qui n'est pas sur le fil principal.
+    private var pending: (fill: AutofillLogin.Fill, save: Bool)?
 
     /// Le ViewController s'enregistre ici pour recevoir les ordres d'achever
     /// ou d'annuler la requête.
     weak var controller: CredentialProviderViewController?
 
-    /// On évite de relancer plusieurs fois la biométrie de manière automatique.
-    private var didAutoStart = false
-
-    /// Appelé quand le domaine est connu : on lance immédiatement Face ID /
-    /// Touch ID pour éviter une étape inutile.
-    ///
-    /// Sauf s'il y a un choix à faire : demander la biométrie avant de savoir
-    /// quel compte remplir obligerait à la redemander après.
-    func startBiometricIfNeeded() {
-        guard !didAutoStart, !domain.isEmpty, !mustChoose else { return }
-        didAutoStart = true
-        startBiometric()
-    }
-
+    /// Un geste par compte connu : biométrie puis remplissage. Une entrée sans
+    /// identifiant demande d'abord de le saisir.
     func choose(_ account: SiteResolution) {
-        chosen = account
-        startBiometric()
+        if let fill = AutofillLogin.quickFill(account) {
+            authenticate(then: fill, save: false)
+        } else {
+            pinned = account
+        }
     }
 
-    func startBiometric() {
+    /// Remplit avec l'identifiant saisi.
+    func fillTyped() {
+        guard let fill = typedFill else { return }
+        authenticate(then: fill, save: fill.isNew && saveToVault)
+    }
+
+    private func authenticate(then fill: AutofillLogin.Fill, save: Bool) {
         guard !busy else { return }
         guard !domain.isEmpty else {
             errorMessage = L10n.t("Aucun domaine détecté pour cette requête.",
@@ -69,6 +80,7 @@ final class AutofillModel: ObservableObject {
         }
 
         busy = true
+        pending = (fill, save)
         errorMessage = nil
 
         let ctx = LAContext()
@@ -93,10 +105,10 @@ final class AutofillModel: ObservableObject {
                 if success {
                     // Seul moment où la clé est consommée : à l'intérieur
                     // de completeFill, dans l'extension, après auth.
-                    self.controller?.completeFill(
-                        domain: self.domain,
-                        resolution: self.chosen ?? self.accounts.first,
-                        saveToVault: self.canSave && self.saveToVault)
+                    if let (fill, save) = self.pending {
+                        self.controller?.completeFill(
+                            domain: self.domain, fill: fill, saveToVault: save)
+                    }
                 } else {
                     self.errorMessage = evalError?.localizedDescription
                         ?? L10n.t("Authentification annulée.", "Authentication cancelled.")
@@ -109,4 +121,3 @@ final class AutofillModel: ObservableObject {
         controller?.cancel()
     }
 }
-
