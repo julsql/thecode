@@ -581,6 +581,8 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
     } else if (request.action === "syncGoogleLogin") {
       sendResponse(await googleSyncLogin(request));
     } else if (request.action === "syncLogout") {
+      // Revoquer d'abord (au mieux), puis oublier la session quoi qu'il arrive.
+      await syncLogout(await loadSession(browser?.storage?.local));
       await clearSession(browser?.storage?.local);
       await browser?.storage?.local?.remove([SYNC_LAST_STATUS_KEY]);
       sendResponse({ ok: true });

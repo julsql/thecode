@@ -215,3 +215,59 @@ struct AutoSyncTriggerTests {
         #expect(!PasswordSettings.touch(defaults))
     }
 }
+
+/// Transport qui note chaque appel et rend une réponse figée, ou échoue.
+private final class RecordingTransport: SyncTransport {
+    struct Offline: Error {}
+
+    private let status: Int?
+    private(set) var calls: [(url: String, method: String, body: String?)] = []
+
+    /// `nil` : le service est injoignable.
+    init(status: Int?) { self.status = status }
+
+    func send(url: String, method: String, body: Data?, bearer: String?) async throws
+        -> SyncResponse
+    {
+        calls.append((url, method, body.map { String(decoding: $0, as: UTF8.self) }))
+        guard let status else { throw Offline() }
+        return SyncResponse(status: status, body: Data())
+    }
+}
+
+@MainActor
+struct SignOutTests {
+
+    @Test func revokesTheSessionWithTheRefreshToken() async throws {
+        let transport = RecordingTransport(status: 204)
+        var forgotten = false
+
+        await AutoSync.signOut(credentials: linked, sync: Sync(transport: transport)) {
+            forgotten = true
+        }
+
+        let calls = transport.calls
+        #expect(calls.count == 1)
+        #expect(calls.first?.url == "https://sync.example.test/v1/auth/logout")
+        #expect(calls.first?.method == "POST")
+        let body = try #require(calls.first?.body)
+        let payload =
+            try JSONSerialization.jsonObject(with: Data(body.utf8)) as? [String: String]
+        #expect(payload == ["refresh_token": "refresh-token-fixture"])
+        #expect(forgotten)
+    }
+
+    @Test(arguments: [nil, 401, 500] as [Int?])
+    func signsOutLocallyWhateverTheServiceSays(status: Int?) async {
+        let transport = RecordingTransport(status: status)
+        var forgotten = false
+
+        await AutoSync.signOut(credentials: linked, sync: Sync(transport: transport)) {
+            forgotten = true
+        }
+
+        // Ni renouvellement ni nouvel essai : un seul appel, puis l'oubli.
+        #expect(transport.calls.count == 1)
+        #expect(forgotten)
+    }
+}

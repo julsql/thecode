@@ -15,9 +15,11 @@ import {
   googleSignIn,
   login,
   loadSession,
+  logout,
   register,
   registrationState,
   saveSession,
+  signOutSession,
   SyncError,
   syncVault,
 } from "@/sync";
@@ -139,6 +141,68 @@ describe("session", () => {
     // Mode privé, stockage bricolé : la page doit continuer de fonctionner.
     localStorage.setItem("thecode.session", "pas du json");
     expect(loadSession()).toBeNull();
+  });
+});
+
+describe("déconnexion", () => {
+  const session = { endpoint: "https://x", accessToken: "a", refreshToken: "r-7" };
+
+  beforeEach(() => {
+    clearSession();
+    vi.unstubAllGlobals();
+  });
+
+  it("révoque la session avec son jeton de renouvellement, sans jeton d'accès", async () => {
+    const fetchMock = vi.fn(() => Promise.resolve({ ok: true, status: 204 } as Response));
+    vi.stubGlobal("fetch", fetchMock);
+    saveSession(session);
+
+    await signOutSession();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("https://x/v1/auth/logout");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body as string)).toEqual({ refresh_token: "r-7" });
+    expect((init.headers as Record<string, string>).Authorization).toBeUndefined();
+    expect(loadSession()).toBeNull();
+  });
+
+  it("oublie la session même si le service est injoignable", async () => {
+    vi.stubGlobal("fetch", () => Promise.reject(new Error("coupure")));
+    saveSession(session);
+
+    await signOutSession();
+
+    expect(loadSession()).toBeNull();
+  });
+
+  it("oublie la session même si le service répond en erreur, sans renouveler", async () => {
+    const fetchMock = vi.fn(() =>
+      Promise.resolve({
+        ok: false,
+        status: 500,
+        statusText: "Server Error",
+        json: () => Promise.resolve({}),
+      } as Response),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    saveSession(session);
+
+    expect(await logout(session)).toBe(false);
+    await signOutSession();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(loadSession()).toBeNull();
+  });
+
+  it("ne contacte rien sans session", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await signOutSession();
+
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
 

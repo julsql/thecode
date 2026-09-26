@@ -77,7 +77,7 @@
 
     <!-- Synchronisation chiffrée (facultative). -->
     <string name="sync_action">Synchroniser</string>
-    <string name="sync_unlink">Délier le compte</string>
+    <string name="sync_unlink">Se déconnecter</string>
     <string name="sync_title">Synchronisation chiffrée</string>
     <string name="sync_explainer">Votre carnet est chiffré sur cet appareil avant d\'être envoyé. Le serveur ne stocke que des blocs opaques : il ne peut lire ni vos sites, ni vos identifiants. Connectez-vous avec les identifiants du compte, jamais avec votre clef maîtresse.</string>
     <string name="sync_endpoint">Adresse du service</string>
@@ -102,7 +102,7 @@
     <string name="sync_failed">Échec de la synchronisation : %1$s</string>
     <string name="sync_needs_key">Définissez d\'abord votre clef maîtresse : le carnet est chiffré avec elle avant de quitter cet appareil.</string>
     <string name="sync_no_secure_storage">Le stockage chiffré est indisponible sur cet appareil : les identifiants ne peuvent pas être conservés.</string>
-    <string name="sync_unlinked">Compte délié. Cet appareil ne se synchronise plus.</string>
+    <string name="sync_unlinked">Déconnecté. Cet appareil ne se synchronise plus.</string>
     <string name="sync_nothing_to_unlink">Aucun compte n\'est lié.</string>
     <string name="vault_save_entry">Enregistrer cette entrée</string>
     <string name="vault_update_entry">Mettre à jour l\'entrée</string>

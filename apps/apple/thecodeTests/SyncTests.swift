@@ -21,6 +21,8 @@ private actor FakeVaultServer: SyncTransport {
 
     /// Tout ce qui est passé sur le réseau, pour vérifier l'absence de clair.
     private(set) var sentBodies: [String] = []
+    /// « MÉTHODE url » de chaque appel, dans l'ordre.
+    private(set) var requests: [String] = []
 
     private var validAccessToken: String
     /// Plafond d'entrées du compte, rendu au pull ; nil : le serveur n'en dit rien.
@@ -41,7 +43,11 @@ private actor FakeVaultServer: SyncTransport {
         -> SyncResponse
     {
         if let body { sentBodies.append(String(decoding: body, as: UTF8.self)) }
+        requests.append("\(method) \(url)")
 
+        if url.hasSuffix("/v1/auth/logout") {
+            return SyncResponse(status: 204, body: Data())
+        }
         if url.hasSuffix("/v1/auth/refresh") {
             refreshCount += 1
             validAccessToken = "access-\(refreshCount + 1)"
@@ -331,6 +337,88 @@ struct SyncTests {
         #expect(Base64URL.encode(raw) == "-_8")
         #expect(Base64URL.decode("-_8") == raw)
         #expect(Base64URL.decode("+/8=") == raw)
+    }
+}
+
+// MARK: - Déconnexion
+
+@Suite("Déconnexion")
+struct SignOutTests {
+
+    @Test("La déconnexion révoque la session avec le jeton de renouvellement")
+    func logoutSendsTheRefreshToken() async throws {
+        let server = FakeVaultServer()
+
+        await Sync(transport: server).logout(credentials: credentials)
+
+        #expect(await server.requests == ["POST https://example.test/api/v1/auth/logout"])
+        let body = try #require(await server.sentBodies.first)
+        let payload = try #require(
+            try JSONSerialization.jsonObject(with: Data(body.utf8)) as? [String: String])
+        #expect(payload == ["refresh_token": "refresh-0"])
+    }
+
+    @Test("Un refus de révocation ne renouvelle pas le jeton")
+    func logoutNeverRefreshes() async {
+        let transport = StubTransport { url, _ in
+            if !url.hasSuffix("/v1/auth/logout") { Issue.record("appel inattendu : \(url)") }
+            return SyncResponse(status: 401, body: Data(#"{"detail":"Session inconnue"}"#.utf8))
+        }
+
+        await Sync(transport: transport).logout(credentials: credentials)
+    }
+
+    @Test("Révocation d'abord, puis oubli local")
+    func signOutRevokesThenForgets() async {
+        let server = FakeVaultServer()
+        var forgotten = false
+
+        await AutoSync.signOut(credentials: credentials, sync: Sync(transport: server)) {
+            forgotten = true
+        }
+
+        #expect(await server.requests.count == 1)
+        #expect(forgotten)
+    }
+
+    @Test("Service injoignable : la déconnexion locale a lieu quand même")
+    func signOutForgetsEvenOffline() async {
+        struct Offline: Error {}
+        let transport = StubTransport { _, _ in throw Offline() }
+        var forgotten = false
+
+        await AutoSync.signOut(credentials: credentials, sync: Sync(transport: transport)) {
+            forgotten = true
+        }
+
+        #expect(forgotten)
+    }
+
+    @Test("Erreur serveur : la déconnexion locale a lieu quand même")
+    func signOutForgetsOnServerError() async {
+        let transport = StubTransport { _, _ in
+            SyncResponse(status: 500, body: Data(#"{"detail":"base indisponible"}"#.utf8))
+        }
+        var forgotten = false
+
+        await AutoSync.signOut(credentials: credentials, sync: Sync(transport: transport)) {
+            forgotten = true
+        }
+
+        #expect(forgotten)
+    }
+
+    @Test("Sans jetons, rien ne part et l'oubli local a lieu")
+    func signOutWithoutCredentials() async {
+        let server = FakeVaultServer()
+        var forgotten = false
+
+        await AutoSync.signOut(credentials: nil, sync: Sync(transport: server)) {
+            forgotten = true
+        }
+
+        #expect(await server.requests.isEmpty)
+        #expect(forgotten)
     }
 }
 
