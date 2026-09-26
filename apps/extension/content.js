@@ -102,6 +102,16 @@ if (typeof browser === "undefined") {
         // Mot de passe cliquable
         const pwdText = document.createElement("span");
         pwdText.innerText = response.password;
+        // Dit pour quel compte : sans identifiant, le mot de passe est calcule
+        // (et sera enregistre) sans, et le saisir apres le changerait.
+        const accountNote = document.createElement("div");
+        accountNote.style.fontSize = "11px";
+        accountNote.style.color = "rgba(255,255,255,0.75)";
+        accountNote.style.whiteSpace = "normal";
+        accountNote.style.maxWidth = "260px";
+        accountNote.innerText = response.login
+          ? `Pour ${response.login}`
+          : "Sans identifiant : saisissez-le avant si le site en utilise un.";
         pwdText.style.flexGrow = "1";
         pwdText.style.margin = "auto";
         pwdText.style.whiteSpace = "nowrap";
@@ -189,6 +199,9 @@ if (typeof browser === "undefined") {
         // Assemblage du menu
         container.appendChild(logo);
         container.appendChild(pwdText);
+        container.style.flexWrap = "wrap";
+        accountNote.style.flexBasis = "100%";
+        container.appendChild(accountNote);
         menu.appendChild(container);
         menu.appendChild(copyBtn);
 
