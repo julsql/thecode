@@ -294,6 +294,9 @@ function generatePassword(vaultMessage) {
         } else if (response.password) {
           hideError();
           showResult();
+          // Le carnet dérive en v2 : enregistrer depuis la v1 donnerait plus
+          // tard un autre mot de passe.
+          saveEntryBtn.hidden = selectedVersion() === 1;
           if (!loginResolved) {
             loginInput.value = response.login || "";
             loginResolved = true;
