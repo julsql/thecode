@@ -364,20 +364,16 @@ struct MainView: View {
                                 // La version en cours doit se lire sans ouvrir
                                 // de menu : c'est elle qui décide quel mot de
                                 // passe sort.
-                                // Enregistrer vit sous le mot de passe, à côté de
-                                // la sécurité, comme sur Android : la ligne du
-                                // mot de passe reste lisible sur petit écran.
-                                HStack(alignment: .center) {
-                                    Text(
-                                        L10n.t("Sécurité : ", "Security: ")
-                                            + localizedSecurityLabel(securityLabel)
-                                            + (useV1 ? "  ·  v1" : "  ·  v2"))
-                                        .foregroundColor(securityColor)
+                                // Sous le mot de passe : la sécurité en petit, puis
+                                // le bouton d'enregistrement, comme sur Android.
+                                Text(
+                                    L10n.t("Sécurité : ", "Security: ")
+                                        + localizedSecurityLabel(securityLabel)
+                                        + (useV1 ? "  ·  v1" : "  ·  v2"))
+                                    .font(.caption)
+                                    .foregroundColor(securityColor)
 
-                                    Spacer(minLength: 8)
-
-                                    saveEntryButton
-                                }
+                                saveEntryButton
 
                                 if let vaultSaveMessage {
                                     Text(vaultSaveMessage)
