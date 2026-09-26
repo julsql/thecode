@@ -287,7 +287,8 @@ import { defineComponent, ref, watch, computed, onMounted, onUnmounted } from "v
 import { generatePassword, calculateEntropyBits, getSecurityLevel } from "@/utils";
 import { canonicalSite, loadPublicSuffixList } from "@/canonicalSite";
 import { keyFingerprint, type Fingerprint } from "@/fingerprint";
-import { clearSession, loadSession, saveSession, syncVault } from "@/sync";
+import { clearSession, loadSession, saveSession, syncSettings, syncVault } from "@/sync";
+import { loadSettings, rememberSettings, saveSettings, type DefaultSettings } from "@/settings";
 import { refreshPlan } from "@/account";
 import {
   emptyVault,
@@ -340,11 +341,34 @@ export default defineComponent({
     const login = ref("");
     /** Vrai tant que l'identifiant vient du carnet et non de l'utilisateur. */
     const loginPrefilled = ref(false);
-    const longueur = ref(20);
-    const minuscules = ref(true);
-    const majuscules = ref(true);
-    const symboles = ref(true);
-    const chiffres = ref(true);
+    // Réglages par défaut retenus d'une visite à l'autre (et partagés avec le
+    // compte à la synchronisation) : shared/spec/default-settings.md.
+    const initial = loadSettings();
+    const longueur = ref(initial.length);
+    const minuscules = ref(initial.charset.lower);
+    const majuscules = ref(initial.charset.upper);
+    const symboles = ref(initial.charset.symbols);
+    const chiffres = ref(initial.charset.numbers);
+
+    function showSettings(settings: DefaultSettings) {
+      longueur.value = settings.length;
+      minuscules.value = settings.charset.lower;
+      majuscules.value = settings.charset.upper;
+      symboles.value = settings.charset.symbols;
+      chiffres.value = settings.charset.numbers;
+    }
+
+    watch([longueur, minuscules, majuscules, symboles, chiffres], () => {
+      rememberSettings({
+        length: Number(longueur.value),
+        charset: {
+          lower: minuscules.value,
+          upper: majuscules.value,
+          symbols: symboles.value,
+          numbers: chiffres.value,
+        },
+      });
+    });
     const showPassword = ref(false);
     const motDePasse = ref("");
     const fingerprint = ref<Fingerprint>({ text: "", color: "", colorName: "" });
@@ -674,8 +698,24 @@ export default defineComponent({
         const result = await syncVault(loadVault(), clef.value, session);
         saveVault(result.vault);
         saveSession(result.session);
+        // Les réglages suivent le carnet. Un échec ici n'annule pas la
+        // synchronisation du carnet, déjà faite.
+        let current = result.session;
+        try {
+          const synced = await syncSettings(loadSettings(), clef.value, current);
+          current = synced.session;
+          saveSession(current);
+          if (synced.applied) {
+            // Enregistrés avant l'affichage : l'écran les retrouve inchangés
+            // et ne les redate pas.
+            saveSettings(synced.settings);
+            showSettings(synced.settings);
+          }
+        } catch {
+          // Service sans réglages, ou coupure : le carnet est à jour.
+        }
         // Un abonnement pris entre-temps doit se voir sans recharger la page.
-        void refreshPlan(result.session);
+        void refreshPlan(current);
         refreshVault();
         const conflicts = result.conflicts.length
           ? tf("sync_conflicts", { n: result.conflicts.length })
