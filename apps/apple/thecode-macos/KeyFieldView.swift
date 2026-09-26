@@ -57,7 +57,7 @@ struct KeyFieldView: View {
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .autocorrectionDisabled()
                 .focused($focused)
-        } else if unlocked && editing {
+        } else if (unlocked || encodingKey.isEmpty) && editing {
             // Pendant la frappe seulement : il faut bien que la saisie aille
             // quelque part. Hors frappe, on repasse au rendu neutre.
             SecureField(placeholder, text: $encodingKey)
@@ -79,7 +79,9 @@ struct KeyFieldView: View {
     /// le focus : il faut bien que la saisie aille quelque part.
     private var maskedField: some View {
         TextField(
-            L10n.t("Aucune clef renseignée", "No key set"),
+            encodingKey.isEmpty
+                ? L10n.t("Cliquez pour saisir votre clé maîtresse", "Click to enter your master key")
+                : "",
             text: .constant(encodingKey.isEmpty ? "" : String(repeating: "•", count: 10))
         )
         .textFieldStyle(RoundedBorderTextFieldStyle())
@@ -94,7 +96,9 @@ struct KeyFieldView: View {
     }
 
     private func startEditing() {
-        guard unlocked else {
+        // Sans clef, il n'y a rien à protéger : pas d'authentification pour la
+        // première saisie.
+        guard unlocked || encodingKey.isEmpty else {
             authenticate(thenReveal: false)
             return
         }

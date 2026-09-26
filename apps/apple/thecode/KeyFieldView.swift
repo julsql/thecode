@@ -28,21 +28,18 @@ struct KeyFieldView: View {
     @Binding var showRealKey: Bool
     @Binding var unlocked: Bool
     @FocusState private var focused: Bool
+    /// Saisie masquée demandée : le `SecureField` doit exister avant de pouvoir
+    /// recevoir le focus. L'attendre du focus lui-même ne marchait jamais, le
+    /// champ affiché hors frappe étant désactivé et sans focus.
+    @State private var editing = false
 
     var body: some View {
         HStack {
             Text(L10n.t("Clé", "Key")).font(.headline)
 
             field
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    if unlocked {
-                        // Le champ masqué n'est pas éditable : il faut lui
-                        // donner le focus pour faire apparaître la saisie.
-                        focused = true
-                    } else {
-                        authenticate(thenReveal: false)
-                    }
+                .onChange(of: focused) { isFocused in
+                    if !isFocused { editing = false }
                 }
 
             Button(action: handleEye) {
@@ -56,14 +53,14 @@ struct KeyFieldView: View {
 
     @ViewBuilder
     private var field: some View {
-        let placeholder = L10n.t("Aucune clef renseignée", "No key set")
+        let placeholder = L10n.t("Clé maîtresse", "Master key")
         if showRealKey {
             TextField(placeholder, text: $encodingKey)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
                 .focused($focused)
-        } else if unlocked && focused {
+        } else if (unlocked || encodingKey.isEmpty) && editing {
             // Pendant la frappe seulement : il faut bien que la saisie aille
             // quelque part. Hors frappe, on repasse au rendu neutre.
             SecureField(placeholder, text: $encodingKey)
@@ -87,11 +84,31 @@ struct KeyFieldView: View {
     /// le focus : il faut bien que la saisie aille quelque part.
     private var maskedField: some View {
         TextField(
-            L10n.t("Aucune clef renseignée", "No key set"),
+            encodingKey.isEmpty
+                ? L10n.t("Touchez pour saisir votre clé maîtresse", "Tap to enter your master key")
+                : "",
             text: .constant(encodingKey.isEmpty ? "" : String(repeating: "•", count: 10))
         )
         .textFieldStyle(RoundedBorderTextFieldStyle())
         .disabled(true)
+        // Un champ désactivé ne reçoit pas les touchers : c'est ce calque qui
+        // les prend, pour ouvrir la saisie masquée.
+        .overlay(
+            Color.clear
+                .contentShape(Rectangle())
+                .onTapGesture(perform: startEditing)
+        )
+    }
+
+    private func startEditing() {
+        // Sans clef, il n'y a rien à protéger : pas d'authentification pour la
+        // première saisie.
+        guard unlocked || encodingKey.isEmpty else {
+            authenticate(thenReveal: false)
+            return
+        }
+        editing = true
+        DispatchQueue.main.async { focused = true }
     }
 
     private func handleEye() {
@@ -127,12 +144,7 @@ struct KeyFieldView: View {
                 if reveal {
                     showRealKey = true
                 } else {
-                    // Le SecureField éditable n'existe dans la hiérarchie
-                    // qu'après que `unlocked` ait été mis à true. On
-                    // décale le focus d'un tick pour que SwiftUI ait
-                    // monté la nouvelle vue avant qu'on ne tente de la
-                    // focaliser.
-                    DispatchQueue.main.async { focused = true }
+                    startEditing()
                 }
             }
         }
