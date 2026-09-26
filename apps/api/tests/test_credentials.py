@@ -48,7 +48,7 @@ def google(monkeypatch, settings):
     settings.google_client_id = "client-de-test"
     identities: dict[str, GoogleIdentity] = {}
 
-    def fake_verify(raw, _settings):
+    def fake_verify(raw, _settings, _nonce=""):
         if raw not in identities:
             raise GoogleError("jeton inconnu")
         return identities[raw]

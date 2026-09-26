@@ -394,7 +394,7 @@ def google_sign_in(payload: GoogleRequest, db: DbSession = Depends(get_db)) -> T
     """
     settings = get_settings()
     try:
-        identity = verify_id_token(payload.id_token, settings)
+        identity = verify_id_token(payload.id_token, settings, payload.nonce)
     except GoogleError as exc:
         # Le détail part dans les journaux, pas au client : il ne l'aiderait
         # pas, et il renseignerait qui cherche à forger un jeton.

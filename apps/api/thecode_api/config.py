@@ -95,6 +95,15 @@ class Settings(BaseSettings):
     #: Il sert d'audience à la vérification : sans lui, un jeton émis pour une
     #: toute autre application serait accepté ici.
     google_client_id: str = ""
+    #: Autres identifiants client Google acceptés en audience, séparés par des
+    #: virgules. Vide par défaut.
+    #:
+    #: Le site, l'extension et Android obtiennent un jeton émis pour le client
+    #: web ci-dessus. iOS et macOS passent par un client de type « iOS », que
+    #: Google impose pour ce flux, et dont les jetons portent donc une autre
+    #: audience. Ces identifiants ne sont jamais publiés par
+    #: `/v1/auth/registration` : chaque application embarque le sien.
+    google_extra_client_ids: str = ""
 
     #: Vérification d'adresse. Par défaut la vérification est proposée mais pas
     #: exigée : tant que l'envoi d'e-mail n'est pas branché, l'exiger
@@ -151,6 +160,18 @@ class Settings(BaseSettings):
     @property
     def google_enabled(self) -> bool:
         return bool(self.google_client_id)
+
+    @property
+    def google_audiences(self) -> list[str]:
+        """Audiences acceptées : le client web d'abord, puis les autres.
+
+        Sans client web, aucune : les identifiants supplémentaires ne suffisent
+        pas à ouvrir la connexion Google, le site ne saurait pas l'afficher.
+        """
+        if not self.google_client_id:
+            return []
+        extra = [cid.strip() for cid in self.google_extra_client_ids.split(",") if cid.strip()]
+        return [self.google_client_id, *(cid for cid in extra if cid != self.google_client_id)]
 
     @property
     def billing_enabled(self) -> bool:

@@ -166,9 +166,13 @@ class VerifyRequest(BaseModel):
 
 
 class GoogleRequest(BaseModel):
-    """Le jeton d'identité rendu par Google au navigateur."""
+    """Le jeton d'identité rendu par Google au site, à l'extension ou à une
+    application."""
 
     id_token: Annotated[str, Field(min_length=1, max_length=4096)]
+    #: Le nonce passé à Google pour obtenir ce jeton. Facultatif ; s'il est
+    #: fourni, le jeton doit porter le même.
+    nonce: Annotated[str, Field(max_length=256)] = ""
     device_label: Annotated[str, Field(max_length=120)] = ""
     invite_code: Annotated[str, Field(max_length=128)] = ""
     lang: Annotated[str, Field(max_length=5)] = "en"
