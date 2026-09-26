@@ -63,7 +63,7 @@ public enum SyncCredentialsStore {
     @discardableResult
     public static func clear() -> Bool {
         let status = SecItemDelete(baseQuery() as CFDictionary)
-        // Rien à supprimer n'est pas un échec : le compte est délié dans les
+        // Rien à supprimer n'est pas un échec : le compte est déconnecté dans les
         // deux cas.
         return status == errSecSuccess || status == errSecItemNotFound
     }
