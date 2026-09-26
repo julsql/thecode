@@ -319,8 +319,8 @@ final class AutoSync: ObservableObject {
             result.localOnly == 0
             ? ""
             : L10nSync.t(
-                ", \(result.localOnly) restées sur cet appareil (plafond de l'offre gratuite)",
-                ", \(result.localOnly) kept on this device (free plan limit)")
+                ", \(result.localOnly) restées sur cet appareil (plafond de ce compte)",
+                ", \(result.localOnly) kept on this device (limit of this account)")
         return result.conflicts.isEmpty
             ? L10nSync.t(
                 "Carnet synchronisé : \(kept) entrées\(local).",
@@ -345,5 +345,19 @@ final class AutoSync: ObservableObject {
         let detail = syncError?.message ?? error.localizedDescription
         return L10nSync.t(
             "Échec de la synchronisation : \(detail)", "Sync failed: \(detail)")
+    }
+
+    /// Échec de la connexion. Un 402 y est le plafond d'appareils : le message
+    /// du service nomme l'offre et renvoie au site, ce qu'une app des magasins
+    /// ne relaie pas. On garde le fait, pas l'invitation.
+    nonisolated static func signInFailureMessage(_ error: Error) -> String {
+        if (error as? SyncError)?.status == 402 {
+            return L10nSync.t(
+                "Ce compte a atteint son nombre maximal d'appareils connectés. Déconnectez "
+                    + "un autre appareil, puis réessayez.",
+                "This account has reached its maximum number of connected devices. Sign out "
+                    + "of another device, then try again.")
+        }
+        return failureMessage(error)
     }
 }

@@ -703,7 +703,7 @@ struct VaultScreen: View {
                 isWorking = false
                 autoSync.syncNow()
             } catch {
-                status = AutoSync.failureMessage(error)
+                status = AutoSync.signInFailureMessage(error)
                 isWorking = false
             }
         }
