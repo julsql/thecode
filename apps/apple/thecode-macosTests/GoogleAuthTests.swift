@@ -31,8 +31,11 @@ struct GoogleAuthTests {
         }
     }
 
-    @Test func buttonHiddenWithoutClientID() {
-        // L'app hôte est construite sans identifiant : la clef reste vide.
-        #expect(GoogleAuth.configured() == nil)
+    @Test func hostAppReadsTheConfiguredClientID() {
+        // L'app hôte porte l'identifiant du projet : le bouton est proposé, et
+        // la redirection suit l'identifiant.
+        let auth = GoogleAuth.configured()
+        #expect(auth != nil)
+        #expect(auth?.clientID.hasSuffix(".apps.googleusercontent.com") == true)
     }
 }
