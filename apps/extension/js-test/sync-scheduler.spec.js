@@ -276,4 +276,47 @@ describe("synchronisation automatique dans le service worker", () => {
     await send({ action: "syncLogout" });
     expect((await send({ action: "syncStatus" })).lastStatus).toBeNull();
   });
+
+  it("revoque la session avec son jeton de renouvellement avant de l'oublier", async () => {
+    global.fetch = jest.fn(async () => ({ ok: true, status: 204 }));
+    const { send, store } = loadWorker({ syncSession: SESSION });
+
+    expect(await send({ action: "syncLogout" })).toStrictEqual({ ok: true });
+
+    expect(syncCalls()).toHaveLength(1);
+    const [url, init] = syncCalls()[0];
+    expect(url).toBe(`${SESSION.endpoint}/v1/auth/logout`);
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body)).toStrictEqual({ refresh_token: SESSION.refreshToken });
+    expect(init.headers.Authorization).toBeUndefined();
+    expect(store.syncSession).toBeUndefined();
+  });
+
+  it("oublie la session meme si le service est injoignable", async () => {
+    const { send, store } = loadWorker({
+      syncSession: SESSION,
+      syncLastStatus: { ok: false, code: "network" },
+    });
+
+    expect(await send({ action: "syncLogout" })).toStrictEqual({ ok: true });
+
+    expect(syncCalls()).toHaveLength(1);
+    expect(store.syncSession).toBeUndefined();
+    expect(store.syncLastStatus).toBeUndefined();
+  });
+
+  it("oublie la session meme si le service repond en erreur, sans renouveler", async () => {
+    global.fetch = jest.fn(async () => ({
+      ok: false,
+      status: 500,
+      statusText: "Server Error",
+      json: async () => ({}),
+    }));
+    const { send, store } = loadWorker({ syncSession: SESSION });
+
+    expect(await send({ action: "syncLogout" })).toStrictEqual({ ok: true });
+
+    expect(syncCalls().map(([url]) => url)).toStrictEqual([`${SESSION.endpoint}/v1/auth/logout`]);
+    expect(store.syncSession).toBeUndefined();
+  });
 });

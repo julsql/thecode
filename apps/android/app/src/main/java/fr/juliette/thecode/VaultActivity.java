@@ -572,7 +572,7 @@ public class VaultActivity extends AppCompatActivity {
             return true;
         }
         if (id == R.id.action_sync_unlink) {
-            unlink();
+            signOut();
             return true;
         }
         return false;
@@ -793,16 +793,24 @@ public class VaultActivity extends AppCompatActivity {
         if (show) view.setText(status);
     }
 
-    private void unlink() {
-        if (preferences.getSyncCredentials() == null) {
+    private void signOut() {
+        Sync.Credentials credentials = preferences.getSyncCredentials();
+        if (credentials == null) {
             toast(getString(R.string.sync_nothing_to_unlink));
             return;
         }
-        // Le carnet local reste : délier coupe la synchronisation, cela
-        // n'efface rien.
-        preferences.clearSyncCredentials();
-        toast(getString(R.string.sync_unlinked));
-        render(vault);
+        // Le carnet local reste : se déconnecter coupe la synchronisation,
+        // cela n'efface rien. La révocation passe par le réseau : un fil à
+        // part, que la fermeture de l'écran (worker.shutdownNow) n'annule pas,
+        // pour que la session locale soit toujours oubliée.
+        new Thread(() -> new Sync().signOut(credentials, () -> {
+            preferences.clearSyncCredentials();
+            main.post(() -> {
+                if (isFinishing()) return;
+                toast(getString(R.string.sync_unlinked));
+                render(vault);
+            });
+        }), "thecode-sign-out").start();
     }
 
     private void toast(String message) {

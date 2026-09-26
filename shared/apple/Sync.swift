@@ -244,6 +244,17 @@ public struct Sync {
         return current.withPlan(body["plan"] as? String ?? SyncPlan.free)
     }
 
+    /// Révoque la session côté service : l'appareil cesse de compter parmi
+    /// les appareils connectés.
+    ///
+    /// Au mieux : toute erreur est ignorée et le jeton n'est pas renouvelé.
+    /// La déconnexion locale ne doit jamais en dépendre, hors ligne compris.
+    public func logout(credentials creds: SyncCredentials) async {
+        _ = try? await call(
+            "\(creds.endpoint)/v1/auth/logout", method: "POST",
+            payload: ["refresh_token": creds.refreshToken])
+    }
+
     private func refresh(_ creds: SyncCredentials) async throws -> SyncCredentials {
         let body = try await call(
             "\(creds.endpoint)/v1/auth/refresh", method: "POST",

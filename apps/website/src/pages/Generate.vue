@@ -324,7 +324,7 @@ import { defineComponent, ref, watch, computed, onMounted, onUnmounted } from "v
 import { generatePassword, calculateEntropyBits, getSecurityLevel } from "@/utils";
 import { canonicalSite, loadPublicSuffixList } from "@/canonicalSite";
 import { keyFingerprint, type Fingerprint } from "@/fingerprint";
-import { clearSession, loadSession } from "@/sync";
+import { loadSession, signOutSession } from "@/sync";
 import { loadSettings, rememberSettings, sameSettings, type DefaultSettings } from "@/settings";
 import { lastSyncFailure, runSyncNow, scheduleAutoSync, useAutoSync } from "@/autoSync";
 import {
@@ -785,8 +785,8 @@ export default defineComponent({
       }
     }
 
-    function disconnectSync() {
-      clearSession();
+    async function disconnectSync() {
+      await signOutSession();
       syncConnected.value = false;
       syncMessage.value = t("sync_forgotten");
     }

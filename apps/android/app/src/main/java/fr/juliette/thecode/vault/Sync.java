@@ -287,6 +287,36 @@ public final class Sync {
         }
     }
 
+    /**
+     * Révoque la session côté service : une session révoquée ne compte plus
+     * dans le plafond d'appareils. Au mieux : un service injoignable ou qui
+     * refuse (jeton déjà expiré, 4xx, 5xx) ne doit pas empêcher de se
+     * déconnecter, et l'on ne renouvelle pas le jeton pour cet appel.
+     *
+     * @return vrai si le service a accepté la révocation
+     */
+    public boolean logout(@NonNull Credentials creds) {
+        try {
+            JSONObject payload = new JSONObject().put("refresh_token", creds.refreshToken);
+            call(creds.endpoint + "/v1/auth/logout", "POST", payload, null);
+            return true;
+        } catch (JSONException | SyncException | RuntimeException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Se déconnecter : révoque la session au mieux, puis oublie la session
+     * locale quoi qu'il arrive.
+     */
+    public void signOut(@NonNull Credentials creds, @NonNull Runnable forgetLocally) {
+        try {
+            logout(creds);
+        } finally {
+            forgetLocally.run();
+        }
+    }
+
     // ------------------------------------------------------- synchronisation
 
     /**

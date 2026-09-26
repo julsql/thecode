@@ -155,8 +155,17 @@ final class AutoSync: ObservableObject {
     /// Le bouton « Synchroniser ».
     func syncNow() { request(.manual) }
 
-    /// Compte délié : l'état d'avant ne veut plus rien dire.
+    /// Compte déconnecté : l'état d'avant ne veut plus rien dire.
     func reset() { status = nil }
+
+    /// Déconnexion : révoque la session au mieux, puis oublie les jetons
+    /// localement, que le service ait répondu ou non.
+    nonisolated static func signOut(
+        credentials: SyncCredentials?, sync: Sync = Sync(), forget: () -> Void
+    ) async {
+        if let credentials { await sync.logout(credentials: credentials) }
+        forget()
+    }
 
     private func handle(_ action: AutoSyncScheduler.Action) {
         switch action {

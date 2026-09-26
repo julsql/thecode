@@ -284,7 +284,7 @@
     "description": "Popup."
   },
   "popup_sync_logout": {
-    "message": "Disconnect",
+    "message": "Sign out",
     "description": "Popup."
   },
   "popup_transfer": {

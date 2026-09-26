@@ -243,7 +243,7 @@ struct VaultScreen: View {
                         .buttonStyle(.borderedProminent)
                         .disabled(isBusy)
 
-                        Button(L10n.t("Délier", "Unlink"), action: unlink)
+                        Button(L10n.t("Se déconnecter", "Sign out"), action: signOut)
                             .buttonStyle(.borderless)
                             .disabled(isBusy)
                     } else {
@@ -616,15 +616,24 @@ struct VaultScreen: View {
         isAppleEnabled = enabled
     }
 
-    private func unlink() {
-        // Le carnet local reste : délier coupe la synchronisation, cela
-        // n'efface rien.
-        SyncCredentialsStore.clear()
-        isLinked = false
-        autoSync.reset()
-        status = L10n.t(
-            "Compte délié. Cet appareil ne se synchronise plus.",
-            "Account unlinked. This device no longer syncs.")
+    private func signOut() {
+        // Le carnet local reste : se déconnecter coupe la synchronisation,
+        // cela n'efface rien. La session est révoquée côté service pour que
+        // l'appareil ne compte plus parmi les appareils connectés.
+        isWorking = true
+        status = L10n.t("Déconnexion…", "Signing out…")
+
+        Task {
+            await AutoSync.signOut(credentials: SyncCredentialsStore.load()) {
+                _ = SyncCredentialsStore.clear()
+            }
+            isLinked = false
+            isWorking = false
+            autoSync.reset()
+            status = L10n.t(
+                "Compte déconnecté. Cet appareil ne se synchronise plus.",
+                "Signed out. This device no longer syncs.")
+        }
     }
 
     /// Connexion, puis première synchronisation par le même chemin que les

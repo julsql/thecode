@@ -114,6 +114,33 @@ export function clearSession(): void {
   }
 }
 
+/**
+ * Révoque la session côté service : une session révoquée ne compte plus dans
+ * le plafond d'appareils. Au mieux : un service injoignable ou qui refuse
+ * (4xx, 5xx) ne doit pas empêcher de se déconnecter, et l'on ne renouvelle
+ * pas le jeton pour cet appel. Rend vrai si le service a accepté.
+ */
+export async function logout(session: Session): Promise<boolean> {
+  try {
+    await request(`${session.endpoint}/v1/auth/logout`, {
+      payload: { refresh_token: session.refreshToken },
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Se déconnecter : révoquer la session au mieux, puis l'oublier quoi qu'il arrive. */
+export async function signOutSession(): Promise<void> {
+  const session = loadSession();
+  try {
+    if (session) await logout(session);
+  } finally {
+    clearSession();
+  }
+}
+
 /** Ce que l'inscription réclame, avant de le demander. */
 export interface RegistrationState {
   open: boolean;
