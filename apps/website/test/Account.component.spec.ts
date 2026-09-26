@@ -868,6 +868,20 @@ describe("page du compte", () => {
       expect(wrapper.find("#acc_email").exists()).toBe(true);
     });
 
+    it("révoque la session côté service à la déconnexion", async () => {
+      const { calls } = fakeService();
+      const wrapper = await mountAccount();
+      const stored = JSON.parse(localStorage.getItem("thecode.session")!);
+
+      await button(wrapper, "Se déconnecter")!.trigger("click");
+      await flush();
+
+      const logout = calls.filter((c) => c.url.endsWith("/v1/auth/logout"));
+      expect(logout).toHaveLength(1);
+      expect(logout[0].body).toEqual({ refresh_token: stored.refreshToken });
+      expect(localStorage.getItem("thecode.session")).toBeNull();
+    });
+
     it("revient au formulaire quand le jeton est mort", async () => {
       const json = (status: number, body: unknown) =>
         Promise.resolve({

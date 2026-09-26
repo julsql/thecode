@@ -565,6 +565,7 @@ import { loadService, service } from "@/service";
 import {
   appleSignIn,
   clearSession,
+  signOutSession,
   DEFAULT_ENDPOINT,
   googleSignIn,
   loadSession,
@@ -1032,8 +1033,8 @@ export default defineComponent({
       }
     }
 
-    function signOut() {
-      clearSession();
+    async function signOut() {
+      await signOutSession();
       connected.value = false;
       info.value = null;
       devices.value = [];
