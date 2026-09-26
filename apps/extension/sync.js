@@ -71,6 +71,24 @@ async function clearSession(storage) {
   }
 }
 
+/**
+ * Revoque la session cote service : une session revoquee ne compte plus dans
+ * le plafond d'appareils. Au mieux : un service injoignable ou qui refuse
+ * (4xx, 5xx) ne doit pas empecher de se deconnecter, et l'on ne renouvelle
+ * pas le jeton pour cet appel. Rend vrai si le service a accepte.
+ */
+async function syncLogout(session) {
+  if (!session?.endpoint || !session?.refreshToken) return false;
+  try {
+    await syncRequest(`${session.endpoint}/v1/auth/logout`, {
+      payload: { refresh_token: session.refreshToken },
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function syncLogin(endpoint, email, password, deviceLabel = "extension") {
   const body = await syncRequest(`${endpoint}/v1/auth/login`, {
     payload: { email, password, device_label: deviceLabel },
@@ -344,6 +362,7 @@ if (typeof module !== "undefined") {
     saveSession,
     clearSession,
     syncLogin,
+    syncLogout,
     syncRegister,
     googleSignInBody,
     syncGoogleLogin,
