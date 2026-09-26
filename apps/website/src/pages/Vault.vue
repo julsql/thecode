@@ -261,7 +261,7 @@
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, nextTick, onMounted, ref } from "vue";
+import { computed, defineComponent, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import { useI18n } from "@/i18n";
 import type { TranslationKey } from "@/i18n";
 import { isPaidPlan, refreshPlan } from "@/account";
@@ -269,6 +269,7 @@ import { loadSession } from "@/sync";
 import { liveEntries, loadVault, saveVault, tombstoneEntry, type VaultEntry } from "@/vault";
 import { changeLock, createLock, forgetLock, hasLock, LockError, verifyLock } from "@/vaultLock";
 import { applyRenewal, proposeRenewal, type RenewProposal } from "@/renew";
+import { clearSession, isWithinGrace, recordLeave, resumeSession } from "@/vaultSession";
 
 type View = "setup" | "locked" | "unlocked";
 
@@ -285,10 +286,11 @@ export default defineComponent({
     const { t, lang, localePath } = useI18n();
 
     /**
-     * État du verrou, en mémoire seulement : quitter l'écran ou recharger
-     * l'onglet reverrouille. Pas de déverrouillage mémorisé.
+     * État du verrou, en mémoire. Seul l'instant de sortie est retenu
+     * (sessionStorage) : revenu dans les 3 minutes, le carnet est toujours
+     * ouvert (vaultSession.ts).
      */
-    const view = ref<View>(hasLock() ? "locked" : "setup");
+    const view = ref<View>(hasLock() ? (resumeSession() ? "unlocked" : "locked") : "setup");
     const password = ref("");
     const passwordConfirm = ref("");
     const current = ref("");
@@ -312,9 +314,47 @@ export default defineComponent({
     const renewConfirm = ref<HTMLButtonElement | null>(null);
     const deleteConfirm = ref<HTMLButtonElement | null>(null);
 
+    // Grâce de 3 minutes : quitter l'écran (autre page, onglet masqué ou
+    // fermé) fait courir la fenêtre.
+    let leftAt: number | null = null;
+
+    function leave() {
+      if (view.value !== "unlocked") return;
+      leftAt = Date.now();
+      recordLeave(leftAt);
+    }
+
+    function comeBack() {
+      if (view.value !== "unlocked" || leftAt === null) return;
+      const since = leftAt;
+      leftAt = null;
+      if (!isWithinGrace(since, Date.now())) onLock();
+    }
+
+    function onVisibility() {
+      if (document.visibilityState === "hidden") leave();
+      else comeBack();
+    }
+
+    function onPageShow(e: PageTransitionEvent) {
+      if (e.persisted) comeBack();
+    }
+
     onMounted(() => {
       const session = loadSession();
       if (session) refreshPlan(session).then((plan) => (renewAllowed.value = isPaidPlan(plan)));
+      if (view.value === "unlocked") refreshEntries();
+      document.addEventListener("visibilitychange", onVisibility);
+      window.addEventListener("pagehide", leave);
+      window.addEventListener("pageshow", onPageShow);
+    });
+
+    // Changer de page dans le site démonte l'écran : c'est une sortie.
+    onBeforeUnmount(() => {
+      leave();
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pagehide", leave);
+      window.removeEventListener("pageshow", onPageShow);
     });
 
     /** Chaque changement de vue place le focus sur son titre. */
@@ -385,6 +425,8 @@ export default defineComponent({
       });
 
     function onLock() {
+      clearSession();
+      leftAt = null;
       resetFields();
       clef.value = "";
       pending.value = null;
@@ -410,6 +452,7 @@ export default defineComponent({
 
     function onForget() {
       forgetLock();
+      clearSession();
       confirmingForget.value = false;
       resetFields();
       status.value = t("vault_forgot_done");

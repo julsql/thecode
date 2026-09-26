@@ -8,6 +8,7 @@ import { createRouter, createMemoryHistory } from "vue-router";
 import Vault from "@/pages/Vault.vue";
 import { emptyVault, loadVault, newEntry, saveVault } from "@/vault";
 import { createLock, hasLock, verifyLock } from "@/vaultLock";
+import { VAULT_GRACE_MS, VAULT_SESSION_KEY } from "@/vaultSession";
 
 const PASSWORD = "mot de passe";
 
@@ -56,6 +57,8 @@ function signInAs(plan: string) {
 
 beforeEach(() => {
   localStorage.clear();
+  sessionStorage.clear();
+  vi.restoreAllMocks();
   document.body.innerHTML = "";
   // refreshPlan interroge le service : on le rend injoignable, l'offre connue
   // reste celle de la session.
@@ -117,20 +120,78 @@ describe("verrou", () => {
     expect(w.text()).not.toContain("gone.com");
   });
 
-  it("ne mémorise pas le déverrouillage", async () => {
+  it("reste ouvert si l'on revient dans les 3 minutes", async () => {
+    seed();
+    const now = vi.spyOn(Date, "now");
+    now.mockReturnValue(1_000_000);
+    const first = await mountVault();
+    await unlock(first);
+    // Changer de page démonte l'écran : l'instant de sortie est retenu.
+    first.unmount();
+    expect(sessionStorage.getItem(VAULT_SESSION_KEY)).toBe("1000000");
+
+    now.mockReturnValue(1_000_000 + VAULT_GRACE_MS);
+    const again = await mountVault();
+    expect(again.text()).not.toContain("Carnet verrouillé");
+    expect(again.text()).toContain("google.com");
+  });
+
+  it("redemande le mot de passe au-delà de 3 minutes", async () => {
+    const now = vi.spyOn(Date, "now");
+    now.mockReturnValue(1_000_000);
     const first = await mountVault();
     await unlock(first);
     first.unmount();
 
+    now.mockReturnValue(1_000_000 + VAULT_GRACE_MS + 1);
     const again = await mountVault();
     expect(again.text()).toContain("Carnet verrouillé");
   });
 
-  it("se reverrouille à la demande", async () => {
+  it("referme si l'horloge a reculé", async () => {
+    const now = vi.spyOn(Date, "now");
+    now.mockReturnValue(1_000_000);
+    const first = await mountVault();
+    await unlock(first);
+    first.unmount();
+
+    now.mockReturnValue(1_000_000 - 1);
+    expect((await mountVault()).text()).toContain("Carnet verrouillé");
+  });
+
+  it("se reverrouille au retour sur un onglet masqué trop longtemps", async () => {
+    const now = vi.spyOn(Date, "now");
+    const visibility = vi.spyOn(document, "visibilityState", "get");
+    now.mockReturnValue(1_000_000);
+    const w = await mountVault();
+    await unlock(w);
+
+    visibility.mockReturnValue("hidden");
+    document.dispatchEvent(new Event("visibilitychange"));
+    now.mockReturnValue(1_000_000 + 60_000);
+    visibility.mockReturnValue("visible");
+    document.dispatchEvent(new Event("visibilitychange"));
+    await w.vm.$nextTick();
+    expect(w.text()).not.toContain("Carnet verrouillé");
+
+    visibility.mockReturnValue("hidden");
+    document.dispatchEvent(new Event("visibilitychange"));
+    now.mockReturnValue(1_000_000 + 60_000 + VAULT_GRACE_MS + 1);
+    visibility.mockReturnValue("visible");
+    document.dispatchEvent(new Event("visibilitychange"));
+    await w.vm.$nextTick();
+    expect(w.text()).toContain("Carnet verrouillé");
+  });
+
+  it("se reverrouille à la demande, sans grâce", async () => {
     const w = await mountVault();
     await unlock(w);
     await button(w, "Verrouiller").trigger("click");
     expect(w.text()).toContain("Carnet verrouillé");
+    w.unmount();
+
+    expect(sessionStorage.getItem(VAULT_SESSION_KEY)).toBeNull();
+    expect((await mountVault()).text()).toContain("Carnet verrouillé");
   });
 
   it("efface le carnet local après confirmation si le mot de passe est oublié", async () => {
