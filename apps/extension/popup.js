@@ -97,6 +97,9 @@ if (typeof browser === "undefined") {
 // Chargement des paramètres sauvegardés
 window.addEventListener("DOMContentLoaded", () => {
   refreshSyncState();
+  // Synchronisation automatique a l'ouverture : le fond l'espace et ne fait
+  // rien sans session ni clef.
+  browser.runtime.sendMessage({ action: "syncAutoOpen" }, () => {});
   hideResult();
   hideError();
   browser.runtime.sendMessage({ action: "checkEncodingKey" }, (resp) => {
@@ -485,6 +488,26 @@ saveEntryBtn.addEventListener("click", () => {
   });
 });
 
+/** Echec de la derniere synchronisation, en une ligne : jamais une alerte. */
+function lastSyncFailure(status) {
+  if (!status || status.ok) return "";
+  switch (status.code) {
+    case "network":
+      return msg("sync_auto_failed_network", "Dernière synchronisation : service injoignable.");
+    case "auth":
+      return msg("sync_auto_failed_auth", "Dernière synchronisation : reconnectez-vous.");
+    case "plan":
+      return msg("sync_auto_failed_plan", "Dernière synchronisation : plafond de l'offre atteint.");
+    case "forbidden":
+      return msg(
+        "sync_auto_failed_forbidden",
+        "Dernière synchronisation : refusée par le service.",
+      );
+    default:
+      return msg("sync_auto_failed", "Dernière synchronisation échouée.");
+  }
+}
+
 /** Montre la connexion ou les actions, selon qu'une session existe. */
 function refreshSyncState() {
   browser.runtime.sendMessage({ action: "syncStatus" }, (resp) => {
@@ -492,6 +515,7 @@ function refreshSyncState() {
     syncLoggedOut.hidden = connected;
     syncLoggedIn.hidden = !connected;
     if (!connected) syncStatus.textContent = "";
+    else if (!syncStatus.textContent) syncStatus.textContent = lastSyncFailure(resp?.lastStatus);
     canRenew = Boolean(resp?.canRenew);
     refreshChangeButton();
     if (!connected) refreshGoogleButton();

@@ -675,5 +675,25 @@
         "content": "$1"
       }
     }
+  },
+  "sync_auto_failed": {
+    "message": "Dernière synchronisation échouée.",
+    "description": "Automatic sync failure, shown in the popup's sync area."
+  },
+  "sync_auto_failed_network": {
+    "message": "Dernière synchronisation : service injoignable.",
+    "description": "Automatic sync failure, shown in the popup's sync area."
+  },
+  "sync_auto_failed_auth": {
+    "message": "Dernière synchronisation : reconnectez-vous.",
+    "description": "Automatic sync failure, shown in the popup's sync area."
+  },
+  "sync_auto_failed_plan": {
+    "message": "Dernière synchronisation : plafond de l'offre atteint.",
+    "description": "Automatic sync failure, shown in the popup's sync area."
+  },
+  "sync_auto_failed_forbidden": {
+    "message": "Dernière synchronisation : refusée par le service.",
+    "description": "Automatic sync failure, shown in the popup's sync area."
   }
 }
