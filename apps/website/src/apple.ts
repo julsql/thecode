@@ -46,10 +46,15 @@ declare global {
   }
 }
 
-/** Ce qu'il faut envoyer au service : le jeton et le nonce brut. */
+/**
+ * Ce qu'il faut envoyer au service : le jeton, le nonce brut, et le code
+ * d'autorisation (vide s'il manque) qui lui permet de révoquer les jetons
+ * Apple à la suppression du compte.
+ */
 export interface AppleCredential {
   idToken: string;
   rawNonce: string;
+  authorizationCode: string;
 }
 
 export interface AppleSignIn {
@@ -165,7 +170,11 @@ export async function setupAppleSignIn(clientId: string, lang = "en"): Promise<A
       const auth = response?.authorization;
       if (!auth?.id_token) throw new AppleSignInError("missing id_token");
       if (auth.state !== request.state) throw new AppleSignInError("state mismatch");
-      return { idToken: auth.id_token, rawNonce: request.rawNonce };
+      return {
+        idToken: auth.id_token,
+        rawNonce: request.rawNonce,
+        authorizationCode: auth.code ?? "",
+      };
     },
   };
 }

@@ -38,7 +38,9 @@ function fakeApple(answer?: (init: Record<string, string>) => Promise<unknown>) 
     const init = inits[inits.length - 1];
     return answer
       ? answer(init)
-      : Promise.resolve({ authorization: { id_token: "jeton-apple", state: init.state } });
+      : Promise.resolve({
+          authorization: { id_token: "jeton-apple", state: init.state, code: "code-apple" },
+        });
   });
   vi.stubGlobal("AppleID", {
     auth: { init: vi.fn((options: Record<string, string>) => inits.push(options)), signIn },
@@ -394,6 +396,8 @@ describe("page du compte", () => {
       const sent = service.calls.find((c) => c.url.endsWith("/v1/auth/apple"));
       expect(sent?.body).toMatchObject({
         identity_token: "jeton-apple",
+        // De quoi révoquer les jetons Apple à la suppression du compte.
+        authorization_code: "code-apple",
         client: "web",
         lang: "fr",
       });
