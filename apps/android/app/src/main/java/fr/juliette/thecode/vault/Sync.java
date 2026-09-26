@@ -23,8 +23,9 @@ import javax.crypto.SecretKey;
 /**
  * Client de synchronisation.
  *
- * Le carnet est chiffré <b>avant</b> de quitter l'appareil, avec la clef de
- * transfert dérivée de la clef maîtresse. Le serveur ne reçoit que des blocs
+ * Le carnet est chiffré <b>avant</b> de quitter l'appareil, avec une clef
+ * dérivée de la clef maîtresse et du sel propre au compte
+ * (shared/spec/vault-sync.md). Le serveur ne reçoit que des blocs
  * opaques : il ne peut ni lire les sites, ni les identifiants, ni rien déduire
  * au-delà du nombre d'entrées.
  *
@@ -67,29 +68,67 @@ public final class Sync {
          * service n'a pas répondu, et proposerait donc tout.
          */
         public final String plan;
+        /**
+         * Sel de dérivation du compte, en base64url, tel que le service l'a
+         * rendu. Public : il ne sert qu'à rendre la clef propre au compte.
+         * Vide tant qu'il n'est pas connu.
+         */
+        public final String kdfSalt;
 
         public Credentials(@NonNull String endpoint, @NonNull String accessToken,
                            @NonNull String refreshToken) {
-            this(endpoint, accessToken, refreshToken, PLAN_FREE);
+            this(endpoint, accessToken, refreshToken, PLAN_FREE, "");
         }
 
         public Credentials(@NonNull String endpoint, @NonNull String accessToken,
                            @NonNull String refreshToken, @NonNull String plan) {
+            this(endpoint, accessToken, refreshToken, plan, "");
+        }
+
+        public Credentials(@NonNull String endpoint, @NonNull String accessToken,
+                           @NonNull String refreshToken, @NonNull String plan,
+                           @NonNull String kdfSalt) {
             this.endpoint = endpoint;
             this.accessToken = accessToken;
             this.refreshToken = refreshToken;
             this.plan = plan;
+            this.kdfSalt = kdfSalt;
         }
 
         /** Les mêmes jetons, avec une offre relue. */
         public Credentials withPlan(@NonNull String plan) {
-            return new Credentials(endpoint, accessToken, refreshToken, plan);
+            return new Credentials(endpoint, accessToken, refreshToken, plan, kdfSalt);
+        }
+
+        /** Les mêmes jetons, avec le sel du compte (gardé s'il est absent). */
+        public Credentials withKdfSalt(@Nullable String salt) {
+            if (salt == null || salt.isEmpty()) return this;
+            return new Credentials(endpoint, accessToken, refreshToken, plan, salt);
+        }
+
+        /** Le sel du compte décodé, ou null s'il manque ou ne fait pas 16 octets. */
+        @Nullable
+        public byte[] kdfSaltBytes() {
+            if (kdfSalt.isEmpty()) return null;
+            try {
+                byte[] raw = Base64Url.decode(kdfSalt);
+                return raw.length == Transfer.SALT_BYTES ? raw : null;
+            } catch (IllegalArgumentException e) {
+                return null;
+            }
         }
 
         static Credentials from(String endpoint, JSONObject body) throws JSONException {
             return new Credentials(endpoint,
-                    body.getString("access_token"), body.getString("refresh_token"));
+                    body.getString("access_token"), body.getString("refresh_token"),
+                    PLAN_FREE, optSalt(body));
         }
+    }
+
+    /** Le kdf_salt d'une réponse, vide s'il est absent ou nul. */
+    static String optSalt(JSONObject body) {
+        if (body.isNull("kdf_salt")) return "";
+        return body.optString("kdf_salt", "");
     }
 
     public static final String PLAN_FREE = "free";
@@ -299,7 +338,7 @@ public final class Sync {
         // le service l'ignore pour un compte qui n'en a pas.
         return new AccountIdentity(body.optString("email", ""),
                 body.optBoolean("has_password", true),
-                current.withPlan(body.optString("plan", PLAN_FREE)));
+                current.withPlan(body.optString("plan", PLAN_FREE)).withKdfSalt(optSalt(body)));
     }
 
     // ------------------------------------------------ suppression du compte
@@ -374,8 +413,12 @@ public final class Sync {
     private Credentials refresh(Credentials creds) throws SyncException {
         try {
             JSONObject payload = new JSONObject().put("refresh_token", creds.refreshToken);
-            return Credentials.from(creds.endpoint,
-                    call(creds.endpoint + "/v1/auth/refresh", "POST", payload, null));
+            JSONObject body = call(creds.endpoint + "/v1/auth/refresh", "POST", payload, null);
+            // L'offre et le sel ne changent pas au renouvellement : les garder
+            // si la réponse ne les redit pas.
+            return new Credentials(creds.endpoint, body.getString("access_token"),
+                    body.getString("refresh_token"), creds.plan,
+                    optSalt(body).isEmpty() ? creds.kdfSalt : optSalt(body));
         } catch (JSONException e) {
             throw new SyncException("Réponse inattendue au renouvellement");
         }
@@ -422,12 +465,8 @@ public final class Sync {
      */
     public Result sync(@NonNull Vault local, @NonNull String masterKey,
                        @NonNull Credentials creds) throws SyncException {
-        SecretKey key;
-        try {
-            key = Transfer.deriveKey(masterKey);
-        } catch (GeneralSecurityException e) {
-            throw new SyncException("Clef de transfert indérivable : " + e.getMessage());
-        }
+        creds = withAccountSalt(creds);
+        SecretKey key = syncKey(masterKey, creds);
 
         String url = creds.endpoint + "/v1/vault";
 
@@ -469,8 +508,8 @@ public final class Sync {
         } catch (SyncException e) {
             if (e.status != 401) throw e;
             Credentials renewed = refresh(creds);
-            Result result = sync(local, masterKey, renewed);
-            return new Result(result.vault, result.conflicts, result.localOnly, renewed);
+            // Les identifiants rendus partent de ceux renouvelés, sel compris.
+            return sync(local, masterKey, renewed);
         }
     }
 
@@ -488,12 +527,8 @@ public final class Sync {
     @NonNull
     public DefaultSettings syncSettings(@NonNull DefaultSettings local, @NonNull String masterKey,
                                         @NonNull Credentials creds) throws SyncException {
-        SecretKey key;
-        try {
-            key = Transfer.deriveKey(masterKey);
-        } catch (GeneralSecurityException e) {
-            throw new SyncException("Clef de transfert indérivable : " + e.getMessage());
-        }
+        creds = withAccountSalt(creds);
+        SecretKey key = syncKey(masterKey, creds);
 
         String url = creds.endpoint + "/v1/settings";
         // 204 : corps vide, donc objet vide, donc aucun réglage distant.
@@ -502,11 +537,7 @@ public final class Sync {
         DefaultSettings remote = null;
         if (pulled.has("blob")) {
             try {
-                byte[] plain = Transfer.openBytes(key,
-                        Base64Url.decode(pulled.getString("nonce")),
-                        Base64Url.decode(pulled.getString("blob")));
-                remote = DefaultSettings.fromJson(
-                        new JSONObject(new String(plain, StandardCharsets.UTF_8)));
+                remote = openSettings(pulled, key);
             } catch (GeneralSecurityException | JSONException | IllegalArgumentException e) {
                 return local;
             }
@@ -517,7 +548,8 @@ public final class Sync {
         // pousser les imposerait aux autres appareils du compte.
         if (winner == local && !DefaultSettings.NEVER.equals(local.updatedAt)) {
             try {
-                Transfer.Sealed sealed = Transfer.seal(key, local.toJson().toString());
+                Transfer.Sealed sealed =
+                        Transfer.seal(key, local.toJson().toString(), Transfer.SETTINGS_AAD);
                 call(url, "PUT", new JSONObject()
                         .put("nonce", Base64Url.encode(sealed.nonce))
                         .put("blob", Base64Url.encode(sealed.blob)), creds.accessToken);
@@ -536,11 +568,7 @@ public final class Sync {
             JSONArray rows = pulled.getJSONArray("entries");
             for (int i = 0; i < rows.length(); i++) {
                 JSONObject row = rows.getJSONObject(i);
-                byte[] plain = Transfer.openBytes(key,
-                        Base64Url.decode(row.getString("nonce")),
-                        Base64Url.decode(row.getString("blob")));
-                VaultEntry entry = VaultEntry.fromJson(
-                        new JSONObject(new String(plain, StandardCharsets.UTF_8)));
+                VaultEntry entry = openEntry(row, key);
                 // La pierre tombale du serveur fait foi même si l'entrée
                 // chiffrée est antérieure à la suppression.
                 entry.deleted = entry.deleted || row.optBoolean("deleted", false);
@@ -553,6 +581,67 @@ public final class Sync {
             throw new SyncException("Carnet distant illisible : " + e.getMessage());
         }
         return remote;
+    }
+
+    /**
+     * Déchiffre une ligne du carnet.
+     *
+     * Les données associées lient le blob à son {@code entry_id} ; l'entrée
+     * doit en plus dire la même chose d'elle-même, pour ne jamais être
+     * fusionnée sous un autre identifiant que le sien.
+     */
+    static VaultEntry openEntry(@NonNull JSONObject row, @NonNull SecretKey key)
+            throws GeneralSecurityException, JSONException {
+        String entryId = row.getString("entry_id");
+        byte[] plain = Transfer.openBytes(key,
+                Base64Url.decode(row.getString("nonce")),
+                Base64Url.decode(row.getString("blob")),
+                Transfer.entryAad(entryId));
+        JSONObject json = new JSONObject(new String(plain, StandardCharsets.UTF_8));
+        if (!entryId.equals(json.optString("id", null))) {
+            throw new JSONException("Entrée incohérente : son identifiant ne correspond pas "
+                    + "à la ligne.");
+        }
+        return VaultEntry.fromJson(json);
+    }
+
+    /** Déchiffre les réglages par défaut du compte, {@code {nonce, blob}}. */
+    static DefaultSettings openSettings(@NonNull JSONObject sealed, @NonNull SecretKey key)
+            throws GeneralSecurityException, JSONException {
+        byte[] plain = Transfer.openBytes(key,
+                Base64Url.decode(sealed.getString("nonce")),
+                Base64Url.decode(sealed.getString("blob")),
+                Transfer.SETTINGS_AAD);
+        return DefaultSettings.fromJson(new JSONObject(new String(plain, StandardCharsets.UTF_8)));
+    }
+
+    /**
+     * Les identifiants avec un sel de compte valide, relu sur
+     * {@code /v1/auth/me} s'il manque. Sans lui, pas de synchronisation :
+     * chiffrer avec un autre sel rendrait les blocs illisibles ailleurs.
+     */
+    Credentials withAccountSalt(@NonNull Credentials creds) throws SyncException {
+        Credentials current = creds;
+        if (current.kdfSaltBytes() == null) {
+            current = accountIdentity(current).credentials;
+        }
+        if (current.kdfSaltBytes() == null) {
+            throw new SyncException("Le service n'a pas rendu le sel de dérivation du compte : "
+                    + "reconnectez-vous.");
+        }
+        return current;
+    }
+
+    private static SecretKey syncKey(String masterKey, Credentials creds) throws SyncException {
+        byte[] salt = creds.kdfSaltBytes();
+        if (salt == null) {
+            throw new SyncException("Sel de dérivation du compte manquant : reconnectez-vous.");
+        }
+        try {
+            return Transfer.deriveSyncKey(masterKey, salt);
+        } catch (GeneralSecurityException e) {
+            throw new SyncException("Clef de synchronisation indérivable : " + e.getMessage());
+        }
     }
 
     /** Les id déjà présents sur le serveur : ceux des lignes du pull. */
@@ -572,7 +661,8 @@ public final class Sync {
         try {
             JSONArray rows = new JSONArray();
             for (VaultEntry entry : entries) {
-                Transfer.Sealed sealed = Transfer.seal(key, entry.toJson().toString());
+                Transfer.Sealed sealed = Transfer.seal(key, entry.toJson().toString(),
+                        Transfer.entryAad(entry.id));
                 rows.put(new JSONObject()
                         .put("entry_id", entry.id)
                         .put("nonce", Base64Url.encode(sealed.nonce))

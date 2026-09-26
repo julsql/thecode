@@ -38,8 +38,11 @@ public final class FragmentCollector {
      */
     @Nullable
     public String accept(@NonNull String text) {
-        if (text.startsWith("TC1.")) return text;
-        if (!text.startsWith("TC1m.")) return null;
+        if (text.startsWith(Transfer.PREFIX + ".")) return text;
+        // Un code v1 n'est plus lu : le rendre tel quel pour que l'import le
+        // refuse en le disant, plutôt que d'attendre en silence.
+        if (text.startsWith("TC1.") || text.startsWith("TC1m.")) return text;
+        if (!text.startsWith(Transfer.MULTIPART_PREFIX + ".")) return null;
 
         String[] parts = text.split("\\.", 4);
         if (parts.length != 4) return null;

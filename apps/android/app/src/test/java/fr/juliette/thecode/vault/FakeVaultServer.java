@@ -32,6 +32,10 @@ final class FakeVaultServer implements Sync.Http {
     JSONObject settings = null;
     int settingsPuts = 0;
 
+    /** Sel de dérivation du compte, rendu comme le service réel ; null : ancien service. */
+    String kdfSalt = "0WveVfSRJyzta8UsTh5DFw";
+    int meCalls = 0;
+
     /** Plafond rendu au pull ; null pour un serveur qui ne le dit pas. */
     Integer maxEntries = null;
 
@@ -43,19 +47,26 @@ final class FakeVaultServer implements Sync.Http {
             if (url.endsWith("/v1/auth/refresh")) {
                 refreshCount++;
                 validAccessToken = nextAccessToken;
-                return json(200, new JSONObject()
+                return json(200, withSalt(new JSONObject()
                         .put("access_token", validAccessToken)
-                        .put("refresh_token", "refresh-" + refreshCount));
+                        .put("refresh_token", "refresh-" + refreshCount)));
             }
             if (url.endsWith("/v1/auth/login") || url.endsWith("/v1/auth/register")
                     || url.endsWith("/v1/auth/google")) {
-                return json(200, new JSONObject()
+                return json(200, withSalt(new JSONObject()
                         .put("access_token", validAccessToken)
-                        .put("refresh_token", "refresh-0"));
+                        .put("refresh_token", "refresh-0")));
             }
 
             if (!validAccessToken.equals(bearer)) {
                 return json(401, new JSONObject().put("detail", "Jeton expiré"));
+            }
+            if (url.endsWith("/v1/auth/me")) {
+                meCalls++;
+                return json(200, withSalt(new JSONObject()
+                        .put("email", "moi@example.fr")
+                        .put("plan", "free")
+                        .put("has_password", true)));
             }
             if (url.endsWith("/v1/settings")) {
                 return "GET".equals(method) ? pullSettings() : putSettings(new JSONObject(body));
@@ -64,6 +75,11 @@ final class FakeVaultServer implements Sync.Http {
         } catch (JSONException e) {
             throw new AssertionError(e);
         }
+    }
+
+    private JSONObject withSalt(JSONObject body) throws JSONException {
+        if (kdfSalt != null) body.put("kdf_salt", kdfSalt);
+        return body;
     }
 
     /** Dépose une ligne telle qu'un autre client l'aurait poussée. */

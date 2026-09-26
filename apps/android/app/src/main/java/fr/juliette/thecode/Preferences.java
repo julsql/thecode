@@ -38,6 +38,8 @@ public final class Preferences {
     public static final String KEY_SYNC_ACCESS = "syncAccessToken";
     public static final String KEY_SYNC_REFRESH = "syncRefreshToken";
     public static final String KEY_SYNC_PLAN = "syncPlan";
+    /** Sel de dérivation du compte (base64url), rendu par le service. */
+    public static final String KEY_SYNC_KDF_SALT = "syncKdfSalt";
     /** Ancien verrou du carnet (méthode + empreinte d'un mot de passe dédié), abandonné. */
     private static final String LEGACY_VAULT_LOCK_METHOD = "vaultLockMethod";
     private static final String LEGACY_VAULT_LOCK_PASSWORD = "vaultLockPassword";
@@ -225,8 +227,10 @@ public final class Preferences {
         String access = securePrefs.getString(KEY_SYNC_ACCESS, "");
         String refresh = securePrefs.getString(KEY_SYNC_REFRESH, "");
         String plan = securePrefs.getString(KEY_SYNC_PLAN, Sync.PLAN_FREE);
+        // Absent d'une session ouverte avant le sel : relu sur /v1/auth/me.
+        String kdfSalt = securePrefs.getString(KEY_SYNC_KDF_SALT, "");
         if (endpoint.isEmpty() || access.isEmpty() || refresh.isEmpty()) return null;
-        return new Sync.Credentials(endpoint, access, refresh, plan);
+        return new Sync.Credentials(endpoint, access, refresh, plan, kdfSalt);
     }
 
     public void setSyncCredentials(@NonNull Sync.Credentials credentials) {
@@ -236,6 +240,7 @@ public final class Preferences {
                 .putString(KEY_SYNC_ACCESS, credentials.accessToken)
                 .putString(KEY_SYNC_REFRESH, credentials.refreshToken)
                 .putString(KEY_SYNC_PLAN, credentials.plan)
+                .putString(KEY_SYNC_KDF_SALT, credentials.kdfSalt)
                 .apply();
     }
 
@@ -246,6 +251,7 @@ public final class Preferences {
                 .remove(KEY_SYNC_ACCESS)
                 .remove(KEY_SYNC_REFRESH)
                 .remove(KEY_SYNC_PLAN)
+                .remove(KEY_SYNC_KDF_SALT)
                 .apply();
     }
 
