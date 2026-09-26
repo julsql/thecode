@@ -9,14 +9,15 @@
          et le renouvellement demande d'aller changer le mot de passe sur le
          site. Fermer l'onglet reverrouille : l'etat deverrouille ne vit que
          dans cette page. -->
+    <script src="i18n.js" defer></script>
     <script src="vault-page.js" defer></script>
-    <title>TheCode — Carnet</title>
+    <title data-i18n="vault_page_title">TheCode — Carnet</title>
   </head>
 
   <body class="vault-page">
     <header class="topbar">
-      <h1 id="pageTitle" tabindex="-1">Carnet</h1>
-      <button id="lockNow" type="button" hidden>Verrouiller</button>
+      <h1 id="pageTitle" tabindex="-1" data-i18n="vault_title">Carnet</h1>
+      <button id="lockNow" type="button" hidden data-i18n="vault_lock_now">Verrouiller</button>
     </header>
 
     <p id="pageStatus" class="status" role="status" aria-live="polite"></p>
@@ -24,12 +25,12 @@
     <!-- Premiere ouverture : pas de biometrie fiable dans un navigateur, le
          mot de passe de carnet est obligatoire. -->
     <form id="createView" class="panel" aria-labelledby="createTitle" hidden novalidate>
-      <h2 id="createTitle">Protéger le carnet</h2>
-      <p class="hint" id="createHint">
+      <h2 id="createTitle" data-i18n="vault_create_title">Protéger le carnet</h2>
+      <p class="hint" id="createHint" data-i18n="vault_create_hint">
         Choisissez un mot de passe de carnet (8 caractères minimum). Il reste sur cet appareil et
         n'est jamais synchronisé. Il protège cet écran, pas le remplissage automatique.
       </p>
-      <label for="createPassword">Mot de passe de carnet</label>
+      <label for="createPassword" data-i18n="vault_password_label">Mot de passe de carnet</label>
       <input
         id="createPassword"
         type="password"
@@ -38,71 +39,94 @@
         required
         aria-describedby="createHint"
       />
-      <label for="createConfirm">Confirmer le mot de passe</label>
+      <label for="createConfirm" data-i18n="vault_confirm_label">Confirmer le mot de passe</label>
       <input id="createConfirm" type="password" autocomplete="new-password" required />
       <p id="createError" class="error" role="alert"></p>
-      <button type="submit" class="primary">Créer le mot de passe</button>
+      <button type="submit" class="primary" data-i18n="vault_create_submit">
+        Créer le mot de passe
+      </button>
     </form>
 
     <form id="unlockView" class="panel" aria-labelledby="unlockTitle" hidden novalidate>
-      <h2 id="unlockTitle">Carnet verrouillé</h2>
-      <label for="unlockPassword">Mot de passe de carnet</label>
+      <h2 id="unlockTitle" data-i18n="vault_locked_title">Carnet verrouillé</h2>
+      <label for="unlockPassword" data-i18n="vault_password_label">Mot de passe de carnet</label>
       <input id="unlockPassword" type="password" autocomplete="current-password" required />
       <p id="unlockError" class="error" role="alert"></p>
       <div class="row">
-        <button type="submit" class="primary">Déverrouiller</button>
-        <button id="forgotBtn" type="button" aria-controls="forgetConfirm" aria-expanded="false">
+        <button type="submit" class="primary" data-i18n="vault_unlock_submit">Déverrouiller</button>
+        <button
+          id="forgotBtn"
+          type="button"
+          aria-controls="forgetConfirm"
+          aria-expanded="false"
+          data-i18n="vault_forgot"
+        >
           Mot de passe oublié ?
         </button>
       </div>
 
       <!-- Rien d'autre ne passe le verrou : l'oubli efface le carnet local. -->
       <div id="forgetConfirm" class="danger-zone" role="group" aria-labelledby="forgetTitle" hidden>
-        <h3 id="forgetTitle" tabindex="-1">Effacer le carnet de cet appareil ?</h3>
-        <p class="hint">
+        <h3 id="forgetTitle" tabindex="-1" data-i18n="vault_forget_title">
+          Effacer le carnet de cet appareil ?
+        </h3>
+        <p class="hint" data-i18n="vault_forget_hint">
           Toutes les entrées enregistrées sur cet appareil et le mot de passe de carnet seront
           effacés. Si la synchronisation est active, le carnet reviendra à la prochaine
           synchronisation. Cette action est irréversible.
         </p>
         <div class="row">
-          <button id="forgetConfirmBtn" type="button" class="danger">Effacer le carnet</button>
-          <button id="forgetCancelBtn" type="button">Annuler</button>
+          <button
+            id="forgetConfirmBtn"
+            type="button"
+            class="danger"
+            data-i18n="vault_forget_confirm"
+          >
+            Effacer le carnet
+          </button>
+          <button id="forgetCancelBtn" type="button" data-i18n="vault_cancel">Annuler</button>
         </div>
       </div>
     </form>
 
     <main id="unlockedView" hidden>
       <section id="entriesSection" class="panel" aria-labelledby="entriesTitle">
-        <h2 id="entriesTitle">Entrées</h2>
-        <p id="entriesEmpty" class="hint" hidden>Le carnet est vide.</p>
+        <h2 id="entriesTitle" data-i18n="vault_entries_title">Entrées</h2>
+        <p id="entriesEmpty" class="hint" hidden data-i18n="vault_empty">Le carnet est vide.</p>
         <ul id="entriesList" class="entries" aria-labelledby="entriesTitle"></ul>
       </section>
 
       <section id="detailView" class="panel" aria-labelledby="detailTitle" hidden>
         <div class="row">
-          <button id="detailBack" type="button">Retour à la liste</button>
+          <button id="detailBack" type="button" data-i18n="vault_back">Retour à la liste</button>
         </div>
         <h2 id="detailTitle" tabindex="-1"></h2>
         <dl class="detail">
           <dt>siteKey</dt>
           <dd><code id="detailSiteKey"></code></dd>
-          <dt>Domaines</dt>
+          <dt data-i18n="vault_detail_domains">Domaines</dt>
           <dd id="detailDomains"></dd>
-          <dt>Identifiant</dt>
+          <dt data-i18n="vault_detail_login">Identifiant</dt>
           <dd id="detailLogin"></dd>
-          <dt>Longueur</dt>
+          <dt data-i18n="vault_detail_length">Longueur</dt>
           <dd id="detailLength"></dd>
-          <dt>Caractères</dt>
+          <dt data-i18n="vault_detail_charset">Caractères</dt>
           <dd id="detailCharset"></dd>
-          <dt>Compteur</dt>
+          <dt data-i18n="vault_detail_counter">Compteur</dt>
           <dd id="detailCounter"></dd>
-          <dt>Mis à jour</dt>
+          <dt data-i18n="vault_detail_updated">Mis à jour</dt>
           <dd id="detailUpdatedAt"></dd>
         </dl>
 
         <div class="row">
-          <button id="renewBtn" type="button">Renouveler</button>
-          <button id="deleteBtn" type="button" class="danger" aria-controls="deleteConfirm">
+          <button id="renewBtn" type="button" data-i18n="vault_renew">Renouveler</button>
+          <button
+            id="deleteBtn"
+            type="button"
+            class="danger"
+            aria-controls="deleteConfirm"
+            data-i18n="vault_delete"
+          >
             Supprimer
           </button>
         </div>
@@ -111,14 +135,14 @@
         <!-- Les deux cote a cote : le nouveau ne sert qu'une fois pose sur le
              site, l'ancien reste celui qui connecte jusque-la. -->
         <div id="renewPreview" class="change-preview" hidden>
-          <p class="hint">Actuel</p>
+          <p class="hint" data-i18n="vault_renew_before">Actuel</p>
           <p><code id="renewBefore"></code></p>
-          <p class="hint">Nouveau</p>
+          <p class="hint" data-i18n="vault_renew_after">Nouveau</p>
           <p><code id="renewAfter"></code></p>
-          <p class="hint">Changez-le sur le site, puis confirmez.</p>
+          <p class="hint" data-i18n="vault_renew_hint">Changez-le sur le site, puis confirmez.</p>
           <div class="row">
-            <button id="renewConfirm" type="button">Confirmer</button>
-            <button id="renewCancel" type="button">Annuler</button>
+            <button id="renewConfirm" type="button" data-i18n="vault_confirm">Confirmer</button>
+            <button id="renewCancel" type="button" data-i18n="vault_cancel">Annuler</button>
           </div>
         </div>
 
@@ -129,23 +153,27 @@
           aria-labelledby="deleteTitle"
           hidden
         >
-          <h3 id="deleteTitle" tabindex="-1">Supprimer cette entrée ?</h3>
-          <p class="hint">
+          <h3 id="deleteTitle" tabindex="-1" data-i18n="vault_delete_title">
+            Supprimer cette entrée ?
+          </h3>
+          <p class="hint" data-i18n="vault_delete_hint">
             La suppression se propagera aux autres appareils à la prochaine synchronisation.
           </p>
           <div class="row">
-            <button id="deleteConfirmBtn" type="button" class="danger">Supprimer</button>
-            <button id="deleteCancelBtn" type="button">Annuler</button>
+            <button id="deleteConfirmBtn" type="button" class="danger" data-i18n="vault_delete">
+              Supprimer
+            </button>
+            <button id="deleteCancelBtn" type="button" data-i18n="vault_cancel">Annuler</button>
           </div>
         </div>
       </section>
 
       <section class="panel" aria-labelledby="changeLockTitle">
-        <h2 id="changeLockTitle">Mot de passe de carnet</h2>
+        <h2 id="changeLockTitle" data-i18n="vault_password_label">Mot de passe de carnet</h2>
         <form id="changeLockForm" novalidate>
-          <label for="changeCurrent">Mot de passe actuel</label>
+          <label for="changeCurrent" data-i18n="vault_change_current">Mot de passe actuel</label>
           <input id="changeCurrent" type="password" autocomplete="current-password" required />
-          <label for="changeNext">Nouveau mot de passe</label>
+          <label for="changeNext" data-i18n="vault_change_next">Nouveau mot de passe</label>
           <input
             id="changeNext"
             type="password"
@@ -153,10 +181,12 @@
             minlength="8"
             required
           />
-          <label for="changeConfirm">Confirmer le nouveau mot de passe</label>
+          <label for="changeConfirm" data-i18n="vault_change_confirm"
+            >Confirmer le nouveau mot de passe</label
+          >
           <input id="changeConfirm" type="password" autocomplete="new-password" required />
           <p id="changeLockError" class="error" role="alert"></p>
-          <button type="submit">Changer le mot de passe</button>
+          <button type="submit" data-i18n="vault_change_submit">Changer le mot de passe</button>
         </form>
       </section>
     </main>

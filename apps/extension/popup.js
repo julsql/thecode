@@ -1,36 +1,4 @@
-/**
- * Message traduit selon la langue du navigateur. Le francais reste en secours
- * quand l'API manque (tests) ou que la clef n'existe pas. `values` remplit
- * $1, $2… dans l'ordre.
- */
-function msg(key, fallback, ...values) {
-  const subs = values.map(String);
-  const text = browser.i18n?.getMessage(key, subs.length ? subs : undefined);
-  return text || subs.reduce((out, v, i) => out.replace(`$${i + 1}`, v), fallback);
-}
-
-/**
- * Traduit la page d'apres ses attributs data-i18n*. Le francais du HTML reste
- * en place pour toute clef absente.
- */
-function translatePage() {
-  document.documentElement.lang = browser.i18n?.getUILanguage?.().split("-")[0] || "fr";
-  const attributes = {
-    i18n: null,
-    i18nAriaLabel: "aria-label",
-    i18nTitle: "title",
-    i18nHref: "href",
-  };
-  for (const [data, attribute] of Object.entries(attributes)) {
-    const selector = `[data-${data.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}]`;
-    document.querySelectorAll(selector).forEach((el) => {
-      const text = browser.i18n?.getMessage(el.dataset[data]);
-      if (!text) return;
-      if (attribute) el.setAttribute(attribute, text);
-      else el.textContent = text;
-    });
-  }
-}
+// msg() et translatePage() viennent de i18n.js, charge avant ce fichier.
 translatePage();
 
 // Références aux éléments de la popup

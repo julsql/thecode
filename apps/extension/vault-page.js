@@ -8,15 +8,25 @@
 if (typeof browser === "undefined" && typeof chrome !== "undefined") {
   var browser = chrome;
 }
+// msg() vient de i18n.js, charge avant ce fichier ; en test, on le requiert.
+if (typeof module !== "undefined" && typeof require === "function") {
+  Object.assign(globalThis, require("./i18n.js"));
+}
 
 const VAULT_LOCK_MIN = 8;
 
 /** Controle d'un nouveau mot de passe saisi deux fois. Rend un message ou null. */
 function newPasswordError(password, confirmation) {
   if (!password || password.length < VAULT_LOCK_MIN) {
-    return `Le mot de passe doit contenir au moins ${VAULT_LOCK_MIN} caractères.`;
+    return msg(
+      "vault_error_too_short",
+      "Le mot de passe doit contenir au moins $1 caractères.",
+      VAULT_LOCK_MIN,
+    );
   }
-  if (password !== confirmation) return "Les deux mots de passe ne correspondent pas.";
+  if (password !== confirmation) {
+    return msg("vault_error_mismatch", "Les deux mots de passe ne correspondent pas.");
+  }
   return null;
 }
 
@@ -34,14 +44,28 @@ function visibleEntries(vault) {
 /** Jeux de caracteres actifs, en clair. */
 function charsetLabel(charset = {}) {
   const names = [
-    ["lower", "minuscules"],
-    ["upper", "majuscules"],
-    ["numbers", "chiffres"],
-    ["symbols", "symboles"],
+    ["lower", "vault_charset_lower", "minuscules"],
+    ["upper", "vault_charset_upper", "majuscules"],
+    ["numbers", "vault_charset_numbers", "chiffres"],
+    ["symbols", "vault_charset_symbols", "symboles"],
   ]
     .filter(([key]) => charset[key])
-    .map(([, name]) => name);
-  return names.length ? names.join(", ") : "aucun";
+    .map(([, id, name]) => msg(id, name));
+  return names.length ? names.join(", ") : msg("vault_charset_none", "aucun");
+}
+
+/** Message d'erreur d'une reponse du service worker. */
+function errorText(resp) {
+  return resp?.error
+    ? msg("vault_error_detail", "Erreur : $1", resp.error)
+    : msg("vault_error_unknown", "Erreur inconnue.");
+}
+
+/** Message d'echec d'une reponse du service worker. */
+function failureText(resp) {
+  return resp?.error
+    ? msg("vault_failure_detail", "Échec : $1", resp.error)
+    : msg("vault_failure", "Échec.");
 }
 
 function send(message) {
@@ -49,6 +73,7 @@ function send(message) {
 }
 
 function initVaultPage() {
+  translatePage();
   const $ = (id) => document.getElementById(id);
   const pageTitle = $("pageTitle");
   const pageStatus = $("pageStatus");
@@ -87,7 +112,7 @@ function initVaultPage() {
   async function start() {
     const resp = await send({ action: "vaultLockStatus" });
     if (!resp?.ok) {
-      say(`Erreur : ${resp?.error || "inconnue"}`);
+      say(errorText(resp));
       return;
     }
     show(resp.configured ? "unlock" : "create");
@@ -101,16 +126,16 @@ function initVaultPage() {
     $("createError").textContent = problem || "";
     if (problem) return;
 
-    say("Création en cours…");
+    say(msg("vault_creating", "Création en cours…"));
     const resp = await send({ action: "vaultLockCreate", password });
     $("createPassword").value = "";
     $("createConfirm").value = "";
     if (!resp?.ok) {
       say("");
-      $("createError").textContent = resp?.error || "Échec.";
+      $("createError").textContent = resp?.error || msg("vault_failure", "Échec.");
       return;
     }
-    say("Mot de passe de carnet créé.");
+    say(msg("vault_created", "Mot de passe de carnet créé."));
     show("unlocked");
     onUnlock();
   });
@@ -119,22 +144,23 @@ function initVaultPage() {
     e.preventDefault();
     const input = $("unlockPassword");
     if (!input.value) return;
-    say("Vérification…");
+    say(msg("vault_checking", "Vérification…"));
     const resp = await send({ action: "vaultLockVerify", password: input.value });
     input.value = "";
     if (!resp?.ok || !resp.unlocked) {
       say("");
-      $("unlockError").textContent = resp?.error || "Mot de passe incorrect.";
+      $("unlockError").textContent =
+        resp?.error || msg("vault_wrong_password", "Mot de passe incorrect.");
       input.focus();
       return;
     }
     $("unlockError").textContent = "";
-    say("Carnet déverrouillé.");
+    say(msg("vault_unlocked", "Carnet déverrouillé."));
     show("unlocked");
     onUnlock();
   });
 
-  lockNowBtn.addEventListener("click", () => lock("Carnet verrouillé."));
+  lockNowBtn.addEventListener("click", () => lock(msg("vault_locked", "Carnet verrouillé.")));
 
   // Oubli : confirmation explicite, puis effacement du carnet local.
   function showForget(open, moveFocus = true) {
@@ -156,12 +182,17 @@ function initVaultPage() {
   $("forgetConfirmBtn").addEventListener("click", async () => {
     const resp = await send({ action: "vaultLockForget" });
     if (!resp?.ok) {
-      say(`Échec : ${resp?.error || "inconnu"}`);
+      say(failureText(resp));
       return;
     }
     showForget(false, false);
     show("create");
-    say("Carnet effacé de cet appareil. Choisissez un nouveau mot de passe de carnet.");
+    say(
+      msg(
+        "vault_forgotten",
+        "Carnet effacé de cet appareil. Choisissez un nouveau mot de passe de carnet.",
+      ),
+    );
   });
 
   // Changement : l'actuel est exige, meme deverrouille.
@@ -171,21 +202,21 @@ function initVaultPage() {
     const current = $("changeCurrent").value;
     const next = $("changeNext").value;
     const problem = !current
-      ? "Saisissez le mot de passe actuel."
+      ? msg("vault_enter_current", "Saisissez le mot de passe actuel.")
       : newPasswordError(next, $("changeConfirm").value);
     $("changeLockError").textContent = problem || "";
     if (problem) return;
 
-    say("Changement en cours…");
+    say(msg("vault_changing", "Changement en cours…"));
     const resp = await send({ action: "vaultLockChange", current, next });
     for (const id of ["changeCurrent", "changeNext", "changeConfirm"]) $(id).value = "";
     if (!resp?.ok) {
       say("");
-      $("changeLockError").textContent = resp?.error || "Échec.";
+      $("changeLockError").textContent = resp?.error || msg("vault_failure", "Échec.");
       $("changeCurrent").focus();
       return;
     }
-    say("Mot de passe de carnet changé.");
+    say(msg("vault_changed", "Mot de passe de carnet changé."));
   });
 
   // Gestion : liste, detail, suppression, renouvellement.
@@ -214,7 +245,7 @@ function initVaultPage() {
     const resp = await send({ action: "getVault" });
     if (!unlocked) return;
     if (!resp?.ok) {
-      say(`Erreur : ${resp?.error || "inconnue"}`);
+      say(errorText(resp));
       return;
     }
     entries = visibleEntries(resp.vault);
@@ -234,7 +265,7 @@ function initVaultPage() {
         const label = document.createElement("strong");
         label.textContent = entry.label || entry.siteKey;
         const login = document.createElement("span");
-        login.textContent = entry.login || "sans identifiant";
+        login.textContent = entry.login || msg("vault_no_login", "sans identifiant");
         const domains = document.createElement("span");
         domains.className = "hint";
         domains.textContent = entry.domains.join(", ");
@@ -267,7 +298,7 @@ function initVaultPage() {
     $("detailLength").textContent = String(entry.length);
     $("detailCharset").textContent = charsetLabel(entry.charset);
     $("detailCounter").textContent = String(entry.counter);
-    $("detailUpdatedAt").textContent = new Date(entry.updatedAt).toLocaleString("fr-FR");
+    $("detailUpdatedAt").textContent = new Date(entry.updatedAt).toLocaleString(uiLocale());
     if (moveFocus) $("detailTitle").focus();
   }
 
@@ -301,12 +332,12 @@ function initVaultPage() {
     // Pierre tombale ecrite par le service worker : deleted + updatedAt.
     const resp = await send({ action: "deleteEntry", id: current.id });
     if (!resp?.ok) {
-      detailStatus.textContent = `Échec : ${resp?.error || "inconnu"}`;
+      detailStatus.textContent = failureText(resp);
       return;
     }
     lastOpenedId = null;
     showDetail(null, false);
-    await loadEntries(`Entrée « ${label} » supprimée.`);
+    await loadEntries(msg("vault_entry_deleted", "Entrée « $1 » supprimée.", label));
     pageTitle.focus();
   });
 
@@ -314,10 +345,10 @@ function initVaultPage() {
   $("renewBtn").addEventListener("click", async () => {
     if (!unlocked || !current) return;
     $("deleteConfirm").hidden = true;
-    detailStatus.textContent = "Calcul en cours…";
+    detailStatus.textContent = msg("vault_computing", "Calcul en cours…");
     const resp = await send({ action: "previewChange", id: current.id });
     if (!resp?.ok) {
-      detailStatus.textContent = `Échec : ${resp?.error || "inconnu"}`;
+      detailStatus.textContent = failureText(resp);
       return;
     }
     $("renewBefore").textContent = resp.before;
@@ -334,12 +365,16 @@ function initVaultPage() {
     const id = current.id;
     const resp = await send({ action: "applyChange", id });
     if (!resp?.ok) {
-      detailStatus.textContent = `Échec : ${resp?.error || "inconnu"}`;
+      detailStatus.textContent = failureText(resp);
       return;
     }
     await loadEntries();
     showDetail(entries.find((e) => e.id === id) || null, false);
-    detailStatus.textContent = `Entrée renouvelée, compteur ${resp.counter}.`;
+    detailStatus.textContent = msg(
+      "vault_entry_renewed",
+      "Entrée renouvelée, compteur $1.",
+      resp.counter,
+    );
     $("renewBtn").focus();
   });
 

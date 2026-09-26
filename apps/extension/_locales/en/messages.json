@@ -394,5 +394,274 @@
   "security_very_strong": {
     "message": "Very strong",
     "description": "Popup."
+  },
+  "vault_page_title": {
+    "message": "TheCode — Vault",
+    "description": "Vault page."
+  },
+  "vault_title": {
+    "message": "Vault",
+    "description": "Vault page."
+  },
+  "vault_lock_now": {
+    "message": "Lock",
+    "description": "Vault page."
+  },
+  "vault_create_title": {
+    "message": "Protect the vault",
+    "description": "Vault page."
+  },
+  "vault_create_hint": {
+    "message": "Choose a vault password (at least 8 characters). It stays on this device and is never synced. It protects this screen, not autofill.",
+    "description": "Vault page."
+  },
+  "vault_password_label": {
+    "message": "Vault password",
+    "description": "Vault page."
+  },
+  "vault_confirm_label": {
+    "message": "Confirm the password",
+    "description": "Vault page."
+  },
+  "vault_create_submit": {
+    "message": "Create the password",
+    "description": "Vault page."
+  },
+  "vault_locked_title": {
+    "message": "Vault locked",
+    "description": "Vault page."
+  },
+  "vault_unlock_submit": {
+    "message": "Unlock",
+    "description": "Vault page."
+  },
+  "vault_forgot": {
+    "message": "Forgot the password?",
+    "description": "Vault page."
+  },
+  "vault_forget_title": {
+    "message": "Erase the vault from this device?",
+    "description": "Vault page."
+  },
+  "vault_forget_hint": {
+    "message": "Every entry saved on this device and the vault password will be erased. If sync is on, the vault will come back at the next sync. This cannot be undone.",
+    "description": "Vault page."
+  },
+  "vault_forget_confirm": {
+    "message": "Erase the vault",
+    "description": "Vault page."
+  },
+  "vault_cancel": {
+    "message": "Cancel",
+    "description": "Vault page."
+  },
+  "vault_entries_title": {
+    "message": "Entries",
+    "description": "Vault page."
+  },
+  "vault_empty": {
+    "message": "The vault is empty.",
+    "description": "Vault page."
+  },
+  "vault_back": {
+    "message": "Back to the list",
+    "description": "Vault page."
+  },
+  "vault_detail_domains": {
+    "message": "Domains",
+    "description": "Vault page."
+  },
+  "vault_detail_login": {
+    "message": "Username",
+    "description": "Vault page."
+  },
+  "vault_detail_length": {
+    "message": "Length",
+    "description": "Vault page."
+  },
+  "vault_detail_charset": {
+    "message": "Characters",
+    "description": "Vault page."
+  },
+  "vault_detail_counter": {
+    "message": "Counter",
+    "description": "Vault page."
+  },
+  "vault_detail_updated": {
+    "message": "Updated",
+    "description": "Vault page."
+  },
+  "vault_renew": {
+    "message": "Renew",
+    "description": "Vault page."
+  },
+  "vault_delete": {
+    "message": "Delete",
+    "description": "Vault page."
+  },
+  "vault_renew_before": {
+    "message": "Current",
+    "description": "Vault page."
+  },
+  "vault_renew_after": {
+    "message": "New",
+    "description": "Vault page."
+  },
+  "vault_renew_hint": {
+    "message": "Change it on the site, then confirm.",
+    "description": "Vault page."
+  },
+  "vault_confirm": {
+    "message": "Confirm",
+    "description": "Vault page."
+  },
+  "vault_delete_title": {
+    "message": "Delete this entry?",
+    "description": "Vault page."
+  },
+  "vault_delete_hint": {
+    "message": "The deletion will reach your other devices at the next sync.",
+    "description": "Vault page."
+  },
+  "vault_change_current": {
+    "message": "Current password",
+    "description": "Vault page."
+  },
+  "vault_change_next": {
+    "message": "New password",
+    "description": "Vault page."
+  },
+  "vault_change_confirm": {
+    "message": "Confirm the new password",
+    "description": "Vault page."
+  },
+  "vault_change_submit": {
+    "message": "Change the password",
+    "description": "Vault page."
+  },
+  "vault_error_too_short": {
+    "message": "The password must be at least $FIRST$ characters long.",
+    "description": "Vault page.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      }
+    }
+  },
+  "vault_error_mismatch": {
+    "message": "The two passwords do not match.",
+    "description": "Vault page."
+  },
+  "vault_charset_lower": {
+    "message": "lowercase",
+    "description": "Vault page."
+  },
+  "vault_charset_upper": {
+    "message": "uppercase",
+    "description": "Vault page."
+  },
+  "vault_charset_numbers": {
+    "message": "digits",
+    "description": "Vault page."
+  },
+  "vault_charset_symbols": {
+    "message": "symbols",
+    "description": "Vault page."
+  },
+  "vault_charset_none": {
+    "message": "none",
+    "description": "Vault page."
+  },
+  "vault_error_detail": {
+    "message": "Error: $FIRST$",
+    "description": "Vault page.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      }
+    }
+  },
+  "vault_error_unknown": {
+    "message": "Unknown error.",
+    "description": "Vault page."
+  },
+  "vault_failure_detail": {
+    "message": "Failed: $FIRST$",
+    "description": "Vault page.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      }
+    }
+  },
+  "vault_failure": {
+    "message": "Failed.",
+    "description": "Vault page."
+  },
+  "vault_creating": {
+    "message": "Creating…",
+    "description": "Vault page."
+  },
+  "vault_created": {
+    "message": "Vault password created.",
+    "description": "Vault page."
+  },
+  "vault_checking": {
+    "message": "Checking…",
+    "description": "Vault page."
+  },
+  "vault_wrong_password": {
+    "message": "Wrong password.",
+    "description": "Vault page."
+  },
+  "vault_unlocked": {
+    "message": "Vault unlocked.",
+    "description": "Vault page."
+  },
+  "vault_locked": {
+    "message": "Vault locked.",
+    "description": "Vault page."
+  },
+  "vault_forgotten": {
+    "message": "Vault erased from this device. Choose a new vault password.",
+    "description": "Vault page."
+  },
+  "vault_enter_current": {
+    "message": "Enter the current password.",
+    "description": "Vault page."
+  },
+  "vault_changing": {
+    "message": "Changing…",
+    "description": "Vault page."
+  },
+  "vault_changed": {
+    "message": "Vault password changed.",
+    "description": "Vault page."
+  },
+  "vault_no_login": {
+    "message": "no username",
+    "description": "Vault page."
+  },
+  "vault_entry_deleted": {
+    "message": "Entry “$FIRST$” deleted.",
+    "description": "Vault page.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      }
+    }
+  },
+  "vault_computing": {
+    "message": "Computing…",
+    "description": "Vault page."
+  },
+  "vault_entry_renewed": {
+    "message": "Entry renewed, counter $FIRST$.",
+    "description": "Vault page.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      }
+    }
   }
 }

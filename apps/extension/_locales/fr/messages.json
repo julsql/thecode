@@ -394,5 +394,274 @@
   "security_very_strong": {
     "message": "Très Forte",
     "description": "Popup."
+  },
+  "vault_page_title": {
+    "message": "TheCode — Carnet",
+    "description": "Vault page."
+  },
+  "vault_title": {
+    "message": "Carnet",
+    "description": "Vault page."
+  },
+  "vault_lock_now": {
+    "message": "Verrouiller",
+    "description": "Vault page."
+  },
+  "vault_create_title": {
+    "message": "Protéger le carnet",
+    "description": "Vault page."
+  },
+  "vault_create_hint": {
+    "message": "Choisissez un mot de passe de carnet (8 caractères minimum). Il reste sur cet appareil et n'est jamais synchronisé. Il protège cet écran, pas le remplissage automatique.",
+    "description": "Vault page."
+  },
+  "vault_password_label": {
+    "message": "Mot de passe de carnet",
+    "description": "Vault page."
+  },
+  "vault_confirm_label": {
+    "message": "Confirmer le mot de passe",
+    "description": "Vault page."
+  },
+  "vault_create_submit": {
+    "message": "Créer le mot de passe",
+    "description": "Vault page."
+  },
+  "vault_locked_title": {
+    "message": "Carnet verrouillé",
+    "description": "Vault page."
+  },
+  "vault_unlock_submit": {
+    "message": "Déverrouiller",
+    "description": "Vault page."
+  },
+  "vault_forgot": {
+    "message": "Mot de passe oublié ?",
+    "description": "Vault page."
+  },
+  "vault_forget_title": {
+    "message": "Effacer le carnet de cet appareil ?",
+    "description": "Vault page."
+  },
+  "vault_forget_hint": {
+    "message": "Toutes les entrées enregistrées sur cet appareil et le mot de passe de carnet seront effacés. Si la synchronisation est active, le carnet reviendra à la prochaine synchronisation. Cette action est irréversible.",
+    "description": "Vault page."
+  },
+  "vault_forget_confirm": {
+    "message": "Effacer le carnet",
+    "description": "Vault page."
+  },
+  "vault_cancel": {
+    "message": "Annuler",
+    "description": "Vault page."
+  },
+  "vault_entries_title": {
+    "message": "Entrées",
+    "description": "Vault page."
+  },
+  "vault_empty": {
+    "message": "Le carnet est vide.",
+    "description": "Vault page."
+  },
+  "vault_back": {
+    "message": "Retour à la liste",
+    "description": "Vault page."
+  },
+  "vault_detail_domains": {
+    "message": "Domaines",
+    "description": "Vault page."
+  },
+  "vault_detail_login": {
+    "message": "Identifiant",
+    "description": "Vault page."
+  },
+  "vault_detail_length": {
+    "message": "Longueur",
+    "description": "Vault page."
+  },
+  "vault_detail_charset": {
+    "message": "Caractères",
+    "description": "Vault page."
+  },
+  "vault_detail_counter": {
+    "message": "Compteur",
+    "description": "Vault page."
+  },
+  "vault_detail_updated": {
+    "message": "Mis à jour",
+    "description": "Vault page."
+  },
+  "vault_renew": {
+    "message": "Renouveler",
+    "description": "Vault page."
+  },
+  "vault_delete": {
+    "message": "Supprimer",
+    "description": "Vault page."
+  },
+  "vault_renew_before": {
+    "message": "Actuel",
+    "description": "Vault page."
+  },
+  "vault_renew_after": {
+    "message": "Nouveau",
+    "description": "Vault page."
+  },
+  "vault_renew_hint": {
+    "message": "Changez-le sur le site, puis confirmez.",
+    "description": "Vault page."
+  },
+  "vault_confirm": {
+    "message": "Confirmer",
+    "description": "Vault page."
+  },
+  "vault_delete_title": {
+    "message": "Supprimer cette entrée ?",
+    "description": "Vault page."
+  },
+  "vault_delete_hint": {
+    "message": "La suppression se propagera aux autres appareils à la prochaine synchronisation.",
+    "description": "Vault page."
+  },
+  "vault_change_current": {
+    "message": "Mot de passe actuel",
+    "description": "Vault page."
+  },
+  "vault_change_next": {
+    "message": "Nouveau mot de passe",
+    "description": "Vault page."
+  },
+  "vault_change_confirm": {
+    "message": "Confirmer le nouveau mot de passe",
+    "description": "Vault page."
+  },
+  "vault_change_submit": {
+    "message": "Changer le mot de passe",
+    "description": "Vault page."
+  },
+  "vault_error_too_short": {
+    "message": "Le mot de passe doit contenir au moins $FIRST$ caractères.",
+    "description": "Vault page.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      }
+    }
+  },
+  "vault_error_mismatch": {
+    "message": "Les deux mots de passe ne correspondent pas.",
+    "description": "Vault page."
+  },
+  "vault_charset_lower": {
+    "message": "minuscules",
+    "description": "Vault page."
+  },
+  "vault_charset_upper": {
+    "message": "majuscules",
+    "description": "Vault page."
+  },
+  "vault_charset_numbers": {
+    "message": "chiffres",
+    "description": "Vault page."
+  },
+  "vault_charset_symbols": {
+    "message": "symboles",
+    "description": "Vault page."
+  },
+  "vault_charset_none": {
+    "message": "aucun",
+    "description": "Vault page."
+  },
+  "vault_error_detail": {
+    "message": "Erreur : $FIRST$",
+    "description": "Vault page.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      }
+    }
+  },
+  "vault_error_unknown": {
+    "message": "Erreur inconnue.",
+    "description": "Vault page."
+  },
+  "vault_failure_detail": {
+    "message": "Échec : $FIRST$",
+    "description": "Vault page.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      }
+    }
+  },
+  "vault_failure": {
+    "message": "Échec.",
+    "description": "Vault page."
+  },
+  "vault_creating": {
+    "message": "Création en cours…",
+    "description": "Vault page."
+  },
+  "vault_created": {
+    "message": "Mot de passe de carnet créé.",
+    "description": "Vault page."
+  },
+  "vault_checking": {
+    "message": "Vérification…",
+    "description": "Vault page."
+  },
+  "vault_wrong_password": {
+    "message": "Mot de passe incorrect.",
+    "description": "Vault page."
+  },
+  "vault_unlocked": {
+    "message": "Carnet déverrouillé.",
+    "description": "Vault page."
+  },
+  "vault_locked": {
+    "message": "Carnet verrouillé.",
+    "description": "Vault page."
+  },
+  "vault_forgotten": {
+    "message": "Carnet effacé de cet appareil. Choisissez un nouveau mot de passe de carnet.",
+    "description": "Vault page."
+  },
+  "vault_enter_current": {
+    "message": "Saisissez le mot de passe actuel.",
+    "description": "Vault page."
+  },
+  "vault_changing": {
+    "message": "Changement en cours…",
+    "description": "Vault page."
+  },
+  "vault_changed": {
+    "message": "Mot de passe de carnet changé.",
+    "description": "Vault page."
+  },
+  "vault_no_login": {
+    "message": "sans identifiant",
+    "description": "Vault page."
+  },
+  "vault_entry_deleted": {
+    "message": "Entrée « $FIRST$ » supprimée.",
+    "description": "Vault page.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      }
+    }
+  },
+  "vault_computing": {
+    "message": "Calcul en cours…",
+    "description": "Vault page."
+  },
+  "vault_entry_renewed": {
+    "message": "Entrée renouvelée, compteur $FIRST$.",
+    "description": "Vault page.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      }
+    }
   }
 }
