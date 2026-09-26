@@ -27,22 +27,24 @@ _(26 characters)_
 **Primary**
 
 ```
-Passwords recomputed on your device from one key. None of them is ever stored.
+No password is ever stored, anywhere: each one is recomputed from your one key.
 ```
 
-_(78 characters)_
+_(79 characters)_
 
 **Alternates**
 
-- `One key, one site, one password. Offline, no account required.` _(63)_
-- `A password manager that stores no passwords. Open source.` _(57)_
+- `The password manager that stores no passwords. No account, works offline.` _(74)_
+- `One key, one site, one password recomputed on demand. Never stored.` _(67)_
 
 ---
 
 ## 3. Full description _(max 4 000 characters)_
 
 ```
-TheCode is a password manager that stores no passwords. Each one is recomputed on your phone, on demand, from a master key only you know and the site's name.
+Your passwords are stored NOWHERE. Not on your phone, not on a server, not in an encrypted vault. TheCode recomputes each one on demand, from a single master key only you know and the site's name.
+
+That is what sets it apart from other password managers: there is no password database to hack, lose or leak.
 
 ━━━━━━━━━━━━━━━━━━━━━
 ONE KEY. ONE PASSWORD PER SITE.
@@ -50,24 +52,28 @@ ONE KEY. ONE PASSWORD PER SITE.
 
 → Same key + same site = exactly the same password, every time, on every device.
 → Different sites = unrelated passwords.
-→ Nothing to steal: no password is saved, neither on the phone nor on a server.
+→ Nothing to steal: no password is ever saved.
 
 The derivation (PBKDF2 with 600,000 iterations, then HMAC-SHA256) is documented, tested and reproducible: your passwords do not depend on any service staying alive.
+
+━━━━━━━━━━━━━━━━━━━━━
+ALL STORAGE IS OPTIONAL
+━━━━━━━━━━━━━━━━━━━━━
+
+The app works fully without a vault, without an account and without sync: a key and a site name are all it needs.
+
+• Local vault (optional): keep each site's username, length and characters — never the password. It stays on the phone, locked with biometrics or a dedicated password.
+• Transfer without an account: send the vault to your other TheCode apps with an encrypted QR code or an encrypted file.
+• Account (optional): automatic sync of the vault and default settings, end-to-end encrypted. The server never sees your master key, your sites or your usernames. Sign in with email or Google.
 
 ━━━━━━━━━━━━━━━━━━━━━
 FEATURES
 ━━━━━━━━━━━━━━━━━━━━━
 
 • Android autofill: TheCode offers the password inside apps and web pages, with the account's username
-• Vault: keep each site's username, length and characters — never the password
 • Save suggestions: a new site is offered to the vault
-• Vault lock with biometrics or a dedicated password
 • Password masked by default, revealed with one tap
 • Length from 4 to 40 characters; lowercase, uppercase, digits, symbols
-• Default settings remembered, and shared across your devices with an account
-• Move your vault to another device with an encrypted QR code
-• Optional automatic sync, end-to-end encrypted
-• Sign in with Google or with an email address
 • Dark, light or system theme
 • No ads, no trackers, no analytics
 
@@ -82,15 +88,18 @@ PRIVACY
 • Open source under the Apache 2.0 licence: everything can be checked.
 
 ━━━━━━━━━━━━━━━━━━━━━
-EVERYWHERE, WITH THE SAME KEY
+ONE PROJECT, ON ALL YOUR DEVICES
 ━━━━━━━━━━━━━━━━━━━━━
 
+TheCode is a fully integrated, cross-platform project:
+
 • Android app (you are here)
-• iPhone, iPad and Mac apps
+• iPhone and iPad app
+• Mac app
 • Extensions for Chrome, Firefox, Edge, Brave and Safari
 • Website thecode.julsql.fr
 
-The same key gives you the same passwords on each of them, even without sync.
+The same key gives you the same passwords on each of them, even without an account or sync.
 
 ━━━━━━━━━━━━━━━━━━━━━
 NO ADS
@@ -109,7 +118,7 @@ HOW IT WORKS
 Later, on any device: same key, same site → same password.
 ```
 
-_(≈ 2 900 characters)_
+_(≈ 3 100 characters)_
 
 ---
 
@@ -128,7 +137,7 @@ _(≈ 2 900 characters)_
 • Sign in with Google
 ```
 
-_(≈ 310 characters)_
+_(≈ 286 characters)_
 
 ---
 
@@ -139,7 +148,7 @@ above:
 
 - password manager
 - password generator
-- deterministic / vaultless password
+- deterministic / vaultless / never-stored password
 - Android autofill
 - biometric password
 - open source, offline
@@ -221,9 +230,13 @@ therefore not declared; encrypted in transit **Yes**; deletion **Yes**.
 
 **Promise**: _"The password manager that stores no passwords."_
 
-1. **No stored password** = nothing to leak
-2. **Offline by default** = sync is a choice, end-to-end encrypted
-3. **One key to remember**, which never leaves the device
+1. **No password stored, anywhere** = nothing to leak; this is what sets it apart from the market
+2. **All storage is optional** = the app works without a vault, an account or sync
+3. **Storage can stay local** = vault on the device, locked, transferable by encrypted QR code or
+   file without an account
+4. **Optional account** = end-to-end encrypted sync, the server sees nothing
+5. **One cross-platform project** = Android, iPhone, iPad, Mac, extensions, website: same key, same
+   passwords
 
 Objections:
 

@@ -16,46 +16,48 @@ _(23 caractères)_
 ## 2. Sous-titre _(30 caractères max)_
 
 ```
-Une clef, aucun mot de passe
+Mots de passe jamais stockés
 ```
 
 _(28 caractères)_
 
-Variante : `Mots de passe jamais stockés` _(28)_
+Variante : `Une clef, aucun mot de passe` _(28)_
 
 ## 3. Texte promotionnel _(170 caractères max)_
 
 Modifiable sans nouvelle version.
 
 ```
-Nouveau : verrou du carnet par Face ID ou Touch ID, remplissage automatique avec l'identifiant et synchronisation chiffrée de bout en bout, facultative.
+Aucun mot de passe stocké, nulle part : chacun est recalculé à la demande depuis votre clef. Sans compte, hors ligne, et sur tous vos appareils.
 ```
 
-_(≈ 150 caractères)_
+_(≈ 144 caractères)_
 
 ## 4. Description _(4 000 caractères max)_
 
 ```
-TheCode est un gestionnaire de mots de passe qui n'en stocke aucun. Chaque mot de passe est recalculé sur votre appareil, à la demande, à partir d'une clef maîtresse que vous seul connaissez et du nom du site.
+Vos mots de passe ne sont stockés NULLE PART. Ni sur votre appareil, ni sur un serveur, ni dans un coffre chiffré. TheCode recalcule chacun d'eux à la demande, à partir d'une seule clef maîtresse que vous seul connaissez et du nom du site.
+
+C'est ce qui le distingue des autres gestionnaires : il n'existe aucune base de mots de passe à pirater, à perdre ou à faire fuiter.
 
 UNE CLEF. UN MOT DE PASSE PAR SITE.
 • Même clef + même site = exactement le même mot de passe, sur chaque appareil.
 • Sites différents = mots de passe sans rapport entre eux.
-• Rien à voler : aucun mot de passe n'est enregistré, ni sur l'appareil, ni sur un serveur.
+• Rien à voler : aucun mot de passe n'est jamais enregistré.
 
 La dérivation (PBKDF2 à 600 000 itérations, puis HMAC-SHA256) est documentée, testée et reproductible : vos mots de passe ne dépendent pas de la survie d'un service.
 
+TOUT LE STOCKAGE EST FACULTATIF
+L'app fonctionne entièrement sans carnet, sans compte et sans synchronisation : une clef et un nom de site suffisent.
+• Carnet local (facultatif) : retenez pour chaque site l'identifiant, la longueur et les caractères voulus — jamais le mot de passe. Il reste sur l'appareil, verrouillé par Face ID, Touch ID ou un mot de passe dédié.
+• Transfert sans compte : envoyez le carnet vers vos autres apps TheCode par QR code chiffré ou par fichier chiffré.
+• Compte (facultatif) : synchronisation automatique du carnet et des réglages par défaut, chiffrée de bout en bout. Le serveur ne voit jamais votre clef maîtresse, ni vos sites, ni vos identifiants. Connexion par e-mail, avec Google ou avec Apple.
+
 FONCTIONNALITÉS
 • Remplissage automatique sur iPhone, iPad et Mac : TheCode propose le mot de passe dans Safari et dans les apps, avec l'identifiant du compte
-• Carnet : retenez pour chaque site l'identifiant, la longueur et les caractères voulus — jamais le mot de passe
 • Enregistrement proposé par le système : TheCode ne retient un compte que s'il sait en recalculer le mot de passe
-• Verrou du carnet par Face ID, Touch ID ou mot de passe dédié
 • Mot de passe masqué par défaut, affiché d'un geste
 • Longueur de 4 à 40 caractères, choix des minuscules, majuscules, chiffres, symboles
-• Réglages par défaut retenus, et partagés entre vos appareils si vous avez un compte
-• Transfert du carnet d'un appareil à l'autre par QR code chiffré
-• Synchronisation automatique, chiffrée de bout en bout, facultative
-• Connexion avec Apple, avec Google ou par adresse e-mail
 • Aucune publicité, aucun traceur, aucune mesure d'audience
 
 CONFIDENTIALITÉ
@@ -65,8 +67,14 @@ CONFIDENTIALITÉ
 • La caméra ne sert qu'à lire un QR code de transfert ; aucune image n'est enregistrée.
 • Code source ouvert sous licence Apache 2.0.
 
-PARTOUT, AVEC LA MÊME CLEF
-Apps iPhone, iPad et Mac, application Android, extensions pour Chrome, Firefox, Edge, Brave et Safari, et le site thecode.julsql.fr. La même clef vous redonne les mêmes mots de passe sur chacun d'eux, même sans synchronisation.
+UN SEUL PROJET, SUR TOUS VOS APPAREILS
+TheCode est un projet entièrement intégré et multiplateforme :
+• Apps iPhone et iPad
+• App Mac
+• Application Android
+• Extensions pour Chrome, Firefox, Edge, Brave et Safari
+• Site thecode.julsql.fr
+La même clef vous redonne les mêmes mots de passe sur chacun d'eux, même sans compte ni synchronisation.
 
 SANS PUBLICITÉ
 Aucune publicité, aucun traceur. La génération, le carnet et le remplissage fonctionnent sans compte ; un compte sert seulement à synchroniser vos appareils.
@@ -78,15 +86,15 @@ COMMENT ÇA MARCHE ?
 4. Activez TheCode dans Réglages > Général > Remplissage automatique et mots de passe (iOS), ou Réglages Système > Général > Remplissage automatique et mots de passe (macOS).
 ```
 
-_(≈ 3 000 caractères)_
+_(≈ 3 400 caractères)_
 
 ## 5. Mots-clés _(100 caractères max, séparés par des virgules, sans espace)_
 
 ```
-gestionnaire,générateur,password,coffre,sécurité,clef,remplissage,autofill,hors ligne,open source
+gestionnaire,générateur,sans stockage,sécurité,clef,remplissage,autofill,hors ligne,open source
 ```
 
-_(97 caractères)_ — « mots de passe » est déjà dans le nom, qu'Apple indexe : inutile de
+_(95 caractères)_ — « mots de passe » est déjà dans le nom, qu'Apple indexe : inutile de
 le répéter ici.
 
 ## 6. Nouveautés de cette version _(4 000 caractères max)_

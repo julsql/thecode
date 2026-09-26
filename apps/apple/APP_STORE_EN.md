@@ -16,46 +16,48 @@ _(26 characters)_
 ## 2. Subtitle _(max 30 characters)_
 
 ```
-One key, no stored passwords
+Passwords, never stored
 ```
 
-_(28 characters)_
+_(23 characters)_
 
-Alternate: `Passwords, never stored` _(23)_
+Alternate: `One key, no stored passwords` _(28)_
 
 ## 3. Promotional text _(max 170 characters)_
 
 Editable without a new version.
 
 ```
-New: vault lock with Face ID or Touch ID, AutoFill with your username, and optional end-to-end encrypted sync.
+No password is stored, anywhere: each one is recomputed on demand from your key. No account needed, works offline, on all your devices.
 ```
 
-_(≈ 110 characters)_
+_(≈ 135 characters)_
 
 ## 4. Description _(max 4,000 characters)_
 
 ```
-TheCode is a password manager that stores no passwords. Each one is recomputed on your device, on demand, from a master key only you know and the site's name.
+Your passwords are stored NOWHERE. Not on your device, not on a server, not in an encrypted vault. TheCode recomputes each one on demand, from a single master key only you know and the site's name.
+
+That is what sets it apart from other password managers: there is no password database to hack, lose or leak.
 
 ONE KEY. ONE PASSWORD PER SITE.
 • Same key + same site = exactly the same password, on every device.
 • Different sites = unrelated passwords.
-• Nothing to steal: no password is saved, neither on the device nor on a server.
+• Nothing to steal: no password is ever saved.
 
 The derivation (PBKDF2 with 600,000 iterations, then HMAC-SHA256) is documented, tested and reproducible: your passwords do not depend on any service staying alive.
 
+ALL STORAGE IS OPTIONAL
+The app works fully without a vault, without an account and without sync: a key and a site name are all it needs.
+• Local vault (optional): keep each site's username, length and characters — never the password. It stays on the device, locked with Face ID, Touch ID or a dedicated password.
+• Transfer without an account: send the vault to your other TheCode apps with an encrypted QR code or an encrypted file.
+• Account (optional): automatic sync of the vault and default settings, end-to-end encrypted. The server never sees your master key, your sites or your usernames. Sign in with email, Google or Apple.
+
 FEATURES
 • AutoFill on iPhone, iPad and Mac: TheCode offers the password in Safari and in apps, with the account's username
-• Vault: keep each site's username, length and characters — never the password
 • System save prompts: TheCode only keeps an account when it can recompute its password
-• Vault lock with Face ID, Touch ID or a dedicated password
 • Password masked by default, revealed with one tap
 • Length from 4 to 40 characters; lowercase, uppercase, digits, symbols
-• Default settings remembered, and shared across your devices with an account
-• Move your vault to another device with an encrypted QR code
-• Optional automatic sync, end-to-end encrypted
-• Sign in with Apple, with Google or with an email address
 • No ads, no trackers, no analytics
 
 PRIVACY
@@ -65,8 +67,14 @@ PRIVACY
 • The camera is only used to read a transfer QR code; no image is saved.
 • Open source under the Apache 2.0 licence.
 
-EVERYWHERE, WITH THE SAME KEY
-iPhone, iPad and Mac apps, the Android app, extensions for Chrome, Firefox, Edge, Brave and Safari, and the website thecode.julsql.fr. The same key gives you the same passwords on each of them, even without sync.
+ONE PROJECT, ON ALL YOUR DEVICES
+TheCode is a fully integrated, cross-platform project:
+• iPhone and iPad app
+• Mac app
+• Android app
+• Extensions for Chrome, Firefox, Edge, Brave and Safari
+• Website thecode.julsql.fr
+The same key gives you the same passwords on each of them, even without an account or sync.
 
 NO ADS
 No ads, no trackers. Generation, the vault and AutoFill work without an account; an account is only used to sync your devices.
@@ -78,15 +86,15 @@ HOW IT WORKS
 4. Turn TheCode on in Settings > General > AutoFill & Passwords (iOS), or System Settings > General > AutoFill & Passwords (macOS).
 ```
 
-_(≈ 2 700 characters)_
+_(≈ 2 900 characters)_
 
 ## 5. Keywords _(max 100 characters, comma-separated, no spaces)_
 
 ```
-password,generator,vault,security,key,autofill,offline,open source,deterministic,login
+password,generator,vaultless,never stored,security,key,autofill,offline,open source,deterministic
 ```
 
-_(86 characters)_ — "manager" is already in the name, which Apple indexes.
+_(97 characters)_ — "manager" is already in the name, which Apple indexes.
 
 ## 6. What's New in this version _(max 4,000 characters)_
 

@@ -27,22 +27,24 @@ _(23 caractères)_
 **Proposition principale**
 
 ```
-Vos mots de passe, recalculés sur l'appareil à partir d'une clef. Aucun stocké.
+Aucun mot de passe stocké, nulle part : chacun est recalculé depuis votre clef.
 ```
 
 _(79 caractères)_
 
 **Variantes**
 
-- `Une clef, un site, un mot de passe. Hors ligne, sans compte obligatoire.` _(73)_
-- `Un gestionnaire de mots de passe qui n'en stocke aucun. Open source.` _(68)_
+- `Le gestionnaire qui ne stocke aucun mot de passe. Sans compte, hors ligne.` _(74)_
+- `Une clef, un site, un mot de passe recalculé à la demande. Jamais stocké.` _(73)_
 
 ---
 
 ## 3. Description complète _(4 000 caractères max)_
 
 ```
-TheCode est un gestionnaire de mots de passe qui n'en stocke aucun. Chaque mot de passe est recalculé sur votre téléphone, à la demande, à partir d'une clef maîtresse que vous seul connaissez et du nom du site.
+Vos mots de passe ne sont stockés NULLE PART. Ni sur votre téléphone, ni sur un serveur, ni dans un coffre chiffré. TheCode recalcule chacun d'eux à la demande, à partir d'une seule clef maîtresse que vous seul connaissez et du nom du site.
+
+C'est ce qui le distingue des autres gestionnaires : il n'existe aucune base de mots de passe à pirater, à perdre ou à faire fuiter.
 
 ━━━━━━━━━━━━━━━━━━━━━
 UNE CLEF. UN MOT DE PASSE PAR SITE.
@@ -50,24 +52,28 @@ UNE CLEF. UN MOT DE PASSE PAR SITE.
 
 → Même clef + même site = exactement le même mot de passe, à chaque fois, sur chaque appareil.
 → Sites différents = mots de passe sans rapport entre eux.
-→ Rien à voler : aucun mot de passe n'est enregistré, ni sur le téléphone, ni sur un serveur.
+→ Rien à voler : aucun mot de passe n'est jamais enregistré.
 
 La dérivation (PBKDF2 à 600 000 itérations, puis HMAC-SHA256) est documentée, testée et reproductible : vos mots de passe ne dépendent pas de la survie d'un service.
+
+━━━━━━━━━━━━━━━━━━━━━
+TOUT LE STOCKAGE EST FACULTATIF
+━━━━━━━━━━━━━━━━━━━━━
+
+L'app fonctionne entièrement sans carnet, sans compte et sans synchronisation : une clef et un nom de site suffisent.
+
+• Carnet local (facultatif) : retenez pour chaque site l'identifiant, la longueur et les caractères voulus — jamais le mot de passe. Il reste sur le téléphone, verrouillé par biométrie ou par un mot de passe dédié.
+• Transfert sans compte : envoyez le carnet vers vos autres apps TheCode par QR code chiffré ou par fichier chiffré.
+• Compte (facultatif) : synchronisation automatique du carnet et des réglages par défaut, chiffrée de bout en bout. Le serveur ne voit jamais votre clef maîtresse, ni vos sites, ni vos identifiants. Connexion par e-mail ou avec Google.
 
 ━━━━━━━━━━━━━━━━━━━━━
 FONCTIONNALITÉS
 ━━━━━━━━━━━━━━━━━━━━━
 
 • Remplissage automatique Android : TheCode propose le mot de passe dans les apps et les pages web, avec l'identifiant du compte
-• Carnet : retenez pour chaque site l'identifiant, la longueur et les caractères voulus — jamais le mot de passe
 • Proposition d'enregistrement : un site nouveau est proposé au carnet
-• Verrou du carnet par biométrie ou mot de passe dédié
 • Mot de passe masqué par défaut, affiché d'un geste
 • Longueur de 4 à 40 caractères, choix des minuscules, majuscules, chiffres, symboles
-• Réglages par défaut retenus, et partagés entre vos appareils si vous avez un compte
-• Transfert du carnet d'un appareil à l'autre par QR code chiffré
-• Synchronisation automatique et chiffrée de bout en bout, facultative
-• Connexion avec Google ou par adresse e-mail
 • Mode sombre, clair ou automatique
 • Aucune publicité, aucun traceur, aucune mesure d'audience
 
@@ -82,15 +88,18 @@ CONFIDENTIALITÉ
 • Code source ouvert sous licence Apache 2.0 : tout est vérifiable.
 
 ━━━━━━━━━━━━━━━━━━━━━
-PARTOUT, AVEC LA MÊME CLEF
+UN SEUL PROJET, SUR TOUS VOS APPAREILS
 ━━━━━━━━━━━━━━━━━━━━━
 
+TheCode est un projet entièrement intégré et multiplateforme :
+
 • Application Android (vous y êtes)
-• Applications iPhone, iPad et Mac
+• Applications iPhone et iPad
+• Application Mac
 • Extensions pour Chrome, Firefox, Edge, Brave et Safari
 • Site thecode.julsql.fr
 
-La même clef vous redonne les mêmes mots de passe sur chacun d'eux, même sans synchronisation.
+La même clef vous redonne les mêmes mots de passe sur chacun d'eux, même sans compte ni synchronisation.
 
 ━━━━━━━━━━━━━━━━━━━━━
 SANS PUBLICITÉ
@@ -109,7 +118,7 @@ COMMENT ÇA MARCHE ?
 Plus tard, sur n'importe quel appareil : même clef, même site → même mot de passe.
 ```
 
-_(≈ 3 100 caractères)_
+_(≈ 3 700 caractères)_
 
 ---
 
@@ -128,7 +137,7 @@ _(≈ 3 100 caractères)_
 • Connexion avec Google
 ```
 
-_(≈ 360 caractères)_
+_(≈ 350 caractères)_
 
 ---
 
@@ -139,7 +148,7 @@ Requêtes visées, intégrées ci-dessus :
 
 - gestionnaire de mots de passe
 - générateur de mot de passe
-- mot de passe déterministe / sans coffre
+- mot de passe déterministe / sans coffre / jamais stocké
 - remplissage automatique Android
 - biométrie mot de passe
 - open source, hors ligne
@@ -221,9 +230,13 @@ bout en bout, donc non déclaré ; chiffrement en transit **Oui** ; suppression 
 
 **Promesse** : _« Le gestionnaire de mots de passe qui n'en stocke aucun. »_
 
-1. **Aucun mot de passe stocké** = rien à fuiter
-2. **Hors ligne par défaut** = la synchronisation est un choix, chiffrée de bout en bout
-3. **Une seule clef à retenir**, qui ne quitte jamais l'appareil
+1. **Aucun mot de passe stocké, nulle part** = rien à fuiter ; c'est la différence avec le marché
+2. **Tout stockage est facultatif** = l'app fonctionne sans carnet, sans compte, sans synchronisation
+3. **Stockage local possible** = carnet sur l'appareil, verrouillé, transférable par QR code ou
+   fichier chiffré sans compte
+4. **Compte facultatif** = synchronisation chiffrée de bout en bout, le serveur ne voit rien
+5. **Un projet multiplateforme** = Android, iPhone, iPad, Mac, extensions, site : même clef, mêmes
+   mots de passe
 
 Objections :
 
