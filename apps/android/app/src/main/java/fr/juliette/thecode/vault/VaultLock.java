@@ -9,10 +9,13 @@ import fr.juliette.thecode.SessionLock;
  * Verrou de l'écran carnet (shared/spec/vault-lock.md).
  *
  * Protège l'écran, pas les données : le remplissage et la génération lisent le
- * carnet sans passer par ici. Déverrouillé tant qu'on est sur l'écran ; en le
- * quittant, seul l'instant de sortie est retenu ({@link Session}) : revenu
- * dans la fenêtre de grâce de la clef ({@link SessionLock#GRACE_MILLIS}),
- * l'écran est toujours ouvert, y compris dans une nouvelle instance.
+ * carnet sans passer par ici.
+ *
+ * Une seule session avec la clef ({@link SessionLock}) : une session valide
+ * ouvre l'écran sans rien demander, et déverrouiller le carnet déverrouille la
+ * clef. Quitter l'écran ouvert fait courir la fenêtre commune ; verrouiller ou
+ * oublier y met fin pour les deux. La méthode propre au carnet (biométrie ou
+ * mot de passe) ne sert qu'à défaut de session valide.
  *
  * Logique pure, le stockage est injecté pour être testable sans Android.
  */
@@ -36,43 +39,22 @@ public final class VaultLock {
         void clear();
     }
 
-    /**
-     * Instant de sortie d'un écran déverrouillé (epoch ms, 0 si aucun). Un
-     * simple horodatage, hors du stockage chiffré : aucun secret n'y vit.
-     */
-    public interface Session {
-        long leftAt();
-        void setLeftAt(long at);
-        void clear();
-    }
-
-    /** Horloge injectable pour les tests. */
-    public interface Clock {
-        long now();
-    }
-
     public static final String BIOMETRIC = "biometric";
     public static final String PASSWORD = "password";
 
     private final Store store;
-    private final Session session;
-    private final Clock clock;
+    private final SessionLock session;
     private volatile boolean unlocked;
 
-    /**
-     * L'état initial se déduit de l'instant de sortie retenu : un écran
-     * recréé dans la fenêtre de grâce reste ouvert.
-     */
-    public VaultLock(@NonNull Store store, @NonNull Session session, @NonNull Clock clock) {
+    /** Une session valide (clef ou carnet déverrouillé récemment) ouvre l'écran. */
+    public VaultLock(@NonNull Store store, @NonNull SessionLock session) {
         this.store = store;
         this.session = session;
-        this.clock = clock;
-        this.unlocked = withinGrace();
+        this.unlocked = sessionOpens();
     }
 
-    private boolean withinGrace() {
-        return method() != Method.NONE
-                && SessionLock.isWithinGrace(session.leftAt(), clock.now());
+    private boolean sessionOpens() {
+        return method() != Method.NONE && session.isValid();
     }
 
     @NonNull
@@ -93,12 +75,18 @@ public final class VaultLock {
         return state() == State.UNLOCKED;
     }
 
+    /** Ouvre l'écran et la session commune : la clef est déverrouillée aussi. */
+    private void open() {
+        unlocked = true;
+        session.stamp();
+    }
+
     /** Choisir la biométrie : à la première ouverture ou depuis l'écran déverrouillé. */
     public void chooseBiometric() {
         requireConfigurable();
         store.setPasswordRecord(null);
         store.setMethod(BIOMETRIC);
-        unlocked = true;
+        open();
     }
 
     /**
@@ -109,7 +97,7 @@ public final class VaultLock {
         requireConfigurable();
         store.setPasswordRecord(record);
         store.setMethod(PASSWORD);
-        unlocked = true;
+        open();
     }
 
     /** Coûteux (PBKDF2) : à appeler hors du fil de l'interface. */
@@ -123,7 +111,7 @@ public final class VaultLock {
         if (with == Method.NONE || with != method()) {
             throw new IllegalStateException("Méthode " + with + " non configurée");
         }
-        unlocked = true;
+        open();
     }
 
     /** Remplace le mot de passe ; l'actuel a été vérifié par l'appelant. */
@@ -134,10 +122,10 @@ public final class VaultLock {
         store.setPasswordRecord(newRecord);
     }
 
-    /** Verrou explicite : referme l'écran et oublie la fenêtre de grâce. */
+    /** Verrou explicite : referme l'écran et met fin à la session, clef comprise. */
     public void lock() {
         unlocked = false;
-        session.clear();
+        session.invalidate();
     }
 
     /** Vrai pendant une auth système lancée par l'écran (biométrie, code de l'appareil). */
@@ -157,24 +145,20 @@ public final class VaultLock {
 
     /**
      * Sortie de l'écran (arrière-plan, retour, fermeture). Ne verrouille pas :
-     * retient l'instant de sortie si l'écran était ouvert, pour le rouvrir
-     * sans auth dans la fenêtre de grâce. Pendant notre propre invite, l'écran
-     * du code de l'appareil fait quitter l'activité : la décision est
-     * différée jusqu'à l'issue de l'auth.
+     * si l'écran était ouvert, la fenêtre commune part de maintenant. Pendant
+     * notre propre invite, l'écran du code de l'appareil fait quitter
+     * l'activité : la décision est différée jusqu'à l'issue de l'auth.
      */
     public void onLeave() {
-        if (isUnlocked()) {
-            session.setLeftAt(clock.now());
-        } else {
-            session.clear();
-        }
+        if (isUnlocked()) session.stamp();
         if (systemAuthInProgress) lockDeferred = true;
     }
 
     /**
-     * Retour sur l'écran : au-delà de la fenêtre de grâce (ou horloge
-     * reculée), l'écran se referme. Sans effet pendant une auth système, dont
-     * l'issue tranchera ({@link #endSystemAuth}).
+     * Retour sur l'écran : l'état suit la session commune. Au-delà de la
+     * fenêtre (ou horloge reculée), l'écran se referme ; une session ouverte
+     * entre-temps par la clef l'ouvre. Sans effet pendant une auth système,
+     * dont l'issue tranchera ({@link #endSystemAuth}).
      *
      * @return vrai si le verrou vient d'être appliqué.
      */
@@ -185,8 +169,8 @@ public final class VaultLock {
 
     /**
      * Fin de l'auth système, dans chaque rappel. Si l'écran a été quitté
-     * pendant l'invite, un succès lève la question, un échec (annulation,
-     * mise en arrière-plan) applique la fenêtre de grâce.
+     * pendant l'invite, un succès lève la question (l'appelant déverrouille),
+     * un échec (annulation, mise en arrière-plan) applique la fenêtre.
      *
      * @return vrai si l'écran vient d'être reverrouillé.
      */
@@ -194,30 +178,26 @@ public final class VaultLock {
         boolean deferred = lockDeferred;
         systemAuthInProgress = false;
         lockDeferred = false;
-        if (!deferred) return false;
-        if (success) {
-            session.clear();
-            return false;
-        }
+        if (!deferred || success) return false;
         return resolveSession();
     }
 
-    /** Applique puis efface l'instant de sortie retenu, s'il y en a un. */
+    /** Aligne l'écran sur la session commune, et la relance si elle court. */
     private boolean resolveSession() {
-        if (session.leftAt() <= 0L) return false;
         boolean wasUnlocked = unlocked;
-        unlocked = unlocked && withinGrace();
-        session.clear();
+        unlocked = sessionOpens();
+        if (unlocked) session.stamp();
         return wasUnlocked && !unlocked;
     }
 
     /**
-     * Oubli : efface le verrou. L'appelant efface aussi le carnet local — rien
-     * d'autre ne permet de passer le verrou.
+     * Oubli : efface le verrou et met fin à la session, clef comprise.
+     * L'appelant efface aussi le carnet local — rien d'autre ne permet de
+     * passer le verrou.
      */
     public void forget() {
         store.clear();
-        session.clear();
+        session.invalidate();
         unlocked = false;
     }
 

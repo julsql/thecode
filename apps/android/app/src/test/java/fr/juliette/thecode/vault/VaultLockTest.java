@@ -26,12 +26,13 @@ public class VaultLockTest {
         @Override public void clear() { method = ""; record = null; }
     }
 
-    static final class MemorySession implements VaultLock.Session {
-        long leftAt = 0L;
+    /** Horodatage de la session commune à la clef et au carnet. */
+    static final class MemorySession implements SessionLock.Store {
+        long at = 0L;
 
-        @Override public long leftAt() { return leftAt; }
-        @Override public void setLeftAt(long at) { leftAt = at; }
-        @Override public void clear() { leftAt = 0L; }
+        @Override public long stampedAt() { return at; }
+        @Override public void setStampedAt(long stamped) { at = stamped; }
+        @Override public void clear() { at = 0L; }
     }
 
     private static final long GRACE = SessionLock.GRACE_MILLIS;
@@ -39,11 +40,12 @@ public class VaultLockTest {
     private final MemoryStore store = new MemoryStore();
     private final MemorySession session = new MemorySession();
     private long now = 1_000_000L;
-    private final VaultLock.Clock clock = () -> now;
+    /** La session telle que l'écran principal la voit, pour la clef. */
+    private final SessionLock keySession = new SessionLock(session, () -> now);
     private final VaultLock lock = newLock();
 
     private VaultLock newLock() {
-        return new VaultLock(store, session, clock);
+        return new VaultLock(store, new SessionLock(session, () -> now));
     }
 
     @Test
@@ -76,9 +78,67 @@ public class VaultLockTest {
     }
 
     @Test
-    public void aNewInstanceStartsLockedWithoutARecentLeave() {
+    public void aNewInstanceStartsLockedWithoutASession() {
         lock.chooseBiometric();
+        keySession.invalidate();
         assertEquals(VaultLock.State.LOCKED, newLock().state());
+    }
+
+    @Test
+    public void anUnlockedKeyOpensTheVaultWithoutAsking() {
+        lock.chooseBiometric();
+        lock.lock();
+        now += GRACE;
+        keySession.stamp();
+
+        assertEquals(VaultLock.State.UNLOCKED, newLock().state());
+    }
+
+    @Test
+    public void anExpiredKeySessionDoesNotOpenTheVault() {
+        lock.chooseBiometric();
+        lock.lock();
+        keySession.stamp();
+        now += GRACE + 1L;
+
+        assertEquals(VaultLock.State.LOCKED, newLock().state());
+    }
+
+    @Test
+    public void unlockingTheVaultUnlocksTheKey() {
+        lock.choosePassword(VaultPassword.hash("vault-pass".toCharArray()));
+        lock.lock();
+        assertFalse(keySession.isValid());
+
+        now += 10_000L;
+        lock.unlock(VaultLock.Method.PASSWORD);
+
+        assertTrue(keySession.isValid());
+        assertEquals(now, session.at);
+    }
+
+    @Test
+    public void settingUpTheVaultUnlocksTheKey() {
+        lock.chooseBiometric();
+        assertTrue(keySession.isValid());
+    }
+
+    @Test
+    public void aKeyUnlockedWhileAwayOpensTheScreenOnReturn() {
+        lock.chooseBiometric();
+        lock.lock();
+        lock.onLeave();
+        keySession.stamp();
+
+        assertFalse(lock.onReturn());
+        assertTrue(lock.isUnlocked());
+    }
+
+    @Test
+    public void explicitLockAlsoLocksTheKey() {
+        lock.chooseBiometric();
+        lock.lock();
+        assertFalse(keySession.isValid());
     }
 
     @Test(expected = IllegalStateException.class)
@@ -135,7 +195,8 @@ public class VaultLockTest {
         lock.onLeave();
 
         assertTrue(lock.isUnlocked());
-        assertEquals(now, session.leftAt);
+        assertEquals(now, session.at);
+        assertTrue(keySession.isValid());
     }
 
     @Test
@@ -146,7 +207,8 @@ public class VaultLockTest {
 
         assertFalse(lock.onReturn());
         assertTrue(lock.isUnlocked());
-        assertEquals(0L, session.leftAt);
+        // Le retour relance la fenêtre commune.
+        assertEquals(now, session.at);
     }
 
     @Test
@@ -157,7 +219,7 @@ public class VaultLockTest {
 
         assertTrue(lock.onReturn());
         assertEquals(VaultLock.State.LOCKED, lock.state());
-        assertEquals(0L, session.leftAt);
+        assertFalse(keySession.isValid());
     }
 
     @Test
@@ -199,13 +261,13 @@ public class VaultLockTest {
         lock.lock();
         lock.onLeave();
 
-        assertEquals(0L, session.leftAt);
+        assertEquals(0L, session.at);
         assertEquals(VaultLock.State.LOCKED, newLock().state());
     }
 
     @Test
     public void aStaleStampDoesNotOpenAnUnconfiguredVault() {
-        session.leftAt = now;
+        session.at = now;
         assertEquals(VaultLock.State.SETUP, newLock().state());
     }
 
@@ -215,7 +277,7 @@ public class VaultLockTest {
         lock.onLeave();
         lock.lock();
 
-        assertEquals(0L, session.leftAt);
+        assertEquals(0L, session.at);
         assertEquals(VaultLock.State.LOCKED, newLock().state());
     }
 
@@ -243,7 +305,6 @@ public class VaultLockTest {
         lock.onLeave();
         assertTrue(lock.isUnlocked());
         assertFalse(lock.endSystemAuth(true));
-        assertEquals(0L, session.leftAt);
         lock.chooseBiometric();
 
         assertEquals(VaultLock.Method.BIOMETRIC, lock.method());
@@ -302,7 +363,7 @@ public class VaultLockTest {
         lock.forget();
 
         assertEquals(VaultLock.State.SETUP, lock.state());
-        assertEquals(0L, session.leftAt);
+        assertEquals(0L, session.at);
         assertEquals("", store.method);
         assertNull(store.record);
     }

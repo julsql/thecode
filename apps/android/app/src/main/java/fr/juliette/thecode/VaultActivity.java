@@ -72,8 +72,9 @@ public class VaultActivity extends AppCompatActivity {
 
     private Preferences preferences;
     /**
-     * Verrou de l'écran (shared/spec/vault-lock.md) : reste ouvert 3 minutes
-     * après la sortie, même si l'activité est recréée entre-temps.
+     * Verrou de l'écran (shared/spec/vault-lock.md) : partage la session de la
+     * clef, ouverte 3 minutes après la sortie, même si l'activité est recréée
+     * entre-temps.
      */
     private VaultLock lock;
     /**
@@ -93,8 +94,7 @@ public class VaultActivity extends AppCompatActivity {
         setContentView(R.layout.activity_vault);
 
         preferences = new Preferences(this);
-        lock = new VaultLock(preferences.vaultLockStore(), preferences.vaultSession(),
-                System::currentTimeMillis);
+        lock = new VaultLock(preferences.vaultLockStore(), new SessionLock(preferences));
 
         MaterialToolbar toolbar = findViewById(R.id.vaultToolbar);
         toolbar.setNavigationOnClickListener(v -> finish());

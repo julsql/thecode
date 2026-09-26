@@ -44,4 +44,29 @@ public class SessionLockTest {
     public void rejectsStampInTheFuture() {
         assertFalse(SessionLock.isWithinGrace(2_000L, 1_000L));
     }
+
+    private long stored = 0L;
+    private long now = 1_000_000L;
+    private final SessionLock lock = new SessionLock(new SessionLock.Store() {
+        @Override public long stampedAt() { return stored; }
+        @Override public void setStampedAt(long at) { stored = at; }
+        @Override public void clear() { stored = 0L; }
+    }, () -> now);
+
+    @Test
+    public void stampOpensTheSessionForTheGrace() {
+        assertFalse(lock.isValid());
+        lock.stamp();
+        now += GRACE;
+        assertTrue(lock.isValid());
+        now += 1L;
+        assertFalse(lock.isValid());
+    }
+
+    @Test
+    public void invalidateEndsTheSession() {
+        lock.stamp();
+        lock.invalidate();
+        assertFalse(lock.isValid());
+    }
 }

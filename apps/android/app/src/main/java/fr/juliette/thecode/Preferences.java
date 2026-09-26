@@ -41,7 +41,6 @@ public final class Preferences {
     public static final String KEY_SYNC_PLAN = "syncPlan";
     public static final String KEY_VAULT_LOCK_METHOD = "vaultLockMethod";
     public static final String KEY_VAULT_LOCK_PASSWORD = "vaultLockPassword";
-    public static final String KEY_VAULT_LEFT_AT = "vaultLeftAt";
 
     private static final String TAG = "TheCode";
     /** Fichier chiffré, distinct de l'ancien pour permettre la migration. */
@@ -261,28 +260,4 @@ public final class Preferences {
     public long getLastUnlockAt() { return prefs.getLong(KEY_LAST_UNLOCK_AT, 0L); }
     public void setLastUnlockAt(long v) { prefs.edit().putLong(KEY_LAST_UNLOCK_AT, v).apply(); }
     public void clearLastUnlockAt() { prefs.edit().remove(KEY_LAST_UNLOCK_AT).apply(); }
-
-    /**
-     * Instant de sortie de l'écran carnet déverrouillé (shared/spec/vault-lock.md,
-     * « Session »). Un horodatage seul, dans le fichier ordinaire : aucun secret.
-     */
-    @NonNull
-    public VaultLock.Session vaultSession() {
-        return new VaultLock.Session() {
-            @Override
-            public long leftAt() {
-                return prefs.getLong(KEY_VAULT_LEFT_AT, 0L);
-            }
-
-            @Override
-            public void setLeftAt(long at) {
-                prefs.edit().putLong(KEY_VAULT_LEFT_AT, at).apply();
-            }
-
-            @Override
-            public void clear() {
-                prefs.edit().remove(KEY_VAULT_LEFT_AT).apply();
-            }
-        };
-    }
 }
