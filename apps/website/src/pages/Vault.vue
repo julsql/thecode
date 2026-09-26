@@ -191,7 +191,7 @@ import { isPaidPlan, refreshPlan } from "@/account";
 import { loadSession } from "@/sync";
 import { lastSyncFailure, scheduleAutoSync, useAutoSync } from "@/autoSync";
 import { liveEntries, loadVault, saveVault, tombstoneEntry, type VaultEntry } from "@/vault";
-import { masterKey, unlockWithMasterKey } from "@/masterKey";
+import { locked, lockSession, masterKey, unlockWithMasterKey } from "@/masterKey";
 import { applyRenewal, proposeRenewal, type RenewProposal } from "@/renew";
 import { clearSession, isWithinGrace, recordLeave, resumeSession } from "@/vaultSession";
 
@@ -206,9 +206,12 @@ export default defineComponent({
      * État du verrou, en mémoire. Le carnet s'ouvre avec la clef maîtresse de
      * la session (masterKey.ts). Seul l'instant de sortie est retenu
      * (sessionStorage) : revenu dans les 3 minutes, le carnet est toujours
-     * ouvert (vaultSession.ts), à condition que la clef soit encore là.
+     * ouvert (vaultSession.ts), à condition que la clef soit encore là et la
+     * session pas verrouillée.
      */
-    const view = ref<View>(masterKey.value && resumeSession() ? "unlocked" : "locked");
+    const view = ref<View>(
+      masterKey.value && !locked.value && resumeSession() ? "unlocked" : "locked",
+    );
     const typedKey = ref("");
     const hasSessionKey = computed(() => Boolean(masterKey.value));
     const status = ref("");
@@ -250,7 +253,7 @@ export default defineComponent({
       if (view.value !== "unlocked" || leftAt === null) return;
       const since = leftAt;
       leftAt = null;
-      if (!isWithinGrace(since, Date.now())) onLock();
+      if (!isWithinGrace(since, Date.now())) closeVault("vault_locked_msg");
     }
 
     function onVisibility() {
@@ -319,8 +322,17 @@ export default defineComponent({
       unlockInput.value?.focus();
     }
 
-    /** Referme l'écran ; la clef reste celle de la session (générateur). */
+    /**
+     * « Verrouiller » : toute la session, pas seulement cet écran. La clef est
+     * gardée mais inutilisable (générateur compris) jusqu'à sa ressaisie.
+     */
     function onLock() {
+      lockSession();
+      closeVault("session_locked_msg");
+    }
+
+    /** Referme l'écran (grâce écoulée ou verrou). */
+    function closeVault(message: TranslationKey) {
       clearSession();
       leftAt = null;
       resetFields();
@@ -328,7 +340,7 @@ export default defineComponent({
       selectedId.value = null;
       entries.value = [];
       error.value = "";
-      status.value = t("vault_locked_msg");
+      status.value = t(message);
       view.value = "locked";
       focusHeading();
     }

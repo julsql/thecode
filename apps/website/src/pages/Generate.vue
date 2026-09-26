@@ -51,7 +51,37 @@
         <fieldset>
           <h2>{{ t("gen_section_data") }}</h2>
 
-          <div class="form-group">
+          <!-- Session verrouillée (shared/spec/vault-lock.md) : la clef est
+               gardée mais inutilisable. La ressaisir rouvre tout ; Effacer
+               l'oublie. -->
+          <form v-if="sessionLocked" class="form-group" novalidate @submit.prevent="onUnlock">
+            <h3 class="panel-title">{{ t("gen_locked_title") }}</h3>
+            <p id="gen_locked_lead" class="hint">{{ t("gen_locked_lead") }}</p>
+            <label for="id_unlock">{{ t("gen_unlock_label") }}</label>
+            <div class="input-with-button">
+              <input
+                id="id_unlock"
+                ref="unlockInput"
+                v-model="unlockTyped"
+                type="password"
+                autocomplete="off"
+                spellcheck="false"
+                aria-describedby="gen_locked_lead gen_unlock_error"
+                :aria-invalid="unlockInvalid"
+              />
+              <button id="unlockSession" type="submit" class="ghost-btn primary">
+                {{ t("gen_unlock_btn") }}
+              </button>
+            </div>
+            <p id="gen_unlock_error" class="error" role="alert">{{ unlockError }}</p>
+            <div class="panel-actions">
+              <button id="forgetKey" type="button" class="ghost-btn" @click="onForgetKey">
+                {{ t("gen_forget_key") }}
+              </button>
+            </div>
+          </form>
+
+          <div v-else class="form-group">
             <label for="id_clef">{{ t("gen_label_key") }}</label>
             <div class="input-with-button">
               <input
@@ -68,7 +98,19 @@
               <button type="button" class="ghost-btn" @click="togglePassword">
                 {{ showPassword ? t("gen_hide") : t("gen_show") }}
               </button>
+              <!-- Verrouille toute la session : la clef reste, inutilisable
+                   jusqu'à ce qu'elle soit ressaisie. -->
+              <button
+                v-if="clef"
+                id="lockSession"
+                type="button"
+                class="ghost-btn"
+                @click="onLockSession"
+              >
+                {{ t("gen_lock_btn") }}
+              </button>
             </div>
+            <p v-if="unlockStatus" class="hint" role="status">{{ unlockStatus }}</p>
             <!-- Guide discret, jamais bloquant (shared/spec/key-strength.md). Le
                  niveau n'apparait que pendant la saisie ou clef affichee : clef
                  masquee et champ sans focus, il trahirait une indication de
@@ -84,7 +126,7 @@
           <div class="form-group">
             <!-- L'empreinte se memorise a force d'etre vue : une valeur differente
                  signale une faute de frappe avant qu'elle ne coute un acces. -->
-            <p v-if="fingerprint.text" class="fingerprint">
+            <p v-if="fingerprint.text && !sessionLocked" class="fingerprint">
               Empreinte
               <span class="chip" :style="{ backgroundColor: fingerprint.color }">
                 {{ fingerprint.text }}
@@ -167,7 +209,8 @@
                points que de caracteres trahirait la longueur. La copie copie
                la vraie valeur. Enregistrer vit ici, a cote de ce qu'il
                enregistre, et nulle part ailleurs. -->
-          <div class="password-row">
+          <p v-if="sessionLocked" class="hint">{{ t("gen_locked_error") }}</p>
+          <div v-else class="password-row">
             <input
               type="text"
               id="password"
@@ -333,12 +376,18 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, watch, computed, onMounted, onUnmounted } from "vue";
+import { defineComponent, ref, watch, computed, nextTick, onMounted, onUnmounted } from "vue";
 import { generatePassword, calculateEntropyBits, getSecurityLevel } from "@/utils";
 import { canonicalSite, loadPublicSuffixList } from "@/canonicalSite";
 import { keyFingerprint, type Fingerprint } from "@/fingerprint";
 import { keyStrength } from "@/keyStrength";
-import { masterKey } from "@/masterKey";
+import {
+  forgetMasterKey,
+  locked as sessionLocked,
+  lockSession,
+  masterKey,
+  unlockWithMasterKey,
+} from "@/masterKey";
 import { loadSession, signOutSession } from "@/sync";
 import { loadSettings, rememberSettings, sameSettings, type DefaultSettings } from "@/settings";
 import { lastSyncFailure, runSyncNow, scheduleAutoSync, useAutoSync } from "@/autoSync";
@@ -560,7 +609,8 @@ export default defineComponent({
       // service worker de l'extension refuse deja ce cas ; on s'aligne.
       // Sans site non plus : le mot de passe serait celui d'un site vide, qui
       // n'existe pas et ne peut pas etre enregistre.
-      if (!clef.value || !site.value.trim()) {
+      // Session verrouillée : la clef est là mais ne produit rien.
+      if (sessionLocked.value || !clef.value || !site.value.trim()) {
         motDePasse.value = "";
         motDePasseVisible.value = false;
         copyMessage.value = "";
@@ -615,6 +665,10 @@ export default defineComponent({
      * contenu est chiffré avec une clef dérivée de la clef maîtresse.
      */
     async function showTransfer() {
+      if (sessionLocked.value) {
+        transferMessage.value = t("gen_locked_error");
+        return;
+      }
       if (!clef.value) {
         transferMessage.value = t("gen_need_key");
         return;
@@ -640,6 +694,10 @@ export default defineComponent({
 
     /** Enregistre le carnet chiffré dans un fichier. */
     async function downloadVault() {
+      if (sessionLocked.value) {
+        transferMessage.value = t("gen_locked_error");
+        return;
+      }
       if (!clef.value) {
         transferMessage.value = t("gen_need_key");
         return;
@@ -673,6 +731,10 @@ export default defineComponent({
       if (!file) return;
       input.value = "";
 
+      if (sessionLocked.value) {
+        transferMessage.value = t("gen_locked_error");
+        return;
+      }
       if (!clef.value) {
         transferMessage.value = t("gen_need_key");
         return;
@@ -745,6 +807,10 @@ export default defineComponent({
      * en changerait un deja en service.
      */
     function saveEntry() {
+      if (sessionLocked.value) {
+        vaultMessage.value = t("gen_locked_error");
+        return;
+      }
       const domain = canonicalSite(site.value);
       if (!domain) {
         vaultMessage.value = t("vault_need_site");
@@ -794,6 +860,10 @@ export default defineComponent({
         syncMessage.value = t("sync_need_login");
         return;
       }
+      if (sessionLocked.value) {
+        syncMessage.value = t("gen_locked_error");
+        return;
+      }
       if (!clef.value) {
         // Le carnet est chiffré avec une clef dérivée de la clef maîtresse :
         // sans elle, il n'y a rien à chiffrer ni à relire.
@@ -823,8 +893,55 @@ export default defineComponent({
       syncMessage.value = t("sync_forgotten");
     }
 
+    /**
+     * Verrou de la session (shared/spec/vault-lock.md). « Verrouiller » garde
+     * la clef mais la rend inutilisable : plus de mot de passe, ni carnet, ni
+     * synchronisation, jusqu'à ce qu'elle soit ressaisie.
+     */
+    const unlockTyped = ref("");
+    const unlockError = ref("");
+    const unlockInvalid = ref(false);
+    const unlockStatus = ref("");
+    const unlockInput = ref<HTMLInputElement | null>(null);
+
+    async function onLockSession() {
+      if (!lockSession()) return;
+      unlockTyped.value = "";
+      unlockError.value = "";
+      unlockInvalid.value = false;
+      unlockStatus.value = "";
+      showPassword.value = false;
+      qrRows.value = [];
+      await nextTick();
+      unlockInput.value?.focus();
+    }
+
+    async function onUnlock() {
+      const outcome = unlockWithMasterKey(unlockTyped.value);
+      unlockTyped.value = "";
+      if (outcome === "unlocked" || outcome === "keySet") {
+        unlockError.value = "";
+        unlockInvalid.value = false;
+        unlockStatus.value = t("gen_unlocked");
+        keyEntered();
+        return;
+      }
+      unlockError.value = t(outcome === "otherKey" ? "vault_err_other_key" : "vault_err_empty");
+      unlockInvalid.value = true;
+      await nextTick();
+      unlockInput.value?.focus();
+    }
+
+    function onForgetKey() {
+      forgetMasterKey();
+      unlockTyped.value = "";
+      unlockError.value = "";
+      unlockInvalid.value = false;
+      unlockStatus.value = "";
+    }
+
     watch(
-      [clef, site, login, longueur, minuscules, majuscules, symboles, chiffres],
+      [clef, sessionLocked, site, login, longueur, minuscules, majuscules, symboles, chiffres],
       genererMotDePasse,
       {
         immediate: true,
@@ -834,6 +951,15 @@ export default defineComponent({
     return {
       t,
       tf,
+      sessionLocked,
+      unlockTyped,
+      unlockError,
+      unlockInvalid,
+      unlockStatus,
+      unlockInput,
+      onLockSession,
+      onUnlock,
+      onForgetKey,
       localePath,
       fingerprint,
       vaultEntries,

@@ -8,7 +8,7 @@ import { mount } from "@vue/test-utils";
 import { createRouter, createMemoryHistory } from "vue-router";
 import Vault from "@/pages/Vault.vue";
 import { emptyVault, loadVault, newEntry, saveVault } from "@/vault";
-import { masterKey, resetMasterKeyForTests } from "@/masterKey";
+import { locked, masterKey, resetMasterKeyForTests } from "@/masterKey";
 import { VAULT_GRACE_MS, VAULT_SESSION_KEY } from "@/vaultSession";
 
 const SESSION_KEY = "clef";
@@ -246,6 +246,43 @@ describe("grâce de 3 minutes", () => {
 
     expect(sessionStorage.getItem(VAULT_SESSION_KEY)).toBeNull();
     expect((await mountVault()).text()).toContain("Carnet verrouillé");
+  });
+
+  it("« Verrouiller » verrouille toute la session, pas seulement l'écran", async () => {
+    const w = await mountVault();
+    await unlock(w);
+    await button(w, "Verrouiller").trigger("click");
+    expect(locked.value).toBe(true);
+    expect(w.text()).toContain("TheCode verrouillé");
+    w.unmount();
+
+    // Même dans la fenêtre de 3 minutes, rien ne se rouvre sans la clef.
+    sessionStorage.setItem(VAULT_SESSION_KEY, String(Date.now()));
+    const again = await mountVault();
+    expect(again.text()).toContain("Carnet verrouillé");
+
+    // Une autre clef ne rouvre rien ; la bonne rouvre toute la session.
+    await again.find("#vault_unlock").setValue(OTHER_KEY);
+    await again.find("form").trigger("submit");
+    expect(locked.value).toBe(true);
+    await unlock(again);
+    expect(locked.value).toBe(false);
+  });
+
+  it("la grâce écoulée referme l'écran sans verrouiller la session", async () => {
+    const now = vi.spyOn(Date, "now");
+    const visibility = vi.spyOn(document, "visibilityState", "get");
+    now.mockReturnValue(1_000_000);
+    const w = await mountVault();
+    await unlock(w);
+    visibility.mockReturnValue("hidden");
+    document.dispatchEvent(new Event("visibilitychange"));
+    now.mockReturnValue(1_000_000 + VAULT_GRACE_MS + 1);
+    visibility.mockReturnValue("visible");
+    document.dispatchEvent(new Event("visibilitychange"));
+    await w.vm.$nextTick();
+    expect(w.text()).toContain("Carnet verrouillé");
+    expect(locked.value).toBe(false);
   });
 });
 

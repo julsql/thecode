@@ -9,6 +9,7 @@
  */
 import { onMounted, onUnmounted, ref, type Ref } from "vue";
 import { refreshPlan } from "@/account";
+import { locked as sessionLocked } from "@/masterKey";
 import { loadSettings, saveSettings, type DefaultSettings } from "@/settings";
 import { loadSession, saveSession, syncSettings, syncVault, SyncError } from "@/sync";
 import { loadVault, saveVault } from "@/vault";
@@ -77,7 +78,8 @@ type Listener = (outcome: SyncOutcome) => void;
 
 let lender: { key: Ref<string>; onSynced?: Listener } | null = null;
 
-const masterKey = () => lender?.key.value.trim() ?? "";
+// Session verrouillée : la clef est gardée mais inutilisable, rien ne part.
+const masterKey = () => (sessionLocked.value ? "" : (lender?.key.value.trim() ?? ""));
 
 function build() {
   return createSyncScheduler<SyncOutcome>({
