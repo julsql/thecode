@@ -125,6 +125,7 @@ public final class VaultLock {
     /** Verrou explicite : referme l'écran et met fin à la session, clef comprise. */
     public void lock() {
         unlocked = false;
+        setupAuthorized = false;
         session.invalidate();
     }
 
@@ -199,11 +200,42 @@ public final class VaultLock {
         store.clear();
         session.invalidate();
         unlocked = false;
+        setupAuthorized = false;
+    }
+
+    /**
+     * Mise en place autorisée pour cet écran : auth de l'appareil réussie,
+     * session valide constatée, ou appareil sans écran de verrouillage.
+     */
+    private boolean setupAuthorized = false;
+
+    /**
+     * Vrai si choisir une méthode exige d'abord l'auth de l'appareil.
+     *
+     * Choisir une méthode ouvre la session commune, donc la clef : sans cette
+     * garde, « Mot de passe oublié » puis un nouveau mot de passe de carnet
+     * déverrouilleraient la clef sans biométrie. Seule une session valide (la
+     * clef vient d'être déverrouillée) en dispense.
+     */
+    public boolean setupNeedsDeviceAuth() {
+        return state() == State.SETUP && !setupAuthorized && !session.isValid();
+    }
+
+    /**
+     * Autorise la mise en place : après une auth de l'appareil réussie, quand
+     * la session est valide au moment de la demander, ou quand l'appareil n'a
+     * aucun écran de verrouillage sécurisé (rien à protéger au-delà de l'app).
+     */
+    public void authorizeSetup() {
+        setupAuthorized = true;
     }
 
     private void requireConfigurable() {
         if (state() == State.LOCKED) {
             throw new IllegalStateException("Changer de méthode exige un carnet déverrouillé");
+        }
+        if (setupNeedsDeviceAuth()) {
+            throw new IllegalStateException("Mise en place sans auth de l'appareil");
         }
     }
 }

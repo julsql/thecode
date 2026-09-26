@@ -160,6 +160,8 @@
     <string name="vault_lock_forgot_done">Local vault erased.</string>
     <string name="vault_lock_setup_title">Protect the vault</string>
     <string name="vault_lock_setup_body">Choose how to unlock the vault on this device. This choice stays on this device and is never synced.</string>
+    <string name="vault_lock_setup_auth_title">Confirm it\'s you</string>
+    <string name="vault_lock_setup_auth_subtitle">Before protecting the vault, confirm your identity with this device\'s lock.</string>
     <string name="vault_lock_use_biometric">Biometrics</string>
     <string name="vault_lock_use_password">Vault password</string>
     <string name="vault_lock_create_title">Create a vault password</string>

@@ -160,6 +160,8 @@
     <string name="vault_lock_forgot_done">Carnet local effacé.</string>
     <string name="vault_lock_setup_title">Protéger le carnet</string>
     <string name="vault_lock_setup_body">Choisissez comment déverrouiller le carnet sur cet appareil. Ce choix reste sur l\'appareil et n\'est jamais synchronisé.</string>
+    <string name="vault_lock_setup_auth_title">Confirmez votre identité</string>
+    <string name="vault_lock_setup_auth_subtitle">Avant de protéger le carnet, confirmez votre identité avec le verrouillage de l\'appareil.</string>
     <string name="vault_lock_use_biometric">Biométrie</string>
     <string name="vault_lock_use_password">Mot de passe de carnet</string>
     <string name="vault_lock_create_title">Créer un mot de passe de carnet</string>

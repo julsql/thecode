@@ -1,5 +1,7 @@
 package fr.juliette.thecode;
 
+import android.app.KeyguardManager;
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.CancellationSignal;
 import android.os.Handler;
@@ -16,6 +18,8 @@ import android.widget.Toast;
 
 import android.os.Build;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
@@ -196,7 +200,7 @@ public class VaultActivity extends AppCompatActivity {
      */
     private void startSetup() {
         if (!biometricAvailable()) {
-            showPasswordDialog(PasswordMode.CREATE, true);
+            withDeviceAuthForSetup(() -> showPasswordDialog(PasswordMode.CREATE, true));
             return;
         }
         AlertDialog dialog = new MaterialAlertDialogBuilder(this)
@@ -204,11 +208,14 @@ public class VaultActivity extends AppCompatActivity {
                 .setMessage(R.string.vault_lock_setup_body)
                 .setPositiveButton(R.string.vault_lock_use_biometric,
                         (d, w) -> runBiometric(() -> {
+                            // L'invite biométrique est l'auth de l'appareil.
+                            lock.authorizeSetup();
                             if (lock.state() == VaultLock.State.SETUP) lock.chooseBiometric();
                             applyLockState();
                         }))
                 .setNegativeButton(R.string.vault_lock_use_password,
-                        (d, w) -> showPasswordDialog(PasswordMode.CREATE, true))
+                        (d, w) -> withDeviceAuthForSetup(
+                                () -> showPasswordDialog(PasswordMode.CREATE, true)))
                 .setOnCancelListener(d -> finish())
                 .create();
         track(dialog);
@@ -226,12 +233,88 @@ public class VaultActivity extends AppCompatActivity {
                 : BiometricManager.Authenticators.BIOMETRIC_STRONG;
     }
 
+    /**
+     * Garde de la mise en place (shared/spec/vault-lock.md, « Apps : une
+     * seule session avec la clef ») : choisir une méthode ouvre la session
+     * commune, donc la clef. Sans session valide, l'appareil doit d'abord
+     * confirmer l'identité — sinon « Mot de passe oublié » puis un nouveau mot
+     * de passe de carnet déverrouilleraient la clef sans biométrie.
+     */
+    private void withDeviceAuthForSetup(Runnable then) {
+        if (!lock.setupNeedsDeviceAuth()) {
+            // Session valide maintenant : elle peut expirer pendant la saisie.
+            lock.authorizeSetup();
+            then.run();
+            return;
+        }
+        Runnable authorized = () -> {
+            lock.authorizeSetup();
+            then.run();
+        };
+        if (biometricAvailable()) {
+            runBiometric(biometricAuthenticators(), R.string.vault_lock_setup_auth_title,
+                    R.string.vault_lock_setup_auth_subtitle, authorized);
+            return;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+                && BiometricManager.from(this).canAuthenticate(
+                        BiometricManager.Authenticators.DEVICE_CREDENTIAL)
+                        == BiometricManager.BIOMETRIC_SUCCESS) {
+            runBiometric(BiometricManager.Authenticators.DEVICE_CREDENTIAL,
+                    R.string.vault_lock_setup_auth_title,
+                    R.string.vault_lock_setup_auth_subtitle, authorized);
+            return;
+        }
+        // Avant Android 11, BiometricPrompt n'accepte pas le code seul.
+        KeyguardManager keyguard = (KeyguardManager) getSystemService(KEYGUARD_SERVICE);
+        boolean secure = keyguard != null && (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+                ? keyguard.isDeviceSecure() : keyguard.isKeyguardSecure());
+        if (secure) {
+            @SuppressWarnings("deprecation")
+            Intent confirm = keyguard.createConfirmDeviceCredentialIntent(
+                    getString(R.string.vault_lock_setup_auth_title),
+                    getString(R.string.vault_lock_setup_auth_subtitle));
+            if (confirm != null && !lock.isSystemAuthInProgress()) {
+                pendingSetup = then;
+                lock.beginSystemAuth();
+                confirmDeviceCredential.launch(confirm);
+                return;
+            }
+        }
+        // Aucun écran de verrouillage sécurisé : l'appareil ne protège rien
+        // au-delà de l'app elle-même, il n'y a rien à exiger de plus.
+        authorized.run();
+    }
+
+    /** Suite de la mise en place, en attente du code de l'appareil (avant Android 11). */
+    @Nullable
+    private Runnable pendingSetup;
+
+    private final ActivityResultLauncher<Intent> confirmDeviceCredential =
+            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
+                    result -> {
+                        boolean ok = result.getResultCode() == RESULT_OK;
+                        lock.endSystemAuth(ok);
+                        Runnable then = pendingSetup;
+                        pendingSetup = null;
+                        if (ok && then != null) {
+                            lock.authorizeSetup();
+                            then.run();
+                        }
+                    });
+
     private boolean biometricAvailable() {
         return BiometricManager.from(this).canAuthenticate(biometricAuthenticators())
                 == BiometricManager.BIOMETRIC_SUCCESS;
     }
 
     private void runBiometric(Runnable onSuccess) {
+        runBiometric(biometricAuthenticators(), R.string.vault_locked_title,
+                R.string.vault_locked_subtitle, onSuccess);
+    }
+
+    private void runBiometric(int authenticators, int titleRes, int subtitleRes,
+                              Runnable onSuccess) {
         if (lock.isSystemAuthInProgress()) return;
         // Posé avant authenticate() : le repli sur le code de l'appareil
         // peut déclencher onStop avant tout rappel.
@@ -265,9 +348,9 @@ public class VaultActivity extends AppCompatActivity {
                 });
 
         BiometricPrompt.PromptInfo.Builder info = new BiometricPrompt.PromptInfo.Builder()
-                .setTitle(getString(R.string.vault_locked_title))
-                .setSubtitle(getString(R.string.vault_locked_subtitle))
-                .setAllowedAuthenticators(biometricAuthenticators());
+                .setTitle(getString(titleRes))
+                .setSubtitle(getString(subtitleRes))
+                .setAllowedAuthenticators(authenticators);
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
             info.setNegativeButtonText(getString(android.R.string.cancel));
         }

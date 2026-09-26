@@ -42,10 +42,88 @@ public class VaultLockTest {
     private long now = 1_000_000L;
     /** La session telle que l'écran principal la voit, pour la clef. */
     private final SessionLock keySession = new SessionLock(session, () -> now);
-    private final VaultLock lock = newLock();
+    /** Écran dont la mise en place a passé l'auth de l'appareil. */
+    private final VaultLock lock = authorized(newLock());
 
     private VaultLock newLock() {
         return new VaultLock(store, new SessionLock(session, () -> now));
+    }
+
+    private static VaultLock authorized(VaultLock lock) {
+        lock.authorizeSetup();
+        return lock;
+    }
+
+    // ------------------------------------------- mise en place sans session
+
+    @Test
+    public void setupWithoutASessionNeedsDeviceAuth() {
+        assertTrue(newLock().setupNeedsDeviceAuth());
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void cannotCreateAVaultPasswordWithoutDeviceAuth() {
+        newLock().choosePassword(VaultPassword.hash("vault-pass".toCharArray()));
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void cannotChooseBiometricsWithoutDeviceAuth() {
+        newLock().chooseBiometric();
+    }
+
+    @Test
+    public void aValidKeySessionDispensesWithDeviceAuth() {
+        keySession.stamp();
+        VaultLock fresh = newLock();
+
+        assertFalse(fresh.setupNeedsDeviceAuth());
+        fresh.choosePassword(VaultPassword.hash("vault-pass".toCharArray()));
+        assertTrue(fresh.isUnlocked());
+    }
+
+    @Test
+    public void deviceAuthAllowsCreatingAPassword() {
+        VaultLock fresh = newLock();
+        fresh.authorizeSetup();
+
+        assertFalse(fresh.setupNeedsDeviceAuth());
+        fresh.choosePassword(VaultPassword.hash("vault-pass".toCharArray()));
+        assertTrue(keySession.isValid());
+    }
+
+    @Test
+    public void forgettingThenCreatingAPasswordCannotUnlockTheKey() {
+        lock.chooseBiometric();
+        lock.lock();
+        lock.forget();
+
+        assertTrue(lock.setupNeedsDeviceAuth());
+        try {
+            lock.choosePassword(VaultPassword.hash("thief-pass".toCharArray()));
+        } catch (IllegalStateException expected) {
+            // La garde a tenu.
+        }
+        assertFalse(keySession.isValid());
+        assertEquals(VaultLock.State.SETUP, lock.state());
+    }
+
+    @Test
+    public void forgetWithAValidSessionStillNeedsDeviceAuth() {
+        lock.chooseBiometric();
+        assertTrue(keySession.isValid());
+        lock.forget();
+
+        assertTrue(lock.setupNeedsDeviceAuth());
+    }
+
+    @Test
+    public void switchingMethodOnceUnlockedNeedsNoDeviceAuth() {
+        lock.choosePassword(VaultPassword.hash("vault-pass".toCharArray()));
+        keySession.invalidate();
+
+        assertFalse(lock.setupNeedsDeviceAuth());
+        lock.chooseBiometric();
+        assertEquals(VaultLock.Method.BIOMETRIC, lock.method());
     }
 
     @Test
