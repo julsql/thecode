@@ -14,10 +14,19 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import Generate from "@/pages/Generate.vue";
 
-// Le resultat vit dans un <input readonly> : wrapper.text() ne voit pas les
-// valeurs de champ, il faut lire l'element.
-const generated = (w: { find: (s: string) => any }) =>
+// Le resultat est masque a l'ecran : on lit la valeur generee sur le composant.
+const generated = (w: { vm: unknown }) => (w.vm as { motDePasse: string }).motDePasse;
+const shown = (w: { find: (s: string) => any }) =>
   (w.find("#password").element as HTMLInputElement).value;
+const MASK = "•".repeat(10);
+const sampleKey = "clef";
+
+/** Saisit site et clef, puis attend le mot de passe : Enregistrer n'existe qu'ensuite. */
+async function generateFor(w: any, site: string) {
+  await w.find("#id_site").setValue(site);
+  await w.find("#id_clef").setValue(sampleKey);
+  await vi.waitFor(() => expect(w.find("#saveEntry").exists()).toBe(true), { timeout: 15000 });
+}
 
 const vectors = JSON.parse(
   readFileSync(join(dirname(fileURLToPath(import.meta.url)), "test-vectors.json"), "utf8"),
@@ -169,10 +178,19 @@ describe("carnet et empreinte", () => {
     await vi.waitFor(() => expect(wrapper.text()).toContain("KG8"), { timeout: 5000 });
   });
 
-  it("propose d'enregistrer le site dans le carnet", async () => {
+  it("propose d'enregistrer l'entree a cote du mot de passe, une fois genere", async () => {
     const wrapper = await mountGenerate();
-    expect(wrapper.text()).toContain("Enregistrer ce site");
-  });
+    expect(wrapper.find("#saveEntry").exists()).toBe(false);
+
+    await generateFor(wrapper, "google.com");
+    const row = wrapper.find(".password-row");
+    expect(row.find("#saveEntry").text()).toBe("Enregistrer cette entrée");
+    expect(row.find("#copyPassword").exists()).toBe(true);
+    // Un seul point d'enregistrement sur la page.
+    expect(wrapper.findAll("button").filter((b) => b.text().includes("Enregistrer"))).toHaveLength(
+      1,
+    );
+  }, 20000);
 
   it("renvoie vers l'écran carnet pour gérer les entrées", async () => {
     const { saveVault, emptyVault, newEntry } = await import("@/vault");
@@ -193,12 +211,11 @@ describe("carnet et empreinte", () => {
   it("enregistre une entree sans version meme depuis l'ecran regle en v1", async () => {
     const wrapper = await mountGenerate();
 
-    await wrapper.find("#id_site").setValue("google.com");
     const v1Button = wrapper.findAll("button").find((b) => b.text() === "v1");
     await v1Button!.trigger("click");
+    await generateFor(wrapper, "google.com");
 
-    const button = wrapper.findAll("button").find((b) => b.text().includes("Enregistrer"));
-    await button!.trigger("click");
+    await wrapper.find("#saveEntry").trigger("click");
     await wrapper.vm.$nextTick();
 
     // La v1 ne vit qu'en generation ponctuelle, hors carnet : l'entree n'a
@@ -212,12 +229,10 @@ describe("carnet et empreinte", () => {
   it("enregistre les reglages et les retrouve", async () => {
     const wrapper = await mountGenerate();
 
-    await wrapper.find("#id_site").setValue("google.com");
     await wrapper.find("#id_longueur").setValue("16");
-    await wrapper.vm.$nextTick();
+    await generateFor(wrapper, "google.com");
 
-    const button = wrapper.findAll("button").find((b) => b.text().includes("Enregistrer"));
-    await button!.trigger("click");
+    await wrapper.find("#saveEntry").trigger("click");
     await wrapper.vm.$nextTick();
 
     // C'etait le probleme : rien ne memorisait qu'un site avait ete regle
@@ -294,9 +309,9 @@ describe("identifiant", () => {
     saveVault(vault);
 
     const wrapper = await mountGenerate();
-    await wrapper.find("#id_site").setValue("google.com");
+    await generateFor(wrapper, "google.com");
     expect(loginValue(wrapper)).toBe("moi");
-    expect(wrapper.text()).toContain("Mettre à jour l'entrée");
+    expect(wrapper.find("#saveEntry").text()).toBe("Mettre à jour l'entrée");
 
     await wrapper.find("#id_site").setValue("github.com");
     expect(loginValue(wrapper)).toBe("");
@@ -310,11 +325,11 @@ describe("identifiant", () => {
 
     const wrapper = await mountGenerate();
     await wrapper.find("#id_login").setValue("pro");
-    await wrapper.find("#id_site").setValue("google.com");
+    await generateFor(wrapper, "google.com");
 
     expect(loginValue(wrapper)).toBe("pro");
-    expect(wrapper.text()).toContain("Enregistrer ce site");
-  });
+    expect(wrapper.find("#saveEntry").text()).toBe("Enregistrer cette entrée");
+  }, 20000);
 
   it("met a jour l'entree du meme identifiant sans toucher a siteKey", async () => {
     const { saveVault, emptyVault, newEntry, loadVault } = await import("@/vault");
@@ -325,10 +340,10 @@ describe("identifiant", () => {
     saveVault(vault);
 
     const wrapper = await mountGenerate();
-    await wrapper.find("#id_site").setValue("google.com");
     await wrapper.find("#id_longueur").setValue("16");
-    const button = wrapper.findAll("button").find((b) => b.text().includes("Mettre à jour"));
-    await button!.trigger("click");
+    await generateFor(wrapper, "google.com");
+    expect(wrapper.find("#saveEntry").text()).toBe("Mettre à jour l'entrée");
+    await wrapper.find("#saveEntry").trigger("click");
 
     const entries = loadVault().entries;
     expect(entries).toHaveLength(1);
@@ -343,15 +358,74 @@ describe("identifiant", () => {
     saveVault(vault);
 
     const wrapper = await mountGenerate();
-    await wrapper.find("#id_site").setValue("google.com");
     await wrapper.find("#id_login").setValue("pro");
-    const button = wrapper.findAll("button").find((b) => b.text().includes("Enregistrer"));
-    await button!.trigger("click");
+    await generateFor(wrapper, "google.com");
+    await wrapper.find("#saveEntry").trigger("click");
 
     const entries = findAllByDomain(loadVault(), "google.com");
     expect(entries.map((e) => e.login).sort()).toStrictEqual(["moi", "pro"]);
     expect(entries.every((e) => !("v" in e))).toBe(true);
   });
+});
+
+describe("mot de passe genere masque", () => {
+  beforeEach(() => localStorage.clear());
+
+  it("masque par un nombre fixe de points, sans dire la longueur", async () => {
+    const wrapper = await mountGenerate();
+    await generateFor(wrapper, "google.com");
+    expect(shown(wrapper)).toBe(MASK);
+
+    await wrapper.find("#id_longueur").setValue("32");
+    await vi.waitFor(() => expect(generated(wrapper)).toHaveLength(32), { timeout: 15000 });
+    expect(shown(wrapper)).toBe(MASK);
+  }, 30000);
+
+  it("se revele et se recache, bouton accessible", async () => {
+    const wrapper = await mountGenerate();
+    await generateFor(wrapper, "google.com");
+    const toggle = wrapper.find("#togglePasswordResult");
+    expect(toggle.attributes("aria-pressed")).toBe("false");
+    expect(toggle.text()).toBe("Voir");
+
+    await toggle.trigger("click");
+    expect(shown(wrapper)).toBe(generated(wrapper));
+    expect(toggle.attributes("aria-pressed")).toBe("true");
+    expect(toggle.text()).toBe("Cacher");
+
+    await toggle.trigger("click");
+    expect(shown(wrapper)).toBe(MASK);
+  }, 20000);
+
+  it("repart masque a chaque nouvelle generation", async () => {
+    const wrapper = await mountGenerate();
+    await generateFor(wrapper, "google.com");
+    await wrapper.find("#togglePasswordResult").trigger("click");
+    const before = generated(wrapper);
+
+    await wrapper.find("#id_site").setValue("github.com");
+    await vi.waitFor(() => expect(generated(wrapper)).not.toBe(before), { timeout: 15000 });
+    expect(shown(wrapper)).toBe(MASK);
+    expect(wrapper.find("#togglePasswordResult").attributes("aria-pressed")).toBe("false");
+  }, 30000);
+
+  it("copie la vraie valeur, pas le masque", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    const wrapper = await mountGenerate();
+    await generateFor(wrapper, "google.com");
+
+    await wrapper.find("#copyPassword").trigger("click");
+    expect(writeText).toHaveBeenCalledWith(generated(wrapper));
+    await vi.waitFor(() => expect(wrapper.text()).toContain("Copié."));
+  }, 20000);
+
+  it("se traduit en anglais", async () => {
+    const wrapper = await mountGenerate("/en");
+    await generateFor(wrapper, "google.com");
+    expect(wrapper.find("#togglePasswordResult").text()).toBe("Show");
+    expect(wrapper.find("#saveEntry").text()).toBe("Save this entry");
+  }, 20000);
 });
 
 describe("synchronisation", () => {
