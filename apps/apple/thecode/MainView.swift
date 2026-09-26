@@ -184,15 +184,15 @@ struct MainView: View {
     private var v2NoticeSheet: some View {
         let intro = L10n.t(
             "Les mots de passe se calculent désormais avec un nouvel algorithme "
-                + "(v2). Changez-les site par site pour adopter les nouveaux.",
-            "Passwords are now computed with a new algorithm (v2). Change them "
-                + "site by site to switch to the new ones.")
+                + "(v2). Veuillez migrer vos mots de passe dans ce nouvel algorithme.",
+            "Passwords are now computed with a new algorithm (v2). Please migrate "
+                + "your passwords to this new algorithm.")
         let detail = L10n.t(
-            "Le remplissage automatique utilise la v2. Pour un site pas encore mis "
-                + "à jour, le bouton v1 redonne ponctuellement l'ancien mot de passe : "
-                + "l'app passe alors en rose.",
-            "AutoFill uses v2. For a site you have not updated yet, the v1 button "
-                + "gives back the old password, one time: the app then turns pink.")
+            "Le remplissage automatique utilise le nouveau : pour un site que vous "
+                + "n'avez pas encore mis à jour, générez le mot de passe en v1 depuis "
+                + "l'application avec l'ancien algorithme.",
+            "Autofill uses the new one: for a site you have not updated yet, "
+                + "generate the password in v1 from the app with the old algorithm.")
 
         return VStack(spacing: 0) {
             ScrollView {
