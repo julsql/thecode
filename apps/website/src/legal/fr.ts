@@ -14,6 +14,7 @@ import { IDENTITY, PRICE } from "./identity";
 import { missing, type LegalDoc } from "./types";
 
 const UPDATED = "19 septembre 2026";
+const PRIVACY_UPDATED = "26 septembre 2026";
 const price = new Intl.NumberFormat("fr-FR", {
   style: "currency",
   currency: PRICE.currency,
@@ -189,13 +190,14 @@ const termsDoc: LegalDoc = {
 
 const privacyDoc: LegalDoc = {
   title: "Politique de confidentialité",
-  updated: UPDATED,
+  updated: PRIVACY_UPDATED,
   intro: [
     "TheCode est un gestionnaire de mots de passe qui n'en stocke aucun : ils sont " +
       "recalculés sur votre appareil à partir de votre clef maîtresse. Cette page dit " +
       "exactement ce qui est collecté, et ce qui ne l'est pas.",
     "Sans compte, le service ne collecte rien du tout : la génération, le carnet et le " +
-      "remplissage fonctionnent hors ligne, sans qu'aucun serveur soit contacté.",
+      "remplissage fonctionnent hors ligne, sans qu'aucun serveur soit contacté. Le compte " +
+      "ne sert qu'à une chose, facultative : synchroniser votre carnet entre vos appareils.",
   ],
   sections: [
     {
@@ -209,16 +211,30 @@ const privacyDoc: LegalDoc = {
     {
       heading: "Ce que nous collectons, si vous créez un compte",
       items: [
-        "votre adresse e-mail, qui identifie le compte ;",
+        "votre adresse e-mail, qui identifie le compte, et la date à laquelle vous l'avez " +
+          "confirmée ;",
         "votre mot de passe de compte, jamais en clair : seule une empreinte Argon2id est " +
-          "conservée ;",
+          "conservée. Un compte ouvert avec Google ou Apple n'en a pas tant que vous n'en " +
+          "définissez pas un ;",
         "si vous vous connectez avec Google : l'identifiant technique que Google nous " +
-          "transmet, et l'adresse associée ;",
-        "les appareils connectés : un libellé que vous choisissez, les dates de connexion " +
-          "et d'expiration ;",
-        "votre offre, l'état de votre abonnement et votre identifiant client Stripe ;",
-        "votre carnet, chiffré : le service reçoit des blocs opaques qu'il ne peut pas " +
-          "déchiffrer ;",
+          "transmet et l'adresse associée, vérifiée par Google ;",
+        "si vous vous connectez avec Apple : l'identifiant technique qu'Apple nous transmet " +
+          "et l'adresse qu'Apple partage — celle de votre identifiant Apple, ou une adresse " +
+          "relais privée si vous avez choisi de masquer la vôtre ;",
+        "les appareils connectés : le nom de l'appareil tel que le système le donne (modèle " +
+          "du téléphone, nom de l'iPhone ou du Mac, « extension », « site web »), le type de " +
+          "client (application ou site), les dates de connexion et d'expiration et l'état de " +
+          "la session. Le jeton de session n'est conservé qu'haché ;",
+        "votre offre, son origine, l'état et la fin de période de votre abonnement, et vos " +
+          "identifiants client et abonnement Stripe ;",
+        "les codes d'invitation, de parrainage ou d'offre à vie que vous avez utilisés, et " +
+          "leur date ;",
+        "les liens envoyés par courrier (confirmation d'adresse, changement d'adresse, " +
+          "réinitialisation du mot de passe) : un jeton haché, sa date d'expiration et, pour " +
+          "un changement, la nouvelle adresse demandée ;",
+        "votre carnet et vos réglages par défaut, chiffrés : le service reçoit des blocs " +
+          "opaques qu'il ne peut pas déchiffrer. Seules les entrées que votre offre permet de " +
+          "synchroniser sont envoyées ; les autres restent sur votre appareil ;",
         "des journaux techniques contenant votre adresse IP, conservés quelques jours pour " +
           "détecter les abus et diagnostiquer les pannes.",
       ],
@@ -226,29 +242,75 @@ const privacyDoc: LegalDoc = {
     {
       heading: "Ce que nous ne pouvons pas savoir",
       paragraphs: [
-        "Le carnet est chiffré sur votre appareil avec une clef dérivée de votre clef " +
-          "maîtresse, que nous n'avons jamais. Nous ne connaissons donc ni les sites que " +
-          "vous y enregistrez, ni vos identifiants, ni vos réglages, ni vos mots de passe.",
+        "Le carnet et les réglages par défaut sont chiffrés sur votre appareil (AES-256-GCM) " +
+          "avec une clef dérivée de votre clef maîtresse, que nous n'avons jamais. Nous ne " +
+          "connaissons donc ni les sites que vous y enregistrez, ni vos identifiants, ni vos " +
+          "réglages, ni vos mots de passe — qui ne sont d'ailleurs stockés nulle part.",
+        "Votre clef maîtresse et le mot de passe qui verrouille l'écran du carnet ne quittent " +
+          "jamais votre appareil. La biométrie (Face ID, Touch ID, empreinte) est vérifiée " +
+          "par le système : nous n'en recevons rien.",
         "Ce que le service voit malgré tout, et qu'il faut énoncer plutôt que de laisser " +
-          "croire à un secret parfait : le nombre d'entrées de votre carnet, lesquelles " +
-          "changent, et la fréquence de vos synchronisations.",
+          "croire à un secret parfait : le nombre d'entrées synchronisées, lesquelles " +
+          "changent, la fréquence de vos synchronisations, le nombre de vos appareils et les " +
+          "adresses IP depuis lesquelles ils se connectent.",
+      ],
+    },
+    {
+      heading: "Ce qui reste sur vos appareils",
+      items: [
+        "La clef maîtresse : dans le trousseau sur iPhone, iPad et Mac, chiffrée par le " +
+          "Keystore sur Android. Dans l'extension, elle n'est gardée qu'en mémoire, pour la " +
+          "session du navigateur, et s'efface à sa fermeture. Le site ne la conserve pas.",
+        "Le carnet, les réglages et le verrou du carnet (une empreinte PBKDF2 du mot de " +
+          "passe, jamais le mot de passe) : dans le stockage privé de l'application, ou dans " +
+          "le stockage local de l'extension ou du navigateur.",
+        "Le remplissage automatique (service de saisie automatique d'Android, fournisseur " +
+          "d'identifiants iOS et macOS) : le système indique à TheCode le site ou l'app " +
+          "concernée, le mot de passe est calculé sur l'appareil, et rien n'est envoyé.",
+        "La caméra, sur téléphone, ne sert qu'à lire le QR code d'un carnet affiché sur un " +
+          "autre appareil : aucune image n'est enregistrée ni envoyée.",
+      ],
+    },
+    {
+      heading: "L'extension de navigateur",
+      paragraphs: ["L'extension demande les permissions suivantes, et n'en fait que cet usage :"],
+      items: [
+        "accès à tous les sites et script de page : repérer les champs de mot de passe et " +
+          "proposer, à côté, celui calculé pour le site. La page n'est lue qu'autour de " +
+          "ces champs (l'identifiant saisi compris), et rien n'en est conservé ni envoyé ;",
+        "onglet actif : connaître le site de l'onglet ouvert quand vous cliquez sur " +
+          "l'extension ;",
+        "stockage : garder le carnet, les réglages et la session de synchronisation sur " +
+          "l'appareil, et la clef maîtresse en mémoire le temps de la session du navigateur ;",
+        "identité : uniquement pour « Continuer avec Google ». Google renvoie un jeton qui " +
+          "contient votre identifiant et votre adresse, rien d'autre ; l'extension n'accède " +
+          "à aucun autre service Google.",
       ],
     },
     {
       heading: "Pourquoi, et sur quelle base",
       items: [
         "Exécution du contrat : créer et tenir votre compte, synchroniser votre carnet, " +
-          "gérer votre abonnement.",
+          "vous envoyer les courriers liés au compte, gérer votre abonnement.",
         "Obligation légale : conserver les pièces de facturation.",
         "Intérêt légitime : protéger le service contre les abus, diagnostiquer les pannes.",
+      ],
+      paragraphs: [
+        "Nous n'envoyons aucun courrier commercial : seulement ceux que le compte exige " +
+          "(confirmation d'adresse, changement d'adresse, mot de passe oublié).",
       ],
     },
     {
       heading: "Qui d'autre y a accès",
       items: [
         "Stripe Payments Europe, Ltd. — paiement et facturation. Stripe reçoit votre " +
-          "adresse e-mail et vos données de paiement, que nous ne voyons jamais.",
+          "adresse e-mail, l'identifiant de votre compte et vos données de paiement, que " +
+          "nous ne voyons jamais.",
         "Google Ireland Ltd. — uniquement si vous choisissez « Continuer avec Google ».",
+        "Apple Distribution International Ltd. — uniquement si vous choisissez « Se " +
+          "connecter avec Apple ».",
+        "Notre fournisseur de messagerie, par lequel partent les courriers du compte : il " +
+          "reçoit votre adresse et le contenu de ces courriers.",
         IDENTITY.host
           ? `Notre hébergeur, ${IDENTITY.host}, qui héberge le serveur dans l'Union ` +
             "européenne."
@@ -256,7 +318,9 @@ const privacyDoc: LegalDoc = {
       ],
       paragraphs: [
         "Vos données ne sont ni vendues, ni louées, ni transmises à des fins publicitaires. " +
-          "Il n'y a aucun traceur, aucune mesure d'audience, aucun cookie publicitaire.",
+          "Il n'y a aucun traceur, aucune mesure d'audience, aucun outil de suivi des " +
+          "plantages et aucun cookie publicitaire, ni sur le site, ni dans les applications, " +
+          "ni dans l'extension.",
         "Lorsqu'un sous-traitant traite des données hors de l'Union européenne, ce transfert " +
           "est encadré par les clauses contractuelles types de la Commission européenne.",
       ],
@@ -264,16 +328,23 @@ const privacyDoc: LegalDoc = {
     {
       heading: "Cookies et stockage local",
       paragraphs: [
-        "Le site ne dépose aucun cookie. Votre carnet et votre session vivent dans le " +
-          "stockage local de votre navigateur : ces données restent sur votre appareil et " +
-          "ne sont jamais envoyées telles quelles.",
+        "Le site ne dépose aucun cookie. Votre carnet, vos réglages et votre session vivent " +
+          "dans le stockage local de votre navigateur : ces données restent sur votre " +
+          "appareil et ne sont jamais envoyées telles quelles.",
+        "Les boutons « Continuer avec Google » et « Se connecter avec Apple » chargent un " +
+          "script de Google ou d'Apple, et seulement sur la page du compte. Ces services " +
+          "appliquent alors leurs propres règles, cookies compris.",
       ],
     },
     {
       heading: "Combien de temps",
       items: [
-        "Compte et carnet : tant que le compte existe. La suppression est immédiate et " +
-          "définitive.",
+        "Compte, carnet, réglages, appareils et codes utilisés : tant que le compte existe. " +
+          "La suppression est immédiate et définitive.",
+        "Liens envoyés par courrier : valables 24 heures, 2 heures pour une " +
+          "réinitialisation du mot de passe.",
+        "Sessions d'appareil : 30 jours sans renouvellement, ou jusqu'à ce que vous " +
+          "déconnectiez l'appareil.",
         "Sauvegardes de la base : sept jours au maximum.",
         "Journaux techniques : quelques jours.",
         "Pièces de facturation : dix ans, comme l'impose la loi comptable.",
@@ -283,8 +354,11 @@ const privacyDoc: LegalDoc = {
       heading: "Vos droits",
       paragraphs: [
         "Depuis la page du compte, vous pouvez à tout moment : exporter l'intégralité de " +
-          "vos données dans un fichier, corriger votre adresse, changer votre mot de passe " +
-          "et supprimer définitivement votre compte.",
+          "vos données dans un fichier, voir et déconnecter vos appareils, corriger votre " +
+          "adresse, changer votre mot de passe, délier Google ou Apple et supprimer " +
+          "définitivement votre compte. La suppression résilie aussi l'abonnement.",
+        "Le fichier exporté contient votre carnet tel que nous le gardons, c'est-à-dire " +
+          "chiffré : seule votre clef maîtresse l'ouvre.",
         "Vous disposez également des droits d'accès, de rectification, d'effacement, de " +
           "limitation, d'opposition et de portabilité prévus par le RGPD. Pour les exercer " +
           `autrement que depuis le site : ${IDENTITY.email}.`,
