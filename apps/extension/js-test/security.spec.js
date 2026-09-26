@@ -50,6 +50,10 @@ describe("cloisonnement des actions sensibles", () => {
       "vaultLockForget",
       "vaultLockStatus",
       "vaultLockVerify",
+      // Grace de 3 minutes : rouvrirait l'ecran carnet sans mot de passe.
+      "vaultSessionClear",
+      "vaultSessionLeave",
+      "vaultSessionResume",
     ]);
   });
 

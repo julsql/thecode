@@ -7,7 +7,14 @@ if (typeof browser === "undefined" && typeof chrome !== "undefined") {
 // en page de fond, sans importScripts : c'est leur manifeste qui liste ces
 // fichiers avant celui-ci (voir manifest.spec.js).
 if (typeof importScripts === "function") {
-  importScripts("vault.js", "transfer.js", "sync.js", "core-v2.js", "vault-lock.js");
+  importScripts(
+    "vault.js",
+    "transfer.js",
+    "sync.js",
+    "core-v2.js",
+    "vault-lock.js",
+    "vault-session.js",
+  );
 }
 // En test, core-v2.js est charge en fin de fichier : il require background.js,
 // et le faire ici rendrait des exports encore vides.
@@ -20,6 +27,7 @@ else if (typeof require === "function") {
     require("./transfer.js"),
     require("./sync.js"),
     require("./vault-lock.js"),
+    require("./vault-session.js"),
   );
 }
 
@@ -229,6 +237,9 @@ const PRIVILEGED_ACTIONS = new Set([
   "vaultLockVerify",
   "vaultLockChange",
   "vaultLockForget",
+  "vaultSessionLeave",
+  "vaultSessionResume",
+  "vaultSessionClear",
 ]);
 
 function isFromExtensionPage(sender) {
@@ -617,15 +628,20 @@ const VAULT_LOCK_ACTIONS = new Set([
   "vaultLockVerify",
   "vaultLockChange",
   "vaultLockForget",
+  "vaultSessionLeave",
+  "vaultSessionResume",
+  "vaultSessionClear",
 ]);
 
 /**
  * Verrou de l'ecran carnet (shared/spec/vault-lock.md).
  *
  * Verifie ici plutot que dans la page : l'empreinte stockee ne transite pas
- * jusqu'a elle. L'etat deverrouille, lui, ne vit que dans la page — rien n'est
- * memorise ici, fermer l'onglet reverrouille.
+ * jusqu'a elle. L'etat deverrouille vit dans la page ; ici n'est retenu que
+ * l'instant ou elle a ete quittee, pour la grace de 3 minutes (vault-session.js).
  */
+const vaultSession = createVaultSession(browser?.storage?.session);
+
 async function handleVaultLock(request) {
   const store = browser?.storage?.local;
   const record = await loadVaultLock(store);
@@ -663,6 +679,19 @@ async function handleVaultLock(request) {
       // verrou. La synchronisation le rapportera s'il existe sur le serveur.
       await store.remove([VAULT_STORAGE_KEY]);
       await clearVaultLock(store);
+      await vaultSession.clear();
+      return { ok: true };
+
+    case "vaultSessionLeave":
+      // L'heure est celle du fond, pas celle que la page annoncerait.
+      if (record) await vaultSession.leave(Date.now());
+      return { ok: true };
+
+    case "vaultSessionResume":
+      return { ok: true, unlocked: Boolean(record) && (await vaultSession.resume(Date.now())) };
+
+    case "vaultSessionClear":
+      await vaultSession.clear();
       return { ok: true };
   }
   return { ok: false, error: "action inconnue" };

@@ -7,9 +7,10 @@
     <link rel="stylesheet" href="vault-page.css" />
     <!-- Page a part et non popup : un popup se ferme des qu'il perd le focus,
          et le renouvellement demande d'aller changer le mot de passe sur le
-         site. Fermer l'onglet reverrouille : l'etat deverrouille ne vit que
-         dans cette page. -->
+         site. Fermer l'onglet fait courir la grace de 3 minutes : seul
+         l'instant de sortie est retenu, par le service worker. -->
     <script src="i18n.js" defer></script>
+    <script src="vault-session.js" defer></script>
     <script src="vault-page.js" defer></script>
     <title data-i18n="vault_page_title">TheCode — Carnet</title>
   </head>

@@ -1,16 +1,17 @@
 /**
  * Ecran carnet : verrou, puis gestion des entrees.
  *
- * L'etat deverrouille ne vit que dans cette page, jamais dans le service
- * worker ni dans le stockage : fermer l'onglet reverrouille. Voir
- * shared/spec/vault-lock.md.
+ * L'etat deverrouille vit dans cette page. Le service worker ne retient que
+ * l'instant ou elle a ete quittee : revenu dans les 3 minutes, le carnet est
+ * toujours ouvert (vault-session.js). Voir shared/spec/vault-lock.md.
  */
 if (typeof browser === "undefined" && typeof chrome !== "undefined") {
   var browser = chrome;
 }
-// msg() vient de i18n.js, charge avant ce fichier ; en test, on le requiert.
+// msg() vient de i18n.js et isWithinVaultGrace() de vault-session.js, charges
+// avant ce fichier ; en test, on les requiert.
 if (typeof module !== "undefined" && typeof require === "function") {
-  Object.assign(globalThis, require("./i18n.js"));
+  Object.assign(globalThis, require("./i18n.js"), require("./vault-session.js"));
 }
 
 const VAULT_LOCK_MIN = 8;
@@ -101,6 +102,8 @@ function initVaultPage() {
 
   function lock(message = "") {
     unlocked = false;
+    leftAt = null;
+    send({ action: "vaultSessionClear" });
     $("unlockPassword").value = "";
     $("unlockError").textContent = "";
     showForget(false, false);
@@ -115,8 +118,50 @@ function initVaultPage() {
       say(errorText(resp));
       return;
     }
-    show(resp.configured ? "unlock" : "create");
+    if (!resp.configured) {
+      show("create");
+      return;
+    }
+    // Revenu dans la grace : pas de nouvelle demande de mot de passe.
+    const session = await send({ action: "vaultSessionResume" });
+    if (session?.ok && session.unlocked) {
+      show("unlocked");
+      onUnlock();
+    } else {
+      show("unlock");
+    }
   }
+
+  // Grace de 3 minutes : quitter l'ecran (onglet masque ou ferme, navigation)
+  // fait courir la fenetre. L'instant est aussi garde ici : un autre onglet
+  // carnet quitte plus tard ne doit pas prolonger celui-ci.
+  let leftAt = null;
+
+  function leave() {
+    if (!unlocked) return;
+    leftAt = Date.now();
+    send({ action: "vaultSessionLeave" });
+  }
+
+  async function comeBack() {
+    if (!unlocked || leftAt === null) return;
+    const since = leftAt;
+    leftAt = null;
+    const session = await send({ action: "vaultSessionResume" });
+    if (!isWithinVaultGrace(since, Date.now()) || !session?.ok || !session.unlocked) {
+      lock(msg("vault_locked", "Carnet verrouillé."));
+    }
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") leave();
+    else comeBack();
+  });
+  window.addEventListener("pagehide", leave);
+  // Retour depuis le cache avant/arriere : la page n'est pas rechargee.
+  window.addEventListener("pageshow", (e) => {
+    if (e.persisted) comeBack();
+  });
 
   // Premiere ouverture : creation du mot de passe de carnet.
   views.create.addEventListener("submit", async (e) => {
