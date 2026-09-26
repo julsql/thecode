@@ -123,6 +123,16 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- Dernier statut de la synchronisation automatique, quand un
+                 compte est lie : un echec s'y lit, jamais dans une fenetre. -->
+            <TextView
+                android:id="@+id/vaultSyncStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:visibility="gone" />
+
             <!-- Sous la synchronisation, affiché seulement quand il n'y a
                  rien : une liste vide sans explication laisse croire à une
                  panne. -->
