@@ -79,9 +79,7 @@ struct KeyFieldView: View {
     /// le focus : il faut bien que la saisie aille quelque part.
     private var maskedField: some View {
         TextField(
-            encodingKey.isEmpty
-                ? L10n.t("Cliquez pour saisir votre clé maîtresse", "Click to enter your master key")
-                : "",
+            "",
             text: .constant(encodingKey.isEmpty ? "" : String(repeating: "•", count: 10))
         )
         .textFieldStyle(RoundedBorderTextFieldStyle())
