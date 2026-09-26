@@ -69,7 +69,7 @@
 
     <!-- Help -->
     <string name="help_title">Information</string>
-    <string name="info_app">"      TheCode never stores your passwords: it recomputes them on the fly from a single master key that you remember. That is what sets it apart: there is no password database to steal or to lose.\n\n      Enter your key, the website name (for example « google.com ») and, if you like, your username on that site; set the length and the characters, and the password is computed. Same key + same site + same username = same password, every time.\n\n      The computation (algorithm v2) happens locally, on this device. The old algorithm (v1) remains available for a one-off generation, to find a password set before v2. Your key is kept in the Android Keystore.\n\n      Everything else is optional: TheCode is fully usable without a vault and without an account.\n\n      Vault: save a site with its settings and username so you no longer have to remember them. It stays on this device, locked with biometrics or a vault password, and can be transferred to your other TheCode apps by encrypted QR code, with no account and no server.\n\n      Account: sign in with an email and a password, or with Google, and your vault and default settings sync automatically across your devices. They are end-to-end encrypted: the server never sees your master key, your sites or your logins. You can delete the account from the app.\n\n      Autofill fills in the username and the password in your apps and websites.\n\n      TheCode is one project across all your devices: iPhone and iPad, Mac, Android, browser extensions (Chrome, Firefox, Edge, Brave, Safari) and the website https://thecode.julsql.fr/en?from=app — with the same key, you find the same passwords everywhere."</string>
+    <string name="info_app">"      TheCode never stores your passwords: it recomputes them on the fly from a single master key that you remember. That is what sets it apart: there is no password database to steal or to lose.\n\n      Enter your key, the website name (for example « google.com ») and, if you like, your username on that site; set the length and the characters, and the password is computed. Same key + same site + same username = same password, every time.\n\n      The computation (algorithm v2) happens locally, on this device. The old algorithm (v1) remains available for a one-off generation, to find a password set before v2. Your key is kept in the Android Keystore.\n\n      Everything else is optional: TheCode is fully usable without a vault and without an account.\n\n      Vault: save a site with its settings and username so you no longer have to remember them. It stays on this device, locked with biometrics or your master key, and can be transferred to your other TheCode apps by encrypted QR code, with no account and no server.\n\n      Account: sign in with an email and a password, or with Google, and your vault and default settings sync automatically across your devices. They are end-to-end encrypted: the server never sees your master key, your sites or your logins. You can delete the account from the app.\n\n      Autofill fills in the username and the password in your apps and websites.\n\n      TheCode is one project across all your devices: iPhone and iPad, Mac, Android, browser extensions (Chrome, Firefox, Edge, Brave, Safari) and the website https://thecode.julsql.fr/en?from=app — with the same key, you find the same passwords everywhere."</string>
     <string name="fingerprint_label">Fingerprint</string>
     <string name="vault_title">Vault</string>
     <string name="vault_empty">No site saved yet. Save one from the main screen to stop having to remember its settings.</string>
@@ -172,37 +172,13 @@
     <!-- Mode de generation, affiche dans la barre. -->
     <string name="algo_mode_v1">v1</string>
     <string name="algo_mode_v2">v2</string>
-    <!-- Verrou de l'ecran carnet (shared/spec/vault-lock.md). -->
+    <!-- Verrou de l'ecran carnet : biometrie, sinon clef maitresse. -->
     <string name="vault_unlock">Unlock</string>
-    <string name="vault_lock_forgot">Forgot password</string>
-    <string name="vault_lock_forgot_title">Erase the local vault?</string>
-    <string name="vault_lock_forgot_body">Nothing else can open the lock. This erases the vault stored on this device, and its lock. If sync is on, the vault comes back at the next sync.</string>
-    <string name="vault_lock_forgot_confirm">Erase</string>
-    <string name="vault_lock_forgot_done">Local vault erased.</string>
-    <string name="vault_lock_setup_title">Protect the vault</string>
-    <string name="vault_lock_setup_body">Choose how to unlock the vault on this device. This choice stays on this device and is never synced.</string>
-    <string name="vault_lock_setup_auth_title">Confirm it\'s you</string>
-    <string name="vault_lock_setup_auth_subtitle">Before protecting the vault, confirm your identity with this device\'s lock.</string>
-    <string name="vault_lock_use_biometric">Biometrics</string>
-    <string name="vault_lock_use_password">Vault password</string>
-    <string name="vault_lock_create_title">Create a vault password</string>
-    <string name="vault_lock_enter_title">Vault password</string>
-    <string name="vault_lock_password">Password</string>
-    <string name="vault_lock_password_current">Current password</string>
-    <string name="vault_lock_password_new">New password</string>
-    <string name="vault_lock_password_confirm">Type it again</string>
-    <string name="vault_lock_password_rule">At least 8 characters.</string>
-    <string name="vault_lock_mismatch">The two passwords differ.</string>
-    <string name="vault_lock_wrong">Wrong password.</string>
-    <string name="vault_lock_checking">Checking…</string>
-    <string name="vault_lock_settings">Vault lock</string>
     <string name="vault_lock_now">Lock now</string>
-    <string name="vault_lock_change_password">Change the vault password</string>
-    <string name="vault_lock_switch_biometric">Use biometrics instead</string>
-    <string name="vault_lock_switch_password">Use a vault password instead</string>
-    <string name="vault_lock_password_changed">Vault password changed.</string>
-    <string name="vault_lock_method_changed">Unlock method changed.</string>
-    <string name="vault_lock_biometric_unavailable">Biometrics and the device screen lock are unavailable. Set up a screen lock, or erase the local vault.</string>
+    <string name="vault_lock_key_title">Enter your master key</string>
+    <string name="vault_lock_key_hint">Master key</string>
+    <string name="vault_lock_key_wrong">This is not this device\'s master key.</string>
+    <string name="vault_lock_needs_key">Set your master key on the main screen first: without biometrics, it is what unlocks the vault.</string>
     <!-- Gestion du carnet : detail et suppression d'une entree. -->
     <string name="vault_entry_login_none">No username</string>
     <string name="vault_detail">Site key: %1$s\nDomains: %2$s\nUsername: %3$s\nLength: %4$d\nCharacters: %5$s\nCounter: %6$d\nUpdated: %7$s</string>
