@@ -66,6 +66,7 @@ struct VaultLockView: View {
     @ObservedObject var lock: VaultLockController
 
     @Environment(\.scenePhase) private var scenePhase
+    @State private var autoPrompted = false
 
     @State private var password = ""
     @State private var confirmation = ""
@@ -101,6 +102,11 @@ struct VaultLockView: View {
         }
         .disabled(lock.isBusy)
         .onAppear(perform: promptBiometricsOnce)
+        // Arrivé pendant que l'app n'était pas active (feuille encore en
+        // animation, retour d'arrière-plan) : on demande dès qu'elle l'est.
+        .onChange(of: scenePhase) { phase in
+            if phase == .active { promptBiometricsOnce() }
+        }
         .alert(
             T.t("Effacer le carnet local ?", "Erase the local vault?"),
             isPresented: $confirmForget
@@ -274,11 +280,27 @@ struct VaultLockView: View {
         }
     }
 
-    /// Ouvre la biométrie d'elle-même à l'arrivée sur l'écran, pas au retour
-    /// d'arrière-plan : l'app n'y est pas encore active et l'OS refuserait.
+    /// Ouvre la biométrie d'elle-même à l'arrivée sur l'écran : c'est la façon
+    /// de se connecter choisie, pas un bouton de plus à chercher. Une seule
+    /// fois par affichage : annuler laisse le bouton, sans relancer l'invite.
     private func promptBiometricsOnce() {
-        guard case .locked(.biometrics) = lock.phase, scenePhase == .active else { return }
-        Task { await lock.unlockWithBiometrics(reason: T.unlockReason) }
+        guard !autoPrompted, case .locked(.biometrics) = lock.phase else { return }
+        #if os(iOS)
+        // L'OS refuse l'invite tant que l'app n'est pas au premier plan ; le
+        // changement de scenePhase rappellera.
+        guard scenePhase == .active else { return }
+        #elseif os(macOS)
+        // Reverrouillé parce que l'app est passée derrière : on attend son
+        // retour au premier plan (scenePhase rappellera).
+        guard NSApplication.shared.isActive else { return }
+        #endif
+        autoPrompted = true
+        Task {
+            // Laisse la feuille finir d'apparaître : une invite ouverte pendant
+            // l'animation est annulée d'office sur macOS.
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            await lock.unlockWithBiometrics(reason: T.unlockReason)
+        }
     }
 
     private func clearFields() {
