@@ -61,6 +61,17 @@
                 android:inputType="textPassword" />
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- Caché tant que le service n'a pas dit quel client Google il
+             accepte : sans lui, le jeton serait refusé de toute façon. -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/syncGoogle"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/sync_google"
+            android:visibility="gone" />
+
         <!-- La création du compte, l'abonnement et les appareils se gèrent sur
              le site : sans ce rappel, un nouveau venu reste bloqué devant un
              formulaire de connexion sans compte à y mettre. -->

@@ -47,7 +47,8 @@ final class FakeVaultServer implements Sync.Http {
                         .put("access_token", validAccessToken)
                         .put("refresh_token", "refresh-" + refreshCount));
             }
-            if (url.endsWith("/v1/auth/login") || url.endsWith("/v1/auth/register")) {
+            if (url.endsWith("/v1/auth/login") || url.endsWith("/v1/auth/register")
+                    || url.endsWith("/v1/auth/google")) {
                 return json(200, new JSONObject()
                         .put("access_token", validAccessToken)
                         .put("refresh_token", "refresh-0"));

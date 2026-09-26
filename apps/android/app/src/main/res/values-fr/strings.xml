@@ -84,6 +84,10 @@
     <string name="sync_email">Adresse e-mail</string>
     <string name="sync_password">Mot de passe du compte</string>
     <string name="sync_connect">Se connecter</string>
+    <string name="sync_google">Continuer avec Google</string>
+    <string name="sync_google_failed">Échec de la connexion Google : %1$s</string>
+    <string name="sync_google_no_account">Aucun compte Google sur cet appareil. Ajoutez-en un dans les réglages du système, puis réessayez.</string>
+    <string name="sync_google_unexpected">réponse inattendue de Google</string>
     <string name="sync_no_account">Pas encore de compte ? Créez-le sur https://thecode.julsql.fr/fr/account?from=app</string>
     <string name="sync_pitch_title">Synchronisez votre carnet</string>
     <string name="sync_pitch_body">Gardez votre carnet à jour entre vos appareils. Il est chiffré sur cet appareil avant d\'être envoyé : le serveur ne peut lire ni vos sites, ni vos identifiants.</string>

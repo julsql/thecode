@@ -1,6 +1,7 @@
 package fr.juliette.thecode;
 
 import android.os.Bundle;
+import android.os.CancellationSignal;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
@@ -22,6 +23,18 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.biometric.BiometricManager;
 import androidx.biometric.BiometricPrompt;
 import androidx.core.content.ContextCompat;
+import androidx.credentials.Credential;
+import androidx.credentials.CredentialManager;
+import androidx.credentials.CredentialManagerCallback;
+import androidx.credentials.CustomCredential;
+import androidx.credentials.GetCredentialRequest;
+import androidx.credentials.GetCredentialResponse;
+import androidx.credentials.exceptions.GetCredentialCancellationException;
+import androidx.credentials.exceptions.GetCredentialException;
+import androidx.credentials.exceptions.NoCredentialException;
+
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption;
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -503,16 +516,136 @@ public class VaultActivity extends AppCompatActivity {
         EditText password = form.findViewById(R.id.syncPassword);
         endpoint.setText(Sync.DEFAULT_ENDPOINT);
 
-        new MaterialAlertDialogBuilder(this)
+        AlertDialog dialog = new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.sync_title)
                 .setView(form)
                 .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton(R.string.sync_connect, (dialog, which) -> signInThenSync(
+                .setPositiveButton(R.string.sync_connect, (d, which) -> signInThenSync(
                         masterKey,
                         endpoint.getText().toString().trim(),
                         email.getText().toString().trim(),
                         password.getText().toString()))
-                .show();
+                .create();
+        dialog.setOnDismissListener(d -> {
+            if (openDialog == dialog) openDialog = null;
+        });
+        openDialog = dialog;
+        dialog.show();
+
+        View google = form.findViewById(R.id.syncGoogle);
+        // Le client Google dépend du service : relu quand l'adresse change.
+        String[] clientId = {null};
+        Runnable refresh = () -> fetchGoogleClientId(
+                endpoint.getText().toString().trim(), dialog, google, clientId);
+        refresh.run();
+        endpoint.setOnFocusChangeListener((v, hasFocus) -> {
+            if (!hasFocus) refresh.run();
+        });
+        google.setOnClickListener(v -> {
+            String id = clientId[0];
+            if (id == null) return;
+            String service = endpoint.getText().toString().trim();
+            dialog.dismiss();
+            googleSignInThenSync(masterKey, service, id);
+        });
+    }
+
+    /**
+     * Montre « Continuer avec Google » seulement si le service dit quel client
+     * il accepte. Un échec le cache : la connexion par mot de passe reste.
+     */
+    private void fetchGoogleClientId(String endpoint, AlertDialog dialog, View button,
+                                     String[] clientId) {
+        clientId[0] = null;
+        button.setVisibility(View.GONE);
+        worker.execute(() -> {
+            String id;
+            try {
+                id = new Sync().googleClientId(endpoint);
+            } catch (Sync.SyncException e) {
+                id = null;
+            }
+            String found = id;
+            main.post(() -> {
+                if (!dialog.isShowing()) return;
+                clientId[0] = found;
+                button.setVisibility(found == null ? View.GONE : View.VISIBLE);
+            });
+        });
+    }
+
+    /**
+     * Credential Manager rend un jeton d'identité Google, que le service
+     * échange contre les jetons du compte. La suite est celle du mot de passe.
+     */
+    private void googleSignInThenSync(String masterKey, String endpoint, String clientId) {
+        GetCredentialRequest request = new GetCredentialRequest.Builder()
+                .addCredentialOption(new GetSignInWithGoogleOption.Builder(clientId).build())
+                .build();
+        CredentialManager.create(this).getCredentialAsync(this, request,
+                new CancellationSignal(), ContextCompat.getMainExecutor(this),
+                new CredentialManagerCallback<GetCredentialResponse, GetCredentialException>() {
+                    @Override
+                    public void onResult(GetCredentialResponse response) {
+                        String idToken = googleIdToken(response.getCredential());
+                        if (idToken == null) {
+                            toast(getString(R.string.sync_google_failed,
+                                    getString(R.string.sync_google_unexpected)));
+                            return;
+                        }
+                        exchangeGoogleToken(masterKey, endpoint, idToken);
+                    }
+
+                    @Override
+                    public void onError(@NonNull GetCredentialException e) {
+                        // Fermer la fenêtre de Google est un choix, pas une erreur.
+                        if (e instanceof GetCredentialCancellationException) return;
+                        if (e instanceof NoCredentialException) {
+                            toast(getString(R.string.sync_google_no_account));
+                            return;
+                        }
+                        Log.w("TheCode", "Connexion Google impossible", e);
+                        CharSequence detail = e.getErrorMessage();
+                        toast(getString(R.string.sync_google_failed, detail != null
+                                ? detail.toString() : e.getType()));
+                    }
+                });
+    }
+
+    @Nullable
+    private static String googleIdToken(Credential credential) {
+        if (!(credential instanceof CustomCredential)
+                || !GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+                        .equals(credential.getType())) {
+            return null;
+        }
+        try {
+            return GoogleIdTokenCredential.createFrom(credential.getData()).getIdToken();
+        } catch (Exception e) {
+            // Kotlin ne déclare pas GoogleIdTokenParsingException : javac
+            // refuse de l'attraper nommément.
+            return null;
+        }
+    }
+
+    private void exchangeGoogleToken(String masterKey, String endpoint, String idToken) {
+        toast(getString(R.string.sync_running));
+        String lang = Sync.serviceLang(java.util.Locale.getDefault().getLanguage());
+        worker.execute(() -> {
+            try {
+                Sync.Credentials credentials = new Sync().googleSignIn(
+                        endpoint, idToken, android.os.Build.MODEL, lang, "");
+                main.post(() -> {
+                    preferences.setSyncCredentials(credentials);
+                    runSync(masterKey, credentials);
+                });
+            } catch (Sync.SyncException e) {
+                String message = e.status == 402
+                        ? getString(R.string.sync_limit_reached)
+                        : getString(R.string.sync_google_failed, e.getMessage());
+                main.post(() -> toast(message));
+            }
+        });
     }
 
     private void signInThenSync(String masterKey, String endpoint, String email, String password) {

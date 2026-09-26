@@ -210,6 +210,55 @@ public final class Sync {
     }
 
     /**
+     * Connexion par Google : le jeton d'identité rendu par Credential Manager
+     * contre les jetons du compte. La même route crée le compte s'il n'existe
+     * pas encore ; les identifiants rendus sont ceux d'une connexion par mot
+     * de passe, la suite (synchronisation, renouvellement) ne change pas.
+     *
+     * @param inviteCode vide sauf si les inscriptions demandent un code
+     */
+    public Credentials googleSignIn(@NonNull String endpoint, @NonNull String idToken,
+                                    @NonNull String deviceLabel, @NonNull String lang,
+                                    @NonNull String inviteCode) throws SyncException {
+        try {
+            JSONObject payload = new JSONObject()
+                    .put("id_token", idToken)
+                    .put("device_label", deviceLabel)
+                    .put("lang", lang);
+            if (!inviteCode.isEmpty()) payload.put("invite_code", inviteCode);
+            return Credentials.from(endpoint,
+                    call(endpoint + "/v1/auth/google", "POST", payload, null));
+        } catch (JSONException e) {
+            throw new SyncException("Réponse inattendue à la connexion Google");
+        }
+    }
+
+    /**
+     * L'identifiant client Google (web) que le service accepte, ou null s'il
+     * n'en a pas. Public par construction : il voyage dans chaque page de
+     * connexion. Le lire au service plutôt que l'embarquer suit un changement
+     * de projet Google sans nouvelle version de l'app.
+     */
+    @Nullable
+    public String googleClientId(@NonNull String endpoint) throws SyncException {
+        return parseGoogleClientId(call(endpoint + "/v1/auth/registration", "GET", null, null));
+    }
+
+    @Nullable
+    static String parseGoogleClientId(@NonNull JSONObject registration) {
+        // optString rendrait « null » pour une valeur JSON nulle.
+        if (registration.isNull("googleClientId")) return null;
+        String id = registration.optString("googleClientId", "").trim();
+        return id.isEmpty() ? null : id;
+    }
+
+    /** La langue des courriers envoyés par le service : fr ou en, rien d'autre. */
+    @NonNull
+    public static String serviceLang(@Nullable String language) {
+        return "fr".equalsIgnoreCase(language) ? "fr" : "en";
+    }
+
+    /**
      * Relit l'offre du compte, en renouvelant le jeton s'il a expiré.
      *
      * Rend les identifiants mis à jour : l'appelant doit les réenregistrer,
