@@ -480,32 +480,24 @@
                                 app:icon="@drawable/ic_visibility" />
                             </LinearLayout>
 
-                            <!-- Le seul point d'enregistrement au carnet : à
-                                 côté du mot de passe qu'il enregistre. -->
-                            <LinearLayout
+                            <!-- Sous le mot de passe : la sécurité en petit, puis
+                                 le seul point d'enregistrement au carnet. -->
+                            <TextView
+                                android:id="@+id/securityLabelTextView"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
-                                android:gravity="center_vertical"
-                                android:orientation="horizontal">
+                                android:layout_marginTop="6dp"
+                                android:layout_marginStart="4dp"
+                                android:textAppearance="@style/TextAppearance.Material3.LabelSmall" />
 
-                                <TextView
-                                    android:id="@+id/securityLabelTextView"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:layout_weight="1"
-                                    android:layout_marginStart="4dp"
-                                    android:textAppearance="@style/TextAppearance.Material3.LabelLarge" />
-
-                                <com.google.android.material.button.MaterialButton
-                                    android:id="@+id/saveEntryButton"
-                                    style="@style/Widget.Material3.Button.TonalButton"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginStart="8dp"
-                                    android:text="@string/vault_save_entry"
-                                    android:visibility="gone" />
-                            </LinearLayout>
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/saveEntryButton"
+                                style="@style/Widget.Material3.Button.TonalButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:text="@string/vault_save_entry"
+                                android:visibility="gone" />
 
                         </LinearLayout>
 
