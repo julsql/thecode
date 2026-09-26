@@ -37,10 +37,21 @@ public class AutofillAuthActivity extends FragmentActivity {
     /** Entrée du carnet choisie, vide quand le carnet ne connaît pas le site. */
     public static final String EXTRA_ENTRY_ID = "fr.juliette.thecode.autofill.ENTRY_ID";
     public static final String EXTRA_PASSWORD_IDS = "fr.juliette.thecode.autofill.PASSWORD_IDS";
+    /**
+     * Identifiant saisi dans la page, pour un compte que le carnet ne connaît
+     * pas encore : il entre dans la dérivation. Absent, le repli dérive sans.
+     */
+    public static final String EXTRA_LOGIN = "fr.juliette.thecode.autofill.LOGIN";
+    /** Champ identifiant du formulaire, rempli avec {@link #EXTRA_LOGIN}. */
+    public static final String EXTRA_USERNAME_ID = "fr.juliette.thecode.autofill.USERNAME_ID";
 
     private String domain;
     private String entryId;
     private AutofillId[] passwordIds;
+    @Nullable
+    private String pageLogin;
+    @Nullable
+    private AutofillId usernameId;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -51,6 +62,9 @@ public class AutofillAuthActivity extends FragmentActivity {
         domain = intent.getStringExtra(EXTRA_DOMAIN);
         entryId = intent.getStringExtra(EXTRA_ENTRY_ID);
         passwordIds = readAutofillIds(intent.getParcelableArrayExtra(EXTRA_PASSWORD_IDS));
+        pageLogin = intent.getStringExtra(EXTRA_LOGIN);
+        Parcelable username = intent.getParcelableExtra(EXTRA_USERNAME_ID);
+        usernameId = username instanceof AutofillId ? (AutofillId) username : null;
 
         if (domain == null || passwordIds == null || passwordIds.length == 0) {
             cancelAndFinish();
@@ -113,7 +127,7 @@ public class AutofillAuthActivity extends FragmentActivity {
         // synchronisation a pu passer entre la suggestion et la validation, et
         // les réglages n'ont pas à transiter par un Intent.
         SiteResolution resolution = SiteResolution.byId(Vault.load(this), entryId, domain,
-                prefs.getLength(), prefs.getMinState(), prefs.getMajState(),
+                pageLogin, prefs.getLength(), prefs.getMinState(), prefs.getMajState(),
                 prefs.getSymState(), prefs.getChiState());
 
         // Toujours en v2, repli compris : le remplissage ne propose pas de
@@ -125,7 +139,7 @@ public class AutofillAuthActivity extends FragmentActivity {
             return;
         }
 
-        Dataset dataset = buildDataset(password);
+        Dataset dataset = buildDataset(password, resolution);
 
         Intent reply = new Intent();
         reply.putExtra(AutofillManager.EXTRA_AUTHENTICATION_RESULT, dataset);
@@ -133,7 +147,7 @@ public class AutofillAuthActivity extends FragmentActivity {
         finish();
     }
 
-    private Dataset buildDataset(String password) {
+    private Dataset buildDataset(String password, SiteResolution resolution) {
         RemoteViews presentation = new RemoteViews(getPackageName(), R.layout.autofill_item);
         presentation.setTextViewText(R.id.autofill_title, getString(R.string.app_name));
         presentation.setTextViewText(R.id.autofill_subtitle,
@@ -147,6 +161,12 @@ public class AutofillAuthActivity extends FragmentActivity {
         Dataset.Builder builder = new Dataset.Builder(presentation);
         for (AutofillId id : passwordIds) {
             builder.setValue(id, AutofillValue.forText(password));
+        }
+        // Mot de passe dérivé avec l'identifiant de la page : on remet cet
+        // identifiant dans son champ (valeur inchangée), pour que le formulaire
+        // soumis porte celui qui redonne le mot de passe.
+        if (usernameId != null && resolution.entryId.isEmpty() && !resolution.login.isEmpty()) {
+            builder.setValue(usernameId, AutofillValue.forText(resolution.login));
         }
         return builder.build();
     }
