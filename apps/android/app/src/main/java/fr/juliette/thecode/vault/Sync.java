@@ -265,6 +265,27 @@ public final class Sync {
      * sans quoi l'offre relue serait oubliée au prochain démarrage.
      */
     public Credentials accountPlan(@NonNull Credentials creds) throws SyncException {
+        return accountIdentity(creds).credentials;
+    }
+
+    /** Ce que la suppression du compte doit savoir de lui, lu à GET /v1/auth/me. */
+    public static final class AccountIdentity {
+        /** L'adresse à recopier : le service l'exige pour supprimer. */
+        public final String email;
+        /** Faux pour un compte créé par Google ou Apple sans mot de passe. */
+        public final boolean hasPassword;
+        /** Éventuellement renouvelés, offre relue : à réenregistrer. */
+        public final Credentials credentials;
+
+        AccountIdentity(String email, boolean hasPassword, Credentials credentials) {
+            this.email = email;
+            this.hasPassword = hasPassword;
+            this.credentials = credentials;
+        }
+    }
+
+    /** Relit le compte, en renouvelant le jeton s'il a expiré. */
+    public AccountIdentity accountIdentity(@NonNull Credentials creds) throws SyncException {
         JSONObject body;
         Credentials current = creds;
         try {
@@ -274,7 +295,80 @@ public final class Sync {
             current = refresh(creds);
             body = call(current.endpoint + "/v1/auth/me", "GET", null, current.accessToken);
         }
-        return current.withPlan(body.optString("plan", PLAN_FREE));
+        // Absent d'un ancien service : le mot de passe est alors demandé, et
+        // le service l'ignore pour un compte qui n'en a pas.
+        return new AccountIdentity(body.optString("email", ""),
+                body.optBoolean("has_password", true),
+                current.withPlan(body.optString("plan", PLAN_FREE)));
+    }
+
+    // ------------------------------------------------ suppression du compte
+
+    /**
+     * Supprime le compte sur le service : le compte, le carnet chiffré, les
+     * réglages et les sessions de tous les appareils.
+     *
+     * Deux preuves, comme l'exige l'API : l'adresse recopiée et, si le compte
+     * en a un, son mot de passe. Le jeton est renouvelé s'il a expiré.
+     */
+    public void deleteAccount(@NonNull Credentials creds, @NonNull String confirmEmail,
+                              @NonNull String password) throws SyncException {
+        JSONObject payload;
+        try {
+            payload = new JSONObject()
+                    .put("confirm_email", confirmEmail.trim())
+                    .put("password", password);
+        } catch (JSONException e) {
+            throw new SyncException("Requête de suppression impossible à construire");
+        }
+        String url = creds.endpoint + "/v1/account";
+        try {
+            call(url, "DELETE", payload, creds.accessToken);
+        } catch (SyncException e) {
+            if (e.status != 401) throw e;
+            Credentials renewed = refresh(creds);
+            call(url, "DELETE", payload, renewed.accessToken);
+        }
+    }
+
+    /**
+     * Supprime le compte puis oublie la session locale, comme une
+     * déconnexion. Seulement si le service a accepté : sur un refus, le
+     * compte existe toujours et l'appareil doit rester lié. Le carnet local
+     * n'est pas touché.
+     */
+    public void deleteAccountAndForget(@NonNull Credentials creds, @NonNull String confirmEmail,
+                                       @NonNull String password, @NonNull Runnable forgetLocally)
+            throws SyncException {
+        deleteAccount(creds, confirmEmail, password);
+        forgetLocally.run();
+    }
+
+    /** Pourquoi la suppression a échoué, pour le dire au bon endroit. */
+    public enum DeleteFailure {
+        /** 403 : le mot de passe du compte ne correspond pas. */
+        WRONG_PASSWORD,
+        /** 400 : l'adresse recopiée n'est pas celle du compte. */
+        EMAIL_MISMATCH,
+        /** Pas de réponse du service. */
+        UNREACHABLE,
+        OTHER;
+
+        @NonNull
+        public static DeleteFailure of(@NonNull SyncException e) {
+            switch (e.status) {
+                case 0: return UNREACHABLE;
+                case 400: return EMAIL_MISMATCH;
+                case 403: return WRONG_PASSWORD;
+                default: return OTHER;
+            }
+        }
+    }
+
+    /** Vrai quand l'adresse recopiée est celle du compte, casse et blancs ignorés. */
+    public static boolean emailMatches(@Nullable String typed, @Nullable String accountEmail) {
+        if (typed == null || accountEmail == null || accountEmail.isEmpty()) return false;
+        return typed.trim().equalsIgnoreCase(accountEmail.trim());
     }
 
     private Credentials refresh(Credentials creds) throws SyncException {

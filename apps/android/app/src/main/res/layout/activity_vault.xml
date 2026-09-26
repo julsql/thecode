@@ -133,6 +133,38 @@
                 android:textAppearance="?attr/textAppearanceBodySmall"
                 android:visibility="gone" />
 
+            <!-- Suppression du compte, quand un compte est lie : exigee par les
+                 magasins pour un compte cree dans l'app. A part, entre deux
+                 separateurs et en couleur d'erreur : on ne la declenche pas en
+                 cherchant la synchronisation. -->
+            <LinearLayout
+                android:id="@+id/vaultAccountSection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="?attr/colorOutlineVariant" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/vaultDeleteAccount"
+                    style="?attr/borderlessButtonStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginVertical="4dp"
+                    android:text="@string/account_delete"
+                    android:textColor="?attr/colorError" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="?attr/colorOutlineVariant" />
+            </LinearLayout>
+
             <!-- Sous la synchronisation, affiché seulement quand il n'y a
                  rien : une liste vide sans explication laisse croire à une
                  panne. -->

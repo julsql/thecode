@@ -104,6 +104,22 @@
     <string name="sync_no_secure_storage">Le stockage chiffré est indisponible sur cet appareil : les identifiants ne peuvent pas être conservés.</string>
     <string name="sync_unlinked">Déconnecté. Cet appareil ne se synchronise plus.</string>
     <string name="sync_nothing_to_unlink">Aucun compte n\'est lié.</string>
+    <!-- Suppression du compte depuis l'app (exigée par les magasins). -->
+    <string name="account_delete">Supprimer mon compte</string>
+    <string name="account_delete_title">Supprimer le compte ?</string>
+    <string name="account_delete_body">Le compte %1$s sera supprimé définitivement du service, avec son carnet chiffré synchronisé, ses réglages synchronisés et les sessions de tous ses appareils. C\'est irréversible.\n\nLe carnet enregistré sur cet appareil est conservé ; cet appareil ne se synchronise plus.</string>
+    <string name="account_delete_email_hint">Recopiez l\'adresse du compte pour confirmer</string>
+    <string name="account_delete_password_hint">Mot de passe du compte</string>
+    <string name="account_delete_confirm">Supprimer définitivement</string>
+    <string name="account_delete_loading">Vérification du compte…</string>
+    <string name="account_delete_running">Suppression du compte…</string>
+    <string name="account_delete_lookup_failed">Impossible de lire le compte : %1$s</string>
+    <string name="account_delete_wrong_password">Mot de passe incorrect.</string>
+    <string name="account_delete_email_mismatch">Cette adresse ne correspond pas à celle du compte.</string>
+    <string name="account_delete_unreachable">Service injoignable : le compte n\'a pas été supprimé. Réessayez plus tard.</string>
+    <string name="account_delete_failed">Le compte n\'a pas été supprimé : %1$s</string>
+    <string name="account_delete_done_title">Compte supprimé</string>
+    <string name="account_delete_done">Le compte et ses données synchronisées ont été supprimés. Le carnet reste sur cet appareil, qui ne se synchronise plus.</string>
     <string name="vault_save_entry">Enregistrer cette entrée</string>
     <string name="vault_update_entry">Mettre à jour l\'entrée</string>
     <string name="show_password">Voir</string>

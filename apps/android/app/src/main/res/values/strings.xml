@@ -104,6 +104,22 @@
     <string name="sync_no_secure_storage">Encrypted storage is unavailable on this device, so sign-in details cannot be kept.</string>
     <string name="sync_unlinked">Signed out. This device no longer syncs.</string>
     <string name="sync_nothing_to_unlink">No account is linked.</string>
+    <!-- Suppression du compte depuis l'app (exigée par les magasins). -->
+    <string name="account_delete">Delete my account</string>
+    <string name="account_delete_title">Delete the account?</string>
+    <string name="account_delete_body">The account %1$s will be permanently deleted from the service, together with its synced encrypted vault, its synced settings and the sessions of all its devices. This cannot be undone.\n\nThe vault saved on this device is kept; this device stops syncing.</string>
+    <string name="account_delete_email_hint">Type the account email to confirm</string>
+    <string name="account_delete_password_hint">Account password</string>
+    <string name="account_delete_confirm">Delete permanently</string>
+    <string name="account_delete_loading">Checking the account…</string>
+    <string name="account_delete_running">Deleting the account…</string>
+    <string name="account_delete_lookup_failed">The account could not be read: %1$s</string>
+    <string name="account_delete_wrong_password">Wrong password.</string>
+    <string name="account_delete_email_mismatch">This email does not match the account.</string>
+    <string name="account_delete_unreachable">The service cannot be reached: the account was not deleted. Try again later.</string>
+    <string name="account_delete_failed">The account was not deleted: %1$s</string>
+    <string name="account_delete_done_title">Account deleted</string>
+    <string name="account_delete_done">The account and its synced data have been deleted. The vault stays on this device, which no longer syncs.</string>
     <string name="vault_save_entry">Save this entry</string>
     <string name="vault_update_entry">Update the entry</string>
     <string name="show_password">Show</string>
