@@ -11,14 +11,7 @@
  */
 
 import { deriveTransferKey } from "@/transfer";
-import {
-  dropVersion,
-  mergeVaults,
-  selectForPush,
-  type Conflict,
-  type Vault,
-  type VaultEntry,
-} from "@/vault";
+import { mergeVaults, selectForPush, type Conflict, type Vault, type VaultEntry } from "@/vault";
 
 export const DEFAULT_ENDPOINT = "https://thecode-api.julsql.fr";
 const SESSION_KEY = "thecode.session";
@@ -305,8 +298,7 @@ export async function syncVault(
 
   const remote: Vault = { schema: 1, updatedAt: vault.updatedAt, entries: [] };
   for (const row of pulled.result.entries) {
-    // Un `v` résiduel est ignoré : une entrée dérive toujours en v2.
-    const entry = dropVersion(await decryptEntry(row, key));
+    const entry = await decryptEntry(row, key);
     // Absent quand faux, jamais « deleted: false ». La représentation
     // canonique départage les écritures simultanées : y laisser un champ que
     // les autres implémentations n'écrivent pas ferait désigner un gagnant

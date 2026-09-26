@@ -6,14 +6,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import { createRouter, createMemoryHistory } from "vue-router";
 import Vault from "@/pages/Vault.vue";
-import {
-  emptyVault,
-  loadVault,
-  newEntry,
-  saveVault,
-  VAULT_STORAGE_KEY,
-  type VaultEntry,
-} from "@/vault";
+import { emptyVault, loadVault, newEntry, saveVault } from "@/vault";
 import { createLock, hasLock, verifyLock } from "@/vaultLock";
 
 const PASSWORD = "mot de passe";
@@ -122,18 +115,6 @@ describe("verrou", () => {
     expect(w.text()).toContain("google.com");
     expect(w.text()).toContain("alice");
     expect(w.text()).not.toContain("gone.com");
-  });
-
-  it("garde une entrée portant un v résiduel", async () => {
-    // Écrit à la main : le carnet ne réécrit jamais `v`.
-    const vault = emptyVault();
-    vault.entries.push({ ...newEntry("old.com"), v: 1 } as VaultEntry);
-    localStorage.setItem(VAULT_STORAGE_KEY, JSON.stringify(vault));
-    const w = await mountVault();
-    await unlock(w);
-
-    expect(w.findAll(".entry-list li")).toHaveLength(1);
-    expect(w.text()).toContain("old.com");
   });
 
   it("ne mémorise pas le déverrouillage", async () => {

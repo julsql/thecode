@@ -12,8 +12,6 @@
  * Spécification : shared/spec/vault-transfer.md
  */
 
-import { stripVersions } from "@/vault";
-
 export const TRANSFER_PREFIX = "TC1";
 export const TRANSFER_NONCE_BYTES = 12;
 export const KDF_SALT = "thecode-transfer/v1";
@@ -106,7 +104,5 @@ export async function importVault(payload: string, masterKey: string): Promise<u
     );
   }
 
-  const vault: unknown = JSON.parse(new TextDecoder().decode(await inflate(new Uint8Array(plain))));
-  // Un `v` résiduel est ignoré, jamais réécrit : une entrée dérive toujours en v2.
-  return vault && typeof vault === "object" ? stripVersions(vault as { entries?: unknown }) : vault;
+  return JSON.parse(new TextDecoder().decode(await inflate(new Uint8Array(plain))));
 }

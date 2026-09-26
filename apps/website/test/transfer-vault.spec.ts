@@ -82,16 +82,6 @@ describe("transfert d'un carnet", () => {
     expect(imported.entries.length).toBeGreaterThan(0);
   });
 
-  it("garde à l'import une entrée portant un v résiduel, sans le v", async () => {
-    // Une entrée ne porte pas de version : shared/spec/vault-merge.md.
-    const v = filled();
-    const payload = await exportVault({ ...v, entries: [{ ...v.entries[0], v: 1 }] }, "clef");
-    const imported = (await importVault(payload, "clef")) as Vault;
-    expect(imported.entries).toHaveLength(1);
-    expect(imported.entries[0]).not.toHaveProperty("v");
-    expect(imported).toStrictEqual(v);
-  });
-
   it("produit un payload que les autres relisent", async () => {
     const payload = await exportVault(filled(), "clef");
 

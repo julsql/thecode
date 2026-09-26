@@ -62,28 +62,6 @@ export function emptyVault(): Vault {
   return { schema: VAULT_SCHEMA, updatedAt: nowIso(), entries: [] };
 }
 
-/**
- * Retire un champ `v` résiduel : une entrée ne porte pas de version et dérive
- * toujours en v2. Toléré, ignoré, jamais réécrit.
- * Voir shared/spec/vault-merge.md, « Pas de version par entrée ».
- */
-export function dropVersion<T>(entry: T): T {
-  if (typeof entry !== "object" || entry === null || !("v" in entry)) return entry;
-  const { v: _stray, ...rest } = entry as T & { v?: unknown };
-  return rest as T;
-}
-
-/**
- * Applique {@link dropVersion} à tout le carnet.
- *
- * Appliqué à chaque lecture (stockage local, import, synchronisation, fusion)
- * et à chaque écriture : un `v` résiduel n'est jamais réécrit.
- */
-export function stripVersions<T extends { entries?: unknown }>(vault: T): T {
-  if (!Array.isArray(vault.entries)) return vault;
-  return { ...vault, entries: vault.entries.map(dropVersion) };
-}
-
 export function newEntry(
   siteKey: string,
   options: Partial<Omit<VaultEntry, "id" | "siteKey">> = {},
@@ -275,8 +253,8 @@ function findDuplicates(
  */
 export function mergeVaults(left: Vault, right: Vault): { vault: Vault; conflicts: Conflict[] } {
   const conflicts: Conflict[] = [];
-  const leftEntries = stripVersions(left).entries;
-  const rightEntries = stripVersions(right).entries;
+  const leftEntries = left.entries;
+  const rightEntries = right.entries;
   const byId = new Map(leftEntries.map((e) => [e.id, e]));
 
   for (const entry of rightEntries) {
@@ -311,7 +289,7 @@ export function loadVault(): Vault {
     if (!raw) return emptyVault();
     const vault = JSON.parse(raw) as Vault;
     if (vault.schema !== VAULT_SCHEMA) return emptyVault();
-    return stripVersions(vault);
+    return vault;
   } catch {
     return emptyVault();
   }
@@ -320,8 +298,7 @@ export function loadVault(): Vault {
 export function saveVault(vault: Vault): void {
   try {
     vault.updatedAt = nowIso();
-    // Un `v` résiduel ne rejoint jamais le stockage.
-    localStorage.setItem(VAULT_STORAGE_KEY, JSON.stringify(stripVersions(vault)));
+    localStorage.setItem(VAULT_STORAGE_KEY, JSON.stringify(vault));
   } catch {
     // Stockage indisponible : le mot de passe reste dérivable, seul le
     // carnet ne persiste pas. On ne bloque pas l'utilisateur pour autant.

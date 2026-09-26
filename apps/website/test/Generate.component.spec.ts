@@ -174,22 +174,6 @@ describe("carnet et empreinte", () => {
     expect(wrapper.text()).toContain("Enregistrer ce site");
   });
 
-  it("garde une entree portant un v residuel, sans proposer de migration", async () => {
-    const { emptyVault, newEntry, VAULT_STORAGE_KEY } = await import("@/vault");
-
-    // Ecrit a la main : le carnet ne reecrit jamais `v`.
-    const vault = emptyVault();
-    vault.entries.push({ ...newEntry("google.com", { domains: ["google.com"] }), v: 1 } as never);
-    localStorage.setItem(VAULT_STORAGE_KEY, JSON.stringify(vault));
-
-    const wrapper = await mountGenerate();
-    await wrapper.find("#id_site").setValue("google.com");
-    await wrapper.vm.$nextTick();
-
-    expect(wrapper.text()).not.toContain("Passer en v2");
-    expect(wrapper.text()).toContain("Mettre à jour");
-  });
-
   it("renvoie vers l'écran carnet pour gérer les entrées", async () => {
     const { saveVault, emptyVault, newEntry } = await import("@/vault");
 
