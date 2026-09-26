@@ -15,23 +15,6 @@ const VAULT_STORAGE_KEY = "vault";
 const VAULT_DEFAULT_CHARSET = { lower: true, upper: true, symbols: true, numbers: true };
 const VAULT_DEFAULT_LENGTH = 20;
 
-/**
- * Retire un champ `v` residuel : une entree ne porte pas de version et derive
- * toujours en v2. Tolere, ignore, jamais reecrit.
- * Voir shared/spec/vault-merge.md, « Pas de version par entrée ».
- */
-function dropVersion(entry) {
-  if (!entry || typeof entry !== "object" || !("v" in entry)) return entry;
-  const { v: _stray, ...rest } = entry;
-  return rest;
-}
-
-/** Applique dropVersion a tout le carnet, a chaque lecture. */
-function stripVersions(vault) {
-  if (!vault || !Array.isArray(vault.entries)) return vault;
-  return { ...vault, entries: vault.entries.map(dropVersion) };
-}
-
 function nowIso() {
   return new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
 }
@@ -209,9 +192,8 @@ function findDuplicates(entries, leftIds, rightIds, conflicts) {
  */
 function mergeVaults(left, right) {
   const conflicts = [];
-  // Ce qui sort d'une fusion est ecrit : un `v` residuel n'y survit pas.
-  const leftEntries = (left.entries || []).map(dropVersion);
-  const rightEntries = (right.entries || []).map(dropVersion);
+  const leftEntries = left.entries || [];
+  const rightEntries = right.entries || [];
   const byId = new Map(leftEntries.map((e) => [e.id, e]));
 
   for (const entry of rightEntries) {
@@ -278,7 +260,7 @@ async function loadVault(storage) {
       console.error("TheCode: carnet en version", vault.schema, "attendu", VAULT_SCHEMA);
       return emptyVault();
     }
-    return stripVersions(vault);
+    return vault;
   } catch (e) {
     console.error("TheCode: echec de la lecture du carnet", e);
     return emptyVault();
@@ -302,8 +284,6 @@ if (typeof module !== "undefined") {
     VAULT_STORAGE_KEY,
     VAULT_DEFAULT_CHARSET,
     VAULT_DEFAULT_LENGTH,
-    dropVersion,
-    stripVersions,
     emptyVault,
     newEntry,
     findByDomain,

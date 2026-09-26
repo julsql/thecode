@@ -93,22 +93,6 @@ describe("generation pour une page", () => {
     expect(viaAlias.password).toBe(direct.password);
   });
 
-  it("derive en v2 une entree portant un v residuel", async () => {
-    // Une entree ne porte pas de version : un `v: 1` reste de l'ancien format
-    // est ignore, l'entree est gardee et ses reglages s'appliquent en v2.
-    const { worker, storage } = loadWorker();
-    const { emptyVault, newEntry, saveVault } = require("../vault");
-    const { generatePasswordV2 } = require("../core-v2");
-
-    const vault = emptyVault();
-    vault.entries.push({ ...newEntry("vieux.fr", { domains: ["vieux.fr"], length: 12 }), v: 1 });
-    await saveVault(storage, vault);
-
-    const res = await worker.generatePasswordForUrl("https://vieux.fr/login");
-    expect(res.known).toBe(true);
-    expect(res.password).toBe(await generatePasswordV2("vieux.fr", "clef", 12, { counter: 1 }));
-  });
-
   it("derive en v1 quand la popup le demande, pour une entree connue", async () => {
     // Secours pour un site dont le mot de passe n'a pas encore ete change.
     const { worker, storage } = loadWorker();

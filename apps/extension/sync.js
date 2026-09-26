@@ -186,8 +186,7 @@ async function syncVault(vault, masterKey, session) {
 
   const remote = { schema: 1, updatedAt: vault.updatedAt || "", entries: [] };
   for (const row of pulled.result.entries) {
-    // Un `v` residuel est ignore : une entree derive toujours en v2.
-    const entry = dropVersion(await decryptEntry(row, key));
+    const entry = await decryptEntry(row, key);
     // Absent quand faux, jamais « deleted: false ». La representation
     // canonique departage les ecritures simultanees : y laisser un champ que
     // les autres implementations n'ecrivent pas ferait designer un gagnant

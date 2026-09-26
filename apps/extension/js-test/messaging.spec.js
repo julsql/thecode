@@ -236,20 +236,6 @@ describe("renouvellement reserve a l'offre complete", () => {
     expect(store.vault.entries[0].counter).toBe(2);
   });
 
-  it("garde une entree portant un v residuel et ne le reecrit pas", async () => {
-    const { send, store } = loadWorker({
-      storage: { vault: vaultWith({ ...ENTRY, v: 1 }), syncSession: session("pro") },
-    });
-    await send({ action: "setEncodingKey", encodingKey: "clef" }, FROM_POPUP);
-
-    // Une entree ne porte pas de version : le `v` est ignore a la lecture.
-    const response = await send({ action: "applyChange", id: "e1", renew: true }, FROM_POPUP);
-
-    expect(response.ok).toBe(true);
-    expect(store.vault.entries[0].counter).toBe(2);
-    expect(store.vault.entries[0]).not.toHaveProperty("v");
-  });
-
   it("ne fait que renouveler, meme sans drapeau renew", async () => {
     const { send, store } = loadWorker({
       storage: { vault: vaultWith(ENTRY), syncSession: session("free") },

@@ -99,14 +99,10 @@ async function importVault(payload, masterKey) {
     throw new Error("Dechiffrement impossible : clef maitresse differente, ou donnees alterees.");
   }
 
-  const vault = JSON.parse(new TextDecoder().decode(await inflate(new Uint8Array(plain))));
-  // Un `v` residuel est ignore, jamais reecrit : une entree derive toujours en v2.
-  return stripVersions(vault);
+  return JSON.parse(new TextDecoder().decode(await inflate(new Uint8Array(plain))));
 }
 
 if (typeof module !== "undefined") {
-  // Dans le service worker, stripVersions vient de vault.js, charge avant.
-  Object.assign(globalThis, { stripVersions: require("./vault.js").stripVersions });
   module.exports = {
     TRANSFER_PREFIX,
     TRANSFER_KDF_SALT,
