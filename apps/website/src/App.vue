@@ -67,6 +67,7 @@
             {{ t("nav_tutorial") }}
           </router-link>
           <router-link
+            v-if="!fromApp"
             :to="localePath('pricing')"
             class="nav-link"
             active-class="is-active"
@@ -165,6 +166,7 @@
             {{ t("nav_tutorial") }}
           </router-link>
           <router-link
+            v-if="!fromApp"
             :to="localePath('pricing')"
             class="mobile-link"
             active-class="is-active"
@@ -215,7 +217,9 @@
             <router-link :to="localePath('about')">{{ t("nav_about") }}</router-link>
             <router-link :to="localePath('generate')">{{ t("nav_generator") }}</router-link>
             <router-link :to="localePath('vault')">{{ t("nav_vault") }}</router-link>
-            <router-link :to="localePath('pricing')">{{ t("nav_pricing") }}</router-link>
+            <router-link v-if="!fromApp" :to="localePath('pricing')">{{
+              t("nav_pricing")
+            }}</router-link>
             <router-link :to="localePath('account')">{{ t("nav_account") }}</router-link>
           </div>
 
@@ -283,9 +287,36 @@ export default defineComponent({
     // besoin, les pages qui suivent la réutiliseront.
     loadService();
     const plansOpen = computed(() => service.plans.billingAvailable);
+
+    // Ouvert depuis une app (?from=app) : les stores interdisent d'orienter
+    // vers un paiement hors de chez eux. Retenu pour la session de l'onglet,
+    // pour que la navigation suivante ne remontre pas les tarifs.
+    const FROM_APP_KEY = "thecode.fromApp";
+    const readFromApp = () => {
+      try {
+        return sessionStorage.getItem(FROM_APP_KEY) === "1";
+      } catch {
+        return false;
+      }
+    };
+    const fromApp = ref(readFromApp());
+    watch(
+      () => route.query.from,
+      (from) => {
+        if (from !== "app") return;
+        fromApp.value = true;
+        try {
+          sessionStorage.setItem(FROM_APP_KEY, "1");
+        } catch {
+          // Navigation privée : le masquage vaut au moins pour cette page.
+        }
+      },
+      { immediate: true },
+    );
     const legalReady = identityPublished();
 
     return {
+      fromApp,
       Logo,
       year,
       isOpen,
