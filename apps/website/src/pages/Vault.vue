@@ -644,7 +644,9 @@ export default defineComponent({
 }
 
 .content-container {
-  max-width: 640px;
+  /* Assez large pour lire une entrée (domaines, identifiant, réglages) sur une
+     ligne ; le téléphone garde toute la largeur disponible. */
+  max-width: 960px;
   margin: -50px auto 0;
   padding: 0 24px 80px;
   position: relative;
