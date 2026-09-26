@@ -100,11 +100,45 @@ public struct Vault: Codable {
     public var schema: Int
     public var updatedAt: String?
     public var entries: [VaultEntry]
+    /// Entrées écartées au décodage parce qu'illisibles. Jamais écrit.
+    public private(set) var skippedEntries = 0
+
+    private enum CodingKeys: String, CodingKey {
+        case schema, updatedAt, entries
+    }
 
     public init(entries: [VaultEntry] = []) {
         self.schema = Vault.schemaVersion
         self.updatedAt = Vault.nowIso()
         self.entries = entries
+    }
+
+    /// Décodage tolérant entrée par entrée : une entrée illisible est écartée
+    /// et comptée, les autres sont gardées. Échouer sur tout le carnet pour une
+    /// seule entrée ferait repartir d'un carnet vide, que la sauvegarde
+    /// suivante écrirait par-dessus le fichier entier.
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        schema = try container.decode(Int.self, forKey: .schema)
+        updatedAt = try container.decodeIfPresent(String.self, forKey: .updatedAt)
+        entries = []
+
+        var list = try container.nestedUnkeyedContainer(forKey: .entries)
+        while !list.isAtEnd {
+            if let entry = try? list.decode(VaultEntry.self) {
+                entries.append(entry)
+            } else {
+                // Un échec ne fait pas avancer le curseur : on consomme
+                // l'élément sans le lire.
+                _ = try list.decode(Skipped.self)
+                skippedEntries += 1
+            }
+        }
+    }
+
+    /// Consomme n'importe quelle valeur JSON sans la lire.
+    private struct Skipped: Decodable {
+        init(from decoder: Decoder) throws {}
     }
 
     static func nowIso() -> String {

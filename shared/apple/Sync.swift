@@ -289,8 +289,11 @@ public struct Sync {
                         + "qui a servi à synchroniser ce carnet.")
             }
 
+            // Une entrée illisible est écartée, pas le carnet entier : elle
+            // reste telle quelle sur le serveur, qui ne retire rien de ce
+            // qu'on ne lui repousse pas.
             guard var entry = try? JSONDecoder().decode(VaultEntry.self, from: plain) else {
-                throw SyncError(message: "Carnet distant illisible : entrée invalide")
+                continue
             }
             // La pierre tombale du serveur fait foi même si l'entrée chiffrée
             // est antérieure à la suppression.
