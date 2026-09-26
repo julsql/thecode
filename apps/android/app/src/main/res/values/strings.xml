@@ -96,6 +96,7 @@
     <string name="sync_account_url" translatable="false">https://thecode.julsql.fr/en/account?from=app</string>
     <string name="sync_running">Syncing…</string>
     <string name="sync_done">Vault synced: %1$d entries.</string>
+    <string name="sync_status_done">Last synced at %1$s.</string>
     <string name="sync_done_conflicts">Vault synced: %1$d entries, %2$d need your attention.</string>
     <string name="sync_local_only">%1$d entries stayed on this device (free plan limit).</string>
     <string name="sync_failed">Sync failed: %1$s</string>

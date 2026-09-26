@@ -675,5 +675,25 @@
         "content": "$1"
       }
     }
+  },
+  "sync_auto_failed": {
+    "message": "Last sync failed.",
+    "description": "Automatic sync failure, shown in the popup's sync area."
+  },
+  "sync_auto_failed_network": {
+    "message": "Last sync: service unreachable.",
+    "description": "Automatic sync failure, shown in the popup's sync area."
+  },
+  "sync_auto_failed_auth": {
+    "message": "Last sync: please sign in again.",
+    "description": "Automatic sync failure, shown in the popup's sync area."
+  },
+  "sync_auto_failed_plan": {
+    "message": "Last sync: plan limit reached.",
+    "description": "Automatic sync failure, shown in the popup's sync area."
+  },
+  "sync_auto_failed_forbidden": {
+    "message": "Last sync: refused by the service.",
+    "description": "Automatic sync failure, shown in the popup's sync area."
   }
 }

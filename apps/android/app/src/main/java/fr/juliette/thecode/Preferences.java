@@ -118,19 +118,41 @@ public final class Preferences {
      */
 
     public int getLength() { return prefs.getInt(KEY_LENGTH, Code.DEFAULT_LENGTH); }
-    public void setLength(int v) { if (v != getLength()) touch().putInt(KEY_LENGTH, v).apply(); }
+    public void setLength(int v) { if (v != getLength()) changed(touch().putInt(KEY_LENGTH, v)); }
 
     public boolean getMinState() { return prefs.getBoolean(KEY_MIN, true); }
-    public void setMinState(boolean v) { if (v != getMinState()) touch().putBoolean(KEY_MIN, v).apply(); }
+    public void setMinState(boolean v) { if (v != getMinState()) changed(touch().putBoolean(KEY_MIN, v)); }
 
     public boolean getMajState() { return prefs.getBoolean(KEY_MAJ, true); }
-    public void setMajState(boolean v) { if (v != getMajState()) touch().putBoolean(KEY_MAJ, v).apply(); }
+    public void setMajState(boolean v) { if (v != getMajState()) changed(touch().putBoolean(KEY_MAJ, v)); }
 
     public boolean getSymState() { return prefs.getBoolean(KEY_SYM, true); }
-    public void setSymState(boolean v) { if (v != getSymState()) touch().putBoolean(KEY_SYM, v).apply(); }
+    public void setSymState(boolean v) { if (v != getSymState()) changed(touch().putBoolean(KEY_SYM, v)); }
 
     public boolean getChiState() { return prefs.getBoolean(KEY_CHI, true); }
-    public void setChiState(boolean v) { if (v != getChiState()) touch().putBoolean(KEY_CHI, v).apply(); }
+    public void setChiState(boolean v) { if (v != getChiState()) changed(touch().putBoolean(KEY_CHI, v)); }
+
+    /** Prévenu à chaque vraie modification d'un réglage par défaut. */
+    public interface SettingsListener {
+        void onDefaultSettingsChanged();
+    }
+
+    @Nullable
+    private static volatile SettingsListener settingsListener;
+
+    public static void setSettingsListener(@Nullable SettingsListener listener) {
+        settingsListener = listener;
+    }
+
+    /**
+     * Enregistre puis relance la synchronisation. Pas les réglages reçus par
+     * {@link #applyDefaultSettings} : ils viennent justement d'elle.
+     */
+    private static void changed(SharedPreferences.Editor editor) {
+        editor.apply();
+        SettingsListener listener = settingsListener;
+        if (listener != null) listener.onDefaultSettingsChanged();
+    }
 
     /** Date de la dernière modification locale ; {@link DefaultSettings#NEVER} sinon. */
     @NonNull

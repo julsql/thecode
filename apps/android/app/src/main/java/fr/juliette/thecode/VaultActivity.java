@@ -44,7 +44,6 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputLayout;
 
-import fr.juliette.thecode.vault.DefaultSettings;
 import fr.juliette.thecode.vault.SiteResolution;
 import fr.juliette.thecode.vault.Sync;
 import fr.juliette.thecode.vault.Vault;
@@ -75,6 +74,8 @@ public class VaultActivity extends AppCompatActivity {
     private final Handler main = new Handler(Looper.getMainLooper());
 
     private Preferences preferences;
+    /** Synchronisation partagée : automatique, et forcée par le menu. */
+    private AutoSync autoSync;
     /**
      * Verrou de l'écran (shared/spec/vault-lock.md) : partage la session de la
      * clef, ouverte 3 minutes après la sortie, même si l'activité est recréée
@@ -99,6 +100,7 @@ public class VaultActivity extends AppCompatActivity {
 
         preferences = new Preferences(this);
         lock = new VaultLock(preferences.vaultLockStore(), new SessionLock(preferences));
+        autoSync = AutoSync.get(this);
 
         MaterialToolbar toolbar = findViewById(R.id.vaultToolbar);
         toolbar.setNavigationOnClickListener(v -> finish());
@@ -115,6 +117,8 @@ public class VaultActivity extends AppCompatActivity {
         // Au-delà de la fenêtre de grâce, l'écran se referme et redemande l'auth.
         lock.onReturn();
         applyLockState();
+        autoSync.addListener(syncListener);
+        autoSync.onOpen();
     }
 
     @Override
@@ -123,6 +127,7 @@ public class VaultActivity extends AppCompatActivity {
         // sortie est retenu). Le contenu est masqué quand même : la capture du
         // sélecteur d'applications ne doit rien montrer. onStart le réaffiche
         // si l'on revient à temps.
+        autoSync.removeListener(syncListener);
         lock.onLeave();
         lockEpoch++;
         dismissOpenDialog();
@@ -167,6 +172,7 @@ public class VaultActivity extends AppCompatActivity {
         ((LinearLayout) findViewById(R.id.vaultList)).removeAllViews();
         findViewById(R.id.vaultEmpty).setVisibility(View.GONE);
         findViewById(R.id.vaultSyncPitch).setVisibility(View.GONE);
+        findViewById(R.id.vaultSyncStatus).setVisibility(View.GONE);
         findViewById(R.id.vaultLocked).setVisibility(View.VISIBLE);
     }
 
@@ -588,7 +594,7 @@ public class VaultActivity extends AppCompatActivity {
         if (credentials == null) {
             askForCredentials(masterKey);
         } else {
-            runSync(masterKey, credentials);
+            runSync();
         }
     }
 
@@ -723,7 +729,7 @@ public class VaultActivity extends AppCompatActivity {
                         endpoint, idToken, android.os.Build.MODEL, lang, "");
                 main.post(() -> {
                     preferences.setSyncCredentials(credentials);
-                    runSync(masterKey, credentials);
+                    runSync();
                 });
             } catch (Sync.SyncException e) {
                 String message = e.status == 402
@@ -743,7 +749,7 @@ public class VaultActivity extends AppCompatActivity {
                         sync.login(endpoint, email, password, android.os.Build.MODEL);
                 main.post(() -> {
                     preferences.setSyncCredentials(credentials);
-                    runSync(masterKey, credentials);
+                    runSync();
                 });
             } catch (Sync.SyncException e) {
                 main.post(() -> toast(getString(R.string.sync_failed, e.getMessage())));
@@ -751,66 +757,39 @@ public class VaultActivity extends AppCompatActivity {
         });
     }
 
-    private void runSync(String masterKey, Sync.Credentials credentials) {
+    /**
+     * Synchronisation forcée : la même routine que l'automatique
+     * ({@link AutoSync}), qui ne double jamais une synchronisation en cours.
+     * Seule celle-ci rend compte par un toast.
+     */
+    private void runSync() {
         toast(getString(R.string.sync_running));
-        worker.execute(() -> {
-            try {
-                Sync sync = new Sync();
-                Sync.Result result = sync.syncRenewing(Vault.load(this), masterKey, credentials);
-                // Un abonnement pris entre-temps doit se voir sans se
-                // reconnecter ; un abonnement arrêté aussi.
-                Sync.Credentials withPlan = sync.accountPlan(result.credentials);
-                syncDefaultSettings(sync, masterKey, withPlan);
-                // Écriture disque ici et non sur le fil principal : la
-                // synchronisation peut rapporter des centaines d'entrées.
-                result.vault.save(this);
-
-                main.post(() -> {
-                    // Les jetons peuvent avoir été renouvelés pendant l'appel :
-                    // ne pas les réenregistrer forcerait une reconnexion.
-                    preferences.setSyncCredentials(withPlan);
-                    render(result.vault);
-
-                    int kept = -result.localOnly;
-                    for (VaultEntry entry : result.vault.entries) {
-                        if (!entry.deleted) kept++;
-                    }
-                    String done = result.conflicts.isEmpty()
-                            ? getString(R.string.sync_done, kept)
-                            : getString(R.string.sync_done_conflicts, kept,
-                                    result.conflicts.size());
-                    // Au-delà du plafond, le reste ne part pas : le dire, sinon
-                    // on croit retrouver sur l'autre appareil ce qui n'y est
-                    // jamais allé.
-                    toast(result.localOnly == 0 ? done
-                            : done + " " + getString(R.string.sync_local_only,
-                                    result.localOnly));
-                });
-            } catch (Sync.SyncException e) {
-                // 402 : le serveur explique comment lever la limite, ce qu'une
-                // app du Store n'a pas le droit de relayer. On garde le fait,
-                // pas l'invitation.
-                String message = e.status == 402
-                        ? getString(R.string.sync_limit_reached)
-                        : getString(R.string.sync_failed, e.getMessage());
-                main.post(() -> toast(message));
-            }
-        });
+        autoSync.syncNow();
     }
 
-    /**
-     * Réglages par défaut, après le carnet. Un échec ici n'annule pas la
-     * synchronisation du carnet, déjà faite : on retentera la prochaine fois.
-     * L'écran de génération les relit à son retour au premier plan.
-     */
-    private void syncDefaultSettings(Sync sync, String masterKey, Sync.Credentials credentials) {
-        DefaultSettings local = preferences.getDefaultSettings();
-        try {
-            DefaultSettings kept = sync.syncSettings(local, masterKey, credentials);
-            if (kept != local) preferences.applyDefaultSettings(kept);
-        } catch (Sync.SyncException e) {
-            Log.w("TheCode", "Réglages non synchronisés : " + e.getMessage());
+    private final AutoSync.Listener syncListener = new AutoSync.Listener() {
+        @Override
+        public void onSyncStatus(@NonNull String status) {
+            renderSyncStatus();
         }
+
+        @Override
+        public void onSyncFinished(@NonNull AutoSync.Outcome outcome) {
+            if (isFinishing()) return;
+            // render() n'affiche rien si l'écran s'est reverrouillé.
+            if (outcome.ok) render(Vault.load(VaultActivity.this));
+            if (outcome.manual) toast(outcome.message);
+        }
+    };
+
+    /** Dernier statut de synchronisation, seulement quand un compte est lié. */
+    private void renderSyncStatus() {
+        TextView view = findViewById(R.id.vaultSyncStatus);
+        String status = autoSync.status();
+        boolean show = lock.isUnlocked() && status != null
+                && preferences.getSyncCredentials() != null;
+        view.setVisibility(show ? View.VISIBLE : View.GONE);
+        if (show) view.setText(status);
     }
 
     private void unlink() {
@@ -822,6 +801,7 @@ public class VaultActivity extends AppCompatActivity {
         // n'efface rien.
         preferences.clearSyncCredentials();
         toast(getString(R.string.sync_unlinked));
+        render(vault);
     }
 
     private void toast(String message) {
@@ -855,6 +835,7 @@ public class VaultActivity extends AppCompatActivity {
         View pitch = findViewById(R.id.vaultSyncPitch);
         boolean linked = preferences.getSyncCredentials() != null;
         pitch.setVisibility(linked ? View.GONE : View.VISIBLE);
+        renderSyncStatus();
         if (!linked) {
             // Même connexion que le menu : un compte déjà créé se lie ici.
             findViewById(R.id.vaultSyncPitchSignIn).setOnClickListener(v -> startSync());

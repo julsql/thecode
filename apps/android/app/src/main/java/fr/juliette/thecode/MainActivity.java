@@ -193,20 +193,46 @@ public class MainActivity extends AppCompatActivity {
         regenerate();
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        refreshAutofillStatus();
-        // Le carnet a pu changer ailleurs (écran du carnet, synchronisation).
+    /**
+     * Relit ce qu'une synchronisation a pu changer : le carnet, et les
+     * réglages par défaut s'ils sont arrivés d'un autre appareil — sans
+     * toucher à ce qui n'a pas bougé.
+     */
+    private void reloadSynced() {
         vault = Vault.load(this);
-        // Les réglages ont pu arriver d'un autre appareil pendant une
-        // synchronisation : les relire, sans toucher à ce qui n'a pas bougé.
         if (loadedSettingsAt != null
                 && !loadedSettingsAt.equals(preferences.getSettingsUpdatedAt())) {
             loadDefaultSettings();
             regenerate();
         }
+    }
+
+    /** Silencieux : seul l'écran du carnet montre le statut de synchronisation. */
+    private final AutoSync.Listener syncListener = new AutoSync.Listener() {
+        @Override
+        public void onSyncStatus(@NonNull String status) {
+            // Rien : pas de message depuis une synchronisation automatique.
+        }
+
+        @Override
+        public void onSyncFinished(@NonNull AutoSync.Outcome outcome) {
+            if (!outcome.ok || isFinishing()) return;
+            reloadSynced();
+            updateSaveButton();
+        }
+    };
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        refreshAutofillStatus();
+        reloadSynced();
         prefillLogin();
+        // Ouverture ou retour au premier plan : la synchronisation automatique
+        // s'en charge, espacée de 30 secondes.
+        AutoSync autoSync = AutoSync.get(this);
+        autoSync.addListener(syncListener);
+        autoSync.onOpen();
         // Le pendant de onPause() est onResume(), pas onStart() : une activité
         // qui ne fait que recouvrir la nôtre (le code PIN du déverrouillage,
         // par exemple) provoque onPause() sans onStop(), donc sans onStart()
@@ -231,6 +257,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
+        AutoSync.get(this).removeListener(syncListener);
         // Fait courir la fenêtre de grâce à partir de la mise en arrière-plan.
         if (sessionUnlocked) sessionLock.stamp();
         // Le snapshot de l'écran « Applications récentes » est capturé ici : on

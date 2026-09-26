@@ -96,6 +96,7 @@
     <string name="sync_account_url" translatable="false">https://thecode.julsql.fr/fr/account?from=app</string>
     <string name="sync_running">Synchronisation…</string>
     <string name="sync_done">Carnet synchronisé : %1$d entrées.</string>
+    <string name="sync_status_done">Dernière synchronisation à %1$s.</string>
     <string name="sync_done_conflicts">Carnet synchronisé : %1$d entrées, %2$d demandent votre attention.</string>
     <string name="sync_local_only">%1$d entrées restées sur cet appareil (plafond de l\'offre gratuite).</string>
     <string name="sync_failed">Échec de la synchronisation : %1$s</string>

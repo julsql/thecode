@@ -42,6 +42,21 @@ public final class Vault {
     public String updatedAt = nowIso();
     public final List<VaultEntry> entries = new ArrayList<>();
 
+    /** Prévenu après chaque écriture locale : la synchronisation automatique s'y accroche. */
+    public interface WriteListener {
+        void onLocalWrite();
+    }
+
+    @Nullable
+    private static volatile WriteListener writeListener;
+
+    /** Sérialise les écritures : la synchronisation relit puis réécrit le carnet. */
+    public static final Object WRITE_LOCK = new Object();
+
+    public static void setWriteListener(@Nullable WriteListener listener) {
+        writeListener = listener;
+    }
+
     /** Un désaccord que la fusion refuse de trancher toute seule. */
     public static final class Conflict {
         public final String kind;
@@ -397,7 +412,11 @@ public final class Vault {
     }
 
     public static Vault load(Context context) {
-        File file = new File(context.getFilesDir(), FILENAME);
+        return load(context.getFilesDir());
+    }
+
+    public static Vault load(File dir) {
+        File file = new File(dir, FILENAME);
         if (!file.isFile()) return new Vault();
         try (java.io.FileInputStream in = new java.io.FileInputStream(file)) {
             // FileInputStream plutot que java.nio.file.Files, qui demande l'API 26.
@@ -423,9 +442,36 @@ public final class Vault {
         }
     }
 
+    /** Écriture locale (entrée enregistrée, modifiée, supprimée, import) : relance la synchronisation. */
     public void save(Context context) {
-        File file = new File(context.getFilesDir(), FILENAME);
-        File tmp = new File(context.getFilesDir(), FILENAME + ".tmp");
+        save(context.getFilesDir());
+    }
+
+    public void save(File dir) {
+        write(dir);
+        WriteListener listener = writeListener;
+        if (listener != null) listener.onLocalWrite();
+    }
+
+    /**
+     * Écriture du résultat d'une synchronisation : ne relance rien, sans quoi
+     * chaque synchronisation en appellerait une autre.
+     */
+    public void saveSynced(Context context) {
+        saveSynced(context.getFilesDir());
+    }
+
+    public void saveSynced(File dir) {
+        write(dir);
+    }
+
+    private void write(File dir) {
+        synchronized (WRITE_LOCK) {
+            writeTo(new File(dir, FILENAME), new File(dir, FILENAME + ".tmp"));
+        }
+    }
+
+    private void writeTo(File file, File tmp) {
         updatedAt = nowIso();
         try {
             // Écriture atomique : une interruption ne doit pas laisser un

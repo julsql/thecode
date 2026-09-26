@@ -33,6 +33,7 @@
       "vault.js",
       "transfer.js",
       "sync.js",
+      "sync-scheduler.js",
       "core-v2.js",
       "vault-lock.js",
       "vault-session.js",

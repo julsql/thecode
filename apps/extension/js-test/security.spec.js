@@ -40,6 +40,8 @@ describe("cloisonnement des actions sensibles", () => {
       "saveSite",
       "setEncodingKey",
       "setParams",
+      // Lance une synchronisation : une page web n'a pas a la provoquer.
+      "syncAutoOpen",
       // Ouvre une fenetre Google et ecrit la session de synchronisation.
       "syncGoogleAvailable",
       "syncGoogleLogin",

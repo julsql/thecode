@@ -75,6 +75,8 @@ function send(message) {
 
 function initVaultPage() {
   translatePage();
+  // Synchronisation automatique a l'ouverture, espacee par le fond.
+  browser.runtime.sendMessage({ action: "syncAutoOpen" }, () => {});
   const $ = (id) => document.getElementById(id);
   const pageTitle = $("pageTitle");
   const pageStatus = $("pageStatus");

@@ -11,6 +11,7 @@ if (typeof importScripts === "function") {
     "vault.js",
     "transfer.js",
     "sync.js",
+    "sync-scheduler.js",
     "core-v2.js",
     "vault-lock.js",
     "vault-session.js",
@@ -27,6 +28,7 @@ else if (typeof require === "function") {
     require("./vault.js"),
     require("./transfer.js"),
     require("./sync.js"),
+    require("./sync-scheduler.js"),
     require("./vault-lock.js"),
     require("./vault-session.js"),
     require("./google-auth.js"),
@@ -67,9 +69,41 @@ const DEFAULT_PARAMS = {
   chiState: true,
 };
 
-// La clé reste volontairement en mémoire seule : elle disparaît avec le
-// service worker et n'est jamais écrite sur disque.
+// La clé n'est jamais écrite sur disque. Elle vit dans storage.session : en
+// mémoire, réservée aux pages de l'extension, effacée à la fermeture du
+// navigateur. Sans lui, le service worker MV3, déchargé après quelques
+// secondes d'inactivité, l'oubliait et il fallait la retaper sans cesse.
 let encodingKey = null;
+const KEY_SESSION = "encodingKey";
+const keyArea = browser?.storage?.session ?? null;
+// Chrome l'ouvre par défaut aux seules pages de l'extension ; on l'écrit pour
+// que ce soit une décision, pas un défaut : un content script ne doit jamais
+// pouvoir la lire.
+keyArea?.setAccessLevel?.({ accessLevel: "TRUSTED_CONTEXTS" })?.catch?.(() => {});
+
+async function readKeyFromSession() {
+  try {
+    const stored = await keyArea?.get(KEY_SESSION);
+    if (typeof stored?.[KEY_SESSION] === "string" && stored[KEY_SESSION]) {
+      encodingKey = stored[KEY_SESSION];
+    }
+  } catch {
+    // Stockage indisponible : on retombe sur la mémoire du worker.
+  }
+}
+
+/** Retrouvée au réveil du worker, avant de traiter le moindre message. */
+const keyReady = readKeyFromSession();
+
+async function rememberKey(key) {
+  encodingKey = key || null;
+  try {
+    if (encodingKey) await keyArea?.set({ [KEY_SESSION]: encodingKey });
+    else await keyArea?.remove(KEY_SESSION);
+  } catch {
+    // La clé reste au moins en mémoire.
+  }
+}
 
 // Les paramètres, eux, DOIVENT survivre au recyclage du service worker MV3 :
 // sinon une longueur réglée à 30 dans la popup retombait à 20 dès que le
@@ -235,6 +269,7 @@ const PRIVILEGED_ACTIONS = new Set([
   "syncGoogleLogin",
   "syncLogout",
   "syncNow",
+  "syncAutoOpen",
   "syncStatus",
   "vaultLockStatus",
   "vaultLockCreate",
@@ -315,8 +350,71 @@ async function googleSyncLogin(request) {
   }
 }
 
+/**
+ * Synchronise le carnet puis les reglages, en renouvelant le jeton au besoin.
+ * La routine du bouton « Synchroniser » comme de la synchronisation
+ * automatique.
+ */
+async function syncEverything() {
+  const session = await loadSession(browser?.storage?.local);
+  if (!encodingKey || !session) return { ok: false, skipped: true };
+  const vault = await loadVault(browser?.storage?.local);
+  const result = await syncVault(vault, encodingKey, session);
+  await saveVault(browser?.storage?.local, result.vault);
+  // Les reglages suivent le carnet. Un echec ici n'annule pas la
+  // synchronisation du carnet, deja faite : il est seulement signale.
+  let current = result.session;
+  let settingsSynced = false;
+  try {
+    const synced = await syncSettings(await loadSettings(), encodingKey, current);
+    current = synced.session;
+    if (synced.applied) await applySettings(synced.settings);
+    settingsSynced = true;
+  } catch (e) {
+    console.error("TheCode: échec de la synchronisation des paramètres", e);
+  }
+  // Un abonnement pris entre-temps doit se voir sans se reconnecter.
+  const withPlan = await syncAccountPlan(current);
+  await saveSession(browser?.storage?.local, {
+    ...withPlan.session,
+    plan: withPlan.plan,
+  });
+  return {
+    ok: true,
+    entries: result.vault.entries.filter((e) => !e.deleted).length - result.localOnly,
+    localOnly: result.localOnly,
+    conflicts: result.conflicts,
+    settingsSynced,
+  };
+}
+
+const SYNC_LAST_STATUS_KEY = "syncLastStatus";
+
+/** Dernier resultat, montre discretement a la prochaine ouverture de la popup. */
+async function storeSyncStatus(result) {
+  if (result?.skipped) return;
+  const status = result?.ok
+    ? { ok: true, at: new Date().toISOString() }
+    : { ok: false, code: syncFailureCode(result?.error), at: new Date().toISOString() };
+  await browser?.storage?.local?.set({ [SYNC_LAST_STATUS_KEY]: status });
+}
+
+// Synchronisation automatique : rien ne part sans session ni clef maitresse,
+// le carnet etant chiffre avec elle.
+const autoSync = createSyncScheduler({
+  run: syncEverything,
+  canSync: async () => Boolean(encodingKey) && Boolean(await loadSession(browser?.storage?.local)),
+  onResult: storeSyncStatus,
+});
+
+/** Apres une ecriture locale ou un reglage modifie. */
+function scheduleAutoSync() {
+  if (encodingKey) autoSync.trigger();
+}
+
 browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
   (async () => {
+    await keyReady;
     if (PRIVILEGED_ACTIONS.has(request.action) && !isFromExtensionPage(sender)) {
       sendResponse({ error: "action reservee a l'extension" });
       return;
@@ -327,7 +425,7 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse({ encodingKey });
     } else if (request.action === "setEncodingKey") {
       try {
-        encodingKey = request.encodingKey;
+        await rememberKey(request.encodingKey);
         sendResponse({ ok: true });
       } catch (e) {
         sendResponse({ ok: false, error: e.message });
@@ -336,12 +434,15 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse({ ok: true, params: await loadParams() });
     } else if (request.action === "setParams") {
       try {
-        sendResponse({ ok: true, params: await saveParams(request.data) });
+        const before = params;
+        const saved = await saveParams(request.data);
+        if (!sameParams(before, saved)) scheduleAutoSync();
+        sendResponse({ ok: true, params: saved });
       } catch (e) {
         sendResponse({ ok: false, error: e.message });
       }
     } else if (request.action === "clearEncodingKey") {
-      encodingKey = null;
+      await rememberKey(null);
       sendResponse({ ok: true });
     } else if (request.action === "generatePassword") {
       // Seule la popup demande la v1 ou un identifiant : content.js n'envoie
@@ -352,13 +453,17 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse({ ok: true, vault: await loadVault(browser?.storage?.local) });
     } else if (request.action === "saveSite") {
       try {
-        sendResponse(await saveSite(request.domain, request.login));
+        const res = await saveSite(request.domain, request.login);
+        if (res?.ok) scheduleAutoSync();
+        sendResponse(res);
       } catch (e) {
         sendResponse({ ok: false, error: e.message });
       }
     } else if (request.action === "saveCurrentSite") {
       try {
-        sendResponse(await saveCurrentSite(sender, request.login));
+        const res = await saveCurrentSite(sender, request.login);
+        if (res?.ok) scheduleAutoSync();
+        sendResponse(res);
       } catch (e) {
         sendResponse({ ok: false, error: e.message });
       }
@@ -372,7 +477,9 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
       }
     } else if (request.action === "importVault") {
       try {
-        sendResponse(await importVaultPayload(request.payload));
+        const res = await importVaultPayload(request.payload);
+        if (res?.ok) scheduleAutoSync();
+        sendResponse(res);
       } catch (e) {
         sendResponse({ ok: false, error: e.message });
       }
@@ -413,6 +520,7 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
           // changement serait perdu a la synchronisation suivante.
           entry.updatedAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
           await saveVault(browser?.storage?.local, vault);
+          scheduleAutoSync();
           sendResponse({ ok: true, counter: entry.counter });
         }
       } catch (e) {
@@ -428,6 +536,7 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
           entry.deleted = true;
           entry.updatedAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
           await saveVault(browser?.storage?.local, vault);
+          scheduleAutoSync();
         }
         sendResponse({ ok: true });
       } catch (e) {
@@ -440,6 +549,10 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
         connected: Boolean(session),
         endpoint: session?.endpoint || "",
         canRenew: isPaidPlan(session?.plan),
+        lastStatus: session
+          ? (await browser?.storage?.local?.get([SYNC_LAST_STATUS_KEY]))?.[SYNC_LAST_STATUS_KEY] ||
+            null
+          : null,
       });
     } else if (request.action === "syncLogin") {
       try {
@@ -462,6 +575,7 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse(await googleSyncLogin(request));
     } else if (request.action === "syncLogout") {
       await clearSession(browser?.storage?.local);
+      await browser?.storage?.local?.remove([SYNC_LAST_STATUS_KEY]);
       sendResponse({ ok: true });
     } else if (request.action === "syncNow") {
       // La clef maitresse ne quitte pas le service worker : la popup demande
@@ -470,43 +584,13 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
         sendResponse({ ok: false, error: "Aucune clef definie." });
         return;
       }
-      const session = await loadSession(browser?.storage?.local);
-      if (!session) {
+      if (!(await loadSession(browser?.storage?.local))) {
         sendResponse({ ok: false, error: "Aucune session. Connectez-vous d'abord." });
         return;
       }
-      try {
-        const vault = await loadVault(browser?.storage?.local);
-        const result = await syncVault(vault, encodingKey, session);
-        await saveVault(browser?.storage?.local, result.vault);
-        // Les reglages suivent le carnet. Un echec ici n'annule pas la
-        // synchronisation du carnet, deja faite : il est seulement signale.
-        let current = result.session;
-        let settingsSynced = false;
-        try {
-          const synced = await syncSettings(await loadSettings(), encodingKey, current);
-          current = synced.session;
-          if (synced.applied) await applySettings(synced.settings);
-          settingsSynced = true;
-        } catch (e) {
-          console.error("TheCode: échec de la synchronisation des paramètres", e);
-        }
-        // Un abonnement pris entre-temps doit se voir sans se reconnecter.
-        const withPlan = await syncAccountPlan(current);
-        await saveSession(browser?.storage?.local, {
-          ...withPlan.session,
-          plan: withPlan.plan,
-        });
-        sendResponse({
-          ok: true,
-          entries: result.vault.entries.filter((e) => !e.deleted).length - result.localOnly,
-          localOnly: result.localOnly,
-          conflicts: result.conflicts,
-          settingsSynced,
-        });
-      } catch (e) {
-        sendResponse({ ok: false, error: e.message });
-      }
+      sendResponse(await autoSync.runNow());
+    } else if (request.action === "syncAutoOpen") {
+      sendResponse({ ok: true, scheduled: encodingKey ? autoSync.triggerOpen() : false });
     } else if (VAULT_LOCK_ACTIONS.has(request.action)) {
       try {
         sendResponse(await handleVaultLock(request));

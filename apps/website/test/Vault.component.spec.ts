@@ -2,7 +2,8 @@
  * Écran carnet : verrou, liste, détail, suppression et renouvellement.
  * Voir shared/spec/vault-lock.md.
  */
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { resetAutoSyncForTests } from "@/autoSync";
 import { mount } from "@vue/test-utils";
 import { createRouter, createMemoryHistory } from "vue-router";
 import Vault from "@/pages/Vault.vue";
@@ -59,6 +60,7 @@ beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
   vi.restoreAllMocks();
+  resetAutoSyncForTests();
   document.body.innerHTML = "";
   // refreshPlan interroge le service : on le rend injoignable, l'offre connue
   // reste celle de la session.
@@ -317,6 +319,58 @@ describe("détail d'une entrée", () => {
     await w.vm.$nextTick();
     expect(w.find("[role=alert]").text()).toContain("offre complète");
     expect(w.text()).not.toContain("Nouveau mot de passe");
+  });
+});
+
+describe("synchronisation automatique", () => {
+  const vaultCalls = () =>
+    vi.mocked(fetch).mock.calls.filter(([url]) => String(url).includes("/v1/vault"));
+
+  beforeEach(async () => {
+    await createLock(PASSWORD, PASSWORD);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("synchronise 2 s après un renouvellement", async () => {
+    seed();
+    signInAs("pro");
+    const w = await mountVault();
+    await unlock(w);
+    await w.findAll(".entry-btn")[0]!.trigger("click");
+    await w.vm.$nextTick();
+    await w.find("#vault_clef").setValue("clef");
+    await button(w, "Renouveler").trigger("submit");
+    await vi.waitFor(() => expect(w.text()).toContain("Nouveau mot de passe"), {
+      timeout: 10000,
+    });
+
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    await button(w, "Confirmer").trigger("click");
+    await vi.advanceTimersByTimeAsync(1999);
+    expect(vaultCalls()).toHaveLength(0);
+    await vi.advanceTimersByTimeAsync(1);
+    vi.useRealTimers();
+
+    await vi.waitFor(() => expect(vaultCalls().length).toBeGreaterThan(0), { timeout: 10000 });
+    await vi.waitFor(() => expect(w.find(".sync-auto-status").text()).toContain("injoignable"));
+  }, 30000);
+
+  it("ne synchronise pas une suppression sans clef maîtresse", async () => {
+    seed();
+    signInAs("pro");
+    const w = await mountVault();
+    await unlock(w);
+    await w.findAll(".entry-btn")[0]!.trigger("click");
+
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    await button(w, "Supprimer cette entrée").trigger("click");
+    await w.vm.$nextTick();
+    await button(w, "Supprimer").trigger("click");
+    await vi.advanceTimersByTimeAsync(5000);
+
+    expect(vaultCalls()).toHaveLength(0);
   });
 });
 

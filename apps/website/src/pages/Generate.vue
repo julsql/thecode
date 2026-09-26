@@ -60,6 +60,7 @@
                 :placeholder="t('gen_placeholder_key')"
                 id="id_clef"
                 required
+                @change="keyEntered"
               />
               <button type="button" class="ghost-btn" @click="togglePassword">
                 {{ showPassword ? t("gen_hide") : t("gen_show") }}
@@ -308,6 +309,9 @@
             </template>
 
             <p v-if="syncMessage" class="hint">{{ syncMessage }}</p>
+            <p v-else-if="syncConnected && lastSyncFailure" class="hint sync-auto-status">
+              {{ t(`sync_auto_failed_${lastSyncFailure}`) }}
+            </p>
           </section>
         </div>
       </div>
@@ -320,9 +324,9 @@ import { defineComponent, ref, watch, computed, onMounted, onUnmounted } from "v
 import { generatePassword, calculateEntropyBits, getSecurityLevel } from "@/utils";
 import { canonicalSite, loadPublicSuffixList } from "@/canonicalSite";
 import { keyFingerprint, type Fingerprint } from "@/fingerprint";
-import { clearSession, loadSession, saveSession, syncSettings, syncVault } from "@/sync";
-import { loadSettings, rememberSettings, saveSettings, type DefaultSettings } from "@/settings";
-import { refreshPlan } from "@/account";
+import { clearSession, loadSession } from "@/sync";
+import { loadSettings, rememberSettings, sameSettings, type DefaultSettings } from "@/settings";
+import { lastSyncFailure, runSyncNow, scheduleAutoSync, useAutoSync } from "@/autoSync";
 import {
   emptyVault,
   findAllByDomain,
@@ -395,7 +399,8 @@ export default defineComponent({
     }
 
     watch([longueur, minuscules, majuscules, symboles, chiffres], () => {
-      rememberSettings({
+      const before = loadSettings();
+      const after = rememberSettings({
         length: Number(longueur.value),
         charset: {
           lower: minuscules.value,
@@ -404,6 +409,9 @@ export default defineComponent({
           numbers: chiffres.value,
         },
       });
+      // Seul un vrai changement se synchronise : des réglages venus du compte
+      // sont déjà enregistrés quand l'écran les reprend.
+      if (!sameSettings(before, after)) scheduleAutoSync();
     });
     const showPassword = ref(false);
     const motDePasse = ref("");
@@ -644,6 +652,7 @@ export default defineComponent({
         const { vault: merged, conflicts } = mergeVaults(loadVault() ?? emptyVault(), incoming);
         saveVault(merged);
         refreshVault();
+        scheduleAutoSync();
 
         const kept = merged.entries.filter((e) => !e.deleted).length;
         transferMessage.value = conflicts.length
@@ -737,7 +746,15 @@ export default defineComponent({
 
       saveVault(vault);
       refreshVault();
+      scheduleAutoSync();
     }
+
+    // Synchronisation automatique : à l'ouverture, une fois la clef saisie,
+    // et après chaque écriture. Ce qu'elle rapporte s'affiche ici.
+    const { keyEntered } = useAutoSync(clef, (outcome) => {
+      if (outcome.settings) showSettings(outcome.settings);
+      refreshVault();
+    });
 
     async function runSync() {
       const session = loadSession();
@@ -753,39 +770,18 @@ export default defineComponent({
       }
 
       syncMessage.value = t("sync_running");
-      try {
-        const result = await syncVault(loadVault(), clef.value, session);
-        saveVault(result.vault);
-        saveSession(result.session);
-        // Les réglages suivent le carnet. Un échec ici n'annule pas la
-        // synchronisation du carnet, déjà faite.
-        let current = result.session;
-        try {
-          const synced = await syncSettings(loadSettings(), clef.value, current);
-          current = synced.session;
-          saveSession(current);
-          if (synced.applied) {
-            // Enregistrés avant l'affichage : l'écran les retrouve inchangés
-            // et ne les redate pas.
-            saveSettings(synced.settings);
-            showSettings(synced.settings);
-          }
-        } catch {
-          // Service sans réglages, ou coupure : le carnet est à jour.
-        }
-        // Un abonnement pris entre-temps doit se voir sans recharger la page.
-        void refreshPlan(current);
-        refreshVault();
-        const conflicts = result.conflicts.length
-          ? tf("sync_conflicts", { n: result.conflicts.length })
-          : "";
-        const kept = result.vault.entries.filter((e) => !e.deleted).length - result.localOnly;
+      const outcome = await runSyncNow();
+      if ("skipped" in outcome) {
+        syncMessage.value = "";
+      } else if (!outcome.ok) {
+        syncMessage.value = tf("sync_failed", { error: (outcome.error as Error).message });
+      } else {
+        const result = outcome.value;
+        const conflicts = result.conflicts ? tf("sync_conflicts", { n: result.conflicts }) : "";
         // Au-delà du plafond, le reste ne part pas : le dire, sinon on croit
         // retrouver sur l'autre appareil ce qui n'y est jamais allé.
         const local = result.localOnly ? tf("sync_local_only", { n: result.localOnly }) : "";
-        syncMessage.value = `${tf("sync_done", { n: kept })}${local}${conflicts}`;
-      } catch (e) {
-        syncMessage.value = tf("sync_failed", { error: (e as Error).message });
+        syncMessage.value = `${tf("sync_done", { n: result.entries })}${local}${conflicts}`;
       }
     }
 
@@ -822,6 +818,8 @@ export default defineComponent({
       importFile,
       syncConnected,
       syncMessage,
+      lastSyncFailure,
+      keyEntered,
       runSync,
       disconnectSync,
       clef,
