@@ -133,6 +133,8 @@ public class MainActivity extends AppCompatActivity {
     private boolean authInFlight = false;
     /** Évite la boucle slider → champ → slider lors de la synchronisation. */
     private boolean syncingLength = false;
+    /** Date des réglages affichés : s'ils ont changé ailleurs, on les relit. */
+    private String loadedSettingsAt;
 
     /** Carnet relu au retour sur l'écran : sert à préremplir l'identifiant. */
     private Vault vault = new Vault();
@@ -187,6 +189,13 @@ public class MainActivity extends AppCompatActivity {
         refreshAutofillStatus();
         // Le carnet a pu changer ailleurs (écran du carnet, synchronisation).
         vault = Vault.load(this);
+        // Les réglages ont pu arriver d'un autre appareil pendant une
+        // synchronisation : les relire, sans toucher à ce qui n'a pas bougé.
+        if (loadedSettingsAt != null
+                && !loadedSettingsAt.equals(preferences.getSettingsUpdatedAt())) {
+            loadDefaultSettings();
+            regenerate();
+        }
         prefillLogin();
         // Le pendant de onPause() est onResume(), pas onStart() : une activité
         // qui ne fait que recouvrir la nôtre (le code PIN du déverrouillage,
@@ -249,6 +258,12 @@ public class MainActivity extends AppCompatActivity {
 
     private void loadFromPreferences() {
         keyEditText.setText(preferences.getEncodingKey());
+        loadDefaultSettings();
+    }
+
+    /** Longueur et jeux de caractères, tels que retenus (ou reçus du compte). */
+    private void loadDefaultSettings() {
+        loadedSettingsAt = preferences.getSettingsUpdatedAt();
         int length = clamp(preferences.getLength(), Code.MIN_LENGTH, Code.MAX_LENGTH);
         lengthSlider.setValueFrom(Code.MIN_LENGTH);
         lengthSlider.setValueTo(Code.MAX_LENGTH);

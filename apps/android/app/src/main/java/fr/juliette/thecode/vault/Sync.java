@@ -301,6 +301,58 @@ public final class Sync {
         }
     }
 
+    // ------------------------------------------------------- réglages
+
+    /**
+     * Synchronise les réglages par défaut, après le carnet.
+     *
+     * Tire, garde le plus récent (à égalité, le distant), puis pousse si le
+     * local l'emportait. Un blob indéchiffrable (autre clef maîtresse) ou
+     * illisible est ignoré : ni le local ni le distant ne sont écrasés.
+     *
+     * @return les réglages à appliquer localement (le local s'il gagne)
+     */
+    @NonNull
+    public DefaultSettings syncSettings(@NonNull DefaultSettings local, @NonNull String masterKey,
+                                        @NonNull Credentials creds) throws SyncException {
+        SecretKey key;
+        try {
+            key = Transfer.deriveKey(masterKey);
+        } catch (GeneralSecurityException e) {
+            throw new SyncException("Clef de transfert indérivable : " + e.getMessage());
+        }
+
+        String url = creds.endpoint + "/v1/settings";
+        // 204 : corps vide, donc objet vide, donc aucun réglage distant.
+        JSONObject pulled = call(url, "GET", null, creds.accessToken);
+
+        DefaultSettings remote = null;
+        if (pulled.has("blob")) {
+            try {
+                byte[] plain = Transfer.openBytes(key,
+                        Base64Url.decode(pulled.getString("nonce")),
+                        Base64Url.decode(pulled.getString("blob")));
+                remote = DefaultSettings.fromJson(
+                        new JSONObject(new String(plain, StandardCharsets.UTF_8)));
+            } catch (GeneralSecurityException | JSONException | IllegalArgumentException e) {
+                return local;
+            }
+        }
+
+        DefaultSettings winner = remote == null ? local : DefaultSettings.newest(local, remote);
+        if (winner == local) {
+            try {
+                Transfer.Sealed sealed = Transfer.seal(key, local.toJson().toString());
+                call(url, "PUT", new JSONObject()
+                        .put("nonce", Base64Url.encode(sealed.nonce))
+                        .put("blob", Base64Url.encode(sealed.blob)), creds.accessToken);
+            } catch (GeneralSecurityException | JSONException e) {
+                throw new SyncException("Chiffrement des réglages impossible : " + e.getMessage());
+            }
+        }
+        return winner;
+    }
+
     private Vault decodeRemote(JSONObject pulled, String fallbackUpdatedAt, SecretKey key)
             throws SyncException {
         Vault remote = new Vault();

@@ -12,7 +12,9 @@ import androidx.security.crypto.MasterKey;
 import java.security.GeneralSecurityException;
 import java.io.IOException;
 
+import fr.juliette.thecode.vault.DefaultSettings;
 import fr.juliette.thecode.vault.Sync;
+import fr.juliette.thecode.vault.Vault;
 import fr.juliette.thecode.vault.VaultLock;
 
 /**
@@ -29,6 +31,7 @@ public final class Preferences {
     public static final String KEY_MAJ = "majState";
     public static final String KEY_SYM = "symState";
     public static final String KEY_CHI = "chiState";
+    public static final String KEY_SETTINGS_UPDATED_AT = "settingsUpdatedAt";
     public static final String KEY_DARK_MODE = "darkMode";
     public static final String KEY_LAST_UNLOCK_AT = "lastUnlockAt";
     public static final String KEY_V2_NOTICE_SEEN = "v2NoticeSeen";
@@ -108,20 +111,54 @@ public final class Preferences {
         securePrefs.edit().putString(KEY_ENCODING_KEY, v).apply();
     }
 
+    /*
+     * Réglages par défaut. Chaque vraie modification date les réglages
+     * ({@link #KEY_SETTINGS_UPDATED_AT}) : c'est ce qui départage deux
+     * appareils. Réécrire la même valeur (rechargement de l'écran) ne date rien.
+     */
+
     public int getLength() { return prefs.getInt(KEY_LENGTH, Code.DEFAULT_LENGTH); }
-    public void setLength(int v) { prefs.edit().putInt(KEY_LENGTH, v).apply(); }
+    public void setLength(int v) { if (v != getLength()) touch().putInt(KEY_LENGTH, v).apply(); }
 
     public boolean getMinState() { return prefs.getBoolean(KEY_MIN, true); }
-    public void setMinState(boolean v) { prefs.edit().putBoolean(KEY_MIN, v).apply(); }
+    public void setMinState(boolean v) { if (v != getMinState()) touch().putBoolean(KEY_MIN, v).apply(); }
 
     public boolean getMajState() { return prefs.getBoolean(KEY_MAJ, true); }
-    public void setMajState(boolean v) { prefs.edit().putBoolean(KEY_MAJ, v).apply(); }
+    public void setMajState(boolean v) { if (v != getMajState()) touch().putBoolean(KEY_MAJ, v).apply(); }
 
     public boolean getSymState() { return prefs.getBoolean(KEY_SYM, true); }
-    public void setSymState(boolean v) { prefs.edit().putBoolean(KEY_SYM, v).apply(); }
+    public void setSymState(boolean v) { if (v != getSymState()) touch().putBoolean(KEY_SYM, v).apply(); }
 
     public boolean getChiState() { return prefs.getBoolean(KEY_CHI, true); }
-    public void setChiState(boolean v) { prefs.edit().putBoolean(KEY_CHI, v).apply(); }
+    public void setChiState(boolean v) { if (v != getChiState()) touch().putBoolean(KEY_CHI, v).apply(); }
+
+    /** Date de la dernière modification locale ; {@link DefaultSettings#NEVER} sinon. */
+    @NonNull
+    public String getSettingsUpdatedAt() {
+        return prefs.getString(KEY_SETTINGS_UPDATED_AT, DefaultSettings.NEVER);
+    }
+
+    private SharedPreferences.Editor touch() {
+        return prefs.edit().putString(KEY_SETTINGS_UPDATED_AT, Vault.nowIso());
+    }
+
+    @NonNull
+    public DefaultSettings getDefaultSettings() {
+        return new DefaultSettings(getLength(), getMinState(), getMajState(), getSymState(),
+                getChiState(), getSettingsUpdatedAt());
+    }
+
+    /** Applique des réglages venus d'ailleurs, en gardant leur date. */
+    public void applyDefaultSettings(@NonNull DefaultSettings s) {
+        prefs.edit()
+                .putInt(KEY_LENGTH, s.length)
+                .putBoolean(KEY_MIN, s.lower)
+                .putBoolean(KEY_MAJ, s.upper)
+                .putBoolean(KEY_SYM, s.symbols)
+                .putBoolean(KEY_CHI, s.numbers)
+                .putString(KEY_SETTINGS_UPDATED_AT, s.updatedAt)
+                .apply();
+    }
 
     /** Vrai une fois l'annonce du passage a la v2 lue et fermee. */
     public boolean getV2NoticeSeen() { return prefs.getBoolean(KEY_V2_NOTICE_SEEN, false); }

@@ -28,6 +28,10 @@ final class FakeVaultServer implements Sync.Http {
     String validAccessToken = "access-1";
     String nextAccessToken = "access-2";
     int refreshCount = 0;
+    /** Réglages du compte, {@code {nonce, blob}} ; null tant qu'aucun n'est poussé. */
+    JSONObject settings = null;
+    int settingsPuts = 0;
+
     /** Plafond rendu au pull ; null pour un serveur qui ne le dit pas. */
     Integer maxEntries = null;
 
@@ -51,6 +55,9 @@ final class FakeVaultServer implements Sync.Http {
 
             if (!validAccessToken.equals(bearer)) {
                 return json(401, new JSONObject().put("detail", "Jeton expiré"));
+            }
+            if (url.endsWith("/v1/settings")) {
+                return "GET".equals(method) ? pullSettings() : putSettings(new JSONObject(body));
             }
             return "GET".equals(method) ? pull() : push(new JSONObject(body));
         } catch (JSONException e) {
@@ -87,6 +94,20 @@ final class FakeVaultServer implements Sync.Http {
         }
         return json(200, new JSONObject().put("revision", revision)
                 .put("accepted", entries.length()));
+    }
+
+    private Sync.Response pullSettings() {
+        // 204 : le compte n'a pas encore de réglages.
+        return settings == null ? new Sync.Response(204, "") : json(200, settings);
+    }
+
+    private Sync.Response putSettings(JSONObject payload) throws JSONException {
+        // Le serveur ne lit rien : il garde le blob tel quel.
+        settings = new JSONObject()
+                .put("nonce", payload.getString("nonce"))
+                .put("blob", payload.getString("blob"));
+        settingsPuts++;
+        return new Sync.Response(204, "");
     }
 
     private static Sync.Response json(int status, JSONObject body) {

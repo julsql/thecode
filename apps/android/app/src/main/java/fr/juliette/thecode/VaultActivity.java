@@ -3,6 +3,7 @@ package fr.juliette.thecode;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -26,6 +27,7 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputLayout;
 
+import fr.juliette.thecode.vault.DefaultSettings;
 import fr.juliette.thecode.vault.SiteResolution;
 import fr.juliette.thecode.vault.Sync;
 import fr.juliette.thecode.vault.Vault;
@@ -523,6 +525,7 @@ public class VaultActivity extends AppCompatActivity {
                 // Un abonnement pris entre-temps doit se voir sans se
                 // reconnecter ; un abonnement arrêté aussi.
                 Sync.Credentials withPlan = sync.accountPlan(result.credentials);
+                syncDefaultSettings(sync, masterKey, withPlan);
                 // Écriture disque ici et non sur le fil principal : la
                 // synchronisation peut rapporter des centaines d'entrées.
                 result.vault.save(this);
@@ -558,6 +561,21 @@ public class VaultActivity extends AppCompatActivity {
                 main.post(() -> toast(message));
             }
         });
+    }
+
+    /**
+     * Réglages par défaut, après le carnet. Un échec ici n'annule pas la
+     * synchronisation du carnet, déjà faite : on retentera la prochaine fois.
+     * L'écran de génération les relit à son retour au premier plan.
+     */
+    private void syncDefaultSettings(Sync sync, String masterKey, Sync.Credentials credentials) {
+        DefaultSettings local = preferences.getDefaultSettings();
+        try {
+            DefaultSettings kept = sync.syncSettings(local, masterKey, credentials);
+            if (kept != local) preferences.applyDefaultSettings(kept);
+        } catch (Sync.SyncException e) {
+            Log.w("TheCode", "Réglages non synchronisés : " + e.getMessage());
+        }
     }
 
     private void unlink() {
