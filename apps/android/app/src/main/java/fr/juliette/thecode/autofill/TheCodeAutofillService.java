@@ -248,7 +248,12 @@ public class TheCodeAutofillService extends AutofillService {
     private Dataset buildDataset(FillRequest request, String domain, SiteResolution resolution,
                                  int index, AutofillId[] passwordIds,
                                  @Nullable AutofillId usernameId) {
-        RemoteViews presentation = buildPresentation(resolution.label);
+        // Sans identifiant, le mot de passe est calculé (et sera enregistré)
+        // sans : le saisir après le changerait. On le dit dans la suggestion.
+        String label = resolution.login.isEmpty()
+                ? resolution.label + " · " + getString(R.string.autofill_no_login)
+                : resolution.label;
+        RemoteViews presentation = buildPresentation(label);
 
         Intent authIntent = new Intent(this, AutofillAuthActivity.class);
         authIntent.putExtra(AutofillAuthActivity.EXTRA_DOMAIN, domain);
@@ -294,7 +299,7 @@ public class TheCodeAutofillService extends AutofillService {
             InlineSuggestionsRequest inlineRequest = request.getInlineSuggestionsRequest();
             if (inlineRequest != null) {
                 InlinePresentation inline =
-                        buildInlinePresentation(resolution.label, inlineRequest);
+                        buildInlinePresentation(label, inlineRequest);
                 if (inline != null) {
                     datasetBuilder.setInlinePresentation(inline);
                 }

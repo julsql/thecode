@@ -195,4 +195,5 @@
     <string name="vault_delete_body">The entry leaves this vault and, at the next sync, your other devices. The password itself does not change on the site.</string>
     <string name="vault_delete_done">"%1$s" deleted.</string>
     <string name="vault_same_key_hint">If you don\'t see all your passwords, check that you are using the same key.</string>
+    <string name="autofill_no_login">no username: type it first if the site uses one</string>
 </resources>
