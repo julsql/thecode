@@ -27,11 +27,42 @@ struct AutofillLoginTests {
             charset: charset)
     }
 
-    @Test("Sans identifiant saisi, rien à remplir")
-    func requiresALogin() {
-        #expect(resolve("", vault: Vault()) == nil)
-        #expect(resolve("   ", vault: Vault(entries: [entry(login: "moi")])) == nil)
+    @Test("Sans domaine, rien à remplir")
+    func requiresADomain() {
         #expect(resolve("moi", vault: Vault(), domain: "") == nil)
+        #expect(resolve("", vault: Vault(), domain: " ") == nil)
+    }
+
+    @Test("Sans identifiant, site inconnu : nouveau compte v2 sans identifiant")
+    func emptyLoginDerivesWithoutLogin() throws {
+        let fill = try #require(resolve("   ", vault: Vault()))
+
+        #expect(fill.user == "")
+        #expect(fill.isNew)
+        #expect(fill.resolution.login == "")
+        #expect(fill.resolution.v == 2)
+        #expect(fill.resolution.counter == 1)
+        #expect(fill.resolution.length == 24)
+    }
+
+    @Test("Sans identifiant : l'entrée sans identifiant du site")
+    func emptyLoginPicksTheLoginlessEntry() throws {
+        let loginless = entry()
+        let fill = try #require(
+            resolve("", vault: Vault(entries: [entry(login: "alice"), loginless])))
+
+        #expect(fill.resolution.entryId == loginless.id)
+        #expect(fill.user == "")
+        #expect(!fill.isNew)
+    }
+
+    @Test("Sans identifiant, seuls des comptes nommés : nouveau compte sans identifiant")
+    func emptyLoginBesideNamedAccountsIsNew() throws {
+        let fill = try #require(resolve("", vault: Vault(entries: [entry(login: "alice")])))
+
+        #expect(fill.isNew)
+        #expect(fill.user == "")
+        #expect(fill.resolution.login == "")
     }
 
     @Test("Site inconnu : nouveau compte v2 dérivé avec l'identifiant")
@@ -122,37 +153,42 @@ struct AutofillLoginTests {
         #expect(AutofillLogin.quickFill(SiteResolution(entry: entry())) == nil)
     }
 
-    @Test("Jamais d'identifiant vide rendu au système")
-    func neverAnEmptyUser() {
-        let vaults = [
-            Vault(), Vault(entries: [entry()]), Vault(entries: [entry(login: "a")]),
-            Vault(entries: [entry(), entry(login: "a")]),
-        ]
-        for vault in vaults {
-            for typed in ["", " ", "a", "b"] {
-                if let fill = resolve(typed, vault: vault) {
-                    #expect(!fill.user.isEmpty)
-                }
-            }
-        }
-    }
-
-    @Test("Le compte enregistré ensuite redonne le mot de passe rempli")
-    func savedAccountGivesTheSamePassword() throws {
-        let fill = try #require(resolve("moi", vault: Vault()))
+    @Test(
+        "Le compte enregistré ensuite redonne le mot de passe rempli",
+        arguments: ["moi", ""])
+    func savedAccountGivesTheSamePassword(login: String) throws {
+        let fill = try #require(resolve(login, vault: Vault()))
         let master = try CoreV2.deriveMasterKey("clef")
         let filled = PasswordUtils().generatePassword(
             for: fill.resolution, masterKey: "clef", master: master, forcing: 2
         ).code
 
         var vault = Vault()
-        vault.upsert(site: "site.fr", login: fill.user, length: 24, charset: charset)
-        let saved = try #require(resolve("moi", vault: vault))
+        let stored = vault.upsert(site: "site.fr", login: fill.user, length: 24, charset: charset)
+        // Sans identifiant, l'entrée est enregistrée sans identifiant.
+        #expect(stored.login == (login.isEmpty ? nil : login))
+
+        let saved = try #require(resolve(login, vault: vault))
         let again = PasswordUtils().generatePassword(
             for: saved.resolution, masterKey: "clef", master: master, forcing: 2
         ).code
 
         #expect(!saved.isNew)
+        #expect(saved.resolution.entryId == stored.id)
         #expect(filled == again)
+    }
+
+    @Test("Ajouter l'identifiant après coup changerait le mot de passe")
+    func loginChangesThePassword() throws {
+        let master = try CoreV2.deriveMasterKey("clef")
+        let without = try #require(resolve("", vault: Vault()))
+        let with = try #require(resolve("moi", vault: Vault()))
+        let generate = { (fill: AutofillLogin.Fill) in
+            PasswordUtils().generatePassword(
+                for: fill.resolution, masterKey: "clef", master: master, forcing: 2
+            ).code
+        }
+
+        #expect(generate(without) != generate(with))
     }
 }

@@ -12,9 +12,9 @@
 //      passe ne doit pas changer parce qu'on remplit enfin l'identifiant) ;
 //    - sinon, c'est un nouveau compte, dérivé en v2 avec cet identifiant.
 //
-//  Jamais d'identifiant vide rendu au système : c'est la cause la plus
-//  probable du plantage de Safari (macOS) sur un formulaire sans champ
-//  identifiant, et un compte sans identifiant ne se retrouve pas ensuite.
+//  L'identifiant est facultatif : sans lui, on remplit (et enregistre) le
+//  compte sans identifiant du site, dérivé en v2 avec un identifiant vide.
+//  L'ajouter plus tard changerait le mot de passe : la vue le dit.
 //
 //  Logique pure, sans AuthenticationServices : vérifiable en test.
 //
@@ -24,7 +24,7 @@ import Foundation
 public enum AutofillLogin {
 
     /// Ce qu'il faut pour remplir : le compte à dériver et l'identifiant à
-    /// rendre au système, jamais vide.
+    /// rendre au système (vide pour un compte sans identifiant).
     public struct Fill: Equatable {
         public let resolution: SiteResolution
         public let user: String
@@ -40,8 +40,9 @@ public enum AutofillLogin {
 
     /// Remplissage en un geste d'une entrée connue.
     ///
-    /// `nil` quand l'entrée n'a pas d'identifiant : il faut alors le saisir,
-    /// faute de quoi le système recevrait un identifiant vide.
+    /// `nil` quand l'entrée n'a pas d'identifiant : la vue la retient pour
+    /// laisser saisir, si on le souhaite, l'identifiant à rendre au formulaire
+    /// (le mot de passe, lui, reste celui de l'entrée).
     public static func quickFill(_ account: SiteResolution) -> Fill? {
         let user = normalize(account.login)
         guard !user.isEmpty else { return nil }
@@ -53,14 +54,15 @@ public enum AutofillLogin {
     /// - Parameter pinned: entrée choisie dans la liste (une entrée sans
     ///   identifiant) ; elle l'emporte, l'identifiant saisi ne sert alors qu'à
     ///   être rendu au formulaire.
-    /// - Returns: `nil` sans identifiant, ou sans domaine.
+    /// - Returns: `nil` sans domaine. Un identifiant vide désigne le compte
+    ///   sans identifiant du site (existant, ou nouveau).
     public static func resolve(
         login typed: String, domain: String, vault: Vault, pinned: String? = nil,
         length: Int, charset: Charset
     ) -> Fill? {
         let login = normalize(typed)
         let site = domain.trimmingCharacters(in: .whitespaces).lowercased()
-        guard !login.isEmpty, !site.isEmpty else { return nil }
+        guard !site.isEmpty else { return nil }
 
         let entries = vault.findAll(domain: site)
 
@@ -76,7 +78,8 @@ public enum AutofillLogin {
 
         // Nouveau compte : l'entrée qu'on enregistrerait, pour dériver
         // exactement comme elle le fera ensuite.
-        var entry = VaultEntry(siteKey: site, domains: [site], login: login)
+        var entry = VaultEntry(
+            siteKey: site, domains: [site], login: login.isEmpty ? nil : login)
         entry.length = length
         entry.charset = charset
         return Fill(resolution: SiteResolution(entry: entry), user: login, isNew: true)

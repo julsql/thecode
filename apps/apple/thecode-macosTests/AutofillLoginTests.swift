@@ -3,8 +3,8 @@
 //  thecode-macosTests
 //
 //  L'extension AutoFill macOS compile la même résolution d'identifiant : on
-//  vérifie ici la règle qui évite de rendre un identifiant vide à Safari. Le
-//  détail des cas est couvert par thecode-iosTests.
+//  vérifie ici l'identifiant facultatif. Le détail des cas est couvert par
+//  thecode-iosTests.
 //
 
 import Foundation
@@ -19,8 +19,20 @@ struct AutofillLoginTests {
             login: login, domain: "julsql.fr", vault: vault, length: 20, charset: Charset())
     }
 
-    @Test func noLoginNoFill() {
-        #expect(resolve("", vault: Vault()) == nil)
+    @Test func noLoginFillsTheLoginlessAccount() throws {
+        let fill = try #require(resolve("", vault: Vault()))
+        #expect(fill.user == "")
+        #expect(fill.isNew)
+        #expect(fill.resolution.login == "")
+        #expect(fill.resolution.v == 2)
+
+        let only = VaultEntry(siteKey: "julsql.fr")
+        let known = try #require(resolve(" ", vault: Vault(entries: [only])))
+        #expect(known.resolution.entryId == only.id)
+        #expect(!known.isNew)
+    }
+
+    @Test func loginlessEntryIsNotAOneGestureFill() {
         #expect(AutofillLogin.quickFill(SiteResolution(entry: VaultEntry(siteKey: "julsql.fr"))) == nil)
     }
 
