@@ -198,6 +198,10 @@ class AppleRequest(BaseModel):
     #: SHA-256 (hexadécimal) et l'a recopiée dans le jeton ; le serveur hache
     #: celui-ci et compare. Facultatif.
     nonce: Annotated[str, Field(max_length=256)] = ""
+    #: Le code d'autorisation rendu avec le jeton, à usage unique et valable
+    #: cinq minutes. Facultatif : échangé contre un jeton de renouvellement,
+    #: gardé pour être révoqué à la suppression du compte.
+    authorization_code: Annotated[str, Field(max_length=4096)] = ""
     device_label: Annotated[str, Field(max_length=120)] = ""
     client: SessionClient = "app"
     invite_code: Annotated[str, Field(max_length=128)] = ""

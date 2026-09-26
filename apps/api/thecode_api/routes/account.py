@@ -16,6 +16,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session as DbSession
 
 from .. import codes as code_rules
+from ..apple import revoke_account_tokens
 from ..auth import current_account, current_session_id, hash_password, verify_password
 from ..config import get_settings
 from ..db import get_db
@@ -314,6 +315,9 @@ def delete_account(
                 "Réessayez dans un moment.",
             ) from None
 
+    # Exigé par Apple (TN3194) ; au mieux, jamais bloquant.
+    revoke_account_tokens(get_settings(), account)
+
     # Les entrées, les réglages par défaut, les sessions, les liens et les
     # codes consommés partent avec le compte : les clefs étrangères sont en
     # ON DELETE CASCADE.
@@ -369,5 +373,6 @@ def unlink_apple(
             "fermerait la seule porte d'entrée de ce compte.",
         )
 
+    revoke_account_tokens(get_settings(), account)
     account.apple_sub = ""
     db.commit()

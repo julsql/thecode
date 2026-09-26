@@ -123,6 +123,14 @@ class Settings(BaseSettings):
     #:
     #: Sans aucun des deux, Apple est désactivé et le service refuse ses jetons.
     apple_web_client_id: str = ""
+    #: Révocation des jetons Apple (exigée par Apple à la suppression du
+    #: compte). Clef « Sign in with Apple » (.p8) créée dans le portail
+    #: développeur : identifiant d'équipe, identifiant de la clef, et contenu
+    #: PEM de la clef. Sans les trois, rien n'est échangé ni révoqué — c'est
+    #: journalisé, et jamais bloquant.
+    apple_team_id: str = ""
+    apple_key_id: str = ""
+    apple_private_key: str = ""
 
     #: Vérification d'adresse. Par défaut la vérification est proposée mais pas
     #: exigée : tant que l'envoi d'e-mail n'est pas branché, l'exiger
@@ -205,6 +213,11 @@ class Settings(BaseSettings):
     @property
     def apple_enabled(self) -> bool:
         return bool(self.apple_audiences)
+
+    @property
+    def apple_revocation_enabled(self) -> bool:
+        """Peut-on signer un `client_secret`, donc échanger et révoquer ?"""
+        return bool(self.apple_team_id and self.apple_key_id and self.apple_private_key)
 
     @property
     def billing_enabled(self) -> bool:

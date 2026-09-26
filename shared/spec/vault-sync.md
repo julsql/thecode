@@ -354,6 +354,7 @@ offrent Google) et par le site. Même contrat que Google :
 POST /v1/auth/apple
 { "identity_token": "<jeton d'identité Apple>",
   "nonce": "<nonce BRUT, facultatif>",
+  "authorization_code": "<code d'autorisation Apple, facultatif>",
   "device_label": "iPhone de Julie",
   "client": "app",
   "invite_code": "",
@@ -408,6 +409,33 @@ rapprocher en changeant d'adresse sur le site.
 
 `accounts.apple_sub` est unique parmi les valeurs non vides (index partiel,
 migration `e5b9c3d7a214`).
+
+**Révocation des jetons** (exigée par Apple, TN3194). Le client joint
+`authorization_code` : `ASAuthorizationAppleIDCredential.authorizationCode`
+décodé en UTF-8 (iOS/macOS), `authorization.code` d'Apple JS (site). Quand la
+clef est configurée, le serveur l'échange à
+`https://appleid.apple.com/auth/token` (`grant_type=authorization_code`) au nom
+du client qui a émis le jeton — son audience : bundle id ou Services ID — et
+garde le `refresh_token` rendu (`accounts.apple_refresh_token`, avec
+`accounts.apple_client_id`, migration `f6c1d2e8b935`). Stocké en clair : le
+service n'a pas de chiffrement au repos, et ce jeton ne donne accès qu'à
+l'identité Apple pour notre application.
+
+À `DELETE /v1/account` et `DELETE /v1/account/apple`, un jeton gardé est
+révoqué (`https://appleid.apple.com/auth/revoke`,
+`token_type_hint=refresh_token`, même `client_id`) puis effacé.
+
+Les deux appels s'authentifient par un `client_secret` : JWT ES256, en-tête
+`kid` = identifiant de la clef, `{iss: Team ID, iat, exp (≤ 6 mois), aud:
+"https://appleid.apple.com", sub: client_id}`, signé avec la clef « Sign in
+with Apple » (.p8) :
+
+- `THECODE_APPLE_TEAM_ID`, `THECODE_APPLE_KEY_ID`,
+  `THECODE_APPLE_PRIVATE_KEY` (contenu PEM ; `\n` littéraux acceptés).
+
+Tout est **au mieux** : sans ces trois valeurs, le code est ignoré et la
+révocation sautée (journalisé) ; un échec d'Apple ne bloque jamais ni la
+connexion, ni la suppression, ni la déliaison.
 
 ## Implémentations
 
