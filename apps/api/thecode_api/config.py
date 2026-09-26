@@ -70,6 +70,13 @@ class Settings(BaseSettings):
     #: L'offre payante n'est pas illimitée mais large : sans borne, un compte
     #: compromis pourrait ouvrir des sessions sans fin.
     pro_max_devices: int = 10
+    #: Sessions du site ouvertes en même temps, quelle que soit l'offre.
+    #:
+    #: Le site ne compte pas dans le plafond d'appareils — c'est là qu'on en
+    #: déconnecte un. Sans borne à part, se déclarer « site » suffirait à
+    #: ouvrir des sessions sans fin. Au-delà, la plus ancienne session du site
+    #: est déconnectée : jamais de refus, le site doit toujours s'ouvrir.
+    web_max_sessions: int = 5
 
     #: Prix affiché par le site. Stripe reste la source de vérité de ce qui est
     #: facturé ; ces deux valeurs ne servent qu'à l'affichage, pour éviter un

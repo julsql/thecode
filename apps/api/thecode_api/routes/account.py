@@ -64,6 +64,7 @@ def devices(
         DeviceResponse(
             id=row.id,
             label=row.label or "appareil sans nom",
+            client=row.client,
             created_at=row.created_at,
             expires_at=row.expires_at,
         )
@@ -236,6 +237,7 @@ def export_account(
         "devices": [
             {
                 "label": row.label,
+                "client": row.client,
                 "created_at": row.created_at,
                 "expires_at": row.expires_at,
                 "revoked": row.revoked,

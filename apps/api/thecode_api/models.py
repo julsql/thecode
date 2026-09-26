@@ -167,6 +167,11 @@ class Session(Base):
     )
     token_hash: Mapped[str] = mapped_column(String(128), unique=True, index=True)
     label: Mapped[str] = mapped_column(String(120), default="")
+    #: ``app`` pour une application, une extension ou la CLI ; ``web`` pour le
+    #: site. Le site est l'endroit où l'on gère ses appareils : une session du
+    #: site ne compte pas dans le plafond d'appareils, sinon atteindre le
+    #: plafond fermerait la seule porte qui permet d'en libérer un.
+    client: Mapped[str] = mapped_column(String(8), default="app", server_default="app")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     revoked: Mapped[bool] = mapped_column(Boolean, default=False)

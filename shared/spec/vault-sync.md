@@ -149,6 +149,40 @@ l'abonnement que dans le second cas. Au plafond d'appareils de l'offre complète
 rien ne se débloque au-dessus : la connexion répond **403**. Le carnet local,
 lui, n'est jamais bridé : les entrées au-delà du plafond restent sur l'appareil.
 
+### Sessions du site
+
+Le site est l'endroit où l'on déconnecte un appareil — c'est là que renvoie le
+message du 402/403. Le plafond ne doit donc jamais lui fermer la porte.
+
+Le site s'annonce à l'ouverture de session : `"client": "web"` dans
+`POST /v1/auth/login`, `/register` et `/google`. Tout autre client envoie
+`"app"` ou n'envoie rien (`app` par défaut) ; une autre valeur répond 422. La
+nature de la session est stockée (`sessions.client`) et conservée par
+`/refresh`. La session ouverte par `POST /v1/auth/password/reset` est une
+session du site, puisque le lien y mène. On ne se fie pas à `device_label` :
+c'est un libellé libre, affiché, pas un contrat.
+
+Une session du site :
+
+- ne compte pas dans « appareils connectés » (`device_count` de
+  `/v1/auth/me`) ;
+- n'est jamais refusée pour cause de plafond d'appareils — ni 402, ni 403 ;
+- apparaît dans `GET /v1/account/devices` avec `"client": "web"`, et se
+  déconnecte comme les autres.
+
+Pour que « web » ne devienne pas un contournement illimité, les sessions du
+site sont bornées à part : au plus `web_max_sessions` (5 par défaut, quelle que
+soit l'offre) sessions vivantes par compte. Au-delà, la **plus ancienne**
+session du site est déconnectée — jamais de refus : le site doit toujours
+s'ouvrir.
+
+Risque résiduel, assumé : rien n'empêche un client natif de se dire « web ».
+Il obtient alors au plus `web_max_sessions` sessions de plus que son offre, et
+chaque nouvelle en chasse une ancienne — ce qui rend le partage d'un compte
+entre plus de personnes pénible plutôt que gratuit. Le site synchronise le
+carnet lui aussi : restreindre ce qu'une session web peut faire casserait le
+site sans rien empêcher d'autre.
+
 ### Synchronisation partielle
 
 `GET /v1/vault` rend `max_entries`, le plafond du compte. Le client ne pousse
@@ -243,12 +277,13 @@ POST /v1/auth/google
 { "id_token": "<jeton d'identité Google>",
   "nonce": "<facultatif>",
   "device_label": "iPhone de Julie",
+  "client": "app",
   "invite_code": "",
   "lang": "fr" }
 
 200 → { "access_token", "refresh_token", "token_type", "expires_in" }
 401 → jeton refusé (« Connexion Google refusée. », sans détail)
-402 / 403 → plafond d'appareils atteint ; 403 aussi pour une inscription fermée
+402 / 403 → plafond d'appareils atteint (jamais pour "client": "web") ; 403 aussi pour une inscription fermée
             ou un code exigé et absent
 ```
 

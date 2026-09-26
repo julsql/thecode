@@ -9,7 +9,7 @@ from __future__ import annotations
 import base64
 import uuid
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
@@ -27,6 +27,13 @@ def b64decode(value: str) -> bytes:
     return base64.b64decode(standard + "=" * (-len(standard) % 4), validate=True)
 
 
+#: Qui ouvre la session. ``web`` : le site, où l'on gère son compte et ses
+#: appareils — ses sessions ne comptent pas dans le plafond d'appareils, et
+#: sont bornées à part (`web_max_sessions`). ``app`` pour tout le reste, et par
+#: défaut : un client qui ne dit rien est un appareil.
+SessionClient = Literal["app", "web"]
+
+
 def b64encode(raw: bytes) -> str:
     return base64.urlsafe_b64encode(raw).decode().rstrip("=")
 
@@ -40,6 +47,7 @@ class RegisterRequest(BaseModel):
     #: tourne en mode invitation, ou quand les places gratuites sont prises.
     invite_code: Annotated[str, Field(max_length=128)] = ""
     device_label: Annotated[str, Field(max_length=120)] = ""
+    client: SessionClient = "app"
     #: Langue du lien de vérification : il mène au site, qui est traduit.
     lang: Annotated[str, Field(max_length=5)] = "en"
 
@@ -48,6 +56,7 @@ class LoginRequest(BaseModel):
     email: EmailStr
     password: Annotated[str, Field(min_length=1, max_length=256)]
     device_label: Annotated[str, Field(max_length=120)] = ""
+    client: SessionClient = "app"
 
 
 class RefreshRequest(BaseModel):
@@ -174,6 +183,7 @@ class GoogleRequest(BaseModel):
     #: fourni, le jeton doit porter le même.
     nonce: Annotated[str, Field(max_length=256)] = ""
     device_label: Annotated[str, Field(max_length=120)] = ""
+    client: SessionClient = "app"
     invite_code: Annotated[str, Field(max_length=128)] = ""
     lang: Annotated[str, Field(max_length=5)] = "en"
 
@@ -259,6 +269,8 @@ class DeviceResponse(BaseModel):
 
     id: uuid.UUID
     label: str
+    #: ``web`` : une session du site, hors du plafond d'appareils.
+    client: str = "app"
     created_at: datetime
     expires_at: datetime
 

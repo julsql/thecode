@@ -23,6 +23,9 @@ from .models import Account, Session, VaultEntry
 FREE = "free"
 PRO = "pro"
 
+#: Session ouverte par le site, hors du plafond d'appareils.
+WEB = "web"
+
 #: Statuts Stripe qui donnent encore droit à l'offre payante.
 #:
 #: `past_due` en fait partie : Stripe relance le paiement pendant plusieurs
@@ -86,7 +89,9 @@ def active_device_count(db: DbSession, account: Account) -> int:
     """Appareils connectés : une session vivante, c'est un appareil.
 
     Une session révoquée ou expirée ne compte pas, sinon se déconnecter ne
-    libèrerait jamais de place et le plafond finirait par tout bloquer.
+    libèrerait jamais de place et le plafond finirait par tout bloquer. Une
+    session du site non plus : c'est là qu'on déconnecte un appareil, et le
+    plafond ne doit jamais en fermer la porte.
     """
     return (
         db.scalar(
@@ -96,7 +101,30 @@ def active_device_count(db: DbSession, account: Account) -> int:
                 Session.account_id == account.id,
                 Session.revoked.is_(False),
                 Session.expires_at > datetime.now(UTC),
+                Session.client != WEB,
             )
         )
         or 0
     )
+
+
+def trim_web_sessions(db: DbSession, account: Account, settings: Settings) -> None:
+    """Garde au plus `web_max_sessions` sessions du site, les plus récentes.
+
+    Les sessions du site échappent au plafond d'appareils ; sans cette borne,
+    un client qui se dirait « site » ouvrirait des sessions sans fin. Au-delà,
+    la plus ancienne est déconnectée plutôt que la nouvelle refusée : le site
+    doit toujours s'ouvrir, c'est là qu'on règle un plafond atteint.
+    """
+    live = db.scalars(
+        select(Session)
+        .where(
+            Session.account_id == account.id,
+            Session.revoked.is_(False),
+            Session.expires_at > datetime.now(UTC),
+            Session.client == WEB,
+        )
+        .order_by(Session.created_at.desc(), Session.id)
+    ).all()
+    for session in live[max(settings.web_max_sessions, 1) :]:
+        session.revoked = True
