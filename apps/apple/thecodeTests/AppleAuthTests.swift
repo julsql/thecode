@@ -55,7 +55,19 @@ struct AppleAuthTests {
     @Test func apiBodyOmitsEmptyDeviceLabel() {
         let body = AppleAuth.apiBody(identityToken: "jwt", rawNonce: "raw", lang: "en")
         #expect(body["device_label"] == nil)
+        #expect(body["authorization_code"] == nil)
         #expect(body.count == 3)
+    }
+
+    @Test func apiBodySendsAuthorizationCode() {
+        let body = AppleAuth.apiBody(
+            identityToken: "jwt", rawNonce: "raw", lang: "en", authorizationCode: "c-1")
+        #expect(body["authorization_code"] as? String == "c-1")
+    }
+
+    @Test func authorizationCodeIsReadAsUTF8OrEmpty() {
+        #expect(AppleAuth.authorizationCode(from: Data("c.1".utf8)) == "c.1")
+        #expect(AppleAuth.authorizationCode(from: nil) == "")
     }
 
     // MARK: - Activation
@@ -79,7 +91,7 @@ struct AppleAuthTests {
             body: #"{"access_token":"acc","refresh_token":"ref","expires_in":900}"#)
         let creds = try await Sync(transport: transport).appleSignIn(
             endpoint: "https://api.test", identityToken: "jwt", rawNonce: "raw", lang: "fr",
-            deviceLabel: "iPhone")
+            deviceLabel: "iPhone", authorizationCode: "c-1")
 
         #expect(creds == SyncCredentials(
             endpoint: "https://api.test", accessToken: "acc", refreshToken: "ref"))
@@ -90,6 +102,7 @@ struct AppleAuthTests {
         #expect(sent?["nonce"] as? String == "raw")
         #expect(sent?["lang"] as? String == "fr")
         #expect(sent?["device_label"] as? String == "iPhone")
+        #expect(sent?["authorization_code"] as? String == "c-1")
     }
 
     @Test func appleEnabledReadsRegistration() async {

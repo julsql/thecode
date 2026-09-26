@@ -205,16 +205,18 @@ public struct Sync {
     }
 
     /// Connexion (ou création du compte) à partir d'un jeton d'identité Apple
-    /// et du nonce *brut* dont l'empreinte a été confiée à Apple.
+    /// et du nonce *brut* dont l'empreinte a été confiée à Apple. Le code
+    /// d'autorisation, facultatif, sert à l'API à révoquer les jetons Apple
+    /// quand le compte est supprimé.
     public func appleSignIn(
         endpoint: String, identityToken: String, rawNonce: String, lang: String,
-        deviceLabel: String = ""
+        deviceLabel: String = "", authorizationCode: String = ""
     ) async throws -> SyncCredentials {
         let body = try await call(
             "\(endpoint)/v1/auth/apple", method: "POST",
             payload: AppleAuth.apiBody(
                 identityToken: identityToken, rawNonce: rawNonce, lang: lang,
-                deviceLabel: deviceLabel))
+                deviceLabel: deviceLabel, authorizationCode: authorizationCode))
         return try credentials(from: body, endpoint: endpoint)
     }
 

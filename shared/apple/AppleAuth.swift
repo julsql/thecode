@@ -47,14 +47,25 @@ public enum AppleAuth {
         return token
     }
 
+    /// Le code d'autorisation, rendu lui aussi en octets UTF-8. Facultatif :
+    /// vide quand il manque, la connexion n'en dépend pas.
+    public static func authorizationCode(from data: Data?) -> String {
+        guard let data, let code = String(data: data, encoding: .utf8) else { return "" }
+        return code
+    }
+
     /// Corps de POST /v1/auth/apple : le nonce part *brut*, l'API le hache.
+    /// Le code d'autorisation permet à l'API de révoquer les jetons Apple à
+    /// la suppression du compte.
     public static func apiBody(
-        identityToken: String, rawNonce: String, lang: String, deviceLabel: String = ""
+        identityToken: String, rawNonce: String, lang: String, deviceLabel: String = "",
+        authorizationCode: String = ""
     ) -> [String: Any] {
         var body: [String: Any] = [
             "identity_token": identityToken, "nonce": rawNonce, "lang": lang,
         ]
         if !deviceLabel.isEmpty { body["device_label"] = deviceLabel }
+        if !authorizationCode.isEmpty { body["authorization_code"] = authorizationCode }
         return body
     }
 

@@ -581,7 +581,7 @@ struct VaultScreen: View {
     /// Même suite que `signIn`, avec le jeton rendu par la feuille d'Apple.
     /// Fermée sans rien choisir, on revient au formulaire, sans message.
     private func signInWithApple(
-        _ result: Result<(identityToken: String, rawNonce: String), Error>
+        _ result: Result<AppleSignInResult, Error>
     ) {
         let endpoint = self.endpoint.trimmingCharacters(in: .whitespaces)
         switch result {
@@ -596,7 +596,8 @@ struct VaultScreen: View {
                 try await Sync().appleSignIn(
                     endpoint: endpoint, identityToken: signIn.identityToken,
                     rawNonce: signIn.rawNonce, lang: L10n.t("fr", "en"),
-                    deviceLabel: Host.current().localizedName ?? "Mac")
+                    deviceLabel: Host.current().localizedName ?? "Mac",
+                    authorizationCode: signIn.authorizationCode)
             }
         }
     }

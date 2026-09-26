@@ -15,12 +15,21 @@
 import AuthenticationServices
 import SwiftUI
 
-/// Le bouton « Se connecter avec Apple », qui rend le jeton d'identité et le
-/// nonce brut à envoyer à l'API. Une annulation ne rend rien.
+/// Ce que la feuille d'Apple rend, à envoyer tel quel à l'API.
+struct AppleSignInResult {
+    let identityToken: String
+    let rawNonce: String
+    /// Vide quand Apple n'en rend pas : la connexion n'en dépend pas.
+    let authorizationCode: String
+}
+
+/// Le bouton « Se connecter avec Apple », qui rend le jeton d'identité, le
+/// nonce brut et le code d'autorisation à envoyer à l'API. Une annulation ne
+/// rend rien.
 struct AppleSignInButton: View {
 
-    /// Appelé avec le jeton et le nonce brut, ou avec l'erreur.
-    let onCompletion: (Result<(identityToken: String, rawNonce: String), Error>) -> Void
+    /// Appelé avec ce que la feuille a rendu, ou avec l'erreur.
+    let onCompletion: (Result<AppleSignInResult, Error>) -> Void
 
     @Environment(\.colorScheme) private var colorScheme
     /// Tiré à chaque demande : un nonce ne sert qu'une fois.
@@ -39,7 +48,10 @@ struct AppleSignInButton: View {
                 rawNonce = ""
                 onCompletion(
                     Result {
-                        (identityToken: try AppleSignIn.identityToken(from: result), rawNonce: nonce)
+                        AppleSignInResult(
+                            identityToken: try AppleSignIn.identityToken(from: result),
+                            rawNonce: nonce,
+                            authorizationCode: AppleSignIn.authorizationCode(from: result))
                     })
             }
         )
@@ -65,6 +77,14 @@ enum AppleSignIn {
         case .failure(let error):
             throw error
         }
+    }
+
+    /// Le code d'autorisation porté par l'autorisation, vide sinon.
+    static func authorizationCode(from result: Result<ASAuthorization, Error>) -> String {
+        guard case .success(let authorization) = result,
+            let credential = authorization.credential as? ASAuthorizationAppleIDCredential
+        else { return "" }
+        return AppleAuth.authorizationCode(from: credential.authorizationCode)
     }
 
     /// Le message à montrer pour un échec ; `nil` pour une annulation, qui
