@@ -364,7 +364,8 @@ describe("page du compte", () => {
       fakeService({}, appleOn);
       const wrapper = await mountAccount();
 
-      expect(button(wrapper, "Se connecter avec Apple")).toBeDefined();
+      await appleButton(wrapper);
+      await vi.waitFor(() => expect(apple.inits.length).toBeGreaterThan(0));
       expect(apple.inits[0]).toMatchObject({
         clientId: "fr.julsql.thecode.web",
         scope: "email",
