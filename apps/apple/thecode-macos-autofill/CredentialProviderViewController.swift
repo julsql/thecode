@@ -125,20 +125,25 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
         if saveToVault, !password.isEmpty {
             rememberAccount(fill.resolution.siteKey, login: fill.user)
         }
-        // Jamais d'identifiant vide : Safari n'en a pas l'usage, et c'est la
-        // cause la plus probable de son plantage sur un formulaire sans champ
-        // identifiant (voir AutofillLogin).
-        guard !password.isEmpty, !fill.user.isEmpty else {
-            // Cas pathologique : clé absente, aucun charset coché dans l'app,
-            // ou identifiant manquant (la vue ne le permet pas).
+        guard !password.isEmpty else {
+            // Cas pathologique : clé absente, ou aucun charset coché dans l'app.
             extensionContext.cancelRequest(withError: NSError(
                 domain: ASExtensionErrorDomain,
                 code: ASExtensionError.failed.rawValue
             ))
             return
         }
-        // L'identifiant est rendu au site : Safari le remplit s'il trouve un
-        // champ pour lui, et ne remplit que le mot de passe sinon.
+        // L'identifiant est rendu au site : le système le remplit s'il trouve
+        // un champ pour lui, et ne remplit que le mot de passe sinon.
+        //
+        // Compte sans identifiant : `user` vaut "". AuthenticationServices
+        // n'offre pas de credential « mot de passe seul » pour une requête de
+        // mot de passe (`completeRequest(withTextToInsert:)` ne sert qu'au
+        // menu « insérer du texte »), d'où la chaîne vide plutôt qu'un
+        // identifiant inventé qui serait écrit dans le formulaire. Compromis :
+        // on soupçonnait (sans preuve) cet identifiant vide de faire planter
+        // Safari sur une page de compte sans champ identifiant ; la feuille de
+        // remplissage fonctionne avec, mais ce cas reste à retester.
         let credential = ASPasswordCredential(user: fill.user, password: password)
         extensionContext.completeRequest(
             withSelectedCredential: credential,

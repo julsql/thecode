@@ -27,9 +27,8 @@ final class AutofillModel: ObservableObject {
     /// n'est alors rendu qu'au formulaire, le mot de passe reste le sien.
     @Published var pinned: SiteResolution? = nil
 
-    /// Identifiant saisi. Le système ne dit pas celui du formulaire : sans
-    /// lui, un compte inconnu se dériverait sans identifiant, et le système
-    /// recevrait un identifiant vide.
+    /// Identifiant saisi, facultatif. Le système ne dit pas celui du
+    /// formulaire ; vide, on remplit le compte sans identifiant du site.
     @Published var login: String = ""
 
     /// Réponse de l'utilisatrice. iOS n'a pas d'équivalent au dialogue que le
@@ -40,8 +39,7 @@ final class AutofillModel: ObservableObject {
     /// identifiant saisi.
     var resolveLogin: (_ login: String, _ pinned: String?) -> AutofillLogin.Fill? = { _, _ in nil }
 
-    /// Le remplissage correspondant à la saisie, `nil` tant qu'il manque
-    /// l'identifiant.
+    /// Le remplissage correspondant à la saisie (`nil` sans domaine).
     var typedFill: AutofillLogin.Fill? { resolveLogin(login, pinned?.entryId) }
 
     /// Le compte saisi est inconnu du carnet : on propose de l'enregistrer.

@@ -75,6 +75,18 @@ struct ContentView: View {
                     .focused($loginFocused)
                     .onSubmit { model.fillTyped() }
 
+                // L'identifiant entre dans le mot de passe (v2) : l'ajouter après
+                // en changerait le mot de passe. On le dit avant de remplir. Inutile
+                // pour une entrée choisie : son mot de passe n'en dépend pas.
+                if model.pinned == nil {
+                    Text(L10n.t(
+                        "Facultatif. Sans identifiant, le mot de passe est calculé et enregistré sans : saisissez-le maintenant si le site en utilise un, il ne pourra pas être ajouté ensuite sans changer le mot de passe.",
+                        "Optional. Without a username, the password is computed and saved without one: type it now if the site uses one, it can't be added later without changing the password."))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
                 // Demandé avant de remplir, faute de moment après : l'extension
                 // disparaît une fois le mot de passe rendu.
                 if model.canSave {
