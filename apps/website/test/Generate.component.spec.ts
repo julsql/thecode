@@ -25,7 +25,8 @@ const sampleKey = "clef";
 async function generateFor(w: any, site: string) {
   await w.find("#id_site").setValue(site);
   await w.find("#id_clef").setValue(sampleKey);
-  await vi.waitFor(() => expect(w.find("#saveEntry").exists()).toBe(true), { timeout: 15000 });
+  // La copie n'apparait qu'une fois le mot de passe genere, en v1 comme en v2.
+  await vi.waitFor(() => expect(w.find("#copyPassword").exists()).toBe(true), { timeout: 15000 });
 }
 
 const vectors = JSON.parse(
@@ -208,22 +209,16 @@ describe("carnet et empreinte", () => {
     expect(wrapper.find('a[href="/fr/vault"]').exists()).toBe(true);
   });
 
-  it("enregistre une entree sans version meme depuis l'ecran regle en v1", async () => {
+  it("ne propose pas d'enregistrer depuis l'ecran regle en v1", async () => {
     const wrapper = await mountGenerate();
 
     const v1Button = wrapper.findAll("button").find((b) => b.text() === "v1");
     await v1Button!.trigger("click");
     await generateFor(wrapper, "google.com");
 
-    await wrapper.find("#saveEntry").trigger("click");
-    await wrapper.vm.$nextTick();
-
-    // La v1 ne vit qu'en generation ponctuelle, hors carnet : l'entree n'a
-    // pas de version et derive en v2.
-    const { loadVault, findAllByDomain } = await import("@/vault");
-    const [entry] = findAllByDomain(loadVault(), "google.com");
-    expect(entry).toBeDefined();
-    expect(entry).not.toHaveProperty("v");
+    // Le carnet derive en v2 : une entree enregistree depuis la v1 rendrait
+    // plus tard un autre mot de passe que celui affiche.
+    expect(wrapper.find("#saveEntry").exists()).toBe(false);
   });
 
   it("enregistre les reglages et les retrouve", async () => {

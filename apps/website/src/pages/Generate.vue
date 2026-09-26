@@ -181,7 +181,15 @@
               >
                 {{ t("gen_copy") }}
               </button>
-              <button id="saveEntry" type="button" class="ghost-btn primary" @click="saveEntry">
+              <!-- Le carnet dérive en v2 : enregistrer depuis la v1 donnerait plus
+                   tard un autre mot de passe. -->
+              <button
+                v-if="!enV1"
+                id="saveEntry"
+                type="button"
+                class="ghost-btn primary"
+                @click="saveEntry"
+              >
                 {{ matchedEntry ? t("vault_update") : t("vault_save") }}
               </button>
             </template>
