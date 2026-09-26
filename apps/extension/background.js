@@ -445,9 +445,16 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
       await rememberKey(null);
       sendResponse({ ok: true });
     } else if (request.action === "generatePassword") {
-      // Seule la popup demande la v1 ou un identifiant : content.js n'envoie
-      // ni l'un ni l'autre et garde le comportement d'origine.
-      const res = await generatePasswordForUrl(request.url || "", request.version, request.login);
+      // Seule la popup demande la v1. L'identifiant vient de la popup, ou du
+      // formulaire de la page pour content.js : dans ce cas, une entree
+      // enregistree sans identifiant reste celle du site (voir plus bas).
+      const fromPage = !isFromExtensionPage(sender);
+      const res = await generatePasswordForUrl(
+        request.url || "",
+        fromPage ? 2 : request.version,
+        request.login,
+        { fromPage },
+      );
       sendResponse(res);
     } else if (request.action === "getVault") {
       sendResponse({ ok: true, vault: await loadVault(browser?.storage?.local) });
@@ -716,7 +723,13 @@ async function saveCurrentSite(sender, login) {
   if (!domain) return { ok: false, error: "domaine illisible" };
 
   const vault = await loadVault(browser?.storage?.local);
-  const existing = findAllByDomain(vault, domain)[0];
+  // Meme compte que celui qui a servi a generer : celui de l'identifiant de la
+  // page, sinon l'entree sans identifiant du site. Un autre identifiant, c'est
+  // un autre compte : il ne doit pas reecrire le premier.
+  const pageLogin = normalizeLogin(login) || "";
+  const existing = pageLogin
+    ? findByDomainAndLogin(vault, domain, pageLogin) || pageFallbackEntry(vault, domain)
+    : findAllByDomain(vault, domain)[0];
   const { lengthNumber, minState, majState, symState, chiState } = await loadParams();
   const charset = {
     lower: minState,
@@ -863,7 +876,21 @@ function setEncodingKeyForTests(key) {
  * le compte — domaine + identifiant — et entre dans la derivation v2 ; vide,
  * il ne change rien au calcul. La v1 l'ignore.
  */
-async function generatePasswordForUrl(url, version, login) {
+/**
+ * Entree a garder quand l'identifiant lu dans la page ne correspond a aucun
+ * compte du site : celle enregistree sans identifiant, si c'est la seule.
+ *
+ * Le compte a ete cree sans identifiant dans la derivation ; le remplir dans
+ * le formulaire ne doit pas changer son mot de passe. Plusieurs comptes, ou un
+ * seul portant un autre identifiant : c'est un nouveau compte, qui derive avec
+ * celui de la page.
+ */
+function pageFallbackEntry(vault, domain) {
+  const entries = findAllByDomain(vault, domain);
+  return entries.length === 1 && !entries[0].login ? entries[0] : undefined;
+}
+
+async function generatePasswordForUrl(url, version, login, { fromPage = false } = {}) {
   const v = version === 1 ? 1 : 2;
   const requestedLogin = normalizeLogin(login);
   if (!encodingKey) {
@@ -889,7 +916,8 @@ async function generatePasswordForUrl(url, version, login) {
     const entry =
       requestedLogin === undefined
         ? findAllByDomain(vault, domain)[0]
-        : findByDomainAndLogin(vault, domain, requestedLogin);
+        : findByDomainAndLogin(vault, domain, requestedLogin) ||
+          (fromPage && requestedLogin ? pageFallbackEntry(vault, domain) : undefined);
 
     if (!entry) {
       // Site inconnu : v2 par defaut aussi, c'est la version des entrees qui
