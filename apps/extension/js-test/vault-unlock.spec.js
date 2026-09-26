@@ -288,12 +288,13 @@ describe("ecran carnet", () => {
     expect(elements.unlockedView.hidden).toBe(false);
   });
 
-  it("« Verrouiller » referme aussitot et efface la grace", async () => {
+  it("« Verrouiller » referme aussitot et verrouille toute la session", async () => {
     const { elements, fire, sent } = await openPage({ sessionKey: SESSION_KEY, resume: true });
     await fire("lockNow", "click");
     expect(elements.unlockView.hidden).toBe(false);
     expect(elements.unlockedView.hidden).toBe(true);
     expect(elements.lockNow.hidden).toBe(true);
-    expect(sent).toContain("vaultSessionClear");
+    expect(sent).toContain("lockSession");
+    expect(elements.pageStatus.textContent).toMatch(/TheCode verrouillé/);
   });
 });

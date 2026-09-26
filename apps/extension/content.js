@@ -2,7 +2,24 @@ if (typeof browser === "undefined") {
   var browser = chrome;
 }
 
+/**
+ * Texte du menu quand aucun mot de passe n'est propose. Session verrouillee
+ * (shared/spec/vault-lock.md) : la clef est la mais inutilisable, il faut
+ * ouvrir l'extension pour la ressaisir. Sinon, aucune clef n'est definie.
+ */
+function menuNotice(response) {
+  if (response?.locked) {
+    return (
+      browser?.i18n?.getMessage?.("content_locked") ||
+      "TheCode est verrouillé : ouvrez l'extension pour le déverrouiller"
+    );
+  }
+  return "Aucune clef n'est renseignée. Cliquer pour rentrer une clef";
+}
+
 (function () {
+  // En test (Node), seul menuNotice est charge : pas de page a equiper.
+  if (typeof document === "undefined") return;
   const MENU_CLASS = "pw-suggester-menu";
   let listInput = [];
 
@@ -61,7 +78,7 @@ if (typeof browser === "undefined") {
         // ➤  AUCUNE CLEF DISPONIBLE
         if (!response || response.error) {
           const noKey = document.createElement("div");
-          noKey.innerText = "Aucune clef n'est renseignée. Cliquer pour rentrer une clef";
+          noKey.innerText = menuNotice(response);
           noKey.style.color = "#eaeaeaff";
           noKey.style.cursor = "pointer";
           noKey.style.fontFamily = "font-family";
@@ -349,3 +366,7 @@ if (typeof browser === "undefined") {
   window.addEventListener("load", scanAddMenus);
   setInterval(scanAddMenus, 3000);
 })();
+
+if (typeof module !== "undefined") {
+  module.exports = { menuNotice };
+}

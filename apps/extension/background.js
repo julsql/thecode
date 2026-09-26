@@ -79,11 +79,19 @@ const keyArea = browser?.storage?.session ?? null;
 // pouvoir la lire.
 keyArea?.setAccessLevel?.({ accessLevel: "TRUSTED_CONTEXTS" })?.catch?.(() => {});
 
+// « Verrouiller » ferme toute la session (shared/spec/vault-lock.md) : la clef
+// reste en place mais ne sert plus a rien — ni generation, ni carnet, ni
+// synchronisation — tant qu'elle n'a pas ete ressaisie. Le drapeau vit a cote
+// de la clef, dans storage.session, pour survivre au recyclage du worker.
+let sessionLocked = false;
+const LOCKED_SESSION = "sessionLocked";
+
 async function readKeyFromSession() {
   try {
-    const stored = await keyArea?.get(KEY_SESSION);
+    const stored = await keyArea?.get([KEY_SESSION, LOCKED_SESSION]);
     if (typeof stored?.[KEY_SESSION] === "string" && stored[KEY_SESSION]) {
       encodingKey = stored[KEY_SESSION];
+      sessionLocked = stored[LOCKED_SESSION] === true;
     }
   } catch {
     // Stockage indisponible : on retombe sur la mémoire du worker.
@@ -95,6 +103,9 @@ const keyReady = readKeyFromSession();
 
 async function rememberKey(key) {
   encodingKey = key || null;
+  // Poser ou effacer la clef ouvre la session : un verrou sans clef ne
+  // protege rien.
+  await setSessionLocked(false);
   try {
     if (encodingKey) await keyArea?.set({ [KEY_SESSION]: encodingKey });
     else await keyArea?.remove(KEY_SESSION);
@@ -102,6 +113,43 @@ async function rememberKey(key) {
     // La clé reste au moins en mémoire.
   }
 }
+
+async function setSessionLocked(locked) {
+  sessionLocked = Boolean(locked && encodingKey);
+  try {
+    if (sessionLocked) await keyArea?.set({ [LOCKED_SESSION]: true });
+    else await keyArea?.remove(LOCKED_SESSION);
+  } catch {
+    // Le drapeau reste au moins en memoire.
+  }
+}
+
+/** Clef utilisable : aucune tant que la session est verrouillee. */
+function usableKey() {
+  return sessionLocked ? null : encodingKey;
+}
+
+/** Reponse des actions refusees tant que la session est verrouillee. */
+const SESSION_LOCKED_ERROR = "TheCode est verrouillé : ouvrez l'extension pour le déverrouiller.";
+
+/**
+ * Actions qui ont besoin de la clef, ou qui montrent le carnet : refusees
+ * tant que la session est verrouillee. getEncodingKey rend null a la place,
+ * et vaultSessionResume ne rouvre rien.
+ */
+const LOCKED_REFUSED = new Set([
+  "setEncodingKey",
+  "generatePassword",
+  "getVault",
+  "saveSite",
+  "saveCurrentSite",
+  "deleteEntry",
+  "previewChange",
+  "applyChange",
+  "exportVault",
+  "importVault",
+  "syncNow",
+]);
 
 // Les paramètres, eux, DOIVENT survivre au recyclage du service worker MV3 :
 // sinon une longueur réglée à 30 dans la popup retombait à 20 dès que le
@@ -273,6 +321,7 @@ const PRIVILEGED_ACTIONS = new Set([
   "vaultSessionLeave",
   "vaultSessionResume",
   "vaultSessionClear",
+  "lockSession",
 ]);
 
 function isFromExtensionPage(sender) {
@@ -350,7 +399,7 @@ async function googleSyncLogin(request) {
  */
 async function syncEverything() {
   const session = await loadSession(browser?.storage?.local);
-  if (!encodingKey || !session) return { ok: false, skipped: true };
+  if (!usableKey() || !session) return { ok: false, skipped: true };
   const vault = await loadVault(browser?.storage?.local);
   const result = await syncVault(vault, encodingKey, session);
   await saveVault(browser?.storage?.local, result.vault);
@@ -393,16 +442,16 @@ async function storeSyncStatus(result) {
 }
 
 // Synchronisation automatique : rien ne part sans session ni clef maitresse,
-// le carnet etant chiffre avec elle.
+// le carnet etant chiffre avec elle, ni session verrouillee.
 const autoSync = createSyncScheduler({
   run: syncEverything,
-  canSync: async () => Boolean(encodingKey) && Boolean(await loadSession(browser?.storage?.local)),
+  canSync: async () => Boolean(usableKey()) && Boolean(await loadSession(browser?.storage?.local)),
   onResult: storeSyncStatus,
 });
 
 /** Apres une ecriture locale ou un reglage modifie. */
 function scheduleAutoSync() {
-  if (encodingKey) autoSync.trigger();
+  if (usableKey()) autoSync.trigger();
 }
 
 browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -412,10 +461,15 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse({ error: "action reservee a l'extension" });
       return;
     }
+    if (sessionLocked && LOCKED_REFUSED.has(request.action)) {
+      sendResponse({ ok: false, locked: true, error: SESSION_LOCKED_ERROR });
+      return;
+    }
     if (request.action === "checkEncodingKey") {
-      sendResponse({ hasEncodingKey: !!encodingKey });
+      sendResponse({ hasEncodingKey: !!encodingKey, locked: sessionLocked });
     } else if (request.action === "getEncodingKey") {
-      sendResponse({ encodingKey });
+      // Verrouillee, la clef ne redescend pas jusqu'a la popup.
+      sendResponse({ encodingKey: usableKey(), locked: sessionLocked });
     } else if (request.action === "setEncodingKey") {
       try {
         await rememberKey(request.encodingKey);
@@ -592,7 +646,7 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
       }
       sendResponse(await autoSync.runNow());
     } else if (request.action === "syncAutoOpen") {
-      sendResponse({ ok: true, scheduled: encodingKey ? autoSync.triggerOpen() : false });
+      sendResponse({ ok: true, scheduled: usableKey() ? autoSync.triggerOpen() : false });
     } else if (VAULT_LOCK_ACTIONS.has(request.action)) {
       try {
         sendResponse(await handleVaultLock(request));
@@ -706,6 +760,7 @@ async function saveSite(domain, login) {
 async function saveCurrentSite(sender, login) {
   const url = sender?.tab?.url;
   if (!url) return { ok: false, error: "aucun onglet" };
+  if (sessionLocked) return { ok: false, locked: true, error: SESSION_LOCKED_ERROR };
   if (!encodingKey) return { ok: false, error: "aucune clef definie" };
 
   await pslReady;
@@ -761,6 +816,7 @@ const VAULT_LOCK_ACTIONS = new Set([
   "vaultSessionLeave",
   "vaultSessionResume",
   "vaultSessionClear",
+  "lockSession",
 ]);
 
 /** Ancien enregistrement du mot de passe de carnet : il n'existe plus. */
@@ -770,12 +826,14 @@ Promise.resolve()
   .catch(() => {});
 
 /**
- * Verrou de l'ecran carnet (shared/spec/vault-lock.md).
+ * Verrou de la session (shared/spec/vault-lock.md).
  *
- * Le carnet s'ouvre avec la clef maitresse, comparee ici a celle de la
- * session : la clef de la session ne transite pas jusqu'a la page. L'etat
- * deverrouille vit dans la page ; ici n'est retenu que l'instant ou elle a ete
- * quittee, pour la grace de 3 minutes (vault-session.js).
+ * « Verrouiller » (popup ou ecran carnet) ferme toute la session : la clef est
+ * gardee mais inutilisable jusqu'a ce qu'elle soit ressaisie. La saisie est
+ * comparee ici a celle de la session : la clef ne transite pas jusqu'a la
+ * page. L'etat deverrouille de l'ecran carnet vit dans la page ; ici n'est
+ * retenu que l'instant ou elle a ete quittee, pour la grace de 3 minutes
+ * (vault-session.js), qui ne rouvre jamais une session verrouillee.
  */
 const vaultSession = createVaultSession(browser?.storage?.session);
 
@@ -785,9 +843,12 @@ async function handleVaultLock(request) {
       const key = request.encodingKey;
       if (typeof key !== "string" || !key) return { ok: false, error: "aucune clef saisie" };
       if (encodingKey) {
-        return sameMasterKey(key, encodingKey)
-          ? { ok: true, unlocked: true }
-          : { ok: true, unlocked: false, reason: "otherKey" };
+        if (!sameMasterKey(key, encodingKey)) {
+          return { ok: true, unlocked: false, reason: "otherKey" };
+        }
+        // La bonne clef rouvre toute la session, pas seulement le carnet.
+        await setSessionLocked(false);
+        return { ok: true, unlocked: true };
       }
       // Nouvelle session : la clef saisie devient celle de la session.
       await rememberKey(key);
@@ -796,25 +857,33 @@ async function handleVaultLock(request) {
 
     case "vaultSessionLeave":
       // L'heure est celle du fond, pas celle que la page annoncerait.
-      if (encodingKey) await vaultSession.leave(Date.now());
+      if (usableKey()) await vaultSession.leave(Date.now());
       return { ok: true };
 
     case "vaultSessionResume":
-      // Sans clef dans la session, la grace ne rouvre rien.
+      // Sans clef utilisable (absente ou session verrouillee), la grace ne
+      // rouvre rien.
       return {
         ok: true,
-        unlocked: Boolean(encodingKey) && (await vaultSession.resume(Date.now())),
+        unlocked: Boolean(usableKey()) && (await vaultSession.resume(Date.now())),
       };
 
     case "vaultSessionClear":
       await vaultSession.clear();
       return { ok: true };
+
+    case "lockSession":
+      // Toute la session, pas seulement l'ecran carnet. La clef est gardee.
+      await vaultSession.clear();
+      await setSessionLocked(true);
+      return { ok: true, locked: sessionLocked };
   }
   return { ok: false, error: "action inconnue" };
 }
 
 /** Chiffre le carnet courant. Rend la meme forme que l'action du meme nom. */
 async function exportVaultPayload() {
+  if (sessionLocked) return { ok: false, locked: true, error: SESSION_LOCKED_ERROR };
   const vault = await loadVault(browser?.storage?.local);
   if (!encodingKey) return { ok: false, error: "aucune clef definie" };
   if (!vault.entries.filter((e) => !e.deleted).length) {
@@ -825,6 +894,7 @@ async function exportVaultPayload() {
 
 /** Fusionne un payload avec le carnet local. */
 async function importVaultPayload(payload) {
+  if (sessionLocked) return { ok: false, locked: true, error: SESSION_LOCKED_ERROR };
   if (!encodingKey) return { ok: false, error: "aucune clef definie" };
   const incoming = await importVault(payload, encodingKey);
   // Fusion et jamais substitution : un import qui ecraserait effacerait les
@@ -870,6 +940,9 @@ function pageFallbackEntry(vault, domain) {
 async function generatePasswordForUrl(url, version, login, { fromPage = false } = {}) {
   const v = version === 1 ? 1 : 2;
   const requestedLogin = normalizeLogin(login);
+  // Verrouillee, la session ne genere rien : ni pour la popup, ni pour le
+  // menu injecte dans la page.
+  if (sessionLocked) return { error: SESSION_LOCKED_ERROR, locked: true };
   if (!encodingKey) {
     return { error: "Aucune clé n'est définie. Ouvre l'extension TheCode et entre ta clé." };
   }

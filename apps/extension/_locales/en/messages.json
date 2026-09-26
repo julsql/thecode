@@ -642,5 +642,45 @@
   "popup_key_strength_strong": {
     "message": "Strength: strong",
     "description": "Popup, near the master key field (shared/spec/key-strength.md)."
+  },
+  "popup_lock": {
+    "message": "Lock",
+    "description": "Popup: lock button tooltip."
+  },
+  "popup_lock_session": {
+    "message": "Lock TheCode",
+    "description": "Popup: lock button label."
+  },
+  "popup_unlock_label": {
+    "message": "Unlock",
+    "description": "Popup: unlock field label."
+  },
+  "popup_locked_hint": {
+    "message": "TheCode is locked. Enter your key to unlock it.",
+    "description": "Popup: shown while the session is locked."
+  },
+  "popup_unlock": {
+    "message": "Unlock",
+    "description": "Popup: unlock button."
+  },
+  "popup_other_key": {
+    "message": "This is not the same key.",
+    "description": "Popup: wrong key when unlocking."
+  },
+  "popup_unlocked": {
+    "message": "TheCode unlocked.",
+    "description": "Popup: session unlocked."
+  },
+  "popup_locked_error": {
+    "message": "TheCode is locked.",
+    "description": "Popup: action refused while locked."
+  },
+  "vault_session_locked": {
+    "message": "TheCode locked. Enter your key to open it again.",
+    "description": "Vault page: after Lock, the whole session is locked."
+  },
+  "content_locked": {
+    "message": "TheCode is locked: open the extension to unlock it",
+    "description": "In-page menu while the session is locked."
   }
 }

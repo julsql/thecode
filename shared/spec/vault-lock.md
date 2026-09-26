@@ -5,6 +5,10 @@ renouvellement) n'est accessible qu'après authentification. Le verrou protège
 l'**écran** de gestion, pas les données : le remplissage automatique et la
 génération continuent de lire le carnet sans rien demander.
 
+Le bouton « Verrouiller », lui, ferme **toute la session** (voir
+« Verrouiller » plus bas) : tant qu'elle est verrouillée, ni génération, ni
+carnet, ni synchronisation.
+
 Il n'existe **pas de mot de passe de carnet** : un seul secret, la clef
 maîtresse. Le carnet s'ouvre avec la biométrie (apps natives) ou avec la clef
 maîtresse elle-même.
@@ -56,8 +60,43 @@ maîtresse dans la session, la grâce ne rouvre rien.
 L'instant de sortie est retenu hors de l'écran (préférences de l'app, stockage de
 session du navigateur) pour survivre à la fermeture de l'écran carnet. Il n'est
 qu'un horodatage : aucun secret n'y est stocké. « Verrouiller » l'efface : le
-carnet se referme aussitôt. Verrouiller le carnet n'efface pas la clef de la
-session.
+carnet se referme aussitôt, et la grâce ne rouvre jamais une session
+verrouillée.
+
+## Verrouiller
+
+« Verrouiller » verrouille **la session partout**, pas seulement l'écran
+carnet. La clef maîtresse **n'est pas effacée**, mais elle devient
+**inutilisable** jusqu'à la ré-authentification :
+
+- plus de génération de mot de passe (écran principal, popup de l'extension,
+  menu proposé dans les pages web) ;
+- plus d'accès au carnet (liste, enregistrement, renouvellement,
+  suppression, transfert) ;
+- plus de synchronisation, ni manuelle ni automatique.
+
+Ré-authentification :
+
+- **apps natives** : biométrie ou code de l'appareil (repli : clef maîtresse),
+  comme à l'ouverture de la session partagée (`SessionLock`) ;
+- **extension et site** : ressaisie de la clef maîtresse, comparée **en temps
+  constant** à la clef de la session. Une autre clef est refusée : « Ce n'est
+  pas la même clef ». La bonne clef rouvre tout d'un coup.
+
+Où le trouver :
+
+- **extension** : dans l'écran carnet et dans l'en-tête de la popup. Verrouillée,
+  la popup remplace le champ clef par un champ « Déverrouiller » ; le menu
+  proposé dans les pages web affiche « TheCode est verrouillé : ouvrez
+  l'extension pour le déverrouiller » à la place d'un mot de passe. L'état
+  verrouillé vit à côté de la clef (`storage.session`) et survit au recyclage
+  du service worker ;
+- **site** : dans l'écran carnet et à côté du champ clef du générateur.
+  Verrouillé, le générateur masque le mot de passe, la copie et
+  l'enregistrement et propose de déverrouiller. Recharger la page oublie la
+  clef, comme avant.
+
+« Effacer » reste distinct : il **oublie** la clef (et le verrou avec elle).
 
 ## Clef oubliée
 

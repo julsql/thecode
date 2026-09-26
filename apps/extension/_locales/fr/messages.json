@@ -642,5 +642,45 @@
   "popup_key_strength_strong": {
     "message": "Robustesse : bonne",
     "description": "Popup, near the master key field (shared/spec/key-strength.md)."
+  },
+  "popup_lock": {
+    "message": "Verrouiller",
+    "description": "Popup: lock button tooltip."
+  },
+  "popup_lock_session": {
+    "message": "Verrouiller TheCode",
+    "description": "Popup: lock button label."
+  },
+  "popup_unlock_label": {
+    "message": "Déverrouiller",
+    "description": "Popup: unlock field label."
+  },
+  "popup_locked_hint": {
+    "message": "TheCode est verrouillé. Saisissez votre clef pour le déverrouiller.",
+    "description": "Popup: shown while the session is locked."
+  },
+  "popup_unlock": {
+    "message": "Déverrouiller",
+    "description": "Popup: unlock button."
+  },
+  "popup_other_key": {
+    "message": "Ce n'est pas la même clef.",
+    "description": "Popup: wrong key when unlocking."
+  },
+  "popup_unlocked": {
+    "message": "TheCode déverrouillé.",
+    "description": "Popup: session unlocked."
+  },
+  "popup_locked_error": {
+    "message": "TheCode est verrouillé.",
+    "description": "Popup: action refused while locked."
+  },
+  "vault_session_locked": {
+    "message": "TheCode verrouillé. Saisissez votre clef pour le rouvrir.",
+    "description": "Vault page: after Lock, the whole session is locked."
+  },
+  "content_locked": {
+    "message": "TheCode est verrouillé : ouvrez l'extension pour le déverrouiller",
+    "description": "In-page menu while the session is locked."
   }
 }

@@ -65,6 +65,25 @@
             />
           </svg>
         </button>
+        <!-- Verrouille toute la session : la clef est gardee mais ne sert
+             plus a rien tant qu'elle n'a pas ete ressaisie. -->
+        <button
+          id="lockSession"
+          type="button"
+          class="icon-btn"
+          aria-label="Verrouiller TheCode"
+          title="Verrouiller"
+          data-i18n-aria-label="popup_lock_session"
+          data-i18n-title="popup_lock"
+          hidden
+        >
+          <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" width="20" height="20">
+            <path
+              fill="currentColor"
+              d="M12 2a5 5 0 0 1 5 5v3h1a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h1V7a5 5 0 0 1 5-5Zm0 2a3 3 0 0 0-3 3v3h6V7a3 3 0 0 0-3-3Zm-6 8v8h12v-8H6Zm6 2a1.5 1.5 0 0 1 .75 2.8V18h-1.5v-1.2A1.5 1.5 0 0 1 12 14Z"
+            />
+          </svg>
+        </button>
         <button
           id="openSettings"
           type="button"
@@ -85,8 +104,31 @@
         </button>
       </header>
 
+      <!-- Session verrouillee : la clef est gardee mais inutilisable. La
+           ressaisir rouvre tout ; Effacer l'oublie. -->
+      <form id="unlockForm" class="field" novalidate hidden>
+        <label for="unlockKey" data-i18n="popup_unlock_label">Déverrouiller</label>
+        <p id="unlockHint" class="hint" data-i18n="popup_locked_hint">
+          TheCode est verrouillé. Saisissez votre clef pour le déverrouiller.
+        </p>
+        <div class="row">
+          <input
+            type="password"
+            id="unlockKey"
+            autocomplete="off"
+            spellcheck="false"
+            aria-describedby="unlockHint unlockError"
+          />
+        </div>
+        <div class="row">
+          <button id="unlockBtn" type="submit" data-i18n="popup_unlock">Déverrouiller</button>
+          <button id="unlockClearKey" type="button" data-i18n="popup_clear_key">Effacer</button>
+        </div>
+        <p id="unlockError" class="status" data-tone="error" role="alert"></p>
+      </form>
+
       <!-- Clef -->
-      <section class="field">
+      <section id="keySection" class="field">
         <label for="passphrase" data-i18n="popup_key">Clef</label>
         <div class="row">
           <input

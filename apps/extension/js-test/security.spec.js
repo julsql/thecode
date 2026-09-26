@@ -36,6 +36,8 @@ describe("cloisonnement des actions sensibles", () => {
       // Liste les sites et identifiants : reserve aux pages de l'extension.
       "getVault",
       "importVault",
+      // Verrouille toute la session : une page web n'a pas a le decider.
+      "lockSession",
       "previewChange",
       "saveSite",
       "setEncodingKey",

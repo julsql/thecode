@@ -5,7 +5,8 @@
  * celle de la session, ou l'y pose si aucune n'est encore definie. L'etat
  * deverrouille vit dans cette page. Le service worker ne retient que l'instant
  * ou elle a ete quittee : revenu dans les 3 minutes, le carnet est toujours
- * ouvert (vault-session.js). Voir shared/spec/vault-lock.md.
+ * ouvert (vault-session.js). « Verrouiller » ferme toute la session, pas
+ * seulement cet ecran. Voir shared/spec/vault-lock.md.
  */
 if (typeof browser === "undefined" && typeof chrome !== "undefined") {
   var browser = chrome;
@@ -101,10 +102,15 @@ function initVaultPage() {
     } else pageTitle.focus();
   }
 
-  function lock(message = "") {
+  /**
+   * Referme l'ecran. `session` : « Verrouiller » ferme toute la session
+   * (generation, synchronisation comprises) jusqu'a la ressaisie de la clef ;
+   * sinon (grace ecoulee) seul l'ecran carnet se referme.
+   */
+  function lock(message = "", { session = false } = {}) {
     unlocked = false;
     leftAt = null;
-    send({ action: "vaultSessionClear" });
+    send({ action: session ? "lockSession" : "vaultSessionClear" });
     $("unlockKey").value = "";
     $("unlockError").textContent = "";
     onLock();
@@ -179,7 +185,11 @@ function initVaultPage() {
     onUnlock();
   });
 
-  lockNowBtn.addEventListener("click", () => lock(msg("vault_locked", "Carnet verrouillé.")));
+  lockNowBtn.addEventListener("click", () =>
+    lock(msg("vault_session_locked", "TheCode verrouillé. Saisissez votre clef pour le rouvrir."), {
+      session: true,
+    }),
+  );
 
   // Gestion : liste, detail, suppression, renouvellement.
   const entriesSection = $("entriesSection");
