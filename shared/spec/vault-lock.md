@@ -5,78 +5,73 @@ renouvellement) n'est accessible qu'après authentification. Le verrou protège
 l'**écran** de gestion, pas les données : le remplissage automatique et la
 génération continuent de lire le carnet sans rien demander.
 
-## Première ouverture
+Il n'existe **pas de mot de passe de carnet** : un seul secret, la clef
+maîtresse. Le carnet s'ouvre avec la biométrie (apps natives) ou avec la clef
+maîtresse elle-même.
 
-À la première ouverture de l'écran carnet sur un appareil, on fait choisir la
-méthode :
+## Apps : Android, iOS, macOS
 
-- **biométrie disponible** (Face ID, Touch ID, empreinte, via l'OS) : choix entre
-  biométrie et mot de passe de carnet ;
-- **sinon** : création obligatoire d'un mot de passe de carnet (saisi deux fois,
-  8 caractères minimum).
+- **biométrie ou code de l'appareil** (Face ID, Touch ID, empreinte, via l'OS),
+  le code de l'appareil servant de repli comme le fait l'OS lui-même ;
+- **sinon** (aucune biométrie ni code configuré) : ressaisie de la clef
+  maîtresse, comparée **en temps constant** à celle déjà gardée dans le
+  Keychain / Keystore.
 
-La biométrie choisie garde le mot de passe de l'appareil de l'OS en repli, comme
-le fait l'OS lui-même. Le site et l'extension n'ont pas accès à une biométrie
-fiable : mot de passe uniquement.
+### Une seule session avec la clef
 
-Le choix est **local à l'appareil** et n'est jamais synchronisé : le serveur ne
-voit ni la méthode ni le mot de passe.
+La clef a déjà son verrou (biométrie, grâce de 3 minutes). Le carnet partage
+**la même session** : déverrouiller la clef ouvre le carnet, déverrouiller le
+carnet ouvre la clef, et la fenêtre de 3 minutes est commune.
 
-## Stockage du mot de passe de carnet
+L'écran carnet reste toujours **accessible** depuis l'écran principal, clef
+verrouillée ou non : c'est lui qui demande le déverrouillage. Un bouton grisé
+tant que la clef n'est pas déverrouillée n'explique rien.
 
-Jamais en clair. On garde :
+## Extension et site
 
-```
-salt = 16 octets aléatoires
-hash = PBKDF2-SHA256(motDePasse, salt, iterations = 600000, dkLen = 32)
-```
+Pas de biométrie fiable dans un navigateur : déverrouiller, c'est **saisir la
+clef maîtresse**.
 
-`{ "v": 1, "salt": base64url, "hash": base64url }`, dans le stockage local de la
-plateforme (Keychain / Keystore quand il existe, sinon stockage local). La
-comparaison se fait en temps constant quand la plateforme le permet.
+- **Une clef est déjà définie dans la session** (extension :
+  `storage.session` ; site : le champ clef du générateur, en mémoire) : la clef
+  saisie doit être **la même**, comparée en temps constant. Une clef différente
+  est refusée, avec l'indication que ce n'est pas la même clef que celle en
+  cours d'utilisation.
+- **Aucune clef définie** (nouvelle session du navigateur) : la clef saisie
+  ouvre le carnet **et** devient la clef maîtresse de la session ; le
+  générateur l'utilise ensuite.
+
+Aucune empreinte de la clef maîtresse n'est jamais stockée, nulle part. Les
+anciens enregistrements de verrou (`vaultLock` dans l'extension,
+`thecode.vaultLock` sur le site) sont effacés au chargement.
 
 ## Session
 
 Même fenêtre de grâce que la clef : **3 minutes**. Le carnet reste déverrouillé
 tant qu'on y est ; quitter l'écran, passer l'app en arrière-plan, perdre le focus
 ou fermer l'onglet fait courir la fenêtre. Revenu dans les 3 minutes, le carnet
-est toujours ouvert ; au-delà, il redemande l'authentification.
+est toujours ouvert ; au-delà, il redemande l'authentification. Sans clef
+maîtresse dans la session, la grâce ne rouvre rien.
 
 L'instant de sortie est retenu hors de l'écran (préférences de l'app, stockage de
 session du navigateur) pour survivre à la fermeture de l'écran carnet. Il n'est
-qu'un horodatage : aucun secret n'y est stocké. « Verrouiller » et « Mot de passe
-oublié » l'effacent : le carnet se referme aussitôt.
+qu'un horodatage : aucun secret n'y est stocké. « Verrouiller » l'efface : le
+carnet se referme aussitôt. Verrouiller le carnet n'efface pas la clef de la
+session.
 
-### Apps : une seule session avec la clef
+## Clef oubliée
 
-Sur Android, iOS et macOS, la clef a déjà son verrou (biométrie, grâce de 3
-minutes). Le carnet partage **la même session** : déverrouiller la clef ouvre le
-carnet, déverrouiller le carnet ouvre la clef, et la fenêtre de 3 minutes est
-commune. Le verrou propre au carnet ne sert qu'à défaut de session valide.
-
-L'écran carnet reste toujours **accessible** depuis l'écran principal, clef
-verrouillée ou non : c'est lui qui demande le déverrouillage. Un bouton grisé
-tant que la clef n'est pas déverrouillée n'explique rien.
-
-Le verrou autonome (mot de passe de carnet, grâce propre) concerne surtout le
-site et l'extension, qui n'ont pas de verrou de clef.
-
-## Oubli
-
-« Mot de passe oublié » propose d'**effacer le carnet local** et le verrou, après
-confirmation explicite. Rien d'autre ne permet de passer le verrou. Si la
-synchronisation est active, le carnet revient à la prochaine synchronisation.
-
-## Changer de méthode
-
-Depuis l'écran carnet déverrouillé : changer le mot de passe (l'actuel est
-exigé), ou basculer biométrie ↔ mot de passe.
+Il n'y a pas de mot de passe de carnet à oublier. Une clef maîtresse oubliée ne
+peut pas être retrouvée : elle n'est stockée nulle part hors de l'appareil, et
+les mots de passe comme le carnet chiffré en dépendent.
 
 ## Gestion
 
 Une fois déverrouillé :
 
-- liste des entrées non supprimées (libellé, identifiant, domaines) ;
+- liste des entrées non supprimées (libellé, identifiant, domaines), précédée
+  du rappel : « Si vous ne voyez pas tous vos mots de passe, vérifiez que vous
+  utilisez la même clef. » ;
 - détail d'une entrée : `siteKey`, domaines, identifiant, longueur, jeux de
   caractères, compteur, date de mise à jour ;
 - suppression, après confirmation : pierre tombale `deleted = true` et
