@@ -30,8 +30,18 @@ reprend à l'ouverture :
 ## Partagés avec un compte
 
 Quand un compte de synchronisation est lié, les réglages voyagent avec le
-carnet, chiffrés comme une entrée (voir `vault-sync.md`, clef `tk`,
-AES-256-GCM, nonce de 12 octets, base64url sans remplissage) :
+carnet, chiffrés avec la même clef qu'une entrée (voir `vault-sync.md`) :
+
+```
+sk    = PBKDF2-HMAC-SHA256(UTF-8(clef maîtresse), UTF-8("thecode-sync/v2") || kdf_salt, 600000, 32)
+nonce = 12 octets aléatoires
+aad   = UTF-8("thecode/settings/v2")
+blob  = AES-256-GCM-Encrypt(sk, nonce, UTF-8(JSON compact des réglages), aad)   // ciphertext || tag
+```
+
+`nonce` et `blob` en base64url sans remplissage. Les données associées
+distinguent les réglages d'une entrée : le serveur ne peut pas faire passer
+l'un pour l'autre. Vecteur : `settings` dans `vault-fixtures/sync-row.json`.
 
 ### `GET /v1/settings`
 
@@ -48,7 +58,7 @@ Corps `{"nonce": "...", "blob": "..."}`. Remplace la valeur du compte. Réponse
 À chaque synchronisation, après celle du carnet : **tirer**, garder la valeur
 dont `updatedAt` est le plus récent (à égalité, la distante), l'appliquer
 localement, puis **pousser** si la locale était la plus récente. Un blob
-indéchiffrable (autre clef maîtresse) est ignoré sans écraser les réglages
-locaux ni le distant.
+indéchiffrable (autre clef maîtresse, autres données associées, format v1) est
+ignoré sans écraser les réglages locaux ni le distant.
 
 `DELETE /v1/vault` et la suppression du compte effacent aussi les réglages.
