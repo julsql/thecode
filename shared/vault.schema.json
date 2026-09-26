@@ -21,7 +21,7 @@
   "$defs": {
     "entry": {
       "type": "object",
-      "description": "Une entree ne porte pas de version d'algorithme : toute entree du carnet derive en v2. La v1 ne subsiste qu'en generation ponctuelle, hors carnet. Un champ 'v' residuel en entree (chargement, import, synchronisation) est ignore et jamais reecrit.",
+      "description": "Une entree ne porte pas de version d'algorithme : toute entree du carnet derive en v2. La v1 ne subsiste qu'en generation ponctuelle, hors carnet.",
       "required": ["id", "siteKey", "domains", "counter", "length", "charset", "updatedAt"],
       "additionalProperties": false,
       "properties": {

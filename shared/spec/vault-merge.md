@@ -14,8 +14,8 @@ Une entrée ne porte **aucun** champ de version d'algorithme : toute entrée du
 carnet dérive en v2. La v1 ne subsiste qu'en génération ponctuelle, hors carnet
 — enregistrer depuis un écran réglé en v1 crée ou garde une entrée v2.
 
-Un champ `v` résiduel dans un carnet lu (chargement, import, synchronisation)
-est ignoré sans erreur et n'est jamais réécrit.
+Aucun carnet n'a jamais contenu d'entrée v1 : les clients n'ont connu le carnet
+qu'avec la v2. Il n'y a donc rien à filtrer ni à migrer à la lecture.
 
 ## Principe
 
