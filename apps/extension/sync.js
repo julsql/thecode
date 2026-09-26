@@ -141,19 +141,15 @@ async function withFreshToken(session, call) {
   }
 }
 
-async function encryptEntry(entry, key) {
+/** Chiffre une valeur JSON avec la clef de transfert : `{ nonce, blob }`. */
+async function encryptBlob(value, key) {
   const nonce = crypto.getRandomValues(new Uint8Array(12));
-  const plain = new TextEncoder().encode(JSON.stringify(entry));
+  const plain = new TextEncoder().encode(JSON.stringify(value));
   const cipher = await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce }, key, plain);
-  return {
-    entry_id: entry.id,
-    nonce: b64e(nonce),
-    blob: b64e(cipher),
-    deleted: Boolean(entry.deleted),
-  };
+  return { nonce: b64e(nonce), blob: b64e(cipher) };
 }
 
-async function decryptEntry(row, key) {
+async function decryptBlob(row, key) {
   let plain;
   try {
     plain = await crypto.subtle.decrypt(
@@ -167,6 +163,18 @@ async function decryptEntry(row, key) {
     );
   }
   return JSON.parse(new TextDecoder().decode(plain));
+}
+
+async function encryptEntry(entry, key) {
+  return {
+    entry_id: entry.id,
+    ...(await encryptBlob(entry, key)),
+    deleted: Boolean(entry.deleted),
+  };
+}
+
+function decryptEntry(row, key) {
+  return decryptBlob(row, key);
 }
 
 /**
@@ -220,6 +228,78 @@ async function syncVault(vault, masterKey, session) {
   return { vault: merged, conflicts, localOnly: localOnly.length, session: pushed.session };
 }
 
+const SETTINGS_MIN_LENGTH = 4;
+const SETTINGS_MAX_LENGTH = 40;
+
+/**
+ * Valide des reglages par defaut venus d'ailleurs (shared/spec/default-settings.md).
+ * Rend null pour une valeur inutilisable : longueur absente, aucun jeu coche.
+ */
+function normalizeSettings(raw) {
+  if (!raw || typeof raw !== "object" || !raw.charset || typeof raw.charset !== "object") {
+    return null;
+  }
+  const length = Number.parseInt(raw.length, 10);
+  if (Number.isNaN(length)) return null;
+  const charset = {
+    lower: raw.charset.lower === true,
+    upper: raw.charset.upper === true,
+    symbols: raw.charset.symbols === true,
+    numbers: raw.charset.numbers === true,
+  };
+  if (!Object.values(charset).some(Boolean)) return null;
+  return {
+    length: Math.min(SETTINGS_MAX_LENGTH, Math.max(SETTINGS_MIN_LENGTH, length)),
+    charset,
+    updatedAt: typeof raw.updatedAt === "string" ? raw.updatedAt : "",
+  };
+}
+
+function settingsTime(updatedAt) {
+  const t = Date.parse(updatedAt || "");
+  return Number.isNaN(t) ? -Infinity : t;
+}
+
+/**
+ * Synchronise les reglages par defaut, apres le carnet.
+ *
+ * Tirer, garder la valeur la plus recente (a egalite, la distante), puis
+ * pousser si la locale l'etait. Un blob indechiffrable (autre clef maitresse)
+ * est ignore : ni les reglages locaux ni le distant ne sont ecrases.
+ * Des reglages locaux jamais modifies (sans `updatedAt`) ne sont pas pousses.
+ *
+ * Rend `{ settings, applied, session }` : `applied` dit s'il faut appliquer
+ * `settings` localement.
+ */
+async function syncSettings(local, masterKey, session) {
+  const key = await deriveTransferKey(masterKey);
+  const url = `${session.endpoint}/v1/settings`;
+
+  const pulled = await withFreshToken(session, (token) => syncRequest(url, { token }));
+  session = pulled.session;
+
+  if (pulled.result) {
+    let remote;
+    try {
+      remote = normalizeSettings(await decryptBlob(pulled.result, key));
+    } catch {
+      remote = null;
+    }
+    if (!remote) return { settings: local, applied: false, session };
+    if (settingsTime(remote.updatedAt) >= settingsTime(local.updatedAt)) {
+      return { settings: remote, applied: true, session };
+    }
+  }
+
+  if (!local.updatedAt) return { settings: local, applied: false, session };
+
+  const payload = await encryptBlob(local, key);
+  const pushed = await withFreshToken(session, (token) =>
+    syncRequest(url, { payload, token, method: "PUT" }),
+  );
+  return { settings: local, applied: false, session: pushed.session };
+}
+
 if (typeof module !== "undefined") {
   Object.assign(globalThis, require("./transfer.js"), require("./vault.js"));
   module.exports = {
@@ -231,6 +311,8 @@ if (typeof module !== "undefined") {
     syncLogin,
     syncRegister,
     syncVault,
+    syncSettings,
+    normalizeSettings,
     syncAccountPlan,
     isPaidPlan,
   };

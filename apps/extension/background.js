@@ -112,23 +112,75 @@ async function loadParams() {
   return params;
 }
 
-async function saveParams(next) {
+// Date de la derniere modification des reglages, gardee a part pour que
+// `params` reste le jeu de reglages seul. Departage la synchronisation
+// (shared/spec/default-settings.md).
+const PARAMS_UPDATED_AT_KEY = "paramsUpdatedAt";
+
+function sameParams(a, b) {
+  return Object.keys(DEFAULT_PARAMS).every((k) => a[k] === b[k]);
+}
+
+async function saveParams(next, updatedAt) {
   // La rehydratation lancee au demarrage du worker n'est pas attendue : sans
   // ce point de rendez-vous, un reglage enregistre juste apres le demarrage
   // etait ecrase par loadParams() qui se terminait ensuite, et la valeur
   // retombait silencieusement sur celle du stockage.
   await paramsReady;
-  params = normalizeParams(next);
+  const normalized = normalizeParams(next);
+  // La popup renvoie ses reglages meme inchanges (sortie du champ) : seule
+  // une vraie modification date les reglages, sinon un appareil qui n'a rien
+  // change l'emporterait a la synchronisation.
+  const stamp =
+    updatedAt ??
+    (sameParams(normalized, params) ? null : new Date().toISOString().replace(/\.\d{3}Z$/, "Z"));
+  params = normalized;
   const store = browser?.storage?.local;
   if (!store) return params;
   try {
-    await store.set(params);
+    await store.set(stamp ? { ...params, [PARAMS_UPDATED_AT_KEY]: stamp } : params);
     // Nettoie les clés héritées pour ne plus jamais les relire.
     await store.remove(["lenghtNumber", "length"]);
   } catch (e) {
     console.error("TheCode: échec de l'écriture des paramètres", e);
   }
   return params;
+}
+
+/** Les reglages au format partage (shared/spec/default-settings.md). */
+async function loadSettings() {
+  const current = await loadParams();
+  let updatedAt = "";
+  try {
+    const stored = await browser?.storage?.local?.get([PARAMS_UPDATED_AT_KEY]);
+    updatedAt = stored?.[PARAMS_UPDATED_AT_KEY] || "";
+  } catch (e) {
+    console.error("TheCode: échec de la lecture des paramètres", e);
+  }
+  return {
+    length: current.lengthNumber,
+    charset: {
+      lower: current.minState,
+      upper: current.majState,
+      symbols: current.symState,
+      numbers: current.chiState,
+    },
+    updatedAt,
+  };
+}
+
+/** Applique des reglages venus du compte, en gardant leur date. */
+function applySettings(settings) {
+  return saveParams(
+    {
+      lengthNumber: settings.length,
+      minState: settings.charset.lower,
+      majState: settings.charset.upper,
+      symState: settings.charset.symbols,
+      chiState: settings.charset.numbers,
+    },
+    settings.updatedAt,
+  );
 }
 
 // Réhydratation au (re)démarrage du worker + suivi des changements, pour que
@@ -374,8 +426,20 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
         const vault = await loadVault(browser?.storage?.local);
         const result = await syncVault(vault, encodingKey, session);
         await saveVault(browser?.storage?.local, result.vault);
+        // Les reglages suivent le carnet. Un echec ici n'annule pas la
+        // synchronisation du carnet, deja faite : il est seulement signale.
+        let current = result.session;
+        let settingsSynced = false;
+        try {
+          const synced = await syncSettings(await loadSettings(), encodingKey, current);
+          current = synced.session;
+          if (synced.applied) await applySettings(synced.settings);
+          settingsSynced = true;
+        } catch (e) {
+          console.error("TheCode: échec de la synchronisation des paramètres", e);
+        }
         // Un abonnement pris entre-temps doit se voir sans se reconnecter.
-        const withPlan = await syncAccountPlan(result.session);
+        const withPlan = await syncAccountPlan(current);
         await saveSession(browser?.storage?.local, {
           ...withPlan.session,
           plan: withPlan.plan,
@@ -385,6 +449,7 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
           entries: result.vault.entries.filter((e) => !e.deleted).length - result.localOnly,
           localOnly: result.localOnly,
           conflicts: result.conflicts,
+          settingsSynced,
         });
       } catch (e) {
         sendResponse({ ok: false, error: e.message });
@@ -941,6 +1006,9 @@ if (typeof module !== "undefined") {
     getUniquePosition,
     hashToBigInt,
     normalizeParams,
+    loadSettings,
+    applySettings,
+    PARAMS_UPDATED_AT_KEY,
     clampLength,
     MIN_LENGTH,
     MAX_LENGTH,

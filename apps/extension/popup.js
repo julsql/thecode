@@ -566,6 +566,10 @@ syncNowBtn.addEventListener("click", () => {
       const done = msg("sync_done", "$1 entrée(s) synchronisée(s)", resp.entries);
       syncStatus.textContent = `${done}${local}${conflicts}`;
       refreshVault(currentDomain);
+      // Les reglages par defaut ont pu venir d'un autre appareil.
+      browser.runtime.sendMessage({ action: "getParams" }, (r) => {
+        applyParams((r && r.params) || {});
+      });
     } else {
       syncStatus.textContent = msg(
         "sync_failed",
