@@ -151,7 +151,10 @@ function loadWorker({ local = {}, withSession = true } = {}) {
 
 const FROM_VAULT_PAGE = { tab: { id: 3 }, url: "chrome-extension://x/vault-page.html" };
 const FROM_CONTENT_SCRIPT = { tab: { id: 7 }, url: "https://example.com/" };
-const LOCK = { vaultLock: { v: 1, salt: "c2FsdA", hash: "aGFzaA" } };
+const SAMPLE_KEY = "clef-exemple";
+
+/** Pose la clef de la session, comme la premiere saisie sur l'ecran carnet. */
+const unlockWith = (send) => send({ action: "vaultUnlock", encodingKey: SAMPLE_KEY });
 
 describe("session dans le service worker", () => {
   let now;
@@ -162,9 +165,10 @@ describe("session dans le service worker", () => {
   afterEach(() => jest.restoreAllMocks());
 
   it("rouvre l'ecran quitte il y a moins de 3 minutes", async () => {
-    const { send, session } = loadWorker({ local: LOCK });
+    const { send, session } = loadWorker();
+    await unlockWith(send);
     await send({ action: "vaultSessionLeave" });
-    expect(session.store).toStrictEqual({ [VAULT_SESSION_STORAGE_KEY]: T0 });
+    expect(session.store[VAULT_SESSION_STORAGE_KEY]).toBe(T0);
     now = T0 + 179_000;
     expect(await send({ action: "vaultSessionResume" })).toStrictEqual({
       ok: true,
@@ -172,36 +176,31 @@ describe("session dans le service worker", () => {
     });
   });
 
-  it("redemande le mot de passe au-dela", async () => {
-    const { send } = loadWorker({ local: LOCK });
+  it("redemande la clef au-dela", async () => {
+    const { send } = loadWorker();
+    await unlockWith(send);
     await send({ action: "vaultSessionLeave" });
     now = T0 + VAULT_SESSION_GRACE_MS + 1;
     expect((await send({ action: "vaultSessionResume" })).unlocked).toBe(false);
   });
 
   it("referme si l'horloge recule", async () => {
-    const { send } = loadWorker({ local: LOCK });
+    const { send } = loadWorker();
+    await unlockWith(send);
     await send({ action: "vaultSessionLeave" });
     now = T0 - 60_000;
     expect((await send({ action: "vaultSessionResume" })).unlocked).toBe(false);
   });
 
   it("« Verrouiller » referme aussitot", async () => {
-    const { send } = loadWorker({ local: LOCK });
+    const { send } = loadWorker();
+    await unlockWith(send);
     await send({ action: "vaultSessionLeave" });
     await send({ action: "vaultSessionClear" });
     expect((await send({ action: "vaultSessionResume" })).unlocked).toBe(false);
   });
 
-  it("« Mot de passe oublie » referme aussitot", async () => {
-    const { send, session } = loadWorker({ local: LOCK });
-    await send({ action: "vaultSessionLeave" });
-    await send({ action: "vaultLockForget" });
-    expect(session.store).toStrictEqual({});
-    expect((await send({ action: "vaultSessionResume" })).unlocked).toBe(false);
-  });
-
-  it("ne rouvre rien sans mot de passe de carnet", async () => {
+  it("ne rouvre rien sans clef dans la session", async () => {
     const { send, session } = loadWorker();
     await send({ action: "vaultSessionLeave" });
     expect(session.store).toStrictEqual({});
@@ -209,7 +208,8 @@ describe("session dans le service worker", () => {
   });
 
   it("garde l'instant en memoire sans storage.session", async () => {
-    const { send, store } = loadWorker({ local: LOCK, withSession: false });
+    const { send, store } = loadWorker({ withSession: false });
+    await unlockWith(send);
     await send({ action: "vaultSessionLeave" });
     expect(store[VAULT_SESSION_STORAGE_KEY]).toBeUndefined();
     now = T0 + 1000;
@@ -219,16 +219,18 @@ describe("session dans le service worker", () => {
   it.each(["vaultSessionLeave", "vaultSessionResume", "vaultSessionClear"])(
     "refuse %s a un content script",
     async (action) => {
-      const { send, session } = loadWorker({ local: LOCK });
+      const { send, session } = loadWorker();
+      await unlockWith(send);
       const resp = await send({ action }, FROM_CONTENT_SCRIPT);
       expect(resp.error).toBeDefined();
       expect(resp.unlocked).toBeUndefined();
-      expect(session.store).toStrictEqual({});
+      expect(session.store[VAULT_SESSION_STORAGE_KEY]).toBeUndefined();
     },
   );
 
   it("un content script ne prolonge pas la grace", async () => {
-    const { send } = loadWorker({ local: LOCK });
+    const { send } = loadWorker();
+    await unlockWith(send);
     await send({ action: "vaultSessionLeave" });
     now = T0 + VAULT_SESSION_GRACE_MS;
     await send({ action: "vaultSessionLeave" }, FROM_CONTENT_SCRIPT);

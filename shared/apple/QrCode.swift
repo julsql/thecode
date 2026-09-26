@@ -113,13 +113,21 @@ public final class QrScanner: NSObject, ObservableObject, AVCaptureMetadataOutpu
 
     /// Accepte un code lu. Exposé pour que l'assemblage soit testable sans caméra.
     public func accept(_ text: String) {
-        if text.hasPrefix("TC1.") {
+        if text.hasPrefix("\(Transfer.prefix).") {
             payload = text
             stop()
             return
         }
 
-        guard text.hasPrefix("TC1m.") else {
+        if text.hasPrefix("TC1.") || text.hasPrefix("TC1m.") {
+            // Format abandonné : le dire, plutôt que de laisser viser en vain.
+            failure = L10nQr.t(
+                "Ce code vient d'une version plus ancienne de TheCode : mettez-la à jour.",
+                "This code comes from an older version of TheCode: update it.")
+            return
+        }
+
+        guard text.hasPrefix("\(Transfer.fragmentPrefix).") else {
             // Un QR qui ne vient pas de TheCode : on n'en dit rien et on
             // continue, l'utilisateur vise peut-être encore.
             return
@@ -141,7 +149,7 @@ public final class QrScanner: NSObject, ObservableObject, AVCaptureMetadataOutpu
         }
 
         let joined = (0..<total).compactMap { fragments[$0] }.joined()
-        payload = "TC1." + joined
+        payload = "\(Transfer.prefix)." + joined
         progress = nil
         stop()
     }

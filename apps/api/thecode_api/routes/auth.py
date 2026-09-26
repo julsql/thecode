@@ -48,6 +48,7 @@ from ..schemas import (
     ResetPasswordRequest,
     TokenResponse,
     VerifyRequest,
+    b64encode,
 )
 
 router = APIRouter(prefix="/v1/auth", tags=["auth"])
@@ -68,6 +69,7 @@ def account_response(db: DbSession, account: Account) -> AccountResponse:
         plan=limits.plan,
         subscription_status=account.subscription_status,
         revision=account.revision,
+        kdf_salt=b64encode(account.kdf_salt),
         entry_count=live_entry_count(db, account),
         max_entries=limits.max_entries,
         email_verified=account.email_verified_at is not None,
@@ -185,6 +187,7 @@ def _issue_tokens(
         access_token=create_access_token(account.id, session.id),
         refresh_token=token,
         expires_in=settings.access_token_minutes * 60,
+        kdf_salt=b64encode(account.kdf_salt),
     )
 
 

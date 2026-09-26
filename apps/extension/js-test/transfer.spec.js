@@ -7,7 +7,14 @@
 const { webcrypto } = require("node:crypto");
 if (!global.crypto) global.crypto = webcrypto;
 
-const { exportVault, importVault, TRANSFER_PREFIX } = require("../transfer");
+const {
+  exportVault,
+  importVault,
+  deriveTransferBits,
+  splitPayload,
+  joinFragments,
+  TRANSFER_PREFIX,
+} = require("../transfer");
 const { emptyVault, newEntry, mergeVaults } = require("../vault");
 
 function filled() {
@@ -39,22 +46,43 @@ describe("transfert chiffre", () => {
   it("detecte une alteration", async () => {
     // AES-GCM authentifie : un octet modifie doit faire echouer, pas produire
     // un carnet corrompu.
-    const [head, nonce, cipher] = (await exportVault(filled(), "clef")).split(".");
+    const [head, salt, nonce, cipher] = (await exportVault(filled(), "clef")).split(".");
     const altered = cipher.slice(0, -4) + (cipher.slice(-4) === "AAAA" ? "BBBB" : "AAAA");
-    await expect(importVault(`${head}.${nonce}.${altered}`, "clef")).rejects.toThrow();
+    await expect(importVault(`${head}.${salt}.${nonce}.${altered}`, "clef")).rejects.toThrow();
   });
 
   it("refuse une version inconnue", async () => {
-    const [, nonce, cipher] = (await exportVault(filled(), "clef")).split(".");
-    await expect(importVault(`TC9.${nonce}.${cipher}`, "clef")).rejects.toThrow(/inconnue/);
+    const [, salt, nonce, cipher] = (await exportVault(filled(), "clef")).split(".");
+    await expect(importVault(`TC9.${salt}.${nonce}.${cipher}`, "clef")).rejects.toThrow(/inconnue/);
   });
 
-  it("ne reutilise jamais un nonce", async () => {
+  it("refuse un nombre de segments inattendu", async () => {
+    const [, salt, nonce] = (await exportVault(filled(), "clef")).split(".");
+    await expect(importVault(`TC2.${salt}.${nonce}`, "clef")).rejects.toThrow(/inattendu/);
+  });
+
+  it("refuse un sel ou un nonce de mauvaise taille avant de dechiffrer", async () => {
+    const [, salt, nonce, cipher] = (await exportVault(filled(), "clef")).split(".");
+    await expect(importVault(`TC2.${salt.slice(4)}.${nonce}.${cipher}`, "clef")).rejects.toThrow(
+      /16 octets/,
+    );
+    await expect(importVault(`TC2.${salt}.${nonce.slice(4)}.${cipher}`, "clef")).rejects.toThrow(
+      /16 octets/,
+    );
+  });
+
+  it("ne reutilise jamais un sel ni un nonce", async () => {
     // Reutiliser un nonce avec la meme clef casse AES-GCM.
     const v = filled();
+    const salts = new Set();
     const nonces = new Set();
-    for (let i = 0; i < 10; i++) nonces.add((await exportVault(v, "clef")).split(".")[1]);
-    expect(nonces.size).toBe(10);
+    for (let i = 0; i < 5; i++) {
+      const [, salt, nonce] = (await exportVault(v, "clef")).split(".");
+      salts.add(salt);
+      nonces.add(nonce);
+    }
+    expect(salts.size).toBe(5);
+    expect(nonces.size).toBe(5);
   });
 
   it("garde un gros carnet scannable", async () => {
@@ -98,5 +126,47 @@ describe("interoperabilite entre implementations", () => {
     // de reference : si l'encodage derivait, le contenu ne correspondrait plus.
     const reexported = await exportVault(vector.vault, vector.masterKey);
     expect(await importVault(reexported, vector.masterKey)).toStrictEqual(vector.vault);
+  });
+
+  it("derive la meme clef de transfert", async () => {
+    const salt = new Uint8Array(Buffer.from(vector.payload.split(".")[1], "base64url"));
+    const bits = await deriveTransferBits(vector.masterKey, salt);
+    expect(Buffer.from(bits).toString("hex")).toBe(vector.derivedTransferHex);
+  });
+
+  it("couvre chaque cas refuse", () => {
+    expect(vector.rejected.map((c) => c.name)).toContain("tc1");
+  });
+
+  it.each(vector.rejected.map((c) => [c.name, c]))("refuse %s", async (_name, c) => {
+    await expect(importVault(c.payload, vector.masterKey)).rejects.toThrow();
+  });
+});
+
+describe("decoupage en plusieurs QR", () => {
+  const payload = `TC2.${"a".repeat(22)}.${"b".repeat(16)}.${"c".repeat(6000)}`;
+
+  it("laisse un payload court en un seul code", () => {
+    const small = "TC2.sel.nonce.data";
+    expect(splitPayload(small)).toStrictEqual([small]);
+  });
+
+  it("coupe le corps en morceaux de 2600 caracteres", () => {
+    const fragments = splitPayload(payload);
+    expect(fragments).toHaveLength(3);
+    expect(fragments[0].startsWith("TC2m.0.3.aaaaaaaaaaaaaaaaaaaaaa.bbbb")).toBe(true);
+    expect(fragments[0].length).toBe("TC2m.0.3.".length + 2600);
+    expect(fragments[2].startsWith("TC2m.2.3.")).toBe(true);
+  });
+
+  it("reassemble dans le desordre, doublons et index hors bornes ignores", () => {
+    const [a, b, c] = splitPayload(payload);
+    expect(joinFragments([c, a])).toBeNull();
+    expect(joinFragments([c, a, a, "TC2m.7.3.zzz", b])).toBe(payload);
+  });
+
+  it("refuse les codes v1", () => {
+    expect(() => joinFragments(["TC1m.0.2.abc"])).toThrow(/inconnu/);
+    expect(() => joinFragments(["TC1.abc.def"])).toThrow(/inconnu/);
   });
 });

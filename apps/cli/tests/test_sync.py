@@ -14,10 +14,12 @@ import pytest
 
 from thecode import sync as sync_module
 from thecode.sync import Credentials, SyncError, sync
-from thecode.transfer import derive_transfer_key
+from thecode.transfer import TransferError, _b64d
 from thecode.vault import empty_vault, new_entry
 
-CREDS = Credentials("https://example.test/api", "access-1", "refresh-0")
+#: Sel de dérivation du compte de test (16 octets, base64url).
+KDF_SALT = "AAECAwQFBgcICQoLDA0ODw"
+CREDS = Credentials("https://example.test/api", "access-1", "refresh-0", kdf_salt=KDF_SALT)
 
 
 class FakeServer:
@@ -35,6 +37,8 @@ class FakeServer:
         #: Réglages par défaut du compte : ``{"nonce", "blob"}``, ou None (204).
         self.settings: dict | None = None
         self.settings_puts = 0
+        self.kdf_salt = KDF_SALT
+        self.me_calls = 0
 
     def __call__(self, url, payload=None, token="", method=""):
         if payload is not None:
@@ -47,6 +51,10 @@ class FakeServer:
 
         if token != self.valid_token:
             raise SyncError("401 : Jeton expiré")
+
+        if url.endswith("/v1/auth/me"):
+            self.me_calls += 1
+            return {"plan": "free", "kdf_salt": self.kdf_salt}
 
         if url.endswith("/v1/settings"):
             if payload is None:
@@ -199,10 +207,150 @@ def test_reports_a_stale_revision(monkeypatch):
     assert pushed[0]["base_revision"] == 3
 
 
+def _vector() -> dict:
+    return json.loads((Path(__file__).parent / "sync-row.json").read_text(encoding="utf-8"))
+
+
+def _vector_key(vector: dict) -> bytes:
+    return sync_module.derive_sync_key(vector["masterKey"], _b64d(vector["kdfSalt"]))
+
+
 def test_interoperates_with_the_shared_vector():
     """Une ligne produite ici doit être lisible partout, et réciproquement."""
-    vector = json.loads((Path(__file__).parent / "sync-row.json").read_text(encoding="utf-8"))
-    key = derive_transfer_key(vector["masterKey"])
+    vector = _vector()
+    key = _vector_key(vector)
 
+    assert key.hex() == vector["derivedSyncHex"]
     assert sync_module._decrypt_entry(vector["row"], key) == vector["entry"]
     assert vector["row"]["entry_id"] == vector["entry"]["id"]
+
+
+def test_shared_settings_vector():
+    vector = _vector()
+    key = _vector_key(vector)
+
+    assert sync_module.open_settings(vector["settings"]["sealed"], key) == vector["settings"]["value"]
+
+
+@pytest.mark.parametrize("case", _vector()["rejected"], ids=lambda case: case["name"])
+def test_shared_negative_vectors(case):
+    """Chaque cas doit échouer : blob déplacé, identifiant incohérent, autre usage."""
+    vector = _vector()
+    key = _vector_key(vector)
+
+    with pytest.raises(TransferError):
+        if case["as"] == "settings":
+            sync_module.open_settings(case["row"], key)
+        else:
+            sync_module._decrypt_entry(case["row"], key)
+
+
+def test_key_depends_on_the_account_salt():
+    """Même clef maîtresse, deux comptes : deux clefs différentes."""
+    one = sync_module.derive_sync_key("clef", bytes(16))
+    other = sync_module.derive_sync_key("clef", bytes([1]) * 16)
+    assert one != other
+
+
+def test_a_blob_moved_to_another_entry_is_refused(server):
+    """Le serveur ne peut pas échanger les blobs de deux entrées."""
+    vault = empty_vault()
+    vault["entries"] += [new_entry("google.com"), new_entry("github.com")]
+    sync(vault, "clef", CREDS)
+
+    first, second = list(server.rows)
+    server.rows[first] = {**server.rows[second], "entry_id": first}
+
+    with pytest.raises(TransferError):
+        sync(empty_vault(), "clef", CREDS)
+
+
+def test_an_entry_under_another_id_stops_the_whole_sync(server):
+    """Cas partagé ``id-mismatch`` : rien n'est poussé, le carnet local reste tel quel."""
+    vector = _vector()
+    case = next(c for c in vector["rejected"] if c["name"] == "id-mismatch")
+    server.kdf_salt = vector["kdfSalt"]
+    server.rows[case["row"]["entry_id"]] = case["row"]
+    local = vault_with("gitlab.com", "moi")
+    before = json.loads(json.dumps(local))
+
+    creds = Credentials(CREDS.endpoint, "access-1", "refresh-0", kdf_salt=vector["kdfSalt"])
+
+    with pytest.raises(sync_module.VaultTamperedError, match="modifié"):
+        sync(local, vector["masterKey"], creds)
+
+    assert server.sent == []
+    assert server.revision == 0
+    assert local == before
+
+
+@pytest.mark.parametrize(
+    ("lang", "expected"), [("fr_FR.UTF-8", "a été modifié"), ("en_US.UTF-8", "tampered with")]
+)
+def test_cli_sync_writes_nothing_when_an_entry_was_moved(
+    server, monkeypatch, tmp_path, capsys, lang, expected
+):
+    from thecode.cli import main
+    from thecode.vault import save
+
+    vector = _vector()
+    case = next(c for c in vector["rejected"] if c["name"] == "id-mismatch")
+    for var in ("LC_ALL", "LC_MESSAGES"):
+        monkeypatch.delenv(var, raising=False)
+    monkeypatch.setenv("LANG", lang)
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
+    Credentials(CREDS.endpoint, "access-1", "refresh-0", kdf_salt=vector["kdfSalt"]).save()
+    server.kdf_salt = vector["kdfSalt"]
+    server.rows[case["row"]["entry_id"]] = case["row"]
+    vault_path = tmp_path / "vault.json"
+    save(vault_with("gitlab.com", "moi"), vault_path)
+    before = vault_path.read_bytes()
+
+    code = main(["-p", vector["masterKey"], "--sync", "--vault", str(vault_path)])
+
+    assert code == 1
+    assert expected in capsys.readouterr().err
+    assert vault_path.read_bytes() == before
+    assert server.sent == []
+
+
+def test_settings_blob_is_not_readable_as_an_entry():
+    key = sync_module.derive_sync_key("clef", bytes(16))
+    entry = new_entry("google.com")
+    sealed = sync_module.seal_settings(entry, key)
+
+    with pytest.raises(TransferError):
+        sync_module._decrypt_entry({"entry_id": entry["id"], **sealed}, key)
+
+
+def test_fetches_the_salt_when_the_session_lacks_it(server, monkeypatch, tmp_path):
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    bare = Credentials(CREDS.endpoint, "access-1", "refresh-0")
+
+    _, _, _, creds = sync(vault_with("google.com", "moi"), "clef", bare)
+
+    assert server.me_calls == 1
+    assert creds.kdf_salt == KDF_SALT
+    assert Credentials.load().kdf_salt == KDF_SALT
+
+
+def test_refuses_to_sync_without_a_salt(server, monkeypatch, tmp_path):
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    server.kdf_salt = ""
+
+    with pytest.raises(SyncError, match="sel"):
+        sync(empty_vault(), "clef", Credentials(CREDS.endpoint, "access-1", "refresh-0"))
+    assert server.sent == []
+
+
+def test_login_keeps_the_account_salt(monkeypatch, tmp_path):
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+
+    def fake(url, payload=None, token="", method=""):
+        assert url.endswith("/v1/auth/login")
+        return {"access_token": "a", "refresh_token": "r", "kdf_salt": KDF_SALT}
+
+    monkeypatch.setattr(sync_module, "_request", fake)
+    sync_module.login("https://example.test", "moi@example.fr", "secret")
+
+    assert Credentials.load().kdf_salt == KDF_SALT

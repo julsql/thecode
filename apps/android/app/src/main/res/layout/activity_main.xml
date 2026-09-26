@@ -87,6 +87,30 @@
                             android:singleLine="true" />
                     </com.google.android.material.textfield.TextInputLayout>
 
+                    <!-- Guide discret, jamais bloquant (shared/spec/key-strength.md).
+                         Le niveau n'apparaît que pendant la saisie ou clef
+                         affichée : clef masquée et champ sans focus, il
+                         trahirait une indication de longueur. -->
+                    <TextView
+                        android:id="@+id/keyHintText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="@string/key_strength_hint"
+                        android:textAppearance="?attr/textAppearanceBodySmall"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
+
+                    <TextView
+                        android:id="@+id/keyStrengthText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:accessibilityLiveRegion="polite"
+                        android:textAppearance="?attr/textAppearanceBodySmall"
+                        android:textStyle="bold"
+                        android:visibility="gone"
+                        tools:text="@string/key_strength_fair" />
+
                     <!-- Empreinte de la clef.
 
                          Une faute de frappe sur la clef ne se voit pas

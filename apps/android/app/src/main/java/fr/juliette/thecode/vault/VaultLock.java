@@ -3,76 +3,70 @@ package fr.juliette.thecode.vault;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+
 import fr.juliette.thecode.SessionLock;
 
 /**
- * Verrou de l'écran carnet (shared/spec/vault-lock.md).
+ * Verrou de l'écran carnet.
  *
  * Protège l'écran, pas les données : le remplissage et la génération lisent le
  * carnet sans passer par ici.
  *
+ * Aucun secret propre au carnet : il s'ouvre par la biométrie de l'appareil
+ * quand elle est disponible, sinon en ressaisissant la clef maîtresse déjà
+ * enregistrée. Rien à choisir, rien à mettre en place, rien à oublier.
+ *
  * Une seule session avec la clef ({@link SessionLock}) : une session valide
  * ouvre l'écran sans rien demander, et déverrouiller le carnet déverrouille la
- * clef. Quitter l'écran ouvert fait courir la fenêtre commune ; verrouiller ou
- * oublier y met fin pour les deux. La méthode propre au carnet (biométrie ou
- * mot de passe) ne sert qu'à défaut de session valide.
+ * clef. Quitter l'écran ouvert fait courir la fenêtre commune ; verrouiller y
+ * met fin pour les deux.
  *
- * Logique pure, le stockage est injecté pour être testable sans Android.
+ * Logique pure, la clef est injectée pour être testable sans Android.
  */
 public final class VaultLock {
 
-    public enum Method { NONE, BIOMETRIC, PASSWORD }
+    public enum State { LOCKED, UNLOCKED }
 
-    public enum State {
-        /** Aucune méthode choisie : première ouverture, ou après un oubli. */
-        SETUP,
-        LOCKED,
-        UNLOCKED
+    /** Issue d'une saisie de la clef maîtresse. */
+    public enum KeyCheck {
+        OK,
+        /** Ce n'est pas la clef enregistrée sur cet appareil. */
+        MISMATCH,
+        /** Aucune clef enregistrée : la définir d'abord sur l'écran principal. */
+        NO_KEY
     }
 
-    /** Stockage local de la méthode et de l'empreinte. Jamais synchronisé. */
-    public interface Store {
-        @NonNull String method();
-        void setMethod(@NonNull String method);
-        @Nullable String passwordRecord();
-        void setPasswordRecord(@Nullable String record);
-        void clear();
+    /** La clef maîtresse enregistrée (Keystore), vide si aucune. */
+    public interface MasterKey {
+        @Nullable String stored();
     }
 
-    public static final String BIOMETRIC = "biometric";
-    public static final String PASSWORD = "password";
-
-    private final Store store;
+    private final MasterKey masterKey;
     private final SessionLock session;
     private volatile boolean unlocked;
 
     /** Une session valide (clef ou carnet déverrouillé récemment) ouvre l'écran. */
-    public VaultLock(@NonNull Store store, @NonNull SessionLock session) {
-        this.store = store;
+    public VaultLock(@NonNull MasterKey masterKey, @NonNull SessionLock session) {
+        this.masterKey = masterKey;
         this.session = session;
-        this.unlocked = sessionOpens();
-    }
-
-    private boolean sessionOpens() {
-        return method() != Method.NONE && session.isValid();
-    }
-
-    @NonNull
-    public Method method() {
-        String m = store.method();
-        if (BIOMETRIC.equals(m)) return Method.BIOMETRIC;
-        if (PASSWORD.equals(m)) return Method.PASSWORD;
-        return Method.NONE;
+        this.unlocked = session.isValid();
     }
 
     @NonNull
     public State state() {
-        if (method() == Method.NONE) return State.SETUP;
         return unlocked ? State.UNLOCKED : State.LOCKED;
     }
 
     public boolean isUnlocked() {
-        return state() == State.UNLOCKED;
+        return unlocked;
+    }
+
+    /** Vrai si une clef maîtresse est enregistrée, donc si la saisie peut ouvrir. */
+    public boolean hasMasterKey() {
+        String stored = masterKey.stored();
+        return stored != null && !stored.isEmpty();
     }
 
     /** Ouvre l'écran et la session commune : la clef est déverrouillée aussi. */
@@ -81,51 +75,33 @@ public final class VaultLock {
         session.stamp();
     }
 
-    /** Choisir la biométrie : à la première ouverture ou depuis l'écran déverrouillé. */
-    public void chooseBiometric() {
-        requireConfigurable();
-        store.setPasswordRecord(null);
-        store.setMethod(BIOMETRIC);
+    /** Succès de l'invite biométrique (ou du code de l'appareil qu'elle propose). */
+    public void unlockWithBiometrics() {
         open();
     }
 
     /**
-     * Choisir un mot de passe de carnet, déjà haché ({@link VaultPassword#hash})
-     * hors du fil de l'interface.
+     * Compare la saisie à la clef enregistrée, en temps constant, et ouvre
+     * l'écran si elles concordent.
      */
-    public void choosePassword(@NonNull String record) {
-        requireConfigurable();
-        store.setPasswordRecord(record);
-        store.setMethod(PASSWORD);
+    @NonNull
+    public KeyCheck unlockWithKey(@NonNull String typed) {
+        String stored = masterKey.stored();
+        if (stored == null || stored.isEmpty()) return KeyCheck.NO_KEY;
+        if (!matches(typed, stored)) return KeyCheck.MISMATCH;
         open();
+        return KeyCheck.OK;
     }
 
-    /** Coûteux (PBKDF2) : à appeler hors du fil de l'interface. */
-    public boolean verifyPassword(@NonNull char[] password) {
-        return method() == Method.PASSWORD
-                && VaultPassword.verify(password, store.passwordRecord());
-    }
-
-    /** Déverrouille après une vérification réussie ou un succès biométrique. */
-    public void unlock(@NonNull Method with) {
-        if (with == Method.NONE || with != method()) {
-            throw new IllegalStateException("Méthode " + with + " non configurée");
-        }
-        open();
-    }
-
-    /** Remplace le mot de passe ; l'actuel a été vérifié par l'appelant. */
-    public void changePassword(@NonNull String newRecord) {
-        if (state() != State.UNLOCKED || method() != Method.PASSWORD) {
-            throw new IllegalStateException("Changement de mot de passe hors session");
-        }
-        store.setPasswordRecord(newRecord);
+    /** Temps constant : ne rien laisser deviner de la clef par la durée. */
+    static boolean matches(@NonNull String typed, @NonNull String stored) {
+        return MessageDigest.isEqual(typed.getBytes(StandardCharsets.UTF_8),
+                stored.getBytes(StandardCharsets.UTF_8));
     }
 
     /** Verrou explicite : referme l'écran et met fin à la session, clef comprise. */
     public void lock() {
         unlocked = false;
-        setupAuthorized = false;
         session.invalidate();
     }
 
@@ -151,7 +127,7 @@ public final class VaultLock {
      * l'activité : la décision est différée jusqu'à l'issue de l'auth.
      */
     public void onLeave() {
-        if (isUnlocked()) session.stamp();
+        if (unlocked) session.stamp();
         if (systemAuthInProgress) lockDeferred = true;
     }
 
@@ -186,56 +162,8 @@ public final class VaultLock {
     /** Aligne l'écran sur la session commune, et la relance si elle court. */
     private boolean resolveSession() {
         boolean wasUnlocked = unlocked;
-        unlocked = sessionOpens();
+        unlocked = session.isValid();
         if (unlocked) session.stamp();
         return wasUnlocked && !unlocked;
-    }
-
-    /**
-     * Oubli : efface le verrou et met fin à la session, clef comprise.
-     * L'appelant efface aussi le carnet local — rien d'autre ne permet de
-     * passer le verrou.
-     */
-    public void forget() {
-        store.clear();
-        session.invalidate();
-        unlocked = false;
-        setupAuthorized = false;
-    }
-
-    /**
-     * Mise en place autorisée pour cet écran : auth de l'appareil réussie,
-     * session valide constatée, ou appareil sans écran de verrouillage.
-     */
-    private boolean setupAuthorized = false;
-
-    /**
-     * Vrai si choisir une méthode exige d'abord l'auth de l'appareil.
-     *
-     * Choisir une méthode ouvre la session commune, donc la clef : sans cette
-     * garde, « Mot de passe oublié » puis un nouveau mot de passe de carnet
-     * déverrouilleraient la clef sans biométrie. Seule une session valide (la
-     * clef vient d'être déverrouillée) en dispense.
-     */
-    public boolean setupNeedsDeviceAuth() {
-        return state() == State.SETUP && !setupAuthorized && !session.isValid();
-    }
-
-    /**
-     * Autorise la mise en place : après une auth de l'appareil réussie, quand
-     * la session est valide au moment de la demander, ou quand l'appareil n'a
-     * aucun écran de verrouillage sécurisé (rien à protéger au-delà de l'app).
-     */
-    public void authorizeSetup() {
-        setupAuthorized = true;
-    }
-
-    private void requireConfigurable() {
-        if (state() == State.LOCKED) {
-            throw new IllegalStateException("Changer de méthode exige un carnet déverrouillé");
-        }
-        if (setupNeedsDeviceAuth()) {
-            throw new IllegalStateException("Mise en place sans auth de l'appareil");
-        }
     }
 }

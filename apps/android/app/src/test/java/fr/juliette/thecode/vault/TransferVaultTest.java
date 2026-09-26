@@ -5,6 +5,7 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.Test;
 
@@ -55,14 +56,56 @@ public class TransferVaultTest {
     public void refusesAnUnknownVersion() {
         // Interpreter un format inconnu au hasard serait pire que refuser.
         Transfer.TransferException e = assertThrows(Transfer.TransferException.class,
-                () -> Transfer.importVault("TC9.aaa.bbb", "clef"));
+                () -> Transfer.importVault("TC9.aaa.bbb.ccc", "clef"));
         assertTrue(e.getMessage(), e.getMessage().contains("TC9"));
     }
 
     @Test
     public void refusesATruncatedPayload() {
         assertThrows(Transfer.TransferException.class,
-                () -> Transfer.importVault("TC1.seulement-deux", "clef"));
+                () -> Transfer.importVault("TC2.seulement-deux", "clef"));
+        assertThrows(Transfer.TransferException.class,
+                () -> Transfer.importVault("TC2.sel.nonce", "clef"));
+    }
+
+    @Test
+    public void refusesTheFormerFormat() {
+        // TC1 n'est plus lu : le refuser en le disant.
+        Transfer.TransferException e = assertThrows(Transfer.TransferException.class,
+                () -> Transfer.importVault("TC1.bm9uY2U.ZG9ubmVlcw", "clef"));
+        assertTrue(e.getMessage(), e.getMessage().contains("TC1"));
+    }
+
+    @Test
+    public void refusesASaltOrNonceOfTheWrongSize() throws Exception {
+        String[] parts = Transfer.exportVault(filled(), "clef").split("\\.");
+        assertThrows(Transfer.TransferException.class, () -> Transfer.importVault(
+                parts[0] + "." + parts[1].substring(2) + "." + parts[2] + "." + parts[3], "clef"));
+        assertThrows(Transfer.TransferException.class, () -> Transfer.importVault(
+                parts[0] + "." + parts[1] + "." + parts[2].substring(4) + "." + parts[3], "clef"));
+    }
+
+    @Test
+    public void eachExportDrawsItsOwnSalt() throws Exception {
+        // Un sel par export : pas de table precalculee valable pour tous.
+        Vault vault = filled();
+        Set<String> salts = new HashSet<>();
+        for (int i = 0; i < 5; i++) {
+            salts.add(Transfer.exportVault(vault, "clef").split("\\.")[1]);
+        }
+        assertEquals(5, salts.size());
+    }
+
+    @Test
+    public void refusesEveryRejectedVector() throws Exception {
+        JSONObject vector = TransferInteropTest.loadVector();
+        JSONArray rejected = vector.getJSONArray("rejected");
+        for (int i = 0; i < rejected.length(); i++) {
+            String payload = rejected.getJSONObject(i).getString("payload");
+            assertThrows(rejected.getJSONObject(i).getString("name"),
+                    Transfer.TransferException.class,
+                    () -> Transfer.importVault(payload, vector.getString("masterKey")));
+        }
     }
 
     @Test
@@ -73,9 +116,9 @@ public class TransferVaultTest {
         // donnent le meme octet. Changer ce seul caractere laissait le chiffre
         // intact, l'import reussissait, et le test echouait sans que rien
         // n'ait ete altere.
-        String cipher = parts[2];
+        String cipher = parts[3];
         String tail = cipher.endsWith("AAAA") ? "BBBB" : "AAAA";
-        String tampered = parts[0] + "." + parts[1] + "."
+        String tampered = parts[0] + "." + parts[1] + "." + parts[2] + "."
                 + cipher.substring(0, cipher.length() - 4) + tail;
 
         assertThrows(Transfer.TransferException.class,
@@ -88,7 +131,7 @@ public class TransferVaultTest {
         Vault vault = filled();
         Set<String> nonces = new HashSet<>();
         for (int i = 0; i < 10; i++) {
-            nonces.add(Transfer.exportVault(vault, "clef").split("\\.")[1]);
+            nonces.add(Transfer.exportVault(vault, "clef").split("\\.")[2]);
         }
         assertEquals(10, nonces.size());
     }
@@ -97,7 +140,8 @@ public class TransferVaultTest {
     public void producesWhatTheOthersRead() throws Exception {
         String payload = Transfer.exportVault(filled(), "clef");
 
-        assertTrue(payload, payload.startsWith("TC1."));
+        assertTrue(payload, payload.startsWith("TC2."));
+        assertEquals(4, payload.split("\\.").length);
         // base64url sans remplissage : un « + » ou un « = » casserait les autres.
         assertTrue(payload, payload.substring(4).matches("[A-Za-z0-9_.-]+"));
     }
@@ -117,6 +161,10 @@ public class TransferVaultTest {
             Vault imported = Transfer.importVault(
                     vector.getString("payload"), vector.getString("masterKey"));
             assertNotEquals(0, imported.entries.size());
+            // A l'identique : le carnet rendu est celui qui a ete exporte.
+            assertTrue(imported.toCompactJson(),
+                    TransferInteropTest.sameJson(vector.getJSONObject("vault"),
+                            new JSONObject(imported.toCompactJson())));
         }
     }
 

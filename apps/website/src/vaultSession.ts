@@ -46,7 +46,7 @@ export function recordLeave(now: number = Date.now(), store = defaultStore()): v
   try {
     store?.setItem(VAULT_SESSION_KEY, String(now));
   } catch {
-    // Sans stockage, revenir redemandera le mot de passe : sûr.
+    // Sans stockage, revenir redemandera la clef : sûr.
   }
 }
 
@@ -63,11 +63,23 @@ export function resumeSession(now: number = Date.now(), store = defaultStore()):
   return false;
 }
 
-/** « Verrouiller », « Mot de passe oublié » : referme aussitôt. */
+/** « Verrouiller » : referme aussitôt. */
 export function clearSession(store = defaultStore()): void {
   try {
     store?.removeItem(VAULT_SESSION_KEY);
   } catch {
     // Rien à effacer si le stockage est inaccessible.
+  }
+}
+
+/** Ancien enregistrement du mot de passe de carnet : il n'existe plus. */
+export const LEGACY_LOCK_KEY = "thecode.vaultLock";
+
+/** Efface l'ancien verrou au chargement du site. */
+export function removeLegacyVaultLock(): void {
+  try {
+    globalThis.localStorage?.removeItem(LEGACY_LOCK_KEY);
+  } catch {
+    // Stockage inaccessible : rien à effacer.
   }
 }

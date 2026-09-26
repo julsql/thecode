@@ -10,6 +10,7 @@
          document et ne trouveraient aucun element. type="module" le faisait
          implicitement. -->
     <script defer src="fingerprint.js"></script>
+    <script defer src="key-strength.js"></script>
     <script defer src="algo-theme.js"></script>
     <script defer src="password-reveal.js"></script>
     <script defer src="i18n.js"></script>
@@ -64,6 +65,25 @@
             />
           </svg>
         </button>
+        <!-- Verrouille toute la session : la clef est gardee mais ne sert
+             plus a rien tant qu'elle n'a pas ete ressaisie. -->
+        <button
+          id="lockSession"
+          type="button"
+          class="icon-btn"
+          aria-label="Verrouiller TheCode"
+          title="Verrouiller"
+          data-i18n-aria-label="popup_lock_session"
+          data-i18n-title="popup_lock"
+          hidden
+        >
+          <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" width="20" height="20">
+            <path
+              fill="currentColor"
+              d="M12 2a5 5 0 0 1 5 5v3h1a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h1V7a5 5 0 0 1 5-5Zm0 2a3 3 0 0 0-3 3v3h6V7a3 3 0 0 0-3-3Zm-6 8v8h12v-8H6Zm6 2a1.5 1.5 0 0 1 .75 2.8V18h-1.5v-1.2A1.5 1.5 0 0 1 12 14Z"
+            />
+          </svg>
+        </button>
         <button
           id="openSettings"
           type="button"
@@ -84,11 +104,40 @@
         </button>
       </header>
 
+      <!-- Session verrouillee : la clef est gardee mais inutilisable. La
+           ressaisir rouvre tout ; Effacer l'oublie. -->
+      <form id="unlockForm" class="field" novalidate hidden>
+        <label for="unlockKey" data-i18n="popup_unlock_label">Déverrouiller</label>
+        <p id="unlockHint" class="hint" data-i18n="popup_locked_hint">
+          TheCode est verrouillé. Saisissez votre clef pour le déverrouiller.
+        </p>
+        <div class="row">
+          <input
+            type="password"
+            id="unlockKey"
+            autocomplete="off"
+            spellcheck="false"
+            aria-describedby="unlockHint unlockError"
+          />
+        </div>
+        <div class="row">
+          <button id="unlockBtn" type="submit" data-i18n="popup_unlock">Déverrouiller</button>
+          <button id="unlockClearKey" type="button" data-i18n="popup_clear_key">Effacer</button>
+        </div>
+        <p id="unlockError" class="status" data-tone="error" role="alert"></p>
+      </form>
+
       <!-- Clef -->
-      <section class="field">
+      <section id="keySection" class="field">
         <label for="passphrase" data-i18n="popup_key">Clef</label>
         <div class="row">
-          <input type="password" id="passphrase" autocomplete="off" spellcheck="false" />
+          <input
+            type="password"
+            id="passphrase"
+            autocomplete="off"
+            spellcheck="false"
+            aria-describedby="keyHint"
+          />
           <button
             id="toggleKey"
             type="button"
@@ -98,6 +147,17 @@
           >
             Voir
           </button>
+        </div>
+        <!-- Guide discret, jamais bloquant : la securite du carnet synchronise
+             repose sur la robustesse de la clef (shared/spec/key-strength.md).
+             Le niveau n'apparait que pendant la saisie ou clef affichee, pour
+             ne pas trahir la longueur d'une clef masquee. -->
+        <div class="key-guide">
+          <p id="keyHint" class="hint" data-i18n="popup_key_hint">
+            Choisissez une clef longue et unique, par exemple une phrase de plusieurs mots : elle
+            protège tous vos mots de passe et votre carnet.
+          </p>
+          <p id="keyStrength" class="key-strength" aria-live="polite"></p>
         </div>
         <div class="row">
           <button id="setKey" type="button" data-i18n="popup_set_key">Définir</button>

@@ -55,15 +55,6 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
                     android:text="@string/vault_unlock" />
-
-                <!-- Seule issue quand le verrou ne s'ouvre plus : efface le
-                     carnet local et le verrou, apres confirmation. -->
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/vaultForgotAction"
-                    style="?attr/borderlessButtonStyle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/vault_lock_forgot" />
             </LinearLayout>
 
             <!-- Affiche tant qu'aucun compte n'est lie : la synchronisation

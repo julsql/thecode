@@ -13,6 +13,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import Generate from "@/pages/Generate.vue";
+import { resetMasterKeyForTests } from "@/masterKey";
 
 // Le resultat est masque a l'ecran : on lit la valeur generee sur le composant.
 const generated = (w: { vm: unknown }) => (w.vm as { motDePasse: string }).motDePasse;
@@ -28,6 +29,10 @@ async function generateFor(w: any, site: string) {
   // La copie n'apparait qu'une fois le mot de passe genere, en v1 comme en v2.
   await vi.waitFor(() => expect(w.find("#copyPassword").exists()).toBe(true), { timeout: 15000 });
 }
+
+// La clef maîtresse vit en mémoire le temps de la session : chaque cas repart
+// sans clef.
+beforeEach(() => resetMasterKeyForTests());
 
 const vectors = JSON.parse(
   readFileSync(join(dirname(fileURLToPath(import.meta.url)), "test-vectors.json"), "utf8"),
@@ -68,6 +73,29 @@ describe("page de generation", () => {
 
   it("masque la clef par defaut", () => {
     expect(wrapper.find("#id_clef").attributes("type")).toBe("password");
+  });
+
+  // Le niveau trahirait une indication de longueur : clef masquee et champ
+  // sans focus, il disparait. Il ne bloque jamais la saisie.
+  it("indique la robustesse de la clef seulement pendant la saisie", async () => {
+    const field = wrapper.find("#id_clef");
+    const strength = () => wrapper.find(".key-strength").text();
+    // v-show : le conseil reste dans le DOM, masque par un style en ligne.
+    const hintShown = () => !(wrapper.find("#keyHint").attributes("style") ?? "").includes("none");
+    expect(hintShown()).toBe(true);
+
+    await field.trigger("focus");
+    await field.setValue("soleil");
+    expect(strength()).toBe("Robustesse : faible");
+    await field.setValue("un chat va ici");
+    expect(strength()).toBe("Robustesse : bonne");
+
+    await field.trigger("blur");
+    expect(strength()).toBe("");
+    expect(hintShown()).toBe(false);
+
+    await wrapper.find(".input-with-button button").trigger("click");
+    expect(strength()).toBe("Robustesse : bonne");
   });
 
   it("genere le mot de passe du vecteur partage a partir des champs", async () => {
@@ -602,7 +630,12 @@ describe("synchronisation automatique", () => {
 
   async function signIn() {
     const { saveSession } = await import("@/sync");
-    saveSession({ endpoint: ENDPOINT, accessToken: "a", refreshToken: "r" });
+    saveSession({
+      endpoint: ENDPOINT,
+      accessToken: "a",
+      refreshToken: "r",
+      kdfSalt: "0WveVfSRJyzta8UsTh5DFw",
+    });
   }
 
   beforeEach(async () => {
@@ -693,5 +726,112 @@ describe("synchronisation automatique", () => {
     await vi.advanceTimersByTimeAsync(5000);
     vi.useRealTimers();
     expect(vaultCalls()).toHaveLength(1);
+  }, 30000);
+});
+
+// « Verrouiller » ferme toute la session (shared/spec/vault-lock.md) : la
+// clef est gardée mais ne produit plus rien jusqu'à sa ressaisie.
+describe("verrou de la session", () => {
+  const ENDPOINT = "https://sync.test";
+  let fetchMock: ReturnType<typeof vi.fn>;
+  const vaultCalls = () =>
+    fetchMock.mock.calls.filter(([url]) => String(url).startsWith(`${ENDPOINT}/v1/vault`));
+
+  beforeEach(async () => {
+    localStorage.clear();
+    sessionStorage.clear();
+    (await import("@/autoSync")).resetAutoSyncForTests();
+    fetchMock = vi.fn(async (url: string) => {
+      if (String(url).startsWith(ENDPOINT)) throw new TypeError("coupure");
+      return new Response("", { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  async function lockedGenerator() {
+    const w = await mountGenerate();
+    await generateFor(w, "example.com");
+    await w.find("#lockSession").trigger("click");
+    await w.vm.$nextTick();
+    return w;
+  }
+
+  it("masque le mot de passe, la copie et l'enregistrement, et garde la clef", async () => {
+    const w = await lockedGenerator();
+    const { masterKey, locked } = await import("@/masterKey");
+    expect(locked.value).toBe(true);
+    expect(masterKey.value).toBe(sampleKey);
+    await vi.waitFor(() => expect(generated(w)).toBe(""));
+    expect(w.find("#password").exists()).toBe(false);
+    expect(w.find("#copyPassword").exists()).toBe(false);
+    expect(w.find("#saveEntry").exists()).toBe(false);
+    // Le champ clef laisse la place au déverrouillage.
+    expect(w.find("#id_clef").exists()).toBe(false);
+    expect(w.find("#id_unlock").exists()).toBe(true);
+    expect(w.text()).toContain("TheCode est verrouillé");
+  }, 20000);
+
+  it("ne génère rien tant qu'elle est verrouillée, même si le site change", async () => {
+    const w = await lockedGenerator();
+    await w.find("#id_site").setValue("github.com");
+    await w.find("#id_longueur").setValue(30);
+    await new Promise((r) => setTimeout(r, 50));
+    expect(generated(w)).toBe("");
+  }, 20000);
+
+  it("refuse une autre clef en le disant", async () => {
+    const w = await lockedGenerator();
+    await w.find("#id_unlock").setValue("autre clef");
+    await w.find("#unlockSession").trigger("submit");
+    await w.vm.$nextTick();
+    expect(w.text()).toContain("Ce n'est pas la même clef");
+    expect(w.find("#id_unlock").attributes("aria-invalid")).toBe("true");
+    expect((await import("@/masterKey")).locked.value).toBe(true);
+    expect(generated(w)).toBe("");
+  }, 20000);
+
+  it("la bonne clef rouvre tout", async () => {
+    const w = await lockedGenerator();
+    await w.find("#id_unlock").setValue(sampleKey);
+    await w.find("form").trigger("submit");
+    await vi.waitFor(() => expect(w.find("#copyPassword").exists()).toBe(true), {
+      timeout: 15000,
+    });
+    expect((await import("@/masterKey")).locked.value).toBe(false);
+    expect(w.find("#id_clef").exists()).toBe(true);
+    expect(generated(w)).not.toBe("");
+  }, 30000);
+
+  it("« Effacer » oublie la clef et le verrou", async () => {
+    const w = await lockedGenerator();
+    await w.find("#forgetKey").trigger("click");
+    const { masterKey, locked } = await import("@/masterKey");
+    expect(masterKey.value).toBe("");
+    expect(locked.value).toBe(false);
+    expect(w.find("#id_clef").exists()).toBe(true);
+  }, 20000);
+
+  it("met la synchronisation en pause", async () => {
+    const { saveSession } = await import("@/sync");
+    saveSession({ endpoint: ENDPOINT, accessToken: "a", refreshToken: "r" });
+    const w = await lockedGenerator();
+    fetchMock.mockClear();
+    const { runSyncNow, scheduleAutoSync } = await import("@/autoSync");
+    expect(await runSyncNow()).toStrictEqual({ skipped: true });
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    scheduleAutoSync();
+    await vi.advanceTimersByTimeAsync(5000);
+    vi.useRealTimers();
+    expect(vaultCalls()).toHaveLength(0);
+
+    const syncBtn = w.findAll("button").find((b) => b.text() === "Synchroniser maintenant");
+    await syncBtn!.trigger("click");
+    await w.vm.$nextTick();
+    expect(w.text()).toContain("TheCode est verrouillé : déverrouillez-le d'abord.");
+    expect(vaultCalls()).toHaveLength(0);
   }, 30000);
 });

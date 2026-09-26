@@ -36,25 +36,90 @@ renouvellement rotatif pour la suite. Sur un usage normal, le jeton d'accès
 expire entre deux synchronisations ; chaque client le renouvelle sans
 redemander le mot de passe.
 
-## Chiffrement des entrées
+## Chiffrement des entrées (v2)
 
-Chaque entrée est chiffrée **séparément**, avec la même clef de transfert que
-`vault-transfer.md` :
+### Sel du compte
+
+Chaque compte reçoit à sa création — quel que soit le chemin : inscription,
+Google, Apple — un **`kdf_salt` de 16 octets aléatoires**, tiré par le serveur
+(générateur cryptographique), stocké avec le compte et **jamais modifié** :
+en changer rendrait le carnet et les réglages du compte illisibles.
+
+Il n'est pas secret. Le serveur le rend en base64url sans remplissage
+(22 caractères) :
+
+- dans **toute** réponse de jeton (`TokenResponse`) : `POST /v1/auth/register`,
+  `/login`, `/refresh`, `/google`, `/apple`, `/password/reset` ;
+- dans `GET /v1/auth/me` ;
+- dans l'export du compte (`GET /v1/account/export`, `account.kdf_salt`).
+
+Le client le garde avec ses jetons, et le relit sur `/v1/auth/me` s'il lui
+manque. Sans sel valide (absent, ou qui ne décode pas en 16 octets), le client
+**ne synchronise pas** et demande de se reconnecter : chiffrer avec un autre sel
+rendrait les blocs illisibles pour les autres appareils.
+
+### Clef
 
 ```
-tk = PBKDF2-SHA256(clef, salt = "thecode-transfer/v1", iterations = 600000, dkLen = 32)
+sk = PBKDF2-HMAC-SHA256(
+       password   = UTF-8(clef maîtresse),
+       salt       = UTF-8("thecode-sync/v2") || kdf_salt,   // 15 + 16 = 31 octets
+       iterations = 600000,
+       dkLen      = 32)
 ```
 
-Une entrée devient :
+`||` est la concaténation d'octets, sans séparateur. Une seule dérivation par
+synchronisation suffit : `sk` sert au carnet puis aux réglages.
+
+Le sel du compte empêche de précalculer une table valable pour tous les
+comptes : qui volerait la base devrait attaquer chaque compte séparément.
+L'étiquette `thecode-sync/v2` sépare cette clef de celle du transfert
+(`thecode-transfer/v2`, `vault-transfer.md`) et de toute autre dérivation.
+PBKDF2-SHA256 à 600 000 itérations reste le choix : c'est la seule fonction
+disponible nativement sur les cinq plateformes.
+
+### Entrée
+
+```
+nonce = 12 octets aléatoires, tirés à chaque chiffrement
+aad   = UTF-8("thecode/entry/v2|" + entry_id)
+blob  = AES-256-GCM-Encrypt(sk, nonce, UTF-8(JSON de l'entrée), aad)   // ciphertext || tag (16 octets)
+```
+
+Le JSON de l'entrée est compact (sans espaces), UTF-8, et porte son propre
+`id`, égal à `entry_id`. Une ligne devient :
 
 ```json
 {
   "entry_id": "<l'id de l'entrée, en clair>",
   "nonce": "<base64url, 12 octets, jamais réutilisés>",
-  "blob": "<base64url(AES-256-GCM(JSON de l'entrée))>",
+  "blob": "<base64url(ciphertext || tag)>",
   "deleted": false
 }
 ```
+
+Au déchiffrement, le client :
+
+1. recalcule `aad` à partir de l'`entry_id` **de la ligne** ;
+2. déchiffre — un tag invalide (autre clef maîtresse, autre compte, blob
+   déplacé sous un autre `entry_id`, blob altéré) est une erreur ;
+3. vérifie que l'`id` de l'entrée déchiffrée est exactement `entry_id`. Sinon,
+   comme pour un tag invalide, **toute la synchronisation échoue** : rien n'est
+   écrit dans le carnet local, rien n'est poussé, et l'utilisateur voit
+   « Le carnet reçu du serveur a été modifié : synchronisation interrompue,
+   rien n'a été écrit. » (EN : « The vault received from the server was
+   tampered with: sync stopped, nothing was written. »). On n'écarte pas
+   l'entrée en silence : un blob valide sous le mauvais identifiant trahit une
+   altération, et l'écarter la rendrait invisible.
+
+Les données associées lient le blob à sa ligne : sans elles, le serveur (ou
+quiconque écrit dans sa base) pourrait échanger les blobs de deux entrées, ou
+rejouer un ancien blob sous un autre identifiant, sans que le déchiffrement ne
+s'en aperçoive. Le contrôle de l'`id` ferme le dernier cas : un client qui aurait
+chiffré une entrée sous le mauvais identifiant.
+
+Rien n'est lu en v1 : le serveur n'a jamais été en production, sa base a été
+vidée des blobs v1 à la migration (`a7d2e9c4f158`).
 
 Entrée par entrée et non carnet entier : sinon chaque modification
 réécrirait tout, et le delta ne servirait à rien.
@@ -254,7 +319,8 @@ Apple, peuvent créer un compte **gratuit**, sans offre à choisir : un
 écran de facturation par plateforme multiplierait les endroits où une erreur de
 droits peut se glisser, pour un geste qu'on fait deux fois par an.
 
-- `GET /v1/auth/me` — l'état du compte : offre, statut, consommation, plafonds.
+- `GET /v1/auth/me` — l'état du compte : offre, statut, consommation, plafonds,
+  et `kdf_salt` (voir « Chiffrement des entrées »).
 - `POST /v1/auth/verify` / `/verify/resend` — confirmation d'adresse. Le jeton
   est stocké haché, à usage unique, et un nouvel envoi invalide le précédent.
 - `GET /v1/account/devices`, `DELETE /v1/account/devices/{id}` — un plafond
@@ -287,7 +353,8 @@ droits peut se glisser, pour un geste qu'on fait deux fois par an.
   sert aussi à reprendre un compte dont on a perdu le contrôle.
 
 Aucun de ces changements ne touche au carnet : il est chiffré avec la clef
-maîtresse, que le service ne connaît pas. Changer la serrure du compte ne rend
+maîtresse, que le service ne connaît pas, et le `kdf_salt` du compte ne change
+jamais — ni au changement de mot de passe, ni d'adresse, ni de fournisseur lié. Changer la serrure du compte ne rend
 son contenu ni lisible, ni illisible.
 
 - `GET /v1/billing/plans`, `POST /v1/billing/checkout`, `POST /v1/billing/portal`,
@@ -311,7 +378,7 @@ POST /v1/auth/google
   "invite_code": "",
   "lang": "fr" }
 
-200 → { "access_token", "refresh_token", "token_type", "expires_in" }
+200 → { "access_token", "refresh_token", "token_type", "expires_in", "kdf_salt" }
 401 → jeton refusé (« Connexion Google refusée. », sans détail)
 402 / 403 → plafond d'appareils atteint (jamais pour "client": "web") ; 403 aussi pour une inscription fermée
             ou un code exigé et absent
@@ -360,7 +427,7 @@ POST /v1/auth/apple
   "invite_code": "",
   "lang": "fr" }
 
-200 → { "access_token", "refresh_token", "token_type", "expires_in" }
+200 → { "access_token", "refresh_token", "token_type", "expires_in", "kdf_salt" }
 400 → aucun compte trouvé et pas d'adresse vérifiée pour en créer un
 401 → jeton refusé (« Connexion Apple refusée. », sans détail)
 402 / 403 → comme Google
@@ -452,7 +519,16 @@ Les cinq clients suivent le même ordre et les mêmes règles ; leurs tests
 montent chacun un serveur en mémoire aux règles ci-dessus, et vérifient qu'aucun
 nom de site ni identifiant ne passe en clair sur le réseau.
 
-`shared/vault-fixtures/sync-row.json` fige une ligne chiffrée par le CLI :
-chaque implémentation doit la déchiffrer et retrouver l'entrée à l'identique.
+`shared/vault-fixtures/sync-row.json` fige, chiffrés par le CLI :
+
+- `kdfSalt` et `derivedSyncHex` (la clef `sk` attendue, en hexadécimal, pour
+  déboguer la dérivation) ;
+- `row` : une ligne que chaque implémentation doit déchiffrer en `entry`, à
+  l'identique ;
+- `settings` : des réglages par défaut scellés (`sealed`) à ouvrir en `value` ;
+- `rejected` : des cas qui **doivent échouer** — le blob de `row` sous un autre
+  `entry_id`, une entrée dont l'`id` ne correspond pas à la ligne, une entrée
+  chiffrée sans `aad` (v1), les réglages présentés comme une entrée et
+  inversement (`as` dit lequel des deux déchiffrements appliquer).
 Le chiffrement n'est pas ce qui a cassé jusqu'ici, c'est le JSON autour — un
 champ inventé, un défaut ajouté, et la fusion diverge.

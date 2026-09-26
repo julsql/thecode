@@ -10,7 +10,14 @@
  * moyens de paiement restent chez Stripe.
  */
 
-import { authorized, loadSession, request, saveSession, type Session } from "@/sync";
+import {
+  authorized,
+  loadSession,
+  request,
+  saveSession,
+  sessionFromTokens,
+  type Session,
+} from "@/sync";
 
 /** Ce que la page du compte affiche. */
 export interface AccountInfo {
@@ -33,6 +40,8 @@ export interface AccountInfo {
   appleLinked: boolean;
   /** Adresse en attente de confirmation, vide s'il n'y en a pas. */
   pendingEmail: string;
+  /** Sel de dérivation du compte (base64url), vide si le service ne l'a pas rendu. */
+  kdfSalt: string;
 }
 
 /** Les tarifs, lisibles sans compte. */
@@ -79,6 +88,7 @@ export async function fetchAccount(session: Session): Promise<AccountInfo> {
     googleLinked: Boolean(body.google_linked),
     appleLinked: Boolean(body.apple_linked),
     pendingEmail: body.pending_email ?? "",
+    kdfSalt: body.kdf_salt ?? "",
   };
 }
 
@@ -188,7 +198,9 @@ export async function refreshPlan(session: Session): Promise<string | undefined>
   try {
     const info = await fetchAccount(session);
     const current = loadSession();
-    if (current) saveSession({ ...current, plan: info.plan });
+    if (current) {
+      saveSession({ ...current, plan: info.plan, kdfSalt: info.kdfSalt || current.kdfSalt });
+    }
     return info.plan;
   } catch {
     return loadSession()?.plan;
@@ -244,11 +256,7 @@ export async function resetPassword(
   const body = await request(`${endpoint}/v1/auth/password/reset`, {
     payload: { token, password },
   });
-  return {
-    endpoint,
-    accessToken: body.access_token,
-    refreshToken: body.refresh_token,
-  };
+  return sessionFromTokens(endpoint, body);
 }
 
 /**

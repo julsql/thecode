@@ -7,6 +7,7 @@
 //  tests lents et instables.
 //
 
+import CryptoKit
 import Foundation
 import Testing
 
@@ -34,9 +35,32 @@ private actor FakeVaultServer: SyncTransport {
 
     func seedSettings(_ value: [String: Any]?) { settings = value }
 
-    init(validAccessToken: String = "access-1", maxEntries: Int? = nil) {
+    /// Sel du compte, rendu par les réponses de jeton et /v1/auth/me ; nil :
+    /// un service qui ne le dit pas.
+    private let kdfSalt: String?
+
+    init(
+        validAccessToken: String = "access-1", maxEntries: Int? = nil,
+        kdfSalt: String? = fakeSalt
+    ) {
         self.validAccessToken = validAccessToken
         self.maxEntries = maxEntries
+        self.kdfSalt = kdfSalt
+    }
+
+    /// Recopie le blob d'une ligne sous un autre identifiant : ce qu'un
+    /// serveur malveillant ferait pour échanger deux entrées.
+    func moveBlob(from source: String, to target: String) {
+        guard var row = rows[target], let from = rows[source] else { return }
+        row["nonce"] = from["nonce"]
+        row["blob"] = from["blob"]
+        rows[target] = row
+    }
+
+    private func tokens(_ refresh: String) -> [String: Any] {
+        var body: [String: Any] = ["access_token": validAccessToken, "refresh_token": refresh]
+        if let kdfSalt { body["kdf_salt"] = kdfSalt }
+        return body
     }
 
     func send(url: String, method: String, body: Data?, bearer: String?) async throws
@@ -51,14 +75,19 @@ private actor FakeVaultServer: SyncTransport {
         if url.hasSuffix("/v1/auth/refresh") {
             refreshCount += 1
             validAccessToken = "access-\(refreshCount + 1)"
-            return json(200, ["access_token": validAccessToken, "refresh_token": "refresh-1"])
+            return json(200, tokens("refresh-1"))
         }
         if url.hasSuffix("/v1/auth/login") || url.hasSuffix("/v1/auth/register") {
-            return json(200, ["access_token": validAccessToken, "refresh_token": "refresh-0"])
+            return json(200, tokens("refresh-0"))
         }
 
         guard bearer == validAccessToken else {
             return json(401, ["detail": "Jeton expiré"])
+        }
+        if url.hasSuffix("/v1/auth/me") {
+            var body: [String: Any] = ["email": "someone@example.test", "plan": "free"]
+            if let kdfSalt { body["kdf_salt"] = kdfSalt }
+            return json(200, body)
         }
         if url.hasSuffix("/v1/settings") {
             if method == "PUT" {
@@ -114,8 +143,18 @@ private struct StubTransport: SyncTransport {
     }
 }
 
+/// Sel du compte de test : 16 octets, base64url sans remplissage.
+private let fakeSalt = "AAECAwQFBgcICQoLDA0ODw"
+
 private let credentials = SyncCredentials(
-    endpoint: "https://example.test/api", accessToken: "access-1", refreshToken: "refresh-0")
+    endpoint: "https://example.test/api", accessToken: "access-1", refreshToken: "refresh-0",
+    kdfSalt: fakeSalt)
+
+private func syncKey(_ masterKey: String = "clef", salt: String = fakeSalt) throws
+    -> SymmetricKey
+{
+    try Sync.deriveKey(masterKey: masterKey, kdfSalt: #require(Base64URL.decode(salt)))
+}
 
 private func vault(siteKey: String, login: String) -> Vault {
     var entry = VaultEntry(siteKey: siteKey, domains: [siteKey])
@@ -258,7 +297,109 @@ struct SyncTests {
 
         #expect(await server.refreshCount == 1)
         #expect(result.credentials.accessToken == "access-2")
+        #expect(result.credentials.kdfSalt == fakeSalt)
         #expect(await server.revision == 1)
+    }
+
+    @Test("Sans sel enregistré, il est relu sur /v1/auth/me avant de chiffrer")
+    func fetchesAMissingSalt() async throws {
+        let server = FakeVaultServer()
+        let bare = SyncCredentials(
+            endpoint: credentials.endpoint, accessToken: "access-1", refreshToken: "refresh-0")
+
+        let result = try await Sync(transport: server)
+            .sync(vault(siteKey: "google.com", login: "moi"), masterKey: "clef", credentials: bare)
+
+        #expect(await server.requests.first == "GET https://example.test/api/v1/auth/me")
+        #expect(result.credentials.kdfSalt == fakeSalt)
+        // Chiffré avec le sel du compte : un autre appareil qui le connaît relit tout.
+        let other = try await Sync(transport: server)
+            .sync(Vault(), masterKey: "clef", credentials: credentials)
+        #expect(other.vault.entries.count == 1)
+    }
+
+    @Test(
+        "Sans sel valide, rien ne part",
+        arguments: [nil, "", "trop-court", "AAECAwQFBgcICQoLDA0ODxA"] as [String?])
+    func refusesWithoutAValidSalt(salt: String?) async throws {
+        let server = FakeVaultServer(kdfSalt: salt)
+        let bare = SyncCredentials(
+            endpoint: credentials.endpoint, accessToken: "access-1", refreshToken: "refresh-0",
+            kdfSalt: salt ?? "")
+
+        await #expect(throws: SyncError.self) {
+            _ = try await Sync(transport: server)
+                .sync(
+                    vault(siteKey: "google.com", login: "moi"), masterKey: "clef",
+                    credentials: bare)
+        }
+        await #expect(throws: SyncError.self) {
+            _ = try await Sync(transport: server)
+                .syncSettings(
+                    settings(at: "2026-01-01T00:00:00Z"), masterKey: "clef", credentials: bare)
+        }
+        #expect(await !server.requests.contains { !$0.hasSuffix("/v1/auth/me") })
+        #expect(await server.sentBodies.isEmpty)
+    }
+
+    @Test("Un autre compte, même clef maîtresse, ne relit pas le carnet")
+    func anotherAccountSaltCannotRead() async throws {
+        let server = FakeVaultServer()
+        _ = try await Sync(transport: server)
+            .sync(
+                vault(siteKey: "google.com", login: "moi"), masterKey: "clef",
+                credentials: credentials)
+
+        let otherAccount = SyncCredentials(
+            endpoint: credentials.endpoint, accessToken: "access-1", refreshToken: "refresh-0",
+            kdfSalt: "Dw4NDAsKCQgHBgUEAwIBAA")
+        await #expect(throws: SyncError.self) {
+            _ = try await Sync(transport: server)
+                .sync(Vault(), masterKey: "clef", credentials: otherAccount)
+        }
+    }
+
+    @Test("Un blob déplacé sous un autre identifiant est refusé")
+    func refusesAMovedBlob() async throws {
+        let server = FakeVaultServer()
+        var local = vault(siteKey: "google.com", login: "moi")
+        local.entries.append(VaultEntry(siteKey: "github.com"))
+        _ = try await Sync(transport: server)
+            .sync(local, masterKey: "clef", credentials: credentials)
+
+        await server.moveBlob(from: local.entries[0].id, to: local.entries[1].id)
+
+        await #expect(throws: SyncError.self) {
+            _ = try await Sync(transport: server)
+                .sync(Vault(), masterKey: "clef", credentials: credentials)
+        }
+    }
+
+    @Test("Chaque ligne poussée est liée à son identifiant")
+    func pushedRowsAreBoundToTheirId() async throws {
+        let server = FakeVaultServer()
+        let local = vault(siteKey: "google.com", login: "moi")
+        _ = try await Sync(transport: server)
+            .sync(local, masterKey: "clef", credentials: credentials)
+
+        let push = try #require(await server.sentBodies.first)
+        let payload = try #require(
+            try JSONSerialization.jsonObject(with: Data(push.utf8)) as? [String: Any])
+        let row = try #require((payload["entries"] as? [[String: Any]])?.first)
+        let nonce = try #require(Base64URL.decode(row["nonce"] as? String ?? ""))
+        let blob = try #require(Base64URL.decode(row["blob"] as? String ?? ""))
+
+        let key = try syncKey()
+        #expect(
+            try Sync.openEntry(entryId: local.entries[0].id, nonce: nonce, blob: blob, key: key)
+                == local.entries[0])
+        // Sans données associées, ou avec celles d'une autre ligne : refusé.
+        #expect(throws: Transfer.TransferError.cannotOpen) {
+            _ = try Transfer.open(nonce: nonce, blob: blob, with: key, aad: Data())
+        }
+        #expect(throws: Sync.EntryError.cannotOpen) {
+            _ = try Sync.openEntry(entryId: "autre", nonce: nonce, blob: blob, key: key)
+        }
     }
 
     @Test("Une révision périmée est signalée, jamais écrasée")
@@ -553,7 +694,10 @@ struct DeleteAccountTests {
     @Test("Le compte dit son adresse et s'il a un mot de passe")
     func identityReadsTheAccount() async throws {
         let transport = ScriptedTransport([
-            (200, #"{"email":"someone@example.test","plan":"pro","has_password":false}"#)
+            (
+                200,
+                #"{"email":"someone@example.test","plan":"pro","has_password":false,"kdf_salt":"AAECAwQFBgcICQoLDA0ODw"}"#
+            )
         ])
 
         let identity = try await Sync(transport: transport).accountIdentity(
@@ -563,6 +707,7 @@ struct DeleteAccountTests {
         #expect(identity.email == "someone@example.test")
         #expect(!identity.hasPassword)
         #expect(identity.credentials.plan == SyncPlan.pro)
+        #expect(identity.credentials.kdfSalt == fakeSalt)
     }
 
     @Test("Un ancien service qui ne le dit pas : le mot de passe est demandé")
@@ -595,8 +740,7 @@ private func settings(
 private func sealedSettings(_ value: SharedSettings, masterKey: String = "clef") throws
     -> [String: Any]
 {
-    let sealed = try Transfer.seal(
-        JSONEncoder().encode(value), with: Transfer.deriveKey(masterKey))
+    let sealed = try Sync.sealSettings(value, key: syncKey(masterKey))
     return ["nonce": Base64URL.encode(sealed.nonce), "blob": Base64URL.encode(sealed.blob)]
 }
 
@@ -605,9 +749,7 @@ private func openSettings(_ row: [String: Any]?, masterKey: String = "clef") thr
 {
     let nonce = try #require(Base64URL.decode(row?["nonce"] as? String ?? ""))
     let blob = try #require(Base64URL.decode(row?["blob"] as? String ?? ""))
-    return try JSONDecoder().decode(
-        SharedSettings.self,
-        from: Transfer.open(nonce: nonce, blob: blob, with: Transfer.deriveKey(masterKey)))
+    return try #require(Sync.openSettings(nonce: nonce, blob: blob, key: syncKey(masterKey)))
 }
 
 private func freshDefaults() -> UserDefaults {
@@ -701,6 +843,20 @@ struct SettingsSyncTests {
         #expect(await server.settings?["blob"] as? String == foreign["blob"] as? String)
     }
 
+    @Test("Un blob d'entrée présenté comme réglages est ignoré")
+    func ignoresAnEntryBlobAsSettings() async throws {
+        let server = FakeVaultServer()
+        let sealed = try Sync.sealEntry(VaultEntry(siteKey: "google.com"), key: syncKey())
+        await server.seedSettings([
+            "nonce": Base64URL.encode(sealed.nonce), "blob": Base64URL.encode(sealed.blob),
+        ])
+
+        let outcome = try await Sync(transport: server).syncSettings(
+            settings(at: "2026-01-01T00:00:00Z"), masterKey: "clef", credentials: credentials)
+
+        #expect(outcome == .ignoredRemote)
+    }
+
     @Test("Des réglages distants sans aucun jeu sont ignorés")
     func ignoresUnusableRemote() async throws {
         let server = FakeVaultServer()
@@ -737,6 +893,7 @@ struct SettingsSyncTests {
         #expect(outcome == .pushedLocal)
         #expect(renewed.accessToken == "access-2")
         #expect(renewed.plan == SyncPlan.pro)
+        #expect(renewed.kdfSalt == fakeSalt)
     }
 
     // MARK: Réglages retenus sur l'appareil
@@ -824,5 +981,35 @@ struct SettingsSyncTests {
 
         #expect(PasswordSettings.load(from: defaults).length == 30)
         #expect(await server.settingsPuts == 0)
+    }
+}
+
+// MARK: - Sel du compte
+
+@Suite("Sel du compte")
+struct KdfSaltTests {
+
+    @Test("Le sel est gardé avec les jetons")
+    func saltRoundTripsThroughTheKeychainFormat() throws {
+        let data = try JSONEncoder().encode(credentials)
+        #expect(try JSONDecoder().decode(SyncCredentials.self, from: data) == credentials)
+        #expect(String(decoding: data, as: UTF8.self).contains("\"kdf_salt\""))
+    }
+
+    @Test("Un trousseau d'avant la v2 se relit, sans sel")
+    func legacyCredentialsDecodeWithoutSalt() throws {
+        let legacy = Data(
+            #"{"endpoint":"https://e.test","access_token":"a","refresh_token":"r","plan":"pro"}"#
+                .utf8)
+        let creds = try JSONDecoder().decode(SyncCredentials.self, from: legacy)
+        #expect(creds.kdfSalt.isEmpty)
+        #expect(creds.decodedKdfSalt == nil)
+    }
+
+    @Test("Un sel relu vide ne remplace pas le sel connu")
+    func emptySaltKeepsTheKnownOne() {
+        #expect(credentials.withKdfSalt("").kdfSalt == fakeSalt)
+        #expect(credentials.withKdfSalt(nil).kdfSalt == fakeSalt)
+        #expect(credentials.withPlan(SyncPlan.pro).kdfSalt == fakeSalt)
     }
 }

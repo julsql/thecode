@@ -56,6 +56,8 @@ public class MainActivity extends AppCompatActivity {
     private TextInputEditText keyEditText;
     private android.view.View fingerprintRow;
     private android.widget.TextView fingerprintChip;
+    private android.widget.TextView keyHintText;
+    private android.widget.TextView keyStrengthText;
     private TextInputEditText siteEditText;
     private TextInputLayout loginInputLayout;
     private TextInputEditText loginEditText;
@@ -273,6 +275,8 @@ public class MainActivity extends AppCompatActivity {
         keyEditText = findViewById(R.id.keyEditText);
         fingerprintRow = findViewById(R.id.fingerprintRow);
         fingerprintChip = findViewById(R.id.fingerprintChip);
+        keyHintText = findViewById(R.id.keyHintText);
+        keyStrengthText = findViewById(R.id.keyStrengthText);
         siteEditText = findViewById(R.id.siteEditText);
         loginInputLayout = findViewById(R.id.loginInputLayout);
         loginEditText = findViewById(R.id.loginEditText);
@@ -317,10 +321,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void wireListeners() {
+        keyEditText.setOnFocusChangeListener((v, hasFocus) -> updateKeyGuide());
         keyEditText.addTextChangedListener(new SimpleTextWatcher() {
             @Override
             public void afterTextChanged(Editable s) {
                 preferences.setEncodingKey(s.toString());
+                updateKeyGuide();
                 // Empreinte et v2 passent chacune par PBKDF2 a 600 000
                 // iterations : les lancer a chaque frappe fige la saisie. On
                 // attend une pause avant de calculer.
@@ -477,6 +483,7 @@ public class MainActivity extends AppCompatActivity {
         keyEditText.setSelection(Math.min(selection, textOf(keyEditText).length()));
         keyInputLayout.setEndIconDrawable(R.drawable.ic_visibility);
         keyInputLayout.setEndIconContentDescription(getString(R.string.show_key));
+        updateKeyGuide();
     }
 
     private void applyKeyRevealed() {
@@ -486,6 +493,47 @@ public class MainActivity extends AppCompatActivity {
         keyEditText.setSelection(Math.min(selection, textOf(keyEditText).length()));
         keyInputLayout.setEndIconDrawable(R.drawable.ic_visibility_off);
         keyInputLayout.setEndIconContentDescription(getString(R.string.hide_key));
+        updateKeyGuide();
+    }
+
+    /**
+     * Conseil et niveau de robustesse de la clef (shared/spec/key-strength.md).
+     *
+     * Le niveau ne s'affiche que pendant la saisie ou clef révélée : clef
+     * masquée et champ sans focus, il trahirait une indication de longueur.
+     * Jamais bloquant ; la clef n'est ni journalisée ni stockée ici.
+     */
+    private void updateKeyGuide() {
+        if (keyStrengthText == null) return;
+        String key = textOf(keyEditText);
+        boolean active = keyRevealed || keyEditText.hasFocus();
+        keyHintText.setVisibility(key.isEmpty() || active ? View.VISIBLE : View.GONE);
+        KeyStrength.Level level = active ? KeyStrength.of(key) : KeyStrength.Level.NONE;
+        if (level == KeyStrength.Level.NONE) {
+            keyStrengthText.setVisibility(View.GONE);
+            return;
+        }
+        int textRes;
+        int colorRes;
+        switch (level) {
+            case WEAK:
+                textRes = R.string.key_strength_weak;
+                colorRes = R.color.safety_weak;
+                break;
+            case FAIR:
+                textRes = R.string.key_strength_fair;
+                colorRes = R.color.safety_medium;
+                break;
+            default:
+                textRes = R.string.key_strength_strong;
+                colorRes = R.color.safety_very_strong;
+                break;
+        }
+        String label = getString(textRes);
+        keyStrengthText.setText(label);
+        keyStrengthText.setContentDescription(label);
+        keyStrengthText.setTextColor(ContextCompat.getColor(this, colorRes));
+        keyStrengthText.setVisibility(View.VISIBLE);
     }
 
     private void onKeyToggleClicked() {

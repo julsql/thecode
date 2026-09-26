@@ -1,6 +1,9 @@
 {
-  "_comment": "Ligne de synchronisation produite par le CLI Python. Chaque implementation doit la dechiffrer et retrouver 'entry' a l'identique. C'est le format d'echange decrit dans shared/spec/vault-sync.md.",
+  "_comment": "Vecteurs de synchronisation v2 produits par le CLI Python (shared/spec/vault-sync.md). Cle : PBKDF2-HMAC-SHA256(UTF-8(masterKey), UTF-8('thecode-sync/v2') || kdfSalt, 600000, 32) = derivedSyncHex. Chaque implementation doit dechiffrer 'row' et retrouver 'entry' a l'identique, ouvrir 'settings.sealed' et retrouver 'settings.value', et ECHOUER sur chaque cas de 'rejected' (as = entry : dechiffrement d'une ligne ; as = settings : reglages par defaut).",
   "masterKey": "clef",
+  "kdfSalt": "0WveVfSRJyzta8UsTh5DFw",
+  "derivedSyncHex": "9e649751045d371f3361df3eb1937d826f5f38c0bbacbc4c51b3d151031d3404",
+  "entryAad": "thecode/entry/v2|6f1d2c34-5b6a-4c7d-8e9f-0a1b2c3d4e5f",
   "entry": {
     "id": "6f1d2c34-5b6a-4c7d-8e9f-0a1b2c3d4e5f",
     "label": "Google",
@@ -22,8 +25,80 @@
   },
   "row": {
     "entry_id": "6f1d2c34-5b6a-4c7d-8e9f-0a1b2c3d4e5f",
-    "nonce": "qUEbuRCE3H0_rugV",
-    "blob": "iSIFtyurqtm1TIkDqtIOwpLl1BwLssoohwbgCxT-JGqNqYW1k_O6gRc5BY6e3WdYd4PJAm4r4jJGYu551D_jqgHkNC2ZhRBHbItyti_cjyes0pqLmOshPuTm_XmL0ODanEVfY0pY9OwmsCytA62sKKcvJuTvRWEZZ8HW9Poyommnh6nUwfWl1DO5TVREtKin79A9g22CLPO21y_pxStxEyIuwA2xGqdqkXQ1Adk5rC9NZwfRfUbIVgsawLynFd2E616G8xnmDGKQNcAPsLchCUIYepUyBUlJD2UQzAFlggZPEgaizzttWxVn2jdObd5V8ryBx0Cs4vUmYTUCS7hU95b9pKhs5w82k_FmAVkpxldAqkbgnimO84oTty9BfeOvbcif",
+    "nonce": "9E85eX9Ge0LA2cz9",
+    "blob": "QxHGsjMx_4tfeRvDgbSdUjqi_pzvJWpBkl8SHhzwO3LXFCy_Caq2sc06IQ4Sh6OfDYm2OYUr6wvf3nqyhTuvDHw4BevLfB_VbQVyX-ZO486hJ7U44qHIUIECbZ5ZiRGxxp3U8Ga6cc2otTTZAmAgMZkrExjgryyRsxMWKz5QcSzD6DmSY-uy7GWgNCC4IHl5yPoG34erKUg-Xp1tC1rsVA4O6NpgSkyC4Wnte219vV-6oBa8vAIYdOEjDS331lUWci_cTn6pml7q2rjaf-Mb5pKYwYB75SYuII1DMMrv1OeRn3R5z-Qh3sbVcKbFY2bzG48EDL_PKZltQh1sYgzxiZY9iKH5mMavL9DsmU1iWAZG3VssIQ1_oVSN6eSncmo878oI",
     "deleted": false
-  }
+  },
+  "settings": {
+    "aad": "thecode/settings/v2",
+    "value": {
+      "length": 16,
+      "charset": {
+        "lower": true,
+        "upper": true,
+        "symbols": false,
+        "numbers": true
+      },
+      "updatedAt": "2026-02-01T00:00:00Z"
+    },
+    "sealed": {
+      "nonce": "wiU6yvBOTsTmdw9S",
+      "blob": "ODDZ_XqMDVNz1ckCGtnkvm3NaIiOwnF3k0iTUeYilYdR3X7gdXqa1JQw1CP4eHG5rTYT7OkVVZPSwqk68TqXigHySD98-umCReLkxiVW1PM0vQVPvBklnH1jEueRdbW_zn7Wvcp4c8r8KZTXHimC-7UHcsDiwKwvCCMHR5FprSvT2yIoug"
+    }
+  },
+  "rejected": [
+    {
+      "name": "wrong-entry-id",
+      "why": "le blob de 'row' sous un autre entry_id : AAD differente, le tag GCM ne passe pas",
+      "as": "entry",
+      "row": {
+        "entry_id": "0b6e3a55-1c2d-4e8f-9a0b-1c2d3e4f5a6b",
+        "nonce": "9E85eX9Ge0LA2cz9",
+        "blob": "QxHGsjMx_4tfeRvDgbSdUjqi_pzvJWpBkl8SHhzwO3LXFCy_Caq2sc06IQ4Sh6OfDYm2OYUr6wvf3nqyhTuvDHw4BevLfB_VbQVyX-ZO486hJ7U44qHIUIECbZ5ZiRGxxp3U8Ga6cc2otTTZAmAgMZkrExjgryyRsxMWKz5QcSzD6DmSY-uy7GWgNCC4IHl5yPoG34erKUg-Xp1tC1rsVA4O6NpgSkyC4Wnte219vV-6oBa8vAIYdOEjDS331lUWci_cTn6pml7q2rjaf-Mb5pKYwYB75SYuII1DMMrv1OeRn3R5z-Qh3sbVcKbFY2bzG48EDL_PKZltQh1sYgzxiZY9iKH5mMavL9DsmU1iWAZG3VssIQ1_oVSN6eSncmo878oI",
+        "deleted": false
+      }
+    },
+    {
+      "name": "id-mismatch",
+      "why": "AAD correcte pour entry_id, mais l'entree dechiffree porte un autre id : a rejeter",
+      "as": "entry",
+      "row": {
+        "entry_id": "6f1d2c34-5b6a-4c7d-8e9f-0a1b2c3d4e5f",
+        "nonce": "l3gwq1hKawpbNila",
+        "blob": "7eoUy15vwBYZSkq2DdXmw9BbthMci-yNuMMl-rst7wUVhMVW2mZAaZMIoykNLHFAZ-o47SNFxGRN3tkzEsRRfJN15gSyuHhdYlg7v6yNa9qVsl-0epA68iBmt77N_1YVmyNOw1F5GieMClIZvstOBweMBkEuG2nTyanW-ajg7NuRbKRTVSGlHCykR1d6OlP_vQXmoSYT21JOHG-PLeOLu5cn3Z5YXhwf7la-O1dKy-tyiujpn4yRolAjiTZymjCaOvbwGu2GpapK61bQm-GGH7Y4OGPl5qHqAet2X5zke5j_wK7725Cz8O3alRJJ1bFiLFYeQSckaeh7G6Zw1HfYtDz-R8-gvd45alHRlRM1Ys38tDLgu5rcXVoyRNatVjgdlFle",
+        "deleted": false
+      }
+    },
+    {
+      "name": "no-aad",
+      "why": "l'entree chiffree sans donnees associees (format v1) : a rejeter",
+      "as": "entry",
+      "row": {
+        "entry_id": "6f1d2c34-5b6a-4c7d-8e9f-0a1b2c3d4e5f",
+        "nonce": "ko7gT1_GazLyjrSp",
+        "blob": "_zqz7Ff2ysSVpTCQnx4rveGZZOAlmueLLIbmp7IV0f2Wv63YYk_HHWsujRV3lytXYuNqAbQ1z9It7J0TyC2E8W8tFAHIpdXKl6npglXYivl7KxRM6678sfzw1DqPnhwfpmR8DXGAk7jBdgS2ODHH-EsP3lzP3urcalSxFaANwfV9PNhI18a9mrjLZgKihJhCkKV18vYvaSiUBT0ZEXrf7SnxfHRxmKvkWmNhjKGn5c2pUef7KaXWuIESlRqvAbW_ANGqx1S5liF9CPBkWswZCqchNUGF9b9tlsUaJMBnUj_lrxFfG7PXwCswVgJRa5Vpcwz2DXCtL6XHIoqAkXl06dehmLEcnSt-vXvzEx0KipgKrvx5aj_fIXiOzylHL971HyA2",
+        "deleted": false
+      }
+    },
+    {
+      "name": "settings-as-entry",
+      "why": "le blob des reglages presente comme une entree",
+      "as": "entry",
+      "row": {
+        "entry_id": "6f1d2c34-5b6a-4c7d-8e9f-0a1b2c3d4e5f",
+        "nonce": "wiU6yvBOTsTmdw9S",
+        "blob": "ODDZ_XqMDVNz1ckCGtnkvm3NaIiOwnF3k0iTUeYilYdR3X7gdXqa1JQw1CP4eHG5rTYT7OkVVZPSwqk68TqXigHySD98-umCReLkxiVW1PM0vQVPvBklnH1jEueRdbW_zn7Wvcp4c8r8KZTXHimC-7UHcsDiwKwvCCMHR5FprSvT2yIoug",
+        "deleted": false
+      }
+    },
+    {
+      "name": "entry-as-settings",
+      "why": "le blob d'une entree presente comme les reglages",
+      "as": "settings",
+      "row": {
+        "nonce": "9E85eX9Ge0LA2cz9",
+        "blob": "QxHGsjMx_4tfeRvDgbSdUjqi_pzvJWpBkl8SHhzwO3LXFCy_Caq2sc06IQ4Sh6OfDYm2OYUr6wvf3nqyhTuvDHw4BevLfB_VbQVyX-ZO486hJ7U44qHIUIECbZ5ZiRGxxp3U8Ga6cc2otTTZAmAgMZkrExjgryyRsxMWKz5QcSzD6DmSY-uy7GWgNCC4IHl5yPoG34erKUg-Xp1tC1rsVA4O6NpgSkyC4Wnte219vV-6oBa8vAIYdOEjDS331lUWci_cTn6pml7q2rjaf-Mb5pKYwYB75SYuII1DMMrv1OeRn3R5z-Qh3sbVcKbFY2bzG48EDL_PKZltQh1sYgzxiZY9iKH5mMavL9DsmU1iWAZG3VssIQ1_oVSN6eSncmo878oI"
+      }
+    }
+  ]
 }

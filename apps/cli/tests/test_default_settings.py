@@ -20,13 +20,15 @@ from thecode.sync import (
     SETTINGS_UNCHANGED,
     Credentials,
     SyncError,
-    _seal,
+    derive_sync_key,
+    open_settings,
+    seal_settings,
     sync_settings,
 )
-from thecode.transfer import derive_transfer_key
+from thecode.transfer import _b64d
 from thecode.vault import load, new_entry, save
 
-from .test_sync import CREDS, FakeServer
+from .test_sync import CREDS, KDF_SALT, FakeServer
 
 SHORT = {
     "length": 12,
@@ -50,11 +52,11 @@ def french(monkeypatch):
 
 
 def sealed(value, master_key="clef"):
-    return _seal(value, derive_transfer_key(master_key))
+    return seal_settings(value, derive_sync_key(master_key, _b64d(KDF_SALT)))
 
 
 def remote_of(server, master_key="clef"):
-    return sync_module._decrypt_entry(server.settings, derive_transfer_key(master_key))
+    return open_settings(server.settings, derive_sync_key(master_key, _b64d(KDF_SALT)))
 
 
 def run(capsys, *argv):

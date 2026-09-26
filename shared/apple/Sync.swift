@@ -2,8 +2,10 @@
 //  Sync.swift
 //  Client de synchronisation.
 //
-//  Le carnet est chiffré *avant* de quitter l'appareil, avec la clef de
-//  transfert dérivée de la clef maîtresse. Le serveur ne reçoit que des blocs
+//  Le carnet est chiffré *avant* de quitter l'appareil, avec une clef dérivée
+//  de la clef maîtresse et du sel propre au compte (`kdf_salt`), chaque bloc
+//  lié à sa ligne par des données associées (shared/spec/vault-sync.md).
+//  Le serveur ne reçoit que des blocs
 //  opaques : il ne peut ni lire les sites, ni les identifiants, ni rien déduire
 //  au-delà du nombre d'entrées.
 //
@@ -29,6 +31,17 @@ public struct SyncError: Error, Equatable {
         self.status = status
         self.message = message
     }
+
+    /// Une ligne déchiffrée ne porte pas l'identifiant sous lequel elle est
+    /// rangée : le carnet reçu a été altéré, la synchronisation s'arrête.
+    public static var vaultTampered: SyncError {
+        SyncError(
+            message: L10nSync.t(
+                "Le carnet reçu du serveur a été modifié : synchronisation interrompue, "
+                    + "rien n'a été écrit.",
+                "The vault received from the server was tampered with: sync stopped, "
+                    + "nothing was written."))
+    }
 }
 
 /// Jetons de session. Stockés à part du carnet, et jamais dans le carnet.
@@ -42,21 +55,44 @@ public struct SyncCredentials: Codable, Equatable {
     /// sans cette trace, l'écran ne saurait pas quoi proposer tant que le
     /// service n'a pas répondu, et proposerait donc tout.
     public let plan: String
+    /// Sel de dérivation du compte (16 octets, base64url), rendu par le
+    /// service à la connexion et par /v1/auth/me. Public : il rend seulement
+    /// la clef de synchronisation propre au compte. Vide tant qu'inconnu.
+    public let kdfSalt: String
 
     public init(
         endpoint: String, accessToken: String, refreshToken: String,
-        plan: String = SyncPlan.free
+        plan: String = SyncPlan.free, kdfSalt: String = ""
     ) {
         self.endpoint = endpoint
         self.accessToken = accessToken
         self.refreshToken = refreshToken
         self.plan = plan
+        self.kdfSalt = kdfSalt
     }
 
     /// Les mêmes jetons, avec une offre relue.
     public func withPlan(_ plan: String) -> SyncCredentials {
         SyncCredentials(
-            endpoint: endpoint, accessToken: accessToken, refreshToken: refreshToken, plan: plan)
+            endpoint: endpoint, accessToken: accessToken, refreshToken: refreshToken, plan: plan,
+            kdfSalt: kdfSalt)
+    }
+
+    /// Les mêmes jetons, avec le sel du compte. Une valeur vide garde l'actuel :
+    /// un service muet ne doit pas faire oublier un sel connu.
+    public func withKdfSalt(_ salt: String?) -> SyncCredentials {
+        guard let salt, !salt.isEmpty else { return self }
+        return SyncCredentials(
+            endpoint: endpoint, accessToken: accessToken, refreshToken: refreshToken, plan: plan,
+            kdfSalt: salt)
+    }
+
+    /// Le sel décodé, ou `nil` s'il manque ou ne fait pas 16 octets.
+    public var decodedKdfSalt: Data? {
+        guard let raw = Base64URL.decode(kdfSalt), raw.count == Sync.kdfSaltBytes else {
+            return nil
+        }
+        return raw
     }
 
     public init(from decoder: Decoder) throws {
@@ -68,6 +104,9 @@ public struct SyncCredentials: Codable, Equatable {
         // strictement ferait perdre la session de tout le monde à la mise à
         // jour, ce qui coûterait bien plus qu'une relecture de l'offre.
         plan = try container.decodeIfPresent(String.self, forKey: .plan) ?? SyncPlan.free
+        // Absent des trousseaux antérieurs au format v2 : relu sur /v1/auth/me
+        // à la prochaine synchronisation.
+        kdfSalt = try container.decodeIfPresent(String.self, forKey: .kdfSalt) ?? ""
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -75,6 +114,7 @@ public struct SyncCredentials: Codable, Equatable {
         case accessToken = "access_token"
         case refreshToken = "refresh_token"
         case plan
+        case kdfSalt = "kdf_salt"
     }
 }
 
@@ -170,7 +210,9 @@ public struct Sync {
                     "Réponse inattendue du service d'authentification",
                     "Unexpected response from the authentication service"))
         }
-        return SyncCredentials(endpoint: endpoint, accessToken: access, refreshToken: refresh)
+        return SyncCredentials(
+            endpoint: endpoint, accessToken: access, refreshToken: refresh,
+            kdfSalt: body["kdf_salt"] as? String ?? "")
     }
 
     public func register(
@@ -244,6 +286,7 @@ public struct Sync {
                 "\(current.endpoint)/v1/auth/me", method: "GET", bearer: current.accessToken)
         }
         return current.withPlan(body["plan"] as? String ?? SyncPlan.free)
+            .withKdfSalt(body["kdf_salt"] as? String)
     }
 
     /// Révoque la session côté service : l'appareil cesse de compter parmi
@@ -287,7 +330,8 @@ public struct Sync {
         return AccountIdentity(
             email: body["email"] as? String ?? "",
             hasPassword: body["has_password"] as? Bool ?? true,
-            credentials: current.withPlan(body["plan"] as? String ?? SyncPlan.free))
+            credentials: current.withPlan(body["plan"] as? String ?? SyncPlan.free)
+                .withKdfSalt(body["kdf_salt"] as? String))
     }
 
     /// Supprime le compte sur le service : le compte, le carnet chiffré, les
@@ -324,7 +368,104 @@ public struct Sync {
         let body = try await call(
             "\(creds.endpoint)/v1/auth/refresh", method: "POST",
             payload: ["refresh_token": creds.refreshToken])
-        return try credentials(from: body, endpoint: creds.endpoint)
+        // Le sel ne change jamais : gardé si la réponse ne le redit pas.
+        let renewed = try credentials(from: body, endpoint: creds.endpoint)
+        return renewed.kdfSalt.isEmpty ? renewed.withKdfSalt(creds.kdfSalt) : renewed
+    }
+
+    // MARK: - Chiffrement v2
+
+    public static let kdfSaltBytes = 16
+    private static let syncLabel = "thecode-sync/v2"
+    private static let entryAADPrefix = "thecode/entry/v2|"
+    /// Données associées des réglages : le serveur ne peut pas les faire
+    /// passer pour une entrée, ni l'inverse.
+    public static let settingsAAD = Data("thecode/settings/v2".utf8)
+
+    /// Clef de synchronisation : propre à la clef maîtresse **et** au compte.
+    ///
+    /// Le sel du compte empêche de précalculer une table valable pour tous les
+    /// comptes : qui vole la base doit s'attaquer à chacun séparément.
+    public static func deriveKey(masterKey: String, kdfSalt: Data) throws -> SymmetricKey {
+        try Transfer.pbkdf2(masterKey, salt: Data(syncLabel.utf8) + kdfSalt)
+    }
+
+    /// Données associées d'une entrée : lient le blob à son identifiant en clair.
+    ///
+    /// Sans elles, le serveur pourrait échanger les blobs de deux entrées, ou
+    /// rejouer un vieux blob sous un autre identifiant.
+    public static func entryAAD(_ entryId: String) -> Data {
+        Data((entryAADPrefix + entryId).utf8)
+    }
+
+    public enum EntryError: Error, Equatable {
+        /// Tag invalide : autre clef maîtresse, autre compte, blob déplacé ou altéré.
+        case cannotOpen
+        /// Déchiffrée, mais pas une entrée lisible.
+        case unreadable
+        /// L'entrée déchiffrée ne porte pas l'identifiant de sa ligne.
+        case idMismatch
+    }
+
+    /// Chiffre une entrée pour sa ligne.
+    public static func sealEntry(_ entry: VaultEntry, key: SymmetricKey) throws -> Transfer.Sealed {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        return try Transfer.seal(encoder.encode(entry), with: key, aad: entryAAD(entry.id))
+    }
+
+    /// Déchiffre une ligne, et la rejette si l'entrée ne dit pas le même
+    /// identifiant qu'elle : elle ne doit jamais être fusionnée sous un autre.
+    public static func openEntry(
+        entryId: String, nonce: Data, blob: Data, key: SymmetricKey
+    ) throws -> VaultEntry {
+        let plain: Data
+        do {
+            plain = try Transfer.open(nonce: nonce, blob: blob, with: key, aad: entryAAD(entryId))
+        } catch {
+            throw EntryError.cannotOpen
+        }
+        guard let entry = try? JSONDecoder().decode(VaultEntry.self, from: plain) else {
+            throw EntryError.unreadable
+        }
+        guard entry.id == entryId else { throw EntryError.idMismatch }
+        return entry
+    }
+
+    /// Chiffre les réglages par défaut du compte.
+    public static func sealSettings(_ settings: SharedSettings, key: SymmetricKey) throws
+        -> Transfer.Sealed
+    {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        return try Transfer.seal(encoder.encode(settings), with: key, aad: settingsAAD)
+    }
+
+    /// Déchiffre et valide un blob de réglages ; `nil` s'il est inutilisable.
+    public static func openSettings(nonce: Data, blob: Data, key: SymmetricKey)
+        -> SharedSettings?
+    {
+        guard let plain = try? Transfer.open(nonce: nonce, blob: blob, with: key, aad: settingsAAD),
+            let settings = try? JSONDecoder().decode(SharedSettings.self, from: plain)
+        else { return nil }
+        return settings.validated()
+    }
+
+    /// Le sel du compte, relu sur /v1/auth/me s'il manque.
+    ///
+    /// Sans sel valide, rien ne part : chiffrer avec un autre sel rendrait les
+    /// blocs illisibles pour les autres appareils du compte.
+    private func accountSalt(_ creds: SyncCredentials) async throws -> (Data, SyncCredentials) {
+        if let salt = creds.decodedKdfSalt { return (salt, creds) }
+        let updated = try await accountPlan(credentials: creds)
+        guard let salt = updated.decodedKdfSalt else {
+            throw SyncError(
+                message: L10nSync.t(
+                    "Le service n'a pas rendu le sel de dérivation du compte : reconnectez-vous.",
+                    "The service did not return the account's key derivation salt: sign in again."
+                ))
+        }
+        return (salt, updated)
     }
 
     // MARK: - Synchronisation
@@ -335,9 +476,11 @@ public struct Sync {
     /// Pousser sans avoir tiré écraserait ce qu'un autre appareil a écrit entre
     /// temps — et le serveur le refuse, précisément pour cette raison.
     public func sync(
-        _ local: Vault, masterKey: String, credentials creds: SyncCredentials
+        _ local: Vault, masterKey: String, credentials: SyncCredentials
     ) async throws -> Result {
-        let key = try Transfer.deriveKey(masterKey)
+        // Une seule dérivation par synchronisation : sk sert à tout le carnet.
+        let (salt, creds) = try await accountSalt(credentials)
+        let key = try Self.deriveKey(masterKey: masterKey, kdfSalt: salt)
         let url = "\(creds.endpoint)/v1/vault"
 
         let pulled = try await call(url, method: "GET", bearer: creds.accessToken)
@@ -379,10 +522,7 @@ public struct Sync {
             return try await sync(local, masterKey: masterKey, credentials: creds)
         } catch let error as SyncError where error.status == 401 {
             let renewed = try await refresh(creds)
-            let result = try await sync(local, masterKey: masterKey, credentials: renewed)
-            return Result(
-                vault: result.vault, conflicts: result.conflicts, localOnly: result.localOnly,
-                credentials: renewed)
+            return try await sync(local, masterKey: masterKey, credentials: renewed)
         }
     }
 
@@ -408,32 +548,44 @@ public struct Sync {
     public func syncSettings(
         _ local: SharedSettings, masterKey: String, credentials creds: SyncCredentials
     ) async throws -> SettingsOutcome {
-        let key = try Transfer.deriveKey(masterKey)
+        try await syncSettingsReturningCredentials(
+            local, masterKey: masterKey, credentials: creds
+        ).0
+    }
+
+    /// `syncSettings`, en rendant les identifiants : le sel du compte a pu
+    /// être relu, et les jetons renouvelés à cette occasion.
+    private func syncSettingsReturningCredentials(
+        _ local: SharedSettings, masterKey: String, credentials: SyncCredentials
+    ) async throws -> (SettingsOutcome, SyncCredentials) {
+        let (salt, creds) = try await accountSalt(credentials)
+        let key = try Self.deriveKey(masterKey: masterKey, kdfSalt: salt)
         let url = "\(creds.endpoint)/v1/settings"
 
         // 204 : corps vide, donc ni nonce ni blob.
         let pulled = try await call(url, method: "GET", bearer: creds.accessToken)
         if let nonce = pulled["nonce"] as? String, let blob = pulled["blob"] as? String {
-            guard let remote = openSettings(nonce: nonce, blob: blob, key: key) else {
-                return .ignoredRemote
+            // Autre clef maîtresse, autres données associées, format v1 : ignoré.
+            guard let nonce = Base64URL.decode(nonce), let blob = Base64URL.decode(blob),
+                let remote = Self.openSettings(nonce: nonce, blob: blob, key: key)
+            else {
+                return (.ignoredRemote, creds)
             }
-            if remote.updatedAt >= local.updatedAt { return .applyRemote(remote) }
+            if remote.updatedAt >= local.updatedAt { return (.applyRemote(remote), creds) }
         }
 
         // Jamais modifiés ici : ce sont les valeurs d'usine, pas un choix. Les
         // pousser les imposerait aux autres appareils du compte.
-        if local.updatedAt == SharedSettings.neverUpdated { return .keptLocal }
+        if local.updatedAt == SharedSettings.neverUpdated { return (.keptLocal, creds) }
 
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.sortedKeys]
-        let sealed = try Transfer.seal(try encoder.encode(local), with: key)
+        let sealed = try Self.sealSettings(local, key: key)
         _ = try await call(
             url, method: "PUT",
             payload: [
                 "nonce": Base64URL.encode(sealed.nonce), "blob": Base64URL.encode(sealed.blob),
             ],
             bearer: creds.accessToken)
-        return .pushedLocal
+        return (.pushedLocal, creds)
     }
 
     /// Comme `syncSettings`, en renouvelant le jeton d'accès s'il a expiré.
@@ -442,22 +594,13 @@ public struct Sync {
         _ local: SharedSettings, masterKey: String, credentials creds: SyncCredentials
     ) async throws -> (SettingsOutcome, SyncCredentials) {
         do {
-            return (try await syncSettings(local, masterKey: masterKey, credentials: creds), creds)
+            return try await syncSettingsReturningCredentials(
+                local, masterKey: masterKey, credentials: creds)
         } catch let error as SyncError where error.status == 401 {
             let renewed = try await refresh(creds).withPlan(creds.plan)
-            return (
-                try await syncSettings(local, masterKey: masterKey, credentials: renewed), renewed
-            )
+            return try await syncSettingsReturningCredentials(
+                local, masterKey: masterKey, credentials: renewed)
         }
-    }
-
-    /// Déchiffre et valide un blob de réglages ; `nil` s'il est inutilisable.
-    private func openSettings(nonce: String, blob: String, key: SymmetricKey) -> SharedSettings? {
-        guard let nonce = Base64URL.decode(nonce), let blob = Base64URL.decode(blob),
-            let plain = try? Transfer.open(nonce: nonce, blob: blob, with: key),
-            let settings = try? JSONDecoder().decode(SharedSettings.self, from: plain)
-        else { return nil }
-        return settings.validated()
     }
 
     private func decodeRemote(
@@ -467,7 +610,8 @@ public struct Sync {
         remote.updatedAt = fallbackUpdatedAt
 
         for case let row as [String: Any] in pulled["entries"] as? [Any] ?? [] {
-            guard let nonce = (row["nonce"] as? String).flatMap(Base64URL.decode),
+            guard let entryId = row["entry_id"] as? String,
+                let nonce = (row["nonce"] as? String).flatMap(Base64URL.decode),
                 let blob = (row["blob"] as? String).flatMap(Base64URL.decode)
             else {
                 throw SyncError(
@@ -476,22 +620,26 @@ public struct Sync {
                         "Remote vault unreadable: invalid encoding"))
             }
 
-            let plain: Data
+            var entry: VaultEntry
             do {
-                plain = try Transfer.open(nonce: nonce, blob: blob, with: key)
-            } catch {
+                entry = try Self.openEntry(entryId: entryId, nonce: nonce, blob: blob, key: key)
+            } catch EntryError.cannotOpen {
                 throw SyncError(
                     message: L10nSync.t(
                         "Déchiffrement impossible : la clef maîtresse n'est pas celle "
-                            + "qui a servi à synchroniser ce carnet.",
+                            + "qui a servi à synchroniser ce carnet, ou le bloc a été altéré.",
                         "Cannot decrypt: this is not the master key that was used to sync "
-                            + "this vault."))
-            }
-
-            // Une entrée illisible est écartée, pas le carnet entier : elle
-            // reste telle quelle sur le serveur, qui ne retire rien de ce
-            // qu'on ne lui repousse pas.
-            guard var entry = try? JSONDecoder().decode(VaultEntry.self, from: plain) else {
+                            + "this vault, or the block was altered."))
+            } catch EntryError.idMismatch {
+                // Un blob valide rangé sous un autre identifiant ne peut venir
+                // que d'une altération côté serveur : comme pour un tag
+                // invalide, toute la synchronisation échoue, rien n'est écrit
+                // ni poussé (shared/spec/vault-sync.md).
+                throw SyncError.vaultTampered
+            } catch {
+                // Une entrée illisible est écartée, pas le carnet entier : elle
+                // reste telle quelle sur le serveur, qui ne retire rien de ce
+                // qu'on ne lui repousse pas.
                 continue
             }
             // La pierre tombale du serveur fait foi même si l'entrée chiffrée
@@ -505,12 +653,9 @@ public struct Sync {
     private func encodePush(
         baseRevision: Int, entries: [VaultEntry], key: SymmetricKey
     ) throws -> [String: Any] {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.sortedKeys]
-
         var rows: [[String: Any]] = []
         for entry in entries {
-            let sealed = try Transfer.seal(try encoder.encode(entry), with: key)
+            let sealed = try Self.sealEntry(entry, key: key)
             rows.append([
                 "entry_id": entry.id,
                 "nonce": Base64URL.encode(sealed.nonce),

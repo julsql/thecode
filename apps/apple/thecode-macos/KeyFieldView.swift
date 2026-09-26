@@ -30,20 +30,26 @@ struct KeyFieldView: View {
     @State private var editing = false
 
     var body: some View {
-        HStack {
-            Text(L10n.t("Clé", "Key")).font(.headline)
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(L10n.t("Clé", "Key")).font(.headline)
 
-            field
-                .onChange(of: focused) { _, isFocused in
-                    if !isFocused { editing = false }
+                field
+                    .onChange(of: focused) { _, isFocused in
+                        if !isFocused { editing = false }
+                    }
+
+                Button(action: handleEye) {
+                    Image(systemName: showRealKey ? "eye.slash.fill" : "eye.fill")
                 }
-
-            Button(action: handleEye) {
-                Image(systemName: showRealKey ? "eye.slash.fill" : "eye.fill")
+                .frame(width: 30, height: 30)
+                .buttonStyle(.plain)
+                .fixedSize()
             }
-            .frame(width: 30, height: 30)
-            .buttonStyle(.plain)
-            .fixedSize()
+
+            // Guide vers une clef robuste, jamais bloquant. Le niveau ne suit
+            // que la frappe ou la clef en clair, jamais le rendu masqué.
+            KeyGuideView(key: encodingKey, active: showRealKey || focused)
         }
     }
 

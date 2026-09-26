@@ -5,9 +5,11 @@
 //  Le serveur ne reçoit que des blocs opaques : il ne peut lire ni les sites,
 //  ni les identifiants.
 //
-//  Le sel diffère de celui des mots de passe et de celui de l'empreinte : une
-//  même valeur dérivée ne doit jamais servir à deux usages, sinon une faiblesse
-//  sur l'un exposerait l'autre.
+//  Format TC2 : sel aléatoire de 16 octets par export, précédé d'une étiquette
+//  qui diffère de celle de la synchronisation, des mots de passe et de
+//  l'empreinte : une même valeur dérivée ne doit jamais servir à deux usages,
+//  sinon une faiblesse sur l'un exposerait l'autre. AES-GCM avec données
+//  associées ; TC1 n'est plus lu.
 //
 //  Source unique : shared/apple/Transfer.swift
 //  Spécification : shared/spec/vault-transfer.md
@@ -20,9 +22,18 @@ import Foundation
 
 public enum Transfer {
 
-    public static let prefix = "TC1"
+    public static let prefix = "TC2"
+    /// Préfixe d'un fragment, quand le payload ne tient pas dans un seul QR.
+    public static let fragmentPrefix = "TC2m"
 
-    private static let salt = "thecode-transfer/v1"
+    /// Étiquette placée devant le sel du payload : une même valeur dérivée ne
+    /// doit jamais servir à deux usages (synchronisation, transfert…).
+    private static let label = "thecode-transfer/v2"
+    /// Données associées AES-GCM : un blob de synchronisation ne s'ouvre pas
+    /// comme un transfert, et réciproquement.
+    public static let aad = Data("thecode/transfer/v2".utf8)
+    static let saltBytes = 16
+    static let nonceBytes = 12
     private static let iterations: UInt32 = 600_000
     private static let keyBytes = 32
 
@@ -36,10 +47,22 @@ public enum Transfer {
         case derivationFailed
     }
 
-    /// Dérive la clef de transfert depuis la clef maîtresse.
-    public static func deriveKey(_ masterKey: String) throws -> SymmetricKey {
+    /// Clef de transfert : propre à la clef maîtresse et au sel du payload.
+    public static func deriveKey(_ masterKey: String, salt: Data) throws -> SymmetricKey {
+        try pbkdf2(masterKey, salt: Data(label.utf8) + salt)
+    }
+
+    /// Octets aléatoires, pour le sel d'un export.
+    static func randomBytes(_ count: Int) -> Data {
+        var generator = SystemRandomNumberGenerator()
+        return Data((0..<count).map { _ in UInt8.random(in: .min ... .max, using: &generator) })
+    }
+
+    /// PBKDF2-HMAC-SHA256, 600 000 itérations, 32 octets. Partagé avec la
+    /// clef de synchronisation : seul le sel change.
+    static func pbkdf2(_ masterKey: String, salt: Data) throws -> SymmetricKey {
         var output = [UInt8](repeating: 0, count: keyBytes)
-        let saltBytes = Array(salt.utf8)
+        let saltBytes = Array(salt)
 
         let status = masterKey.withCString { keyPointer in
             CCKeyDerivationPBKDF(
@@ -65,16 +88,20 @@ public enum Transfer {
         public let blob: Data
     }
 
-    public static func seal(_ plain: Data, with key: SymmetricKey) throws -> Sealed {
+    /// AES-256-GCM. Les données associées lient le bloc à son usage : elles
+    /// sont obligatoires, un bloc sans elles serait déplaçable.
+    public static func seal(_ plain: Data, with key: SymmetricKey, aad: Data) throws -> Sealed {
         // AES.GCM.Nonce() tire un nonce aléatoire : le réutiliser avec la même
         // clef casserait AES-GCM.
         let nonce = AES.GCM.Nonce()
-        let box = try AES.GCM.seal(plain, using: key, nonce: nonce)
+        let box = try AES.GCM.seal(plain, using: key, nonce: nonce, authenticating: aad)
         return Sealed(nonce: Data(nonce), blob: box.ciphertext + box.tag)
     }
 
-    public static func open(nonce: Data, blob: Data, with key: SymmetricKey) throws -> Data {
-        guard blob.count > 16 else { throw TransferError.cannotOpen }
+    public static func open(
+        nonce: Data, blob: Data, with key: SymmetricKey, aad: Data
+    ) throws -> Data {
+        guard nonce.count == nonceBytes, blob.count > 16 else { throw TransferError.cannotOpen }
 
         do {
             let box = try AES.GCM.SealedBox(
@@ -82,7 +109,7 @@ public enum Transfer {
                 ciphertext: blob.prefix(blob.count - 16),
                 tag: blob.suffix(16)
             )
-            return try AES.GCM.open(box, using: key)
+            return try AES.GCM.open(box, using: key, authenticating: aad)
         } catch {
             throw TransferError.cannotOpen
         }
@@ -101,7 +128,7 @@ public enum Transfer {
     public static func fragments(_ payload: String) -> [String] {
         guard payload.count > fragmentPayloadLimit else { return [payload] }
 
-        // Le préfixe « TC1. » est porté une fois par le réassemblage, pas par
+        // Le préfixe « TC2. » est porté une fois par le réassemblage, pas par
         // chaque fragment.
         let body = String(payload.dropFirst(prefix.count + 1))
         let chunks = stride(from: 0, to: body.count, by: fragmentPayloadLimit).map { start -> String in
@@ -111,20 +138,27 @@ public enum Transfer {
         }
 
         return chunks.enumerated().map { index, chunk in
-            "TC1m.\(index).\(chunks.count).\(chunk)"
+            "\(fragmentPrefix).\(index).\(chunks.count).\(chunk)"
         }
     }
 
     // MARK: - Carnet entier
 
     /// Chiffre un carnet en un payload transportable.
+    ///
+    /// `TC2.<sel>.<nonce>.<ciphertext>` : un sel neuf à chaque export, pour
+    /// qu'aucune table précalculée ne vaille pour deux payloads.
     public static func exportVault(_ vault: Vault, masterKey: String) throws -> String {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
         let compressed = try deflate(encoder.encode(vault))
 
-        let sealed = try seal(compressed, with: deriveKey(masterKey))
-        return "\(prefix).\(Base64URL.encode(sealed.nonce)).\(Base64URL.encode(sealed.blob))"
+        let salt = randomBytes(saltBytes)
+        let sealed = try seal(compressed, with: deriveKey(masterKey, salt: salt), aad: aad)
+        return [
+            prefix, Base64URL.encode(salt), Base64URL.encode(sealed.nonce),
+            Base64URL.encode(sealed.blob),
+        ].joined(separator: ".")
     }
 
     /// Déchiffre un payload. Lève `TransferError` s'il est illisible.
@@ -133,19 +167,26 @@ public enum Transfer {
             separator: ".", omittingEmptySubsequences: false
         ).map(String.init)
 
-        guard parts.count == 3 else {
-            throw TransferError.unreadable("Format inattendu : TC1.<nonce>.<donnees> attendu.")
-        }
         guard parts[0] == prefix else {
             // Interpréter un format inconnu au hasard serait pire que refuser.
+            // TC1 compris : il n'est plus lu.
             throw TransferError.unreadable(
                 "Version « \(parts[0]) » inconnue, ce client lit \(prefix).")
         }
-        guard let nonce = Base64URL.decode(parts[1]), let blob = Base64URL.decode(parts[2]) else {
+        guard parts.count == 4 else {
+            throw TransferError.unreadable(
+                "Format inattendu : TC2.<sel>.<nonce>.<donnees> attendu.")
+        }
+        // Sel et nonce de mauvaise taille : refusés avant tout déchiffrement.
+        guard let salt = Base64URL.decode(parts[1]), salt.count == saltBytes,
+            let nonce = Base64URL.decode(parts[2]), nonce.count == nonceBytes,
+            let blob = Base64URL.decode(parts[3])
+        else {
             throw TransferError.unreadable("Encodage invalide.")
         }
 
-        let compressed = try open(nonce: nonce, blob: blob, with: deriveKey(masterKey))
+        let compressed = try open(
+            nonce: nonce, blob: blob, with: deriveKey(masterKey, salt: salt), aad: aad)
         return try JSONDecoder().decode(Vault.self, from: try inflate(compressed))
     }
 }

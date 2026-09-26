@@ -17,77 +17,36 @@
           {{ t(`sync_auto_failed_${lastSyncFailure}`) }}
         </p>
 
-        <!-- Première ouverture : création obligatoire du mot de passe. -->
-        <form v-if="view === 'setup'" novalidate @submit.prevent="onCreate">
-          <h2 ref="heading" tabindex="-1" class="panel-title">{{ t("vault_setup_title") }}</h2>
-          <p class="panel-lead">{{ t("vault_setup_lead") }}</p>
+        <!-- Verrouillé : la clef maîtresse, comparée à celle de la session ou
+             posée comme clef de la session si aucune ne l'est encore. -->
+        <form v-if="view === 'locked'" novalidate @submit.prevent="onUnlock">
+          <h2 ref="heading" tabindex="-1" class="panel-title">{{ t("vault_locked_title") }}</h2>
+          <p id="vault_unlock_lead" class="panel-lead">{{ t("vault_unlock_lead") }}</p>
+          <p v-if="!hasSessionKey" id="vault_unlock_new" class="hint">
+            {{ t("vault_unlock_new_session") }}
+          </p>
           <div class="form-field">
-            <label for="vault_new">{{ t("vault_password") }}</label>
+            <label for="vault_unlock">{{ t("vault_key_label") }}</label>
             <input
-              id="vault_new"
-              v-model="password"
+              id="vault_unlock"
+              ref="unlockInput"
+              v-model="typedKey"
               type="password"
-              autocomplete="new-password"
-              aria-describedby="vault_new_hint"
-              :aria-invalid="errorField === 'password'"
-            />
-            <p id="vault_new_hint" class="hint">{{ t("vault_password_hint") }}</p>
-          </div>
-          <div class="form-field">
-            <label for="vault_new_confirm">{{ t("vault_password_confirm") }}</label>
-            <input
-              id="vault_new_confirm"
-              v-model="passwordConfirm"
-              type="password"
-              autocomplete="new-password"
-              :aria-invalid="errorField === 'confirm'"
+              autocomplete="off"
+              spellcheck="false"
+              :aria-describedby="
+                hasSessionKey ? 'vault_unlock_lead' : 'vault_unlock_lead vault_unlock_new'
+              "
+              :aria-invalid="invalid"
             />
           </div>
           <div class="panel-actions">
-            <button type="submit" class="ghost-btn primary">{{ t("vault_setup_btn") }}</button>
+            <button type="submit" class="ghost-btn primary">{{ t("vault_unlock_btn") }}</button>
           </div>
+          <p class="hint">{{ t("vault_forgotten_key") }}</p>
         </form>
 
-        <!-- Verrouillé : le mot de passe, ou l'effacement si on l'a oublié. -->
-        <template v-else-if="view === 'locked'">
-          <section v-if="confirmingForget" aria-labelledby="vaultForgetTitle" class="confirm-box">
-            <h2 id="vaultForgetTitle" ref="heading" tabindex="-1" class="panel-title">
-              {{ t("vault_forgot_title") }}
-            </h2>
-            <p class="panel-lead">{{ t("vault_forgot_lead") }}</p>
-            <div class="panel-actions">
-              <button type="button" class="ghost-btn danger" @click="onForget">
-                {{ t("vault_forgot_confirm") }}
-              </button>
-              <button type="button" class="ghost-btn" @click="cancelForget">
-                {{ t("vault_cancel") }}
-              </button>
-            </div>
-          </section>
-
-          <form v-else novalidate @submit.prevent="onUnlock">
-            <h2 ref="heading" tabindex="-1" class="panel-title">{{ t("vault_locked_title") }}</h2>
-            <div class="form-field">
-              <label for="vault_unlock">{{ t("vault_password") }}</label>
-              <input
-                id="vault_unlock"
-                ref="unlockInput"
-                v-model="password"
-                type="password"
-                autocomplete="current-password"
-                :aria-invalid="errorField === 'password'"
-              />
-            </div>
-            <div class="panel-actions">
-              <button type="submit" class="ghost-btn primary">{{ t("vault_unlock_btn") }}</button>
-              <button type="button" class="link-btn" @click="askForget">
-                {{ t("vault_forgot") }}
-              </button>
-            </div>
-          </form>
-        </template>
-
-        <!-- Déverrouillé : liste, détail, changement de mot de passe. -->
+        <!-- Déverrouillé : liste et détail. -->
         <template v-else>
           <div class="toolbar">
             <button type="button" class="ghost-btn small" @click="onLock">
@@ -113,44 +72,6 @@
                 </button>
               </li>
             </ul>
-
-            <section class="panel" aria-labelledby="vaultChangeTitle">
-              <h3 id="vaultChangeTitle" class="panel-title">{{ t("vault_change_title") }}</h3>
-              <form novalidate @submit.prevent="onChange">
-                <div class="form-field">
-                  <label for="vault_current">{{ t("vault_change_current") }}</label>
-                  <input
-                    id="vault_current"
-                    v-model="current"
-                    type="password"
-                    autocomplete="current-password"
-                  />
-                </div>
-                <div class="form-field">
-                  <label for="vault_next">{{ t("vault_change_new") }}</label>
-                  <input
-                    id="vault_next"
-                    v-model="password"
-                    type="password"
-                    autocomplete="new-password"
-                    aria-describedby="vault_next_hint"
-                  />
-                  <p id="vault_next_hint" class="hint">{{ t("vault_password_hint") }}</p>
-                </div>
-                <div class="form-field">
-                  <label for="vault_next_confirm">{{ t("vault_change_confirm") }}</label>
-                  <input
-                    id="vault_next_confirm"
-                    v-model="passwordConfirm"
-                    type="password"
-                    autocomplete="new-password"
-                  />
-                </div>
-                <div class="panel-actions">
-                  <button type="submit" class="ghost-btn">{{ t("vault_change_btn") }}</button>
-                </div>
-              </form>
-            </section>
           </section>
 
           <section v-else aria-labelledby="vaultDetailTitle">
@@ -193,10 +114,6 @@
               <h3 id="vaultRenewTitle" class="panel-title">{{ t("vault_renew_title") }}</h3>
               <p class="panel-lead">{{ t("vault_renew_lead") }}</p>
               <form v-if="!pending" novalidate @submit.prevent="onProposeRenew">
-                <div class="form-field">
-                  <label for="vault_clef">{{ t("vault_renew_key") }}</label>
-                  <input id="vault_clef" v-model="clef" type="password" autocomplete="off" />
-                </div>
                 <!-- Jamais désactivé : c'est le clic qui dit ce que l'offre
                      complète apporte, et où l'obtenir. -->
                 <div class="panel-actions">
@@ -274,18 +191,11 @@ import { isPaidPlan, refreshPlan } from "@/account";
 import { loadSession } from "@/sync";
 import { lastSyncFailure, scheduleAutoSync, useAutoSync } from "@/autoSync";
 import { liveEntries, loadVault, saveVault, tombstoneEntry, type VaultEntry } from "@/vault";
-import { changeLock, createLock, forgetLock, hasLock, LockError, verifyLock } from "@/vaultLock";
+import { locked, lockSession, masterKey, unlockWithMasterKey } from "@/masterKey";
 import { applyRenewal, proposeRenewal, type RenewProposal } from "@/renew";
 import { clearSession, isWithinGrace, recordLeave, resumeSession } from "@/vaultSession";
 
-type View = "setup" | "locked" | "unlocked";
-
-const ERROR_KEYS: Record<string, TranslationKey> = {
-  "too-short": "vault_err_too_short",
-  mismatch: "vault_err_mismatch",
-  "wrong-password": "vault_err_wrong",
-  storage: "vault_err_storage",
-};
+type View = "locked" | "unlocked";
 
 export default defineComponent({
   name: "Vault",
@@ -293,32 +203,33 @@ export default defineComponent({
     const { t, lang, localePath } = useI18n();
 
     /**
-     * État du verrou, en mémoire. Seul l'instant de sortie est retenu
+     * État du verrou, en mémoire. Le carnet s'ouvre avec la clef maîtresse de
+     * la session (masterKey.ts). Seul l'instant de sortie est retenu
      * (sessionStorage) : revenu dans les 3 minutes, le carnet est toujours
-     * ouvert (vaultSession.ts).
+     * ouvert (vaultSession.ts), à condition que la clef soit encore là et la
+     * session pas verrouillée.
      */
-    const view = ref<View>(hasLock() ? (resumeSession() ? "unlocked" : "locked") : "setup");
-    const password = ref("");
-    const passwordConfirm = ref("");
-    const current = ref("");
+    const view = ref<View>(
+      masterKey.value && !locked.value && resumeSession() ? "unlocked" : "locked",
+    );
+    const typedKey = ref("");
+    const hasSessionKey = computed(() => Boolean(masterKey.value));
     const status = ref("");
     const error = ref("");
-    const errorField = ref<"" | "password" | "confirm">("");
+    const invalid = ref(false);
     const busy = ref(false);
-    const confirmingForget = ref(false);
 
     const entries = ref<VaultEntry[]>([]);
     const selectedId = ref<string | null>(null);
     const selected = computed(() => entries.value.find((e) => e.id === selectedId.value) ?? null);
     const confirmingDelete = ref(false);
 
-    const clef = ref("");
+    const clef = masterKey;
     const pending = ref<RenewProposal | null>(null);
     const renewAllowed = ref(isPaidPlan(loadSession()?.plan));
     const syncConnected = Boolean(loadSession());
 
-    // Synchronisation automatique : la clef maîtresse n'est saisie ici que
-    // pour renouveler ; sans elle, rien ne part.
+    // Synchronisation automatique avec la clef de la session.
     useAutoSync(clef, () => {
       if (view.value === "unlocked") refreshEntries();
     });
@@ -342,7 +253,7 @@ export default defineComponent({
       if (view.value !== "unlocked" || leftAt === null) return;
       const since = leftAt;
       leftAt = null;
-      if (!isWithinGrace(since, Date.now())) onLock();
+      if (!isWithinGrace(since, Date.now())) closeVault("vault_locked_msg");
     }
 
     function onVisibility() {
@@ -378,17 +289,8 @@ export default defineComponent({
     }
 
     function resetFields() {
-      password.value = "";
-      passwordConfirm.value = "";
-      current.value = "";
-      errorField.value = "";
-    }
-
-    function showError(e: unknown) {
-      const code = e instanceof LockError ? e.code : "";
-      error.value = t(ERROR_KEYS[code] ?? "vault_err_wrong");
-      errorField.value = code === "mismatch" ? "confirm" : "password";
-      status.value = "";
+      typedKey.value = "";
+      invalid.value = false;
     }
 
     function refreshEntries() {
@@ -405,72 +307,41 @@ export default defineComponent({
       focusHeading();
     }
 
-    async function withBusy(task: () => Promise<void>) {
+    async function onUnlock() {
       if (busy.value) return;
-      busy.value = true;
-      error.value = "";
-      status.value = t("vault_checking");
-      try {
-        await task();
-      } catch (e) {
-        showError(e);
-      } finally {
-        busy.value = false;
+      const outcome = unlockWithMasterKey(typedKey.value);
+      typedKey.value = "";
+      if (outcome === "unlocked" || outcome === "keySet") {
+        enterUnlocked(outcome === "keySet" ? "vault_unlocked_key_set" : "vault_unlocked");
+        return;
       }
-    }
-
-    const onCreate = () =>
-      withBusy(async () => {
-        await createLock(password.value, passwordConfirm.value);
-        enterUnlocked("vault_unlocked");
-      });
-
-    const onUnlock = () =>
-      withBusy(async () => {
-        if (!(await verifyLock(password.value))) throw new LockError("wrong-password");
-        enterUnlocked("vault_unlocked");
-      });
-
-    const onChange = () =>
-      withBusy(async () => {
-        await changeLock(current.value, password.value, passwordConfirm.value);
-        resetFields();
-        status.value = t("vault_change_done");
-      });
-
-    function onLock() {
-      clearSession();
-      leftAt = null;
-      resetFields();
-      clef.value = "";
-      pending.value = null;
-      selectedId.value = null;
-      entries.value = [];
-      error.value = "";
-      status.value = t("vault_locked_msg");
-      view.value = "locked";
-      focusHeading();
-    }
-
-    function askForget() {
-      confirmingForget.value = true;
-      error.value = "";
-      focusHeading();
-    }
-
-    async function cancelForget() {
-      confirmingForget.value = false;
+      error.value = t(outcome === "otherKey" ? "vault_err_other_key" : "vault_err_empty");
+      invalid.value = true;
+      status.value = "";
       await nextTick();
       unlockInput.value?.focus();
     }
 
-    function onForget() {
-      forgetLock();
+    /**
+     * « Verrouiller » : toute la session, pas seulement cet écran. La clef est
+     * gardée mais inutilisable (générateur compris) jusqu'à sa ressaisie.
+     */
+    function onLock() {
+      lockSession();
+      closeVault("session_locked_msg");
+    }
+
+    /** Referme l'écran (grâce écoulée ou verrou). */
+    function closeVault(message: TranslationKey) {
       clearSession();
-      confirmingForget.value = false;
+      leftAt = null;
       resetFields();
-      status.value = t("vault_forgot_done");
-      view.value = "setup";
+      pending.value = null;
+      selectedId.value = null;
+      entries.value = [];
+      error.value = "";
+      status.value = t(message);
+      view.value = "locked";
       focusHeading();
     }
 
@@ -560,14 +431,12 @@ export default defineComponent({
       t,
       localePath,
       view,
-      password,
-      passwordConfirm,
-      current,
+      typedKey,
+      hasSessionKey,
       status,
       error,
-      errorField,
+      invalid,
       busy,
-      confirmingForget,
       entries,
       selected,
       confirmingDelete,
@@ -580,13 +449,8 @@ export default defineComponent({
       unlockInput,
       renewConfirm,
       deleteConfirm,
-      onCreate,
       onUnlock,
-      onChange,
       onLock,
-      askForget,
-      cancelForget,
-      onForget,
       openEntry,
       closeEntry,
       askDelete,

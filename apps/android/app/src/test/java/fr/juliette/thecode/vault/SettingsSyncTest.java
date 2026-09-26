@@ -40,7 +40,9 @@ public class SettingsSyncTest {
 
         for (String body : server.sentBodies) {
             assertFalse(body, body.contains("length"));
-            assertFalse(body, body.contains("37"));
+            // « 37 » seul apparaît parfois dans un chiffré base64 tiré au hasard :
+            // on cherche la valeur telle qu'un JSON en clair l'écrirait.
+            assertFalse(body, body.contains(":37"));
             assertFalse(body, body.contains("updatedAt"));
         }
     }

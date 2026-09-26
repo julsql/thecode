@@ -4,6 +4,9 @@
  * Quitter l'ecran (onglet ferme ou masque, navigation) fait courir la fenetre ;
  * revenu a temps, le carnet est toujours ouvert. Seul l'instant de sortie est
  * retenu, jamais un secret. Voir shared/spec/vault-lock.md, « Session ».
+ *
+ * Le carnet s'ouvre avec la clef maitresse : aucune empreinte n'en est stockee,
+ * la clef saisie est comparee a celle de la session.
  */
 
 const VAULT_SESSION_GRACE_MS = 3 * 60 * 1000;
@@ -17,6 +20,21 @@ function isWithinVaultGrace(leftAt, now, grace = VAULT_SESSION_GRACE_MS) {
   if (!Number.isFinite(leftAt) || !Number.isFinite(now)) return false;
   const elapsed = now - leftAt;
   return elapsed >= 0 && elapsed <= grace;
+}
+
+/**
+ * Vrai si les deux clefs sont identiques. Comparaison en temps constant : la
+ * duree ne depend que de la plus longue, jamais de la position du premier
+ * octet different.
+ */
+function sameMasterKey(a, b) {
+  if (typeof a !== "string" || typeof b !== "string") return false;
+  const x = new TextEncoder().encode(a);
+  const y = new TextEncoder().encode(b);
+  const n = Math.max(x.length, y.length);
+  let diff = x.length ^ y.length;
+  for (let i = 0; i < n; i++) diff |= (x[i] ?? 0) ^ (y[i] ?? 0);
+  return diff === 0;
 }
 
 /**
@@ -65,7 +83,7 @@ function createVaultSession(area) {
       if (leftAt !== null) await write(null);
       return false;
     },
-    /** « Verrouiller », « Mot de passe oublie » : referme aussitot. */
+    /** « Verrouiller » : referme aussitot. */
     clear: () => write(null),
   };
 }
@@ -75,6 +93,7 @@ if (typeof module !== "undefined") {
     VAULT_SESSION_GRACE_MS,
     VAULT_SESSION_STORAGE_KEY,
     isWithinVaultGrace,
+    sameMasterKey,
     createVaultSession,
   };
 }

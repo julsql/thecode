@@ -911,7 +911,7 @@ Clef maîtresse : gardée dans le trousseau de l'appareil et protégée par Face
 
 Tout le reste est facultatif : sans carnet ni compte, l'app fonctionne entièrement.
 
-Carnet : retient pour chaque site l'identifiant, la longueur et les caractères, jamais le mot de passe. Il reste sur l'appareil, verrouillé par Face ID, Touch ID ou un mot de passe de carnet. Un déverrouillage vaut 3 minutes pour la clef comme pour le carnet. Sans compte, il passe à vos autres apps TheCode par QR code chiffré.
+Carnet : retient pour chaque site l'identifiant, la longueur et les caractères, jamais le mot de passe. Il reste sur l'appareil, verrouillé par Face ID, Touch ID ou le code de l'appareil. Un déverrouillage vaut 3 minutes pour la clef comme pour le carnet. Sans compte, il passe à vos autres apps TheCode par QR code chiffré.
 
 Compte : synchronise automatiquement le carnet et les réglages par défaut entre vos appareils, chiffrés de bout en bout. Le serveur ne voit ni votre clef maîtresse, ni vos sites, ni vos identifiants. Connexion par e-mail, avec Apple ou avec Google ; le compte se supprime depuis l'app.
 
@@ -931,7 +931,7 @@ Master key: kept in the device keychain and protected by Face ID or Touch ID. It
 
 Everything else is optional: without a vault or an account, the app works fully.
 
-Vault: remembers each site's username, length and characters, never the password. It stays on the device, locked by Face ID, Touch ID or a vault password. One unlock lasts 3 minutes for both the key and the vault. Without an account, it moves to your other TheCode apps through an encrypted QR code.
+Vault: remembers each site's username, length and characters, never the password. It stays on the device, locked by Face ID, Touch ID or the device passcode. One unlock lasts 3 minutes for both the key and the vault. Without an account, it moves to your other TheCode apps through an encrypted QR code.
 
 Account: automatically syncs the vault and the default settings across your devices, end-to-end encrypted. The server sees neither your master key, nor your sites, nor your usernames. Sign in with email, Apple or Google; the account can be deleted from the app.
 

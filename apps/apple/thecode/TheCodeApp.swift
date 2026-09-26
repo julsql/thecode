@@ -43,6 +43,8 @@ func initializeSharedDefaults() {
     // La clef maîtresse ne vit plus ici : elle est dans le trousseau, et une
     // version antérieure l'y avait laissée en clair.
     SecureKeyStore.migrateFromUserDefaults()
+    // L'ancien verrou du carnet (méthode, mot de passe de carnet) n'existe plus.
+    LegacyVaultLockRecords.remove()
     if defaults.object(forKey: "lengthNumber") == nil {
         defaults.set(PasswordSettings.defaultLength, forKey: "lengthNumber")
     }

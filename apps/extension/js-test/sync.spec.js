@@ -8,7 +8,16 @@
 const { webcrypto } = require("node:crypto");
 if (!global.crypto) global.crypto = webcrypto;
 
-const { syncVault, SyncError } = require("../sync");
+const {
+  syncVault,
+  SyncError,
+  VaultTamperedError,
+  deriveSyncBits,
+  deriveSyncKey,
+  decryptEntry,
+  encryptEntry,
+  openSettings,
+} = require("../sync");
 const { emptyVault, newEntry } = require("../vault");
 
 const vector = require("./sync-row.json");
@@ -16,7 +25,9 @@ const SESSION = {
   endpoint: "https://example.test/api",
   accessToken: "a",
   refreshToken: "r",
+  kdfSalt: vector.kdfSalt,
 };
+const saltBytes = (text) => new Uint8Array(Buffer.from(text, "base64url"));
 
 /** Serveur de carnet en memoire, aux memes regles que l'API reelle. */
 function fakeServer(maxEntries) {
@@ -186,5 +197,123 @@ describe("synchronisation", () => {
 
   it("expose une erreur dediee", () => {
     expect(new SyncError("x")).toBeInstanceOf(Error);
+  });
+
+  describe("entree rangee sous un autre identifiant (id-mismatch)", () => {
+    const mismatch = vector.rejected.find((c) => c.name === "id-mismatch");
+    let pushed;
+
+    beforeEach(() => {
+      pushed = [];
+      global.fetch = (url, init) => {
+        if (init?.body) pushed.push(init.body);
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve(
+              init?.body ? { revision: 1, accepted: 1 } : { revision: 0, entries: [mismatch.row] },
+            ),
+        });
+      };
+    });
+
+    afterEach(() => {
+      delete global.chrome;
+    });
+
+    it.each([
+      ["fr", /Le carnet reçu du serveur a été modifié/],
+      ["en-US", /The vault received from the server was tampered with/],
+    ])("fait echouer toute la synchronisation (%s)", async (lang, message) => {
+      global.chrome = { i18n: { getUILanguage: () => lang } };
+      const local = vaultWith("gitlab.com", "moi");
+      const before = JSON.parse(JSON.stringify(local));
+
+      const run = syncVault(local, vector.masterKey, SESSION);
+
+      await expect(run).rejects.toThrow(VaultTamperedError);
+      await expect(run).rejects.toThrow(message);
+      await expect(run).rejects.toMatchObject({ code: "vault-tampered" });
+      expect(pushed).toHaveLength(0);
+      expect(local).toStrictEqual(before);
+    });
+  });
+
+  it("relit le sel du compte sur /v1/auth/me quand la session ne l'a pas", async () => {
+    const calls = [];
+    global.fetch = (url, init) => {
+      calls.push(url);
+      if (url.endsWith("/v1/auth/me")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ plan: "free", kdf_salt: vector.kdfSalt }),
+        });
+      }
+      return server.fetchImpl(url, init);
+    };
+    const { kdfSalt, ...withoutSalt } = SESSION;
+
+    const result = await syncVault(vaultWith("google.com", "moi"), "clef", withoutSalt);
+
+    expect(calls[0]).toMatch(/\/v1\/auth\/me$/);
+    expect(result.session.kdfSalt).toBe(kdfSalt);
+  });
+
+  it.each([
+    ["absent", undefined],
+    ["trop court", "AAAA"],
+    ["pas du base64url", "!!!!!!!!!!!!!!!!!!!!!!"],
+  ])("ne synchronise pas sans sel valide (%s)", async (_name, salt) => {
+    global.fetch = (url, init) =>
+      url.endsWith("/v1/auth/me")
+        ? Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () => Promise.resolve({ kdf_salt: salt }),
+          })
+        : server.fetchImpl(url, init);
+
+    await expect(
+      syncVault(vaultWith("google.com", "moi"), "clef", { ...SESSION, kdfSalt: salt }),
+    ).rejects.toThrow(/sel de derivation/);
+    expect(server.sent).toHaveLength(0);
+  });
+});
+
+describe("vecteurs de synchronisation v2 (sync-row.json)", () => {
+  let key;
+  beforeAll(async () => {
+    key = await deriveSyncKey(vector.masterKey, saltBytes(vector.kdfSalt));
+  });
+
+  it("derive la meme clef que les autres implementations", async () => {
+    const bits = await deriveSyncBits(vector.masterKey, saltBytes(vector.kdfSalt));
+    expect(Buffer.from(bits).toString("hex")).toBe(vector.derivedSyncHex);
+  });
+
+  it("dechiffre la ligne de reference", async () => {
+    expect(await decryptEntry(vector.row, key)).toStrictEqual(vector.entry);
+  });
+
+  it("ouvre les reglages de reference", async () => {
+    expect(await openSettings(vector.settings.sealed, key)).toStrictEqual(vector.settings.value);
+  });
+
+  it("chiffre une entree que l'on sait relire, liee a son identifiant", async () => {
+    const row = await encryptEntry(vector.entry, key);
+    expect(row.entry_id).toBe(vector.entry.id);
+    expect(await decryptEntry(row, key)).toStrictEqual(vector.entry);
+    await expect(decryptEntry({ ...row, entry_id: "autre" }, key)).rejects.toThrow(SyncError);
+  });
+
+  it("couvre chaque cas refuse", () => {
+    expect(vector.rejected.length).toBeGreaterThan(0);
+  });
+
+  it.each(vector.rejected.map((c) => [c.name, c]))("refuse %s", async (_name, c) => {
+    const open = c.as === "settings" ? openSettings(c.row, key) : decryptEntry(c.row, key);
+    await expect(open).rejects.toThrow(SyncError);
   });
 });

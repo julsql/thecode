@@ -22,7 +22,7 @@ public class TransferFragmentTest {
     @Test
     public void shortPayloadStaysWhole() {
         // Imposer un assemblage pour un carnet ordinaire n'apporterait rien.
-        String payload = "TC1.abc.def";
+        String payload = "TC2.abc.def";
         assertEquals(Collections.singletonList(payload), Transfer.fragments(payload));
     }
 
@@ -30,13 +30,13 @@ public class TransferFragmentTest {
     public void longPayloadIsSplit() {
         StringBuilder body = new StringBuilder();
         for (int i = 0; i < 7000; i++) body.append('A');
-        String payload = "TC1." + body;
+        String payload = "TC2." + body;
 
         List<String> parts = Transfer.fragments(payload);
 
         assertEquals(3, parts.size());
         for (String part : parts) {
-            assertTrue(part, part.startsWith("TC1m."));
+            assertTrue(part, part.startsWith("TC2m."));
             assertTrue(part, part.length() <= Transfer.FRAGMENT_LIMIT + 16);
         }
     }
@@ -45,7 +45,7 @@ public class TransferFragmentTest {
     public void fragmentsRejoinInAnyOrder() {
         StringBuilder body = new StringBuilder();
         for (int i = 0; i < 7000; i++) body.append('B');
-        String payload = "TC1." + body;
+        String payload = "TC2." + body;
 
         List<String> parts = Transfer.fragments(payload);
         Map<Integer, String> seen = new HashMap<>();

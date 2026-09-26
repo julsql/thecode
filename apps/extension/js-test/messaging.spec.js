@@ -68,10 +68,12 @@ describe("protocole de messages", () => {
     const { send } = loadWorker();
     expect(await send({ action: "checkEncodingKey" }, FROM_POPUP)).toStrictEqual({
       hasEncodingKey: false,
+      locked: false,
     });
     await send({ action: "setEncodingKey", encodingKey: "clef" }, FROM_POPUP);
     expect(await send({ action: "checkEncodingKey" }, FROM_POPUP)).toStrictEqual({
       hasEncodingKey: true,
+      locked: false,
     });
   });
 
@@ -81,6 +83,7 @@ describe("protocole de messages", () => {
     await send({ action: "clearEncodingKey" }, FROM_POPUP);
     expect(await send({ action: "checkEncodingKey" }, FROM_POPUP)).toStrictEqual({
       hasEncodingKey: false,
+      locked: false,
     });
   });
 });
@@ -128,6 +131,7 @@ describe("cloisonnement vis-a-vis des content scripts", () => {
     await send({ action: "setEncodingKey", encodingKey: "secret" }, FROM_POPUP);
     expect(await send({ action: "getEncodingKey" }, FROM_POPUP)).toStrictEqual({
       encodingKey: "secret",
+      locked: false,
     });
   });
 

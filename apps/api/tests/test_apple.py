@@ -9,15 +9,12 @@ from __future__ import annotations
 
 import hashlib
 import time
-import uuid
-from pathlib import Path
 
 import jwt
 import pytest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec, rsa
 from sqlalchemy import create_engine, inspect, select, text
-from sqlalchemy.engine import make_url
 
 import thecode_api.apple as apple_module
 from thecode_api.apple import AppleError, hash_nonce, verify_identity_token
@@ -537,40 +534,18 @@ class TestRevocation:
 class TestMigration:
     """La migration s'applique et se défait sur une base neuve."""
 
-    @pytest.fixture
-    def fresh_url(self, postgres_url, monkeypatch):
-        name = f"migr_{uuid.uuid4().hex[:8]}"
-        admin = create_engine(postgres_url, isolation_level="AUTOCOMMIT")
-        with admin.connect() as connection:
-            connection.execute(text(f'CREATE DATABASE "{name}"'))
-        url = make_url(postgres_url).set(database=name)
-        rendered = url.render_as_string(hide_password=False)
-        monkeypatch.setenv("THECODE_DATABASE_URL", rendered)
-        # `migrations/env.py` lit la vraie configuration : elle doit passer
-        # ses propres contrôles de démarrage.
-        monkeypatch.setenv("THECODE_REGISTRATION_MODE", "open")
-        monkeypatch.setenv("THECODE_ENVIRONMENT", "test")
-        yield rendered
-        with admin.connect() as connection:
-            connection.execute(text(f'DROP DATABASE "{name}" WITH (FORCE)'))
-        admin.dispose()
-
-    def test_upgrade_and_downgrade(self, fresh_url):
+    def test_upgrade_and_downgrade(self, fresh_url, alembic_config):
         from alembic import command
-        from alembic.config import Config
 
         from thecode_api.config import get_settings
 
-        root = Path(__file__).resolve().parent.parent
-        # Sans fichier : `env.py` appliquerait sinon la configuration des
-        # journaux d'`alembic.ini`, qui coupe ceux déjà créés par les autres
-        # tests.
-        config = Config()
-        config.set_main_option("script_location", str(root / "migrations"))
+        config = alembic_config
 
         get_settings.cache_clear()
         try:
-            command.upgrade(config, "head")
+            # Jusqu'aux jetons Apple : les migrations suivantes ont leurs
+            # propres tests.
+            command.upgrade(config, "f6c1d2e8b935")
             engine = create_engine(fresh_url)
             columns = {c["name"] for c in inspect(engine).get_columns("accounts")}
             assert "apple_sub" in columns

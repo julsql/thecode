@@ -13,10 +13,6 @@ import Testing
 
 @testable import TheCode
 
-private struct TransferVector: Decodable {
-    let masterKey: String
-    let payload: String
-}
 
 private func filled() -> Vault {
     var entry = VaultEntry(siteKey: "google.com", domains: ["google.com", "google.fr"])
@@ -51,16 +47,47 @@ struct TransferVaultTests {
     func refusesAnUnknownVersion() {
         // Interpréter un format inconnu au hasard serait pire que refuser.
         #expect(throws: Transfer.TransferError.unreadable(
-            "Version « TC9 » inconnue, ce client lit TC1.")) {
-            _ = try Transfer.importVault("TC9.aaa.bbb", masterKey: "clef")
+            "Version « TC9 » inconnue, ce client lit TC2.")) {
+            _ = try Transfer.importVault("TC9.aaa.bbb.ccc", masterKey: "clef")
+        }
+    }
+
+    @Test("Le format v1 n'est plus lu")
+    func refusesTC1() {
+        #expect(throws: Transfer.TransferError.unreadable(
+            "Version « TC1 » inconnue, ce client lit TC2.")) {
+            _ = try Transfer.importVault("TC1.nonce.donnees", masterKey: "clef")
         }
     }
 
     @Test("Un payload tronqué est refusé")
     func refusesATruncatedPayload() {
         #expect(throws: (any Error).self) {
-            _ = try Transfer.importVault("TC1.seulement-deux", masterKey: "clef")
+            _ = try Transfer.importVault("TC2.seulement-deux", masterKey: "clef")
         }
+    }
+
+    @Test("Un sel ou un nonce de mauvaise taille est refusé avant tout déchiffrement")
+    func refusesBadSaltOrNonceLength() throws {
+        let parts = try Transfer.exportVault(filled(), masterKey: "clef").split(separator: ".")
+        let shortSalt = "TC2.\(Base64URL.encode(Data(count: 15))).\(parts[2]).\(parts[3])"
+        let shortNonce = "TC2.\(parts[1]).\(Base64URL.encode(Data(count: 11))).\(parts[3])"
+        for payload in [shortSalt, shortNonce] {
+            #expect(throws: Transfer.TransferError.unreadable("Encodage invalide.")) {
+                _ = try Transfer.importVault(payload, masterKey: "clef")
+            }
+        }
+    }
+
+    @Test("Chaque export tire un sel neuf")
+    func neverReusesASalt() throws {
+        let vault = filled()
+        var salts = Set<String>()
+        for _ in 0..<5 {
+            salts.insert(
+                String(try Transfer.exportVault(vault, masterKey: "clef").split(separator: ".")[1]))
+        }
+        #expect(salts.count == 5)
     }
 
     @Test("Une altération est détectée")
@@ -71,9 +98,9 @@ struct TransferVaultTests {
         // donnent le même octet. Changer ce seul caractère laissait le chiffré
         // intact, l'import réussissait, et le test échouait sans que rien
         // n'ait été altéré.
-        let cipher = parts[2]
+        let cipher = parts[3]
         let tail = cipher.hasSuffix("AAAA") ? "BBBB" : "AAAA"
-        let tampered = "\(parts[0]).\(parts[1]).\(cipher.dropLast(4))\(tail)"
+        let tampered = "\(parts[0]).\(parts[1]).\(parts[2]).\(cipher.dropLast(4))\(tail)"
 
         #expect(throws: (any Error).self) {
             _ = try Transfer.importVault(tampered, masterKey: "clef")
@@ -87,7 +114,7 @@ struct TransferVaultTests {
         var nonces = Set<String>()
         for _ in 0..<10 {
             nonces.insert(
-                String(try Transfer.exportVault(vault, masterKey: "clef").split(separator: ".")[1]))
+                String(try Transfer.exportVault(vault, masterKey: "clef").split(separator: ".")[2]))
         }
         #expect(nonces.count == 10)
     }
@@ -95,21 +122,31 @@ struct TransferVaultTests {
     @Test("Lit un payload produit par une autre implémentation")
     func readsAForeignPayload() throws {
         // Le fichier vient du CLI Python : c'est la seule garantie qui vaille,
-        // et c'est elle qui prouve que le deflate est bien du deflate brut.
-        let url = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .appendingPathComponent("Resources/transfer-vector.json")
-        let vector = try JSONDecoder().decode(TransferVector.self, from: Data(contentsOf: url))
+        // et c'est elle qui prouve que l'enveloppe zlib est la bonne.
+        let vector = try loadTransferVector()
 
         let imported = try Transfer.importVault(vector.payload, masterKey: vector.masterKey)
-        #expect(!imported.entries.isEmpty)
+        #expect(imported.entries == vector.vault.entries)
+        #expect(imported.updatedAt == vector.vault.updatedAt)
+    }
+
+    @Test(
+        "Refuse chaque payload du vecteur « rejected »",
+        arguments: try loadTransferVector().rejected)
+    func refusesRejected(_ rejected: TransferVectorFixture.Rejected) throws {
+        let vector = try loadTransferVector()
+        #expect(throws: (any Error).self) {
+            _ = try Transfer.importVault(rejected.payload, masterKey: vector.masterKey)
+        }
     }
 
     @Test("Produit un payload que les autres relisent")
     func producesWhatOthersRead() throws {
         let payload = try Transfer.exportVault(filled(), masterKey: "clef")
 
-        #expect(payload.hasPrefix("TC1."))
+        #expect(payload.hasPrefix("TC2."))
+        #expect(payload.split(separator: ".").count == 4)
+        #expect(Base64URL.decode(String(payload.split(separator: ".")[1]))?.count == 16)
         // base64url sans remplissage : un « + » ou un « = » casserait les autres.
         #expect(payload.dropFirst(4).allSatisfy { $0.isLetter || $0.isNumber || "._-".contains($0) })
     }
@@ -144,11 +181,13 @@ struct TransferInteropDirectionTests {
 
         let payload = try Transfer.exportVault(Vault(entries: [entry]), masterKey: "clef")
         let parts = payload.split(separator: ".").map(String.init)
-        let nonce = try #require(Base64URL.decode(parts[1]))
-        let blob = try #require(Base64URL.decode(parts[2]))
+        let salt = try #require(Base64URL.decode(parts[1]))
+        let nonce = try #require(Base64URL.decode(parts[2]))
+        let blob = try #require(Base64URL.decode(parts[3]))
 
         let compressed = try Transfer.open(
-            nonce: nonce, blob: blob, with: Transfer.deriveKey("clef"))
+            nonce: nonce, blob: blob, with: Transfer.deriveKey("clef", salt: salt),
+            aad: Transfer.aad)
 
         // 0x78 : méthode deflate, fenêtre 32 Ko. C'est l'en-tête RFC 1950.
         #expect(compressed[compressed.startIndex] == 0x78)
@@ -162,18 +201,18 @@ struct TransferFragmentTests {
     @Test("Un payload court reste en un seul morceau")
     func shortPayloadStaysWhole() {
         // Imposer un assemblage pour un carnet ordinaire n'apporterait rien.
-        let payload = "TC1.abc.def"
+        let payload = "TC2.sel.abc.def"
         #expect(Transfer.fragments(payload) == [payload])
     }
 
     @Test("Un payload long est découpé et se réassemble")
     func longPayloadSplitsAndRejoins() throws {
         let body = String(repeating: "A", count: 7000)
-        let payload = "TC1.\(body)"
+        let payload = "TC2.\(body)"
 
         let parts = Transfer.fragments(payload)
         #expect(parts.count == 3)
-        #expect(parts.allSatisfy { $0.hasPrefix("TC1m.") })
+        #expect(parts.allSatisfy { $0.hasPrefix("TC2m.") })
 
         // Le lecteur accumule : l'ordre ne doit pas compter, et un fragment lu
         // deux fois ne doit pas casser l'assemblage.
@@ -187,8 +226,8 @@ struct TransferFragmentTests {
     @Test("Un seul QR est accepté directement")
     func singleCodeIsAcceptedAsIs() {
         let scanner = QrScanner()
-        scanner.accept("TC1.nonce.donnees")
-        #expect(scanner.payload == "TC1.nonce.donnees")
+        scanner.accept("TC2.sel.nonce.donnees")
+        #expect(scanner.payload == "TC2.sel.nonce.donnees")
     }
 
     @Test("Un QR étranger est ignoré sans bruit")
@@ -200,11 +239,27 @@ struct TransferFragmentTests {
         #expect(scanner.failure == nil)
     }
 
+    @Test("Un code TC1, entier ou fragment, est refusé", arguments: ["TC1.a.b", "TC1m.0.2.a"])
+    func tc1CodeIsRefused(_ text: String) {
+        let scanner = QrScanner()
+        scanner.accept(text)
+        #expect(scanner.payload == nil)
+        #expect(scanner.failure != nil)
+    }
+
+    @Test("Un fragment garde les points de son contenu")
+    func fragmentKeepsItsDots() {
+        let scanner = QrScanner()
+        scanner.accept("TC2m.1.2.nonce.donnees")
+        scanner.accept("TC2m.0.2.sel.")
+        #expect(scanner.payload == "TC2.sel.nonce.donnees")
+    }
+
     @Test("Tant qu'il manque un fragment, rien n'est rendu")
     func incompleteYieldsNothing() {
         let scanner = QrScanner()
-        scanner.accept("TC1m.0.3.aaa")
-        scanner.accept("TC1m.2.3.ccc")
+        scanner.accept("TC2m.0.3.aaa")
+        scanner.accept("TC2m.2.3.ccc")
 
         #expect(scanner.payload == nil)
         #expect(scanner.progress != nil)

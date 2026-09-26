@@ -19,6 +19,7 @@ const { googleSignInBody } = require("../sync.js");
 
 const REDIRECT = "https://abcdefghijklmnop.chromiumapp.org/";
 const ENDPOINT = "https://api.example";
+const SALT = "0WveVfSRJyzta8UsTh5DFw";
 
 describe("URL d'autorisation", () => {
   const url = new URL(
@@ -197,9 +198,9 @@ function loadWorker({ identity, googleClientId = "web-client", failRegistration 
       return json(200, { open: true, googleClientId });
     }
     if (url.endsWith("/v1/auth/google")) {
-      return json(200, { access_token: "acc", refresh_token: "ref" });
+      return json(200, { access_token: "acc", refresh_token: "ref", kdf_salt: SALT });
     }
-    if (url.endsWith("/v1/auth/me")) return json(200, { plan: "free" });
+    if (url.endsWith("/v1/auth/me")) return json(200, { plan: "free", kdf_salt: SALT });
     return json(404, { detail: "inconnu" });
   };
 
@@ -280,6 +281,7 @@ describe("service worker", () => {
       endpoint: ENDPOINT,
       accessToken: "acc",
       refreshToken: "ref",
+      kdfSalt: SALT,
       plan: "free",
     });
     expect((await send({ action: "syncStatus" })).connected).toBe(true);

@@ -1,9 +1,10 @@
 /**
  * Client de synchronisation.
  *
- * Le carnet est chiffré **avant** de quitter le navigateur, avec la clef de
- * transfert dérivée de la clef maîtresse. Le serveur ne reçoit que des blocs
- * opaques : il ne peut lire ni les sites, ni les identifiants.
+ * Le carnet est chiffré **avant** de quitter le navigateur, avec une clef
+ * dérivée de la clef maîtresse et du sel propre au compte
+ * (shared/spec/vault-sync.md). Le serveur ne reçoit que des blocs opaques : il
+ * ne peut lire ni les sites, ni les identifiants.
  *
  * Les identifiants du compte sont volontairement distincts de la clef
  * maîtresse. S'authentifier avec celle-ci ferait qu'une faiblesse du service
@@ -11,11 +12,18 @@
  */
 
 import { normalizeSettings, type DefaultSettings } from "@/settings";
-import { deriveTransferKey } from "@/transfer";
+import { aesKey, b64d, b64dOrNull, b64e, concatBytes, pbkdf2Bits } from "@/transfer";
 import { mergeVaults, selectForPush, type Conflict, type Vault, type VaultEntry } from "@/vault";
 
 export const DEFAULT_ENDPOINT = "https://thecode-api.julsql.fr";
 const SESSION_KEY = "thecode.session";
+/** Préfixe du sel PBKDF2 de la clef de synchronisation ; le sel du compte lui est concaténé. */
+export const SYNC_KDF_LABEL = "thecode-sync/v2";
+export const KDF_SALT_BYTES = 16;
+/** Données associées AES-GCM d'une entrée, suivies de son `entry_id`. */
+export const ENTRY_AAD_PREFIX = "thecode/entry/v2|";
+/** Données associées AES-GCM des réglages par défaut. */
+export const SETTINGS_AAD = "thecode/settings/v2";
 
 export class SyncError extends Error {
   /** Statut HTTP de la réponse, 0 quand le service n'a pas répondu. */
@@ -24,6 +32,25 @@ export class SyncError extends Error {
   constructor(message: string, status = 0) {
     super(message);
     this.status = status;
+  }
+}
+
+export const VAULT_TAMPERED_MESSAGES = {
+  fr: "Le carnet reçu du serveur a été modifié : synchronisation interrompue, rien n'a été écrit.",
+  en: "The vault received from the server was tampered with: sync stopped, nothing was written.",
+} as const;
+
+/**
+ * Une ligne déchiffrée ne porte pas l'identifiant sous lequel elle est rangée.
+ * Seule une altération côté serveur y mène : toute la synchronisation échoue,
+ * comme pour un tag GCM invalide, plutôt que d'écarter l'entrée en silence
+ * (shared/spec/vault-sync.md).
+ */
+export class VaultTamperedError extends SyncError {
+  constructor() {
+    // La langue du site est le premier segment de l'URL (/fr/…, /en/…).
+    const fr = /^\/fr(\/|$)/.test(globalThis.location?.pathname ?? "");
+    super(VAULT_TAMPERED_MESSAGES[fr ? "fr" : "en"]);
   }
 }
 
@@ -39,18 +66,37 @@ export interface Session {
    * n'a pas répondu, et proposerait donc tout.
    */
   plan?: string;
+  /**
+   * Sel de dérivation du compte, en base64url, tel que le service l'a rendu.
+   * Public : il ne sert qu'à rendre la clef de synchronisation propre au
+   * compte, et le serveur le connaît de toute façon.
+   */
+  kdfSalt?: string;
 }
 
-function b64e(bytes: ArrayBuffer | Uint8Array): string {
-  let binary = "";
-  for (const b of new Uint8Array(bytes)) binary += String.fromCharCode(b);
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+/** Ce que rend toute route qui ouvre ou renouvelle une session. */
+export interface TokenResponse {
+  access_token: string;
+  refresh_token: string;
+  kdf_salt?: string;
 }
 
-function b64d(text: string): Uint8Array {
-  const standard = text.replace(/-/g, "+").replace(/_/g, "/");
-  const binary = atob(standard + "=".repeat((4 - (standard.length % 4)) % 4));
-  return Uint8Array.from(binary, (c) => c.charCodeAt(0));
+/**
+ * Session tirée d'une réponse de jeton. Le sel du compte y voyage ; à défaut,
+ * celui de la session précédente est gardé.
+ */
+export function sessionFromTokens(
+  endpoint: string,
+  body: TokenResponse,
+  previous?: Session,
+): Session {
+  return {
+    ...previous,
+    endpoint,
+    accessToken: body.access_token,
+    refreshToken: body.refresh_token,
+    kdfSalt: body.kdf_salt || previous?.kdfSalt || "",
+  };
 }
 
 export async function request(
@@ -190,13 +236,9 @@ export async function register(
       device_label: "site web",
       client: "web",
     },
-  })) as { access_token: string; refresh_token: string };
+  })) as TokenResponse;
 
-  return {
-    endpoint,
-    accessToken: body.access_token,
-    refreshToken: body.refresh_token,
-  };
+  return sessionFromTokens(endpoint, body);
 }
 
 /**
@@ -210,11 +252,7 @@ export async function login(endpoint: string, email: string, password: string): 
   const body = await request(`${endpoint}/v1/auth/login`, {
     payload: { email, password, device_label: "site web", client: "web" },
   });
-  return {
-    endpoint,
-    accessToken: body.access_token,
-    refreshToken: body.refresh_token,
-  };
+  return sessionFromTokens(endpoint, body);
 }
 
 /**
@@ -239,11 +277,7 @@ export async function googleSignIn(
       client: "web",
     },
   });
-  return {
-    endpoint,
-    accessToken: body.access_token,
-    refreshToken: body.refresh_token,
-  };
+  return sessionFromTokens(endpoint, body);
 }
 
 /**
@@ -273,11 +307,7 @@ export async function appleSignIn(
       ...(authorizationCode ? { authorization_code: authorizationCode } : {}),
     },
   });
-  return {
-    endpoint,
-    accessToken: body.access_token,
-    refreshToken: body.refresh_token,
-  };
+  return sessionFromTokens(endpoint, body);
 }
 
 /**
@@ -298,11 +328,7 @@ async function withFreshToken<T>(
     const body = await request(`${session.endpoint}/v1/auth/refresh`, {
       payload: { refresh_token: session.refreshToken },
     });
-    const refreshed: Session = {
-      endpoint: session.endpoint,
-      accessToken: body.access_token,
-      refreshToken: body.refresh_token,
-    };
+    const refreshed = sessionFromTokens(session.endpoint, body, session);
     return { result: await call(refreshed.accessToken), session: refreshed };
   }
 }
@@ -322,43 +348,121 @@ export async function authorized<T>(
   return result;
 }
 
-/** Chiffre une valeur JSON avec la clef de transfert : `{ nonce, blob }`. */
-async function encryptBlob(value: unknown, key: CryptoKey) {
+/**
+ * Sel de dérivation du compte, relu sur /v1/auth/me s'il manque à la session.
+ *
+ * Sans sel valide, pas de synchronisation : chiffrer avec un autre sel
+ * rendrait les blocs illisibles pour les autres appareils.
+ */
+export async function accountSalt(
+  session: Session,
+): Promise<{ salt: Uint8Array<ArrayBuffer>; session: Session }> {
+  let salt = b64dOrNull(session.kdfSalt);
+  if (!salt || salt.length !== KDF_SALT_BYTES) {
+    const me = await withFreshToken(session, (token) =>
+      request(`${session.endpoint}/v1/auth/me`, { token }),
+    );
+    session = { ...me.session, kdfSalt: me.result?.kdf_salt || "" };
+    salt = b64dOrNull(session.kdfSalt);
+  }
+  if (!salt || salt.length !== KDF_SALT_BYTES) {
+    throw new SyncError(
+      "Le service n'a pas rendu le sel de dérivation du compte : reconnectez-vous.",
+    );
+  }
+  return { salt, session };
+}
+
+/** Octets de la clef de synchronisation : PBKDF2(clef, "thecode-sync/v2" || sel du compte). */
+export function deriveSyncBits(
+  masterKey: string,
+  kdfSalt: Uint8Array,
+): Promise<Uint8Array<ArrayBuffer>> {
+  return pbkdf2Bits(masterKey, concatBytes(new TextEncoder().encode(SYNC_KDF_LABEL), kdfSalt));
+}
+
+/**
+ * Clef de synchronisation : propre à la clef maîtresse **et** au compte. Le
+ * sel du compte empêche de précalculer une table valable pour tous les comptes.
+ */
+export async function deriveSyncKey(masterKey: string, kdfSalt: Uint8Array): Promise<CryptoKey> {
+  return aesKey(await deriveSyncBits(masterKey, kdfSalt));
+}
+
+/**
+ * Données associées d'une entrée : la lient à son identifiant en clair. Sans
+ * elles, le serveur pourrait échanger les blobs de deux entrées sans que rien
+ * ne le trahisse au déchiffrement.
+ */
+function entryAad(entryId: string): Uint8Array<ArrayBuffer> {
+  return new TextEncoder().encode(ENTRY_AAD_PREFIX + entryId);
+}
+
+interface Sealed {
+  nonce: string;
+  blob: string;
+}
+
+/** Chiffre une valeur JSON : AES-256-GCM, `{ nonce, blob }` en base64url. */
+async function seal(value: unknown, key: CryptoKey, aad: Uint8Array<ArrayBuffer>): Promise<Sealed> {
   const nonce = crypto.getRandomValues(new Uint8Array(12));
   const plain = new TextEncoder().encode(JSON.stringify(value));
-  const cipher = await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce }, key, plain);
+  const cipher = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv: nonce, additionalData: aad },
+    key,
+    plain,
+  );
   return { nonce: b64e(nonce), blob: b64e(cipher) };
 }
 
-async function encryptEntry(entry: VaultEntry, key: CryptoKey) {
+async function open(
+  sealed: Sealed,
+  key: CryptoKey,
+  aad: Uint8Array<ArrayBuffer>,
+): Promise<unknown> {
+  let plain: ArrayBuffer;
+  try {
+    plain = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: b64d(sealed.nonce), additionalData: aad },
+      key,
+      b64d(sealed.blob),
+    );
+  } catch {
+    throw new SyncError(
+      "Déchiffrement impossible : la clef maîtresse n'est pas celle qui a servi à synchroniser ce carnet, ou le bloc a été altéré.",
+    );
+  }
+  return JSON.parse(new TextDecoder().decode(plain));
+}
+
+export async function encryptEntry(entry: VaultEntry, key: CryptoKey) {
   return {
     entry_id: entry.id,
-    ...(await encryptBlob(entry, key)),
+    ...(await seal(entry, key, entryAad(entry.id))),
     deleted: Boolean(entry.deleted),
   };
 }
 
-function decryptEntry(
-  row: { nonce: string; blob: string; deleted: boolean },
+export async function decryptEntry(
+  row: { entry_id: string; nonce: string; blob: string },
   key: CryptoKey,
 ): Promise<VaultEntry> {
-  return decryptBlob(row, key) as Promise<VaultEntry>;
+  const entry = await open(row, key, entryAad(row.entry_id));
+  // Les données associées lient déjà le blob à l'identifiant ; l'entrée doit
+  // en plus dire la même chose d'elle-même, pour ne jamais être fusionnée
+  // sous un autre identifiant que le sien.
+  if (!entry || typeof entry !== "object" || (entry as VaultEntry).id !== row.entry_id) {
+    throw new VaultTamperedError();
+  }
+  return entry as VaultEntry;
 }
 
-async function decryptBlob(row: { nonce: string; blob: string }, key: CryptoKey): Promise<unknown> {
-  let plain: ArrayBuffer;
-  try {
-    plain = await crypto.subtle.decrypt(
-      { name: "AES-GCM", iv: b64d(row.nonce) },
-      key,
-      b64d(row.blob),
-    );
-  } catch {
-    throw new SyncError(
-      "Déchiffrement impossible : la clef maîtresse n'est pas celle qui a servi à synchroniser ce carnet.",
-    );
-  }
-  return JSON.parse(new TextDecoder().decode(plain));
+export function sealSettings(value: unknown, key: CryptoKey): Promise<Sealed> {
+  return seal(value, key, new TextEncoder().encode(SETTINGS_AAD));
+}
+
+export function openSettings(sealed: Sealed, key: CryptoKey): Promise<unknown> {
+  return open(sealed, key, new TextEncoder().encode(SETTINGS_AAD));
 }
 
 /**
@@ -373,9 +477,10 @@ export async function syncVault(
   masterKey: string,
   session: Session,
 ): Promise<{ vault: Vault; conflicts: Conflict[]; localOnly: number; session: Session }> {
-  const key = await deriveTransferKey(masterKey);
+  const account = await accountSalt(session);
+  const key = await deriveSyncKey(masterKey, account.salt);
 
-  const pulled = await withFreshToken(session, (token) =>
+  const pulled = await withFreshToken(account.session, (token) =>
     request(`${session.endpoint}/v1/vault`, { token }),
   );
 
@@ -436,16 +541,17 @@ export async function syncSettings(
   masterKey: string,
   session: Session,
 ): Promise<{ settings: DefaultSettings; applied: boolean; session: Session }> {
-  const key = await deriveTransferKey(masterKey);
+  const account = await accountSalt(session);
+  const key = await deriveSyncKey(masterKey, account.salt);
   const url = `${session.endpoint}/v1/settings`;
 
-  const pulled = await withFreshToken(session, (token) => request(url, { token }));
+  const pulled = await withFreshToken(account.session, (token) => request(url, { token }));
   session = pulled.session;
 
   if (pulled.result) {
     let remote: DefaultSettings | null;
     try {
-      remote = normalizeSettings(await decryptBlob(pulled.result, key));
+      remote = normalizeSettings(await openSettings(pulled.result, key));
     } catch {
       remote = null;
     }
@@ -457,7 +563,7 @@ export async function syncSettings(
 
   if (!local.updatedAt) return { settings: local, applied: false, session };
 
-  const payload = await encryptBlob(local, key);
+  const payload = await sealSettings(local, key);
   const pushed = await withFreshToken(session, (token) =>
     request(url, { payload, token, method: "PUT" }),
   );

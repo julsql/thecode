@@ -23,6 +23,8 @@ const copyStatus = document.getElementById("copyStatus");
 const errorContainer = document.getElementById("errorContainer");
 const fingerprintRow = document.getElementById("fingerprintRow");
 const fingerprintChip = document.getElementById("fingerprint");
+const keyHint = document.getElementById("keyHint");
+const keyStrengthLine = document.getElementById("keyStrength");
 const loginInput = document.getElementById("login");
 const loginOptions = document.getElementById("loginOptions");
 const saveEntryBtn = document.getElementById("saveEntry");
@@ -46,6 +48,11 @@ const syncNowBtn = document.getElementById("syncNowBtn");
 const syncLogoutBtn = document.getElementById("syncLogoutBtn");
 const syncStatus = document.getElementById("syncStatus");
 const renewPitch = document.getElementById("renewPitch");
+const keySection = document.getElementById("keySection");
+const lockSessionBtn = document.getElementById("lockSession");
+const unlockForm = document.getElementById("unlockForm");
+const unlockKeyInput = document.getElementById("unlockKey");
+const unlockError = document.getElementById("unlockError");
 
 const lengthInput = document.getElementById("length");
 // Bornes lues sur le champ lui-même, pour ne pas les redéclarer ici en plus
@@ -103,12 +110,11 @@ window.addEventListener("DOMContentLoaded", () => {
   hideResult();
   hideError();
   browser.runtime.sendMessage({ action: "checkEncodingKey" }, (resp) => {
-    if (resp && resp.hasEncodingKey) {
+    if (resp && resp.locked) {
+      showLocked(true);
+    } else if (resp && resp.hasEncodingKey) {
       setStatus(msg("popup_key_set", "Clef définie."), "ok");
-      browser.runtime.sendMessage({ action: "getEncodingKey" }, (resp) => {
-        passInput.value = resp.encodingKey;
-        refreshFingerprint(passInput.value.trim());
-      });
+      loadSessionKey();
     }
   });
 
@@ -117,6 +123,79 @@ window.addEventListener("DOMContentLoaded", () => {
   // afficher et les renvoyer quand l'utilisateur les modifie.
   browser.runtime.sendMessage({ action: "getParams" }, (resp) => {
     applyParams((resp && resp.params) || {});
+  });
+});
+
+/** Clef de la session, affichee dans son champ (masquee par defaut). */
+function loadSessionKey() {
+  browser.runtime.sendMessage({ action: "getEncodingKey" }, (resp) => {
+    passInput.value = resp?.encodingKey || "";
+    lockSessionBtn.hidden = !passInput.value;
+    refreshFingerprint(passInput.value.trim());
+    refreshKeyGuide();
+  });
+}
+
+/**
+ * Session verrouillee (shared/spec/vault-lock.md) : la clef est gardee par le
+ * service worker mais ne sert plus a rien. Son champ laisse la place a une
+ * saisie de deverrouillage ; rien de ce qu'elle a produit ne reste affiche.
+ */
+let sessionLocked = false;
+
+function showLocked(locked) {
+  sessionLocked = locked;
+  unlockForm.hidden = !locked;
+  keySection.hidden = locked;
+  unlockError.textContent = "";
+  unlockKeyInput.value = "";
+  unlockKeyInput.removeAttribute("aria-invalid");
+  if (locked) {
+    lockSessionBtn.hidden = true;
+    passInput.value = "";
+    refreshFingerprint("");
+    hideResult();
+    hideError();
+    unlockKeyInput.focus();
+  }
+}
+
+lockSessionBtn.addEventListener("click", () => {
+  browser.runtime.sendMessage({ action: "lockSession" }, (resp) => {
+    if (resp && resp.ok && resp.locked) showLocked(true);
+  });
+});
+
+unlockForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  const typed = unlockKeyInput.value;
+  if (!typed) return;
+  browser.runtime.sendMessage({ action: "vaultUnlock", encodingKey: typed }, (resp) => {
+    unlockKeyInput.value = "";
+    if (!resp || !resp.ok || !resp.unlocked) {
+      unlockError.textContent =
+        resp?.reason === "otherKey"
+          ? msg("popup_other_key", "Ce n'est pas la même clef.")
+          : msg("popup_error_detail", "Erreur : $1", resp?.error || "n/a");
+      unlockKeyInput.setAttribute("aria-invalid", "true");
+      unlockKeyInput.focus();
+      return;
+    }
+    showLocked(false);
+    setStatus(msg("popup_unlocked", "TheCode déverrouillé."), "ok");
+    loadSessionKey();
+    generatePassword();
+  });
+});
+
+// Effacer reste distinct de Verrouiller : il oublie la clef, et avec elle le
+// verrou.
+document.getElementById("unlockClearKey").addEventListener("click", () => {
+  browser.runtime.sendMessage({ action: "clearEncodingKey" }, (resp) => {
+    if (!resp || !resp.ok) return;
+    showLocked(false);
+    setStatus(msg("popup_key_cleared", "Clef effacée."));
+    passInput.focus();
   });
 });
 
@@ -179,6 +258,7 @@ toggleBtn.addEventListener("click", () => {
   passInput.type = isHidden ? "text" : "password";
   toggleBtn.textContent = isHidden ? msg("popup_hide", "Cacher") : msg("popup_show", "Voir");
   toggleBtn.setAttribute("aria-pressed", String(isHidden));
+  refreshKeyGuide();
 });
 
 // Définir la clef
@@ -188,7 +268,12 @@ setBtn.addEventListener("click", () => {
 
 // Déclenche setPassword() si on appuie sur "Entrée" dans passInput
 // L'empreinte suit la saisie, pour que l'erreur se voie avant de generer.
-passInput.addEventListener("input", () => refreshFingerprint(passInput.value.trim()));
+passInput.addEventListener("input", () => {
+  refreshFingerprint(passInput.value.trim());
+  refreshKeyGuide();
+});
+passInput.addEventListener("focus", refreshKeyGuide);
+passInput.addEventListener("blur", refreshKeyGuide);
 
 passInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") {
@@ -208,6 +293,7 @@ function setPassword() {
   browser.runtime.sendMessage({ action: "setEncodingKey", encodingKey: pass }, (resp) => {
     if (resp && resp.ok) {
       setStatus(msg("popup_key_set", "Clef définie."), "ok");
+      lockSessionBtn.hidden = false;
       generatePassword();
     } else {
       setStatus(msg("popup_error_detail", "Erreur : $1", (resp && resp.error) || "n/a"), "error");
@@ -220,8 +306,10 @@ clearBtn.addEventListener("click", () => {
   browser.runtime.sendMessage({ action: "clearEncodingKey" }, (resp) => {
     if (resp && resp.ok) {
       setStatus(msg("popup_key_cleared", "Clef effacée."));
+      lockSessionBtn.hidden = true;
       passInput.value = "";
       refreshFingerprint("");
+      refreshKeyGuide();
       hideResult();
       hideError();
     }
@@ -275,6 +363,7 @@ function requestedLogin() {
 
 /** `vaultMessage` remplace le statut du carnet une fois celui-ci relu. */
 function generatePassword(vaultMessage) {
+  if (sessionLocked) return;
   // Aucune option n'est transmise : le background relit les paramètres
   // persistés, exactement comme pour le menu injecté dans la page. C'est ce
   // qui garantit un mot de passe identique des deux côtés.
@@ -291,7 +380,10 @@ function generatePassword(vaultMessage) {
         login: requestedLogin(),
       },
       (response) => {
-        if (!response || response.error) {
+        if (response?.locked) {
+          // Verrouillee ailleurs (ecran carnet) pendant que la popup etait ouverte.
+          showLocked(true);
+        } else if (!response || response.error) {
           hideResult();
           showError(response?.error || msg("popup_no_response", "Pas de réponse."));
         } else if (response.password) {
@@ -344,6 +436,29 @@ async function refreshFingerprint(key) {
   } catch {
     fingerprintRow.hidden = true;
   }
+}
+
+/**
+ * Conseil et niveau de robustesse de la clef (shared/spec/key-strength.md).
+ *
+ * Le niveau ne s'affiche que pendant la saisie ou clef en clair : clef masquee
+ * et champ sans focus, il trahirait une indication de longueur. Jamais
+ * bloquant, rien n'est journalise ni stocke.
+ */
+function refreshKeyGuide() {
+  const key = passInput.value.trim();
+  const active = document.activeElement === passInput || passInput.type === "text";
+  const level = active ? keyStrength(key) : "none";
+  keyHint.hidden = key !== "" && !active;
+  keyStrengthLine.dataset.level = level;
+  keyStrengthLine.textContent =
+    level === "none"
+      ? ""
+      : {
+          weak: msg("popup_key_strength_weak", "Robustesse : faible"),
+          fair: msg("popup_key_strength_fair", "Robustesse : moyenne"),
+          strong: msg("popup_key_strength_strong", "Robustesse : bonne"),
+        }[level];
 }
 
 /**
@@ -423,7 +538,9 @@ changeEntryBtn.addEventListener("click", () => {
       vaultStatus.textContent = msg(
         "sync_failed",
         "Échec : $1",
-        resp?.error || msg("sync_unknown_error", "inconnu"),
+        resp?.locked
+          ? msg("popup_locked_error", "TheCode est verrouillé.")
+          : resp?.error || msg("sync_unknown_error", "inconnu"),
       );
       return;
     }

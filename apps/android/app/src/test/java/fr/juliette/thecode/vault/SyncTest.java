@@ -13,11 +13,15 @@ import org.junit.Test;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 public class SyncTest {
 
     private static final Sync.Credentials CREDS =
+            new Sync.Credentials("https://example.test/api", "access-1", "refresh-0",
+                    Sync.PLAN_FREE, "0WveVfSRJyzta8UsTh5DFw");
+    private static final Sync.Credentials CREDS_WITHOUT_SALT =
             new Sync.Credentials("https://example.test/api", "access-1", "refresh-0");
 
     private static Vault vaultWith(String siteKey, String login) {
@@ -137,6 +141,137 @@ public class SyncTest {
             // Message explicite : sinon l'utilisatrice croirait à une panne.
             assertTrue(e.getMessage(), e.getMessage().contains("clef maîtresse"));
         }
+    }
+
+    @Test
+    public void readsTheAccountSaltWhenItIsMissing() throws Exception {
+        FakeVaultServer server = new FakeVaultServer();
+
+        Sync.Result result =
+                new Sync(server).sync(vaultWith("google.com", "moi"), "clef", CREDS_WITHOUT_SALT);
+
+        assertEquals(1, server.meCalls);
+        // Rendu avec les identifiants : l'appelant l'enregistre avec les jetons.
+        assertEquals("0WveVfSRJyzta8UsTh5DFw", result.credentials.kdfSalt);
+        assertEquals(1, server.revision);
+    }
+
+    @Test
+    public void doesNotAskForTheSaltItAlreadyHas() throws Exception {
+        FakeVaultServer server = new FakeVaultServer();
+        new Sync(server).sync(vaultWith("google.com", "moi"), "clef", CREDS);
+        assertEquals(0, server.meCalls);
+    }
+
+    @Test
+    public void refusesToSyncWithoutAValidSalt() {
+        for (String salt : new String[] {null, "", "trop-court", "0WveVfSRJyzta8UsTh5DFw00"}) {
+            FakeVaultServer server = new FakeVaultServer();
+            server.kdfSalt = salt;
+            try {
+                new Sync(server).sync(vaultWith("google.com", "moi"), "clef", CREDS_WITHOUT_SALT);
+                throw new AssertionError("synchronisé sans sel valide : " + salt);
+            } catch (Sync.SyncException e) {
+                // Chiffrer avec un autre sel rendrait les blocs illisibles
+                // pour les autres appareils : rien ne doit partir.
+                assertTrue(e.getMessage(), e.getMessage().contains("sel"));
+                assertEquals(0, server.revision);
+                assertTrue(server.sentBodies.isEmpty());
+            }
+        }
+    }
+
+    @Test
+    public void anotherAccountSaltCannotReadTheVault() throws Exception {
+        FakeVaultServer server = new FakeVaultServer();
+        Sync sync = new Sync(server);
+        sync.sync(vaultWith("google.com", "moi"), "clef", CREDS);
+
+        Sync.Credentials otherAccount = new Sync.Credentials(CREDS.endpoint, CREDS.accessToken,
+                CREDS.refreshToken, Sync.PLAN_FREE, "AAAAAAAAAAAAAAAAAAAAAA");
+        try {
+            sync.sync(new Vault(), "clef", otherAccount);
+            throw new AssertionError("un carnet chiffré sous un autre sel a été ouvert");
+        } catch (Sync.SyncException e) {
+            assertTrue(e.getMessage(), e.getMessage().contains("clef maîtresse"));
+        }
+    }
+
+    @Test
+    public void refusesBlobsSwappedBetweenEntries() throws Exception {
+        FakeVaultServer server = new FakeVaultServer();
+        Sync sync = new Sync(server);
+        Vault vault = vaultWith("google.com", "moi");
+        vault.entries.add(VaultEntry.create("github.com", null));
+        sync.sync(vault, "clef", CREDS);
+
+        JSONArray rows = new JSONObject(server.send(CREDS.endpoint + "/v1/vault", "GET", null,
+                CREDS.accessToken).body).getJSONArray("entries");
+        JSONObject a = rows.getJSONObject(0);
+        JSONObject b = rows.getJSONObject(1);
+
+        // Le serveur échange les blobs : chacun reste un chiffré valide, mais
+        // plus sous son identifiant.
+        FakeVaultServer tampered = new FakeVaultServer();
+        tampered.seed(new JSONObject(a.toString())
+                .put("nonce", b.getString("nonce")).put("blob", b.getString("blob")));
+        tampered.seed(new JSONObject(b.toString())
+                .put("nonce", a.getString("nonce")).put("blob", a.getString("blob")));
+
+        try {
+            new Sync(tampered).sync(new Vault(), "clef", CREDS);
+            throw new AssertionError("des blobs échangés ont été acceptés");
+        } catch (Sync.SyncException e) {
+            assertTrue(tampered.sentBodies.isEmpty());
+        }
+    }
+
+    @Test
+    public void anEntryUnderAnotherIdStopsTheWholeSync() throws Exception {
+        JSONObject vector = SyncInteropTest.vector();
+        JSONObject mismatch = null;
+        JSONArray rejected = vector.getJSONArray("rejected");
+        for (int i = 0; i < rejected.length(); i++) {
+            if ("id-mismatch".equals(rejected.getJSONObject(i).getString("name"))) {
+                mismatch = rejected.getJSONObject(i);
+            }
+        }
+        assertNotNull(mismatch);
+        FakeVaultServer tampered = new FakeVaultServer();
+        tampered.seed(mismatch.getJSONObject("row"));
+        Vault local = vaultWith("gitlab.com", "moi");
+        String before = local.toJson().toString();
+
+        Locale previous = Locale.getDefault();
+        try {
+            for (Locale locale : new Locale[] {Locale.FRANCE, Locale.US}) {
+                Locale.setDefault(locale);
+                try {
+                    new Sync(tampered).sync(local, vector.getString("masterKey"), CREDS);
+                    throw new AssertionError("une entrée rangée sous un autre id a été acceptée");
+                } catch (Sync.VaultTamperedException e) {
+                    assertEquals(locale == Locale.FRANCE
+                            ? Sync.VaultTamperedException.MESSAGE_FR
+                            : Sync.VaultTamperedException.MESSAGE_EN, e.getMessage());
+                }
+            }
+        } finally {
+            Locale.setDefault(previous);
+        }
+        assertTrue(tampered.sentBodies.isEmpty());
+        assertEquals(before, local.toJson().toString());
+    }
+
+    @Test
+    public void keepsTheSaltAcrossARefresh() throws Exception {
+        FakeVaultServer server = new FakeVaultServer();
+        server.validAccessToken = "expiré";
+
+        Sync.Result result =
+                new Sync(server).syncRenewing(vaultWith("google.com", "moi"), "clef", CREDS);
+
+        assertEquals(CREDS.kdfSalt, result.credentials.kdfSalt);
+        assertEquals(0, server.meCalls);
     }
 
     @Test
