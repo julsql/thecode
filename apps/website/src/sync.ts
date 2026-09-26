@@ -258,6 +258,7 @@ export async function appleSignIn(
   nonce: string,
   code = "",
   lang = "en",
+  authorizationCode = "",
 ): Promise<Session> {
   const body = await request(`${endpoint}/v1/auth/apple`, {
     payload: {
@@ -267,6 +268,9 @@ export async function appleSignIn(
       lang,
       device_label: "site web",
       client: "web",
+      // Facultatif : sert au service à révoquer les jetons Apple quand le
+      // compte est supprimé.
+      ...(authorizationCode ? { authorization_code: authorizationCode } : {}),
     },
   });
   return {

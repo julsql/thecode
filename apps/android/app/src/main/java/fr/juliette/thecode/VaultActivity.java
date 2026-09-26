@@ -109,6 +109,7 @@ public class VaultActivity extends AppCompatActivity {
 
         findViewById(R.id.vaultUnlockAction).setOnClickListener(v -> promptUnlock());
         findViewById(R.id.vaultForgotAction).setOnClickListener(v -> confirmForget());
+        findViewById(R.id.vaultDeleteAccount).setOnClickListener(v -> startDeleteAccount());
     }
 
     @Override
@@ -174,6 +175,7 @@ public class VaultActivity extends AppCompatActivity {
         findViewById(R.id.vaultSameKeyHint).setVisibility(View.GONE);
         findViewById(R.id.vaultSyncPitch).setVisibility(View.GONE);
         findViewById(R.id.vaultSyncStatus).setVisibility(View.GONE);
+        findViewById(R.id.vaultAccountSection).setVisibility(View.GONE);
         findViewById(R.id.vaultLocked).setVisibility(View.VISIBLE);
     }
 
@@ -734,7 +736,7 @@ public class VaultActivity extends AppCompatActivity {
                 });
             } catch (Sync.SyncException e) {
                 String message = e.status == 402
-                        ? getString(R.string.sync_limit_reached)
+                        ? getString(R.string.sync_device_limit)
                         : getString(R.string.sync_google_failed, e.getMessage());
                 main.post(() -> toast(message));
             }
@@ -753,7 +755,13 @@ public class VaultActivity extends AppCompatActivity {
                     runSync();
                 });
             } catch (Sync.SyncException e) {
-                main.post(() -> toast(getString(R.string.sync_failed, e.getMessage())));
+                // 402 : plafond d'appareils. Le message du service nomme l'offre
+                // et renvoie au site, ce qu'une app des magasins ne relaie pas :
+                // on garde le fait, pas l'invitation.
+                String message = e.status == 402
+                        ? getString(R.string.sync_device_limit)
+                        : getString(R.string.sync_failed, e.getMessage());
+                main.post(() -> toast(message));
             }
         });
     }
@@ -813,6 +821,166 @@ public class VaultActivity extends AppCompatActivity {
         }), "thecode-sign-out").start();
     }
 
+    // ------------------------------------------------ suppression du compte
+
+    /**
+     * « Supprimer mon compte » : relit d'abord le compte (son adresse, et
+     * s'il a un mot de passe), puis ouvre la confirmation.
+     */
+    private void startDeleteAccount() {
+        if (!lock.isUnlocked()) return;
+        Sync.Credentials credentials = preferences.getSyncCredentials();
+        if (credentials == null) {
+            toast(getString(R.string.sync_nothing_to_unlink));
+            return;
+        }
+        toast(getString(R.string.account_delete_loading));
+        int epoch = lockEpoch;
+        worker.execute(() -> {
+            try {
+                Sync.AccountIdentity identity = new Sync().accountIdentity(credentials);
+                main.post(() -> {
+                    // Jetons renouvelés en chemin : sans eux, le prochain appel
+                    // repartirait d'un jeton de renouvellement consommé.
+                    if (preferences.getSyncCredentials() != null) {
+                        preferences.setSyncCredentials(identity.credentials);
+                    }
+                    if (epoch != lockEpoch || isFinishing() || !lock.isUnlocked()) return;
+                    showDeleteAccount(identity);
+                });
+            } catch (Sync.SyncException e) {
+                main.post(() -> toast(
+                        getString(R.string.account_delete_lookup_failed, e.getMessage())));
+            }
+        });
+    }
+
+    private void showDeleteAccount(Sync.AccountIdentity identity) {
+        View form = LayoutInflater.from(this).inflate(R.layout.dialog_delete_account, null);
+        TextView body = form.findViewById(R.id.deleteAccountBody);
+        TextInputLayout emailLayout = form.findViewById(R.id.deleteAccountEmailLayout);
+        TextInputLayout passwordLayout = form.findViewById(R.id.deleteAccountPasswordLayout);
+        EditText email = form.findViewById(R.id.deleteAccountEmail);
+        EditText password = form.findViewById(R.id.deleteAccountPassword);
+        TextView error = form.findViewById(R.id.deleteAccountError);
+
+        body.setText(getString(R.string.account_delete_body, identity.email));
+        // Un compte Google ou Apple sans mot de passe n'a rien à saisir ici.
+        passwordLayout.setVisibility(identity.hasPassword ? View.VISIBLE : View.GONE);
+
+        AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.account_delete_title)
+                .setView(form)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.account_delete_confirm, null)
+                .create();
+        dialog.setOnShowListener(d -> {
+            android.widget.Button ok = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            ok.setTextColor(com.google.android.material.color.MaterialColors.getColor(
+                    ok, com.google.android.material.R.attr.colorError));
+            Runnable validate = () -> ok.setEnabled(
+                    Sync.emailMatches(email.getText().toString(), identity.email)
+                            && (!identity.hasPassword || password.length() > 0));
+            android.text.TextWatcher watcher = new android.text.TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                }
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                }
+
+                @Override
+                public void afterTextChanged(android.text.Editable s) {
+                    emailLayout.setError(null);
+                    passwordLayout.setError(null);
+                    validate.run();
+                }
+            };
+            email.addTextChangedListener(watcher);
+            password.addTextChangedListener(watcher);
+            validate.run();
+
+            ok.setOnClickListener(v -> {
+                emailLayout.setError(null);
+                passwordLayout.setError(null);
+                error.setVisibility(View.GONE);
+                ok.setEnabled(false);
+                deleteAccount(dialog, ok, emailLayout, passwordLayout, error,
+                        email.getText().toString(),
+                        identity.hasPassword ? password.getText().toString() : "");
+            });
+        });
+        track(dialog);
+        dialog.show();
+    }
+
+    /**
+     * Sur un fil à part, comme la déconnexion : quitter l'écran pendant
+     * l'appel (worker.shutdownNow) ne doit pas laisser un compte supprimé
+     * côté service et des jetons encore enregistrés ici.
+     */
+    private void deleteAccount(AlertDialog dialog, View ok, TextInputLayout emailLayout,
+                               TextInputLayout passwordLayout, TextView error,
+                               String typedEmail, String typedPassword) {
+        Sync.Credentials credentials = preferences.getSyncCredentials();
+        if (credentials == null) {
+            dialog.dismiss();
+            toast(getString(R.string.sync_nothing_to_unlink));
+            return;
+        }
+        toast(getString(R.string.account_delete_running));
+        new Thread(() -> {
+            try {
+                // Le carnet local reste : seule la session est oubliée, et
+                // sans jetons la synchronisation automatique ne part plus.
+                new Sync().deleteAccountAndForget(credentials, typedEmail, typedPassword,
+                        preferences::clearSyncCredentials);
+                main.post(() -> {
+                    if (isFinishing()) return;
+                    if (dialog.isShowing()) dialog.dismiss();
+                    render(vault);
+                    if (!lock.isUnlocked()) {
+                        toast(getString(R.string.account_delete_done));
+                        return;
+                    }
+                    AlertDialog done = new MaterialAlertDialogBuilder(this)
+                            .setTitle(R.string.account_delete_done_title)
+                            .setMessage(R.string.account_delete_done)
+                            .setPositiveButton(android.R.string.ok, null)
+                            .create();
+                    track(done);
+                    done.show();
+                });
+            } catch (Sync.SyncException e) {
+                main.post(() -> {
+                    if (isFinishing() || !dialog.isShowing()) {
+                        toast(getString(R.string.account_delete_failed, e.getMessage()));
+                        return;
+                    }
+                    ok.setEnabled(true);
+                    switch (Sync.DeleteFailure.of(e)) {
+                        case WRONG_PASSWORD:
+                            passwordLayout.setError(
+                                    getString(R.string.account_delete_wrong_password));
+                            break;
+                        case EMAIL_MISMATCH:
+                            emailLayout.setError(getString(R.string.account_delete_email_mismatch));
+                            break;
+                        case UNREACHABLE:
+                            error.setText(R.string.account_delete_unreachable);
+                            error.setVisibility(View.VISIBLE);
+                            break;
+                        default:
+                            error.setText(getString(R.string.account_delete_failed,
+                                    e.getMessage()));
+                            error.setVisibility(View.VISIBLE);
+                    }
+                });
+            }
+        }, "thecode-delete-account").start();
+    }
+
     private void toast(String message) {
         Toast.makeText(this, message, Toast.LENGTH_LONG).show();
     }
@@ -845,6 +1013,7 @@ public class VaultActivity extends AppCompatActivity {
         View pitch = findViewById(R.id.vaultSyncPitch);
         boolean linked = preferences.getSyncCredentials() != null;
         pitch.setVisibility(linked ? View.GONE : View.VISIBLE);
+        findViewById(R.id.vaultAccountSection).setVisibility(linked ? View.VISIBLE : View.GONE);
         renderSyncStatus();
         if (!linked) {
             // Même connexion que le menu : un compte déjà créé se lie ici.
@@ -868,9 +1037,9 @@ public class VaultActivity extends AppCompatActivity {
             com.google.android.material.button.MaterialButton action =
                     card.findViewById(R.id.entryAction);
             action.setText(R.string.vault_renew);
-            // Jamais désactivé : un bouton éteint n'explique rien et ne
-            // propose rien. C'est le clic qui dit ce que l'offre complète
-            // apporte.
+            // Jamais désactivé : un bouton éteint n'explique rien. Le clic
+            // constate seulement que la fonction n'est pas activée sur ce
+            // compte, sans renvoyer vers un achat hors du magasin.
             action.setOnClickListener(v -> proposeRenew(entry));
 
             card.setOnClickListener(v -> showDetail(entry));

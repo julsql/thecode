@@ -12,7 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DbSession
 
 from .. import codes as code_rules
-from ..apple import AppleError, verify_identity_token
+from ..apple import AppleError, remember_refresh_token, verify_identity_token
 from ..auth import (
     create_access_token,
     current_account,
@@ -545,6 +545,12 @@ def apple_sign_in(payload: AppleRequest, db: DbSession = Depends(get_db)) -> Tok
             ) from None
 
     _enforce_device_limit(db, account, payload.client)
+    # Au mieux : de quoi révoquer les jetons Apple quand le compte partira.
+    if payload.authorization_code:
+        remember_refresh_token(
+            settings, account, identity.audience, payload.authorization_code
+        )
+        db.commit()
     return _issue_tokens(db, account, payload.device_label or "Apple", payload.client)
 
 

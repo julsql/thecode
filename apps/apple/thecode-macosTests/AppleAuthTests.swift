@@ -27,6 +27,18 @@ struct AppleAuthTests {
         #expect(body["identity_token"] as? String == "jwt")
         #expect(body["nonce"] as? String == "raw")
         #expect(body["device_label"] as? String == "Mac")
+        #expect(body["authorization_code"] == nil)
+    }
+
+    @Test func apiBodySendsAuthorizationCode() {
+        let body = AppleAuth.apiBody(
+            identityToken: "jwt", rawNonce: "raw", lang: "en", authorizationCode: "c-1")
+        #expect(body["authorization_code"] as? String == "c-1")
+    }
+
+    @Test func authorizationCodeIsReadAsUTF8OrEmpty() {
+        #expect(AppleAuth.authorizationCode(from: Data("c.1".utf8)) == "c.1")
+        #expect(AppleAuth.authorizationCode(from: nil) == "")
     }
 
     @Test func appleEnabledOnlyWhenTrue() {

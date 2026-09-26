@@ -216,20 +216,11 @@
               Renouveler
             </button>
           </div>
-          <!-- Dit ce que l'offre complete apporte avant meme le clic : un bouton
-               qui refuse sans prevenir ne propose rien. -->
-          <p id="renewPitch" class="hint" hidden>
-            <span data-i18n="popup_renew_pitch"
-              >Renouveler sans changer de clef maîtresse fait partie de l'offre complète.</span
-            >
-            <a
-              href="https://thecode.julsql.fr/fr/account"
-              target="_blank"
-              rel="noopener"
-              data-i18n="popup_unlock"
-              data-i18n-href="popup_account_url"
-              >Débloquer</a
-            >.
+          <!-- Previent avant le clic : un bouton qui refuse sans rien dire
+               n'explique rien. Message neutre, sans renvoyer vers une offre
+               (regles des magasins). -->
+          <p id="renewPitch" class="hint" data-i18n="popup_renew_pitch" hidden>
+            Le renouvellement n'est pas activé sur ce compte.
           </p>
           <p id="vaultStatus" class="hint" role="status" aria-live="polite"></p>
 

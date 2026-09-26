@@ -57,10 +57,10 @@ public struct VaultView<Header: View>: View {
             Section {
                 Text(
                     L10nVault.t(
-                        "Si vous ne voyez pas tous vos mots de passe, vérifiez que vous "
-                            + "utilisez la même clef.",
-                        "If you don't see all your passwords, check that you are using "
-                            + "the same key.")
+                        "Si vous ne voyez pas tous vos sites, vérifiez que vous utilisez "
+                            + "la même clef maîtresse.",
+                        "If you don't see all your sites, check that you are using the "
+                            + "same master key.")
                 )
                 .font(.footnote)
                 .foregroundStyle(.secondary)
@@ -85,9 +85,10 @@ public struct VaultView<Header: View>: View {
                             Text(
                                 L10nVault.t(
                                     "Aucun site enregistré. Enregistrez-en un depuis l'écran "
-                                        + "principal pour ne plus avoir à retenir ses réglages.",
-                                    "No site saved yet. Save one from the main screen so you "
-                                        + "no longer have to remember its settings.")
+                                        + "principal pour retrouver son identifiant et ses "
+                                        + "réglages, jamais son mot de passe.",
+                                    "No site saved yet. Save one from the main screen to "
+                                        + "keep its username and settings, never its password.")
                             )
                             .font(.callout)
                             .foregroundStyle(.secondary)

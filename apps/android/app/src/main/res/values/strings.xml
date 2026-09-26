@@ -45,7 +45,7 @@
 
     <!-- Autofill -->
     <string name="autofill_section">Autofill</string>
-    <string name="autofill_card_description">Enable TheCode as your autofill service to generate a password directly inside any app or website.</string>
+    <string name="autofill_card_description">Enable TheCode as your autofill service to fill in your username and password directly inside any app or website.</string>
     <string name="autofill_status_active">Active on this device</string>
     <string name="autofill_status_inactive">Disabled — tap to set up</string>
     <string name="autofill_status_unsupported">Not available on this device</string>
@@ -69,7 +69,7 @@
 
     <!-- Help -->
     <string name="help_title">Information</string>
-    <string name="info_app">"      TheCode is a free and open-source password manager that stores no passwords: it regenerates them on the fly from a single secret key that you remember.\n\n      Choose your key, enter the website name (for example « google.com » for your Google account), tweak the length and the options (lowercase, uppercase, digits, symbols), and the password is generated. To find it again, just come back with the same key and the same website name.\n\n      Internally, TheCode combines your key with the website name and applies a cryptographic function (SHA-256). The result is converted into a strong password that matches your criteria. Same key + same website = same password, every time, deterministically.\n\n      No password is ever saved or transmitted: every computation happens locally, with no internet connection, no account, no tracking.\n\n      TheCode follows you everywhere: browser extensions (Chrome, Firefox, Safari, Edge, Opera) and native iOS and Android apps. With the same key, you find the same passwords across all your platforms.</string>
+    <string name="info_app">"      TheCode never stores your passwords: it recomputes them on the fly from a single master key that you remember. That is what sets it apart: there is no password database to steal or to lose.\n\n      Enter your key, the website name (for example « google.com ») and, if you like, your username on that site; set the length and the characters, and the password is computed. Same key + same site + same username = same password, every time.\n\n      The computation (algorithm v2) happens locally, on this device. The old algorithm (v1) remains available for a one-off generation, to find a password set before v2. Your key is kept in the Android Keystore.\n\n      Everything else is optional: TheCode is fully usable without a vault and without an account.\n\n      Vault: save a site with its settings and username so you no longer have to remember them. It stays on this device, locked with biometrics or a vault password, and can be transferred to your other TheCode apps by encrypted QR code, with no account and no server.\n\n      Account: sign in with an email and a password, or with Google, and your vault and default settings sync automatically across your devices. They are end-to-end encrypted: the server never sees your master key, your sites or your logins. You can delete the account from the app.\n\n      Autofill fills in the username and the password in your apps and websites.\n\n      TheCode is one project across all your devices: iPhone and iPad, Mac, Android, browser extensions (Chrome, Firefox, Edge, Brave, Safari) and the website https://thecode.julsql.fr/en?from=app — with the same key, you find the same passwords everywhere."</string>
     <string name="fingerprint_label">Fingerprint</string>
     <string name="vault_title">Vault</string>
     <string name="vault_empty">No site saved yet. Save one from the main screen to stop having to remember its settings.</string>
@@ -98,12 +98,28 @@
     <string name="sync_done">Vault synced: %1$d entries.</string>
     <string name="sync_status_done">Last synced at %1$s.</string>
     <string name="sync_done_conflicts">Vault synced: %1$d entries, %2$d need your attention.</string>
-    <string name="sync_local_only">%1$d entries stayed on this device (free plan limit).</string>
+    <string name="sync_local_only">%1$d entries stayed on this device (limit of this account).</string>
     <string name="sync_failed">Sync failed: %1$s</string>
     <string name="sync_needs_key">Set your master key first: the vault is encrypted with it before it leaves this device.</string>
     <string name="sync_no_secure_storage">Encrypted storage is unavailable on this device, so sign-in details cannot be kept.</string>
     <string name="sync_unlinked">Signed out. This device no longer syncs.</string>
     <string name="sync_nothing_to_unlink">No account is linked.</string>
+    <!-- Suppression du compte depuis l'app (exigée par les magasins). -->
+    <string name="account_delete">Delete my account</string>
+    <string name="account_delete_title">Delete the account?</string>
+    <string name="account_delete_body">The account %1$s will be permanently deleted from the service, together with its synced encrypted vault, its synced settings and the sessions of all its devices. This cannot be undone.\n\nThe vault saved on this device is kept; this device stops syncing.</string>
+    <string name="account_delete_email_hint">Type the account email to confirm</string>
+    <string name="account_delete_password_hint">Account password</string>
+    <string name="account_delete_confirm">Delete permanently</string>
+    <string name="account_delete_loading">Checking the account…</string>
+    <string name="account_delete_running">Deleting the account…</string>
+    <string name="account_delete_lookup_failed">The account could not be read: %1$s</string>
+    <string name="account_delete_wrong_password">Wrong password.</string>
+    <string name="account_delete_email_mismatch">This email does not match the account.</string>
+    <string name="account_delete_unreachable">The service cannot be reached: the account was not deleted. Try again later.</string>
+    <string name="account_delete_failed">The account was not deleted: %1$s</string>
+    <string name="account_delete_done_title">Account deleted</string>
+    <string name="account_delete_done">The account and its synced data have been deleted. The vault stays on this device, which no longer syncs.</string>
     <string name="vault_save_entry">Save this entry</string>
     <string name="vault_update_entry">Update the entry</string>
     <string name="show_password">Show</string>
@@ -117,6 +133,7 @@
     <string name="vault_renew">Renew this password</string>
     <string name="vault_renew_paid">Renewal is not enabled on this account.</string>
     <string name="sync_limit_reached">Sync limit reached: the extra entries stay on this device.</string>
+    <string name="sync_device_limit">This account has reached its maximum number of connected devices. Sign out of another device, then try again.</string>
     <string name="vault_renew_title">Renew "%1$s"</string>
     <string name="vault_password_pair">Current\n%1$s\n\nNew\n%2$s\n\nChange it on the site, then confirm. The new one is useless until you have, and the old one is still what signs you in.</string>
     <string name="vault_renew_done">"%1$s" renewed, counter %2$d.</string>

@@ -1,4 +1,2 @@
-/* Face ID : clef de l'écran principal et verrou du carnet. */
-"NSFaceIDUsageDescription" = "Face ID protège votre clef maîtresse et votre carnet.";
 /* Caméra : lecture du QR code de transfert du carnet. */
 "NSCameraUsageDescription" = "Pour lire le QR code chiffré d'un carnet affiché sur un autre appareil. Aucune image n'est enregistrée ni envoyée.";

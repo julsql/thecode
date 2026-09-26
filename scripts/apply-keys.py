@@ -36,6 +36,10 @@ MAPPING = {
     # leurs jetons) et Services ID du site. Publics, comme les précédents.
     "THECODE_APPLE_CLIENT_IDS": "Apple.Client_IDs",
     "THECODE_APPLE_WEB_CLIENT_ID": "Apple.Web_Client_ID",
+    # Clef « Sign in with Apple » : sert à révoquer les jetons Apple à la
+    # suppression du compte. Le contenu de la clef vient de FILES.
+    "THECODE_APPLE_TEAM_ID": "Apple.Team_ID",
+    "THECODE_APPLE_KEY_ID": "Apple.Key_ID",
     "THECODE_MAIL_USER": "Email.Host_User",
     "THECODE_MAIL_PASSWORD": "Email.Host_Password",
     # Facultatif : l'adresse affichée aux destinataires, quand elle diffère du
@@ -46,6 +50,12 @@ MAPPING = {
     # Ne change rien à l'authentification : c'est là que partent les réponses
     # des humains, et cela garde l'adresse du domaine visible.
     "THECODE_MAIL_REPLY_TO": "Email.Reply_To",
+}
+
+#: Ce que le service lit, recopié depuis le **contenu** du fichier dont
+#: `keys.yml` donne le chemin (relatif à la racine, ou absolu).
+FILES = {
+    "THECODE_APPLE_PRIVATE_KEY": "Apple.Private_Key_File",
 }
 
 #: Ce qui va avec, et qui n'est pas un secret. Ce que `keys.yml` précise
@@ -93,6 +103,13 @@ def collect() -> dict[str, str]:
         found = values.get(source, "")
         if found:
             out[target] = found
+    for target, source in FILES.items():
+        path = values.get(source, "")
+        if path:
+            file = (ROOT / Path(path).expanduser()).resolve()
+            if not file.is_file():
+                sys.exit(f"{source} : {file} est absent.")
+            out[target] = file.read_text(encoding="utf-8").strip()
 
     # Gmail réécrit l'expéditeur avec le compte authentifié : annoncer autre
     # chose ferait partir le courrier d'une adresse inattendue.
@@ -103,16 +120,24 @@ def collect() -> dict[str, str]:
 
 def command_check() -> None:
     found = collect()
-    for target in dict.fromkeys([*MAPPING, *FIXED]):
+    for target in dict.fromkeys([*MAPPING, *FILES, *FIXED]):
         state = "présent" if target in found else "MANQUANT"
         print(f"{target:<32} {state}")
+
+
+def _env_value(value: str) -> str:
+    """Une valeur sur plusieurs lignes (clef PEM) tient sur une seule, entre
+    guillemets, retours à la ligne en `\\n` — que `.env` sait relire."""
+    if "\n" not in value:
+        return value
+    return '"' + value.replace("\n", "\\n") + '"'
 
 
 def command_env() -> None:
     found = collect()
     lines = [
         "# Écrit par scripts/apply-keys.py depuis keys.yml. Ne pas commiter.",
-        *(f"{key}={value}" for key, value in sorted(found.items())),
+        *(f"{key}={_env_value(value)}" for key, value in sorted(found.items())),
         "",
     ]
     ENV_FILE.write_text("\n".join(lines), encoding="utf-8")

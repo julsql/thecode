@@ -396,11 +396,11 @@ function refreshVault(domain, message) {
 }
 
 /**
- * Le compteur — renouveler sans changer de clef — fait partie de l'offre
- * complete.
+ * Le compteur — renouveler sans changer de clef — n'est pas active sur tous
+ * les comptes.
  *
- * L'etat sert a annoncer l'offre avant le clic ; c'est le service worker qui
- * refuse, puisque c'est lui qui ecrit le compteur.
+ * L'etat sert a le dire avant le clic, sans renvoyer vers une offre ; c'est le
+ * service worker qui refuse, puisque c'est lui qui ecrit le compteur.
  */
 let canRenew = false;
 
@@ -408,8 +408,7 @@ function refreshChangeButton() {
   const known = Boolean(currentEntryId);
   changeEntryBtn.hidden = !known;
   // Jamais desactive : un bouton eteint n'explique rien et ne propose rien.
-  // Le service worker refuse et rend le message, qui dit ce que l'offre
-  // complete apporte et ou l'obtenir.
+  // Le service worker refuse et rend un message neutre.
   renewPitch.hidden = !known || canRenew;
 }
 
@@ -497,7 +496,10 @@ function lastSyncFailure(status) {
     case "auth":
       return msg("sync_auto_failed_auth", "Dernière synchronisation : reconnectez-vous.");
     case "plan":
-      return msg("sync_auto_failed_plan", "Dernière synchronisation : plafond de l'offre atteint.");
+      return msg(
+        "sync_auto_failed_plan",
+        "Dernière synchronisation : limite de ce compte atteinte.",
+      );
     case "forbidden":
       return msg(
         "sync_auto_failed_forbidden",
@@ -594,7 +596,7 @@ syncNowBtn.addEventListener("click", () => {
       const local = resp.localOnly
         ? msg(
             "sync_local_only",
-            ", $1 restée(s) sur cet appareil (plafond de l'offre gratuite)",
+            ", $1 restée(s) sur cet appareil (limite de ce compte)",
             resp.localOnly,
           )
         : "";

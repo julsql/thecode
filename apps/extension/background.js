@@ -311,9 +311,8 @@ async function renewAllowed() {
   return isPaidPlan(session?.plan);
 }
 
-const RENEW_IS_PAID =
-  "Renouveler un mot de passe sans changer de clef maitresse fait partie de " +
-  "l'offre complete : https://thecode.julsql.fr/fr/account";
+// Neutre : ni offre ni lien, les regles des magasins interdisent d'y orienter.
+const RENEW_IS_PAID = "Le renouvellement n'est pas activé sur ce compte.";
 
 /** Enregistre une session neuve avec son offre, quelle que soit la connexion. */
 async function storeSyncSession(session) {

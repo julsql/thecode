@@ -22,6 +22,7 @@ from sqlalchemy import (
     Integer,
     LargeBinary,
     String,
+    Text,
     UniqueConstraint,
     text,
 )
@@ -101,6 +102,16 @@ class Account(Base):
     #: Unique parmi les valeurs non vides (index partiel) : deux comptes
     #: ouverts par le même identifiant Apple rendraient la connexion ambiguë.
     apple_sub: Mapped[str] = mapped_column(String(255), default="")
+    #: Jeton de renouvellement rendu par Apple à la connexion, vide sinon.
+    #:
+    #: Gardé pour une seule raison : Apple exige qu'on le révoque quand le
+    #: compte est supprimé (ou Apple délié). Stocké **en clair** — le service
+    #: n'a aucun chiffrement au repos — et il ne donne accès qu'à l'identité
+    #: Apple de l'utilisateur pour notre application, rien de plus.
+    apple_refresh_token: Mapped[str] = mapped_column(Text, default="")
+    #: L'audience qui a émis ce jeton (bundle id ou Services ID) : la
+    #: révocation doit se faire au nom du même client.
+    apple_client_id: Mapped[str] = mapped_column(String(255), default="")
 
     entries: Mapped[list[VaultEntry]] = relationship(back_populates="account", cascade="all, delete-orphan")
     sessions: Mapped[list[Session]] = relationship(back_populates="account", cascade="all, delete-orphan")

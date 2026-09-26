@@ -167,6 +167,66 @@ final class AutoSync: ObservableObject {
         forget()
     }
 
+    /// Suppression du compte : le service d'abord, puis l'oubli des jetons
+    /// comme une déconnexion. Seulement si le service a accepté : sur un
+    /// refus, le compte existe toujours et l'appareil doit rester lié. Le
+    /// carnet local n'est pas touché.
+    nonisolated static func deleteAccount(
+        credentials: SyncCredentials, confirmEmail: String, password: String,
+        sync: Sync = Sync(), forget: () -> Void
+    ) async throws {
+        try await sync.deleteAccount(
+            credentials: credentials, confirmEmail: confirmEmail, password: password)
+        forget()
+    }
+
+    /// Pourquoi la suppression a échoué, pour le dire sous le bon champ.
+    enum DeleteFailure: Equatable {
+        /// 403 : le mot de passe du compte ne correspond pas.
+        case wrongPassword
+        /// 400 : l'adresse recopiée n'est pas celle du compte.
+        case emailMismatch
+        /// Tout le reste, avec de quoi le dire.
+        case other(String)
+
+        var message: String {
+            switch self {
+            case .wrongPassword:
+                return L10nSync.t("Mot de passe incorrect.", "Wrong password.")
+            case .emailMismatch:
+                return L10nSync.t(
+                    "Cette adresse ne correspond pas à celle du compte.",
+                    "This email does not match the account.")
+            case .other(let message):
+                return message
+            }
+        }
+    }
+
+    nonisolated static func deleteFailure(_ error: Error) -> DeleteFailure {
+        guard let syncError = error as? SyncError else {
+            return .other(
+                L10nSync.t(
+                    "Le compte n'a pas été supprimé : \(error.localizedDescription)",
+                    "The account was not deleted: \(error.localizedDescription)"))
+        }
+        switch syncError.status {
+        case 403: return .wrongPassword
+        case 400: return .emailMismatch
+        case 0:
+            return .other(
+                L10nSync.t(
+                    "Service injoignable : le compte n'a pas été supprimé. Réessayez plus tard.",
+                    "The service cannot be reached: the account was not deleted. "
+                        + "Try again later."))
+        default:
+            return .other(
+                L10nSync.t(
+                    "Le compte n'a pas été supprimé : \(syncError.message)",
+                    "The account was not deleted: \(syncError.message)"))
+        }
+    }
+
     private func handle(_ action: AutoSyncScheduler.Action) {
         switch action {
         case .none:
@@ -259,8 +319,8 @@ final class AutoSync: ObservableObject {
             result.localOnly == 0
             ? ""
             : L10nSync.t(
-                ", \(result.localOnly) restées sur cet appareil (plafond de l'offre gratuite)",
-                ", \(result.localOnly) kept on this device (free plan limit)")
+                ", \(result.localOnly) restées sur cet appareil (plafond de ce compte)",
+                ", \(result.localOnly) kept on this device (limit of this account)")
         return result.conflicts.isEmpty
             ? L10nSync.t(
                 "Carnet synchronisé : \(kept) entrées\(local).",
@@ -285,5 +345,19 @@ final class AutoSync: ObservableObject {
         let detail = syncError?.message ?? error.localizedDescription
         return L10nSync.t(
             "Échec de la synchronisation : \(detail)", "Sync failed: \(detail)")
+    }
+
+    /// Échec de la connexion. Un 402 y est le plafond d'appareils : le message
+    /// du service nomme l'offre et renvoie au site, ce qu'une app des magasins
+    /// ne relaie pas. On garde le fait, pas l'invitation.
+    nonisolated static func signInFailureMessage(_ error: Error) -> String {
+        if (error as? SyncError)?.status == 402 {
+            return L10nSync.t(
+                "Ce compte a atteint son nombre maximal d'appareils connectés. Déconnectez "
+                    + "un autre appareil, puis réessayez.",
+                "This account has reached its maximum number of connected devices. Sign out "
+                    + "of another device, then try again.")
+        }
+        return failureMessage(error)
     }
 }

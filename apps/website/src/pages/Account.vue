@@ -889,6 +889,7 @@ export default defineComponent({
             credential.rawNonce,
             code.value,
             lang.value,
+            credential.authorizationCode,
           ),
         );
         code.value = "";

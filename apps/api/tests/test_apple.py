@@ -14,7 +14,8 @@ from pathlib import Path
 
 import jwt
 import pytest
-from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ec, rsa
 from sqlalchemy import create_engine, inspect, select, text
 from sqlalchemy.engine import make_url
 
@@ -326,6 +327,213 @@ def select_account(email):
     return select(Account).where(Account.email == email)
 
 
+EC_KEY = ec.generate_private_key(ec.SECP256R1())
+EC_PEM = EC_KEY.private_bytes(
+    serialization.Encoding.PEM,
+    serialization.PrivateFormat.PKCS8,
+    serialization.NoEncryption(),
+).decode("ascii")
+ISSUER_URL = "https://appleid.apple.com"
+
+
+class FakeApple:
+    """Remplace les appels HTTP à `appleid.apple.com`."""
+
+    def __init__(self):
+        self.calls: list[tuple[str, dict[str, str]]] = []
+        self.fail = False
+        self.answer: dict[str, object] = {"refresh_token": "r-token", "access_token": "a"}
+
+    def __call__(self, url, data):
+        self.calls.append((url, data))
+        if self.fail:
+            raise OSError("Apple est injoignable")
+        return self.answer if url == apple_module.TOKEN_URL else {}
+
+    def urls(self):
+        return [url for url, _ in self.calls]
+
+
+@pytest.fixture
+def fake_apple(monkeypatch):
+    fake = FakeApple()
+    monkeypatch.setattr(apple_module, "_post_form", fake)
+    return fake
+
+
+def decode_secret(secret):
+    return jwt.decode(secret, EC_KEY.public_key(), algorithms=["ES256"], audience=ISSUER_URL)
+
+
+class TestClientSecret:
+    def test_it_is_an_es256_jwt_for_apple(self):
+        settings = Settings(apple_team_id="TEAM123", apple_key_id="KEY456", apple_private_key=EC_PEM)
+        secret = apple_module.client_secret(settings, BUNDLE)
+
+        header = jwt.get_unverified_header(secret)
+        assert header["alg"] == "ES256"
+        assert header["kid"] == "KEY456"
+        claims = decode_secret(secret)
+        assert claims["iss"] == "TEAM123"
+        assert claims["sub"] == BUNDLE
+        # Apple refuse plus de six mois.
+        assert 0 < claims["exp"] - claims["iat"] <= 180 * 24 * 3600
+
+    def test_a_single_line_key_is_accepted(self):
+        settings = Settings(
+            apple_team_id="T", apple_key_id="K", apple_private_key=EC_PEM.replace("\n", "\\n")
+        )
+        decode_secret(apple_module.client_secret(settings, BUNDLE))
+
+    def test_revocation_needs_the_three_values(self):
+        assert not Settings(apple_team_id="T", apple_key_id="K").apple_revocation_enabled
+        assert Settings(
+            apple_team_id="T", apple_key_id="K", apple_private_key=EC_PEM
+        ).apple_revocation_enabled
+
+
+class TestRevocation:
+    @pytest.fixture(autouse=True)
+    def configure(self, settings):
+        settings.apple_client_ids = BUNDLE
+        settings.apple_web_client_id = WEB_ID
+        settings.apple_team_id = "TEAM123"
+        settings.apple_key_id = "KEY456"
+        settings.apple_private_key = EC_PEM
+
+    def sign_in(self, http, raw=None, **body):
+        return http.post(
+            "/v1/auth/apple",
+            json={"identity_token": raw or token(), "authorization_code": "c-1", **body},
+        )
+
+    def account(self, db_session):
+        db_session.expire_all()
+        return db_session.scalars(select_account("julie@exemple.fr")).one()
+
+    def delete(self, client, created):
+        return client.request(
+            "DELETE",
+            "/v1/account",
+            json={"password": "", "confirm_email": "julie@exemple.fr"},
+            headers=bearer(created),
+        )
+
+    def set_password(self, client, created):
+        client.post(
+            "/v1/account/password", json={"new_password": PASSWORD}, headers=bearer(created)
+        )
+
+    def test_the_code_is_exchanged_and_the_token_kept(self, client, db_session, fake_apple):
+        assert self.sign_in(client).status_code == 200
+
+        url, data = fake_apple.calls[0]
+        assert url == apple_module.TOKEN_URL
+        assert data["grant_type"] == "authorization_code"
+        assert data["code"] == "c-1"
+        assert data["client_id"] == BUNDLE
+        assert decode_secret(data["client_secret"])["sub"] == BUNDLE
+        account = self.account(db_session)
+        assert account.apple_refresh_token == "r-token"
+        assert account.apple_client_id == BUNDLE
+
+    def test_the_site_exchanges_with_its_services_id(self, client, db_session, fake_apple):
+        assert self.sign_in(client, token(aud=WEB_ID), client="web").status_code == 200
+        assert fake_apple.calls[0][1]["client_id"] == WEB_ID
+        assert decode_secret(fake_apple.calls[0][1]["client_secret"])["sub"] == WEB_ID
+        assert self.account(db_session).apple_client_id == WEB_ID
+
+    def test_without_code_nothing_is_called(self, client, db_session, fake_apple):
+        response = client.post("/v1/auth/apple", json={"identity_token": token()})
+        assert response.status_code == 200
+        assert fake_apple.calls == []
+        assert self.account(db_session).apple_refresh_token == ""
+
+    def test_a_failed_exchange_does_not_block_sign_in(self, client, db_session, fake_apple):
+        fake_apple.fail = True
+        assert self.sign_in(client).status_code == 200
+        assert self.account(db_session).apple_refresh_token == ""
+
+    def test_an_answer_without_token_does_not_block_sign_in(self, client, db_session, fake_apple):
+        fake_apple.answer = {"error": "invalid_grant"}
+        assert self.sign_in(client).status_code == 200
+        assert self.account(db_session).apple_refresh_token == ""
+
+    def test_unconfigured_the_code_is_ignored(self, client, db_session, settings, fake_apple):
+        settings.apple_private_key = ""
+        assert self.sign_in(client).status_code == 200
+        assert fake_apple.calls == []
+        assert self.account(db_session).apple_refresh_token == ""
+
+    def test_deleting_the_account_revokes_the_token(self, client, db_session, fake_apple):
+        created = self.sign_in(client)
+
+        assert self.delete(client, created).status_code == 204
+
+        url, data = fake_apple.calls[-1]
+        assert url == apple_module.REVOKE_URL
+        assert data["token"] == "r-token"
+        assert data["token_type_hint"] == "refresh_token"
+        assert data["client_id"] == BUNDLE
+        assert decode_secret(data["client_secret"])["sub"] == BUNDLE
+        assert db_session.query(Account).count() == 0
+
+    def test_a_failed_revocation_does_not_block_deletion(self, client, db_session, fake_apple):
+        created = self.sign_in(client)
+        fake_apple.fail = True
+
+        assert self.delete(client, created).status_code == 204
+        assert fake_apple.urls()[-1] == apple_module.REVOKE_URL
+        assert db_session.query(Account).count() == 0
+
+    def test_unconfigured_deletion_skips_revocation(
+        self, client, db_session, settings, fake_apple
+    ):
+        created = self.sign_in(client)
+        settings.apple_key_id = ""
+
+        assert self.delete(client, created).status_code == 204
+        assert apple_module.REVOKE_URL not in fake_apple.urls()
+        assert db_session.query(Account).count() == 0
+
+    def test_without_stored_token_nothing_is_revoked(self, client, db_session, fake_apple):
+        created = client.post("/v1/auth/apple", json={"identity_token": token()})
+        assert self.delete(client, created).status_code == 204
+        assert fake_apple.calls == []
+
+    def test_unlinking_revokes_and_forgets_the_token(self, client, db_session, fake_apple):
+        created = self.sign_in(client)
+        self.set_password(client, created)
+
+        response = client.request("DELETE", "/v1/account/apple", headers=bearer(created))
+
+        assert response.status_code == 204
+        url, data = fake_apple.calls[-1]
+        assert url == apple_module.REVOKE_URL
+        assert data["token"] == "r-token"
+        account = self.account(db_session)
+        assert account.apple_sub == ""
+        assert account.apple_refresh_token == ""
+        assert account.apple_client_id == ""
+
+    def test_a_failed_revocation_does_not_block_unlinking(self, client, db_session, fake_apple):
+        created = self.sign_in(client)
+        self.set_password(client, created)
+        fake_apple.fail = True
+
+        response = client.request("DELETE", "/v1/account/apple", headers=bearer(created))
+
+        assert response.status_code == 204
+        account = self.account(db_session)
+        assert account.apple_sub == ""
+        assert account.apple_refresh_token == ""
+
+    def test_the_export_never_shows_the_token(self, client, fake_apple):
+        created = self.sign_in(client)
+        export = client.get("/v1/account/export", headers=bearer(created)).text
+        assert "r-token" not in export
+
+
 class TestMigration:
     """La migration s'applique et se défait sur une base neuve."""
 
@@ -366,6 +574,7 @@ class TestMigration:
             engine = create_engine(fresh_url)
             columns = {c["name"] for c in inspect(engine).get_columns("accounts")}
             assert "apple_sub" in columns
+            assert {"apple_refresh_token", "apple_client_id"} <= columns
             indexes = {i["name"]: i for i in inspect(engine).get_indexes("accounts")}
             assert indexes["ix_accounts_apple_sub"]["unique"]
 
@@ -382,6 +591,13 @@ class TestMigration:
                         ),
                         {"email": f"u{n}@exemple.fr"},
                     )
+
+            # Les jetons d'abord, puis l'identifiant Apple.
+            command.downgrade(config, "-1")
+            columns = {c["name"] for c in inspect(engine).get_columns("accounts")}
+            assert "apple_refresh_token" not in columns
+            assert "apple_client_id" not in columns
+            assert "apple_sub" in columns
 
             command.downgrade(config, "-1")
             columns = {c["name"] for c in inspect(engine).get_columns("accounts")}

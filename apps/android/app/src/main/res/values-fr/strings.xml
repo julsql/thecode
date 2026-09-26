@@ -45,7 +45,7 @@
 
     <!-- Autofill -->
     <string name="autofill_section">Remplissage automatique</string>
-    <string name="autofill_card_description">Activez TheCode comme service de remplissage automatique pour générer un mot de passe directement dans n\'importe quelle app ou site.</string>
+    <string name="autofill_card_description">Activez TheCode comme service de remplissage automatique pour saisir votre identifiant et votre mot de passe directement dans n\'importe quelle app ou site.</string>
     <string name="autofill_status_active">Activé pour cet appareil</string>
     <string name="autofill_status_inactive">Désactivé — touchez pour configurer</string>
     <string name="autofill_status_unsupported">Non disponible sur cet appareil</string>
@@ -69,7 +69,7 @@
 
     <!-- Aide -->
     <string name="help_title">Information</string>
-    <string name="info_app">"      TheCode est un gestionnaire de mots de passe libre et open-source qui ne stocke aucun mot de passe : il les régénère à la volée à partir d\'une seule clé secrète que vous mémorisez.\n\n      Choisissez votre clé, entrez le nom du site (par exemple « google.com » pour votre compte Google), ajustez la longueur et les options (minuscules, majuscules, chiffres, symboles), et le mot de passe est généré. Pour le retrouver, il vous suffit de revenir avec la même clé et le même nom de site.\n\n      En interne, TheCode combine votre clé avec le nom du site et applique une fonction cryptographique (SHA-256). Le résultat est converti en un mot de passe robuste qui respecte vos critères. Même clé + même site = même mot de passe, à chaque fois, de manière déterministe.\n\n      Aucun mot de passe n\'est jamais sauvegardé ni transmis : tous les calculs ont lieu localement, sans connexion internet, sans compte, sans pistage.\n\n      TheCode vous suit partout : extensions navigateur (Chrome, Firefox, Safari, Edge, Opera) et applications natives iOS et Android. Avec la même clé, vous retrouvez les mêmes mots de passe sur toutes vos plateformes.</string>
+    <string name="info_app">"      TheCode ne stocke jamais vos mots de passe : il les recalcule à la volée à partir d\'une seule clé maîtresse que vous mémorisez. C\'est ce qui le distingue : aucune base de mots de passe à voler ni à perdre.\n\n      Entrez votre clé, le nom du site (par exemple « google.com ») et, si vous le souhaitez, votre identifiant sur ce site ; réglez la longueur et les caractères, et le mot de passe est calculé. Même clé + même site + même identifiant = même mot de passe, à chaque fois.\n\n      Le calcul (algorithme v2) a lieu localement, sur cet appareil. L\'ancien algorithme (v1) reste disponible en génération ponctuelle, pour retrouver un mot de passe posé avant la v2. Votre clé est conservée dans le Keystore Android.\n\n      Tout le reste est facultatif : TheCode s\'utilise pleinement sans carnet et sans compte.\n\n      Carnet : enregistrez un site avec ses réglages et votre identifiant pour ne plus avoir à les retenir. Il reste sur cet appareil, verrouillé par biométrie ou par un mot de passe de carnet, et se transfère vers vos autres apps TheCode par QR code chiffré, sans compte ni serveur.\n\n      Compte : connectez-vous avec un e-mail et un mot de passe, ou avec Google, et votre carnet et vos réglages par défaut se synchronisent automatiquement entre vos appareils. Ils sont chiffrés de bout en bout : le serveur ne voit jamais votre clé maîtresse, vos sites ni vos identifiants. Vous pouvez supprimer le compte depuis l\'app.\n\n      Le remplissage automatique saisit l\'identifiant et le mot de passe dans vos apps et sites.\n\n      TheCode est un seul projet sur tous vos appareils : iPhone et iPad, Mac, Android, extensions navigateur (Chrome, Firefox, Edge, Brave, Safari) et le site https://thecode.julsql.fr/fr?from=app — avec la même clé, vous retrouvez les mêmes mots de passe partout."</string>
     <string name="fingerprint_label">Empreinte</string>
     <string name="vault_title">Carnet</string>
     <string name="vault_empty">Aucun site enregistré. Enregistrez-en un depuis l\'écran principal pour ne plus avoir à retenir ses réglages.</string>
@@ -98,12 +98,28 @@
     <string name="sync_done">Carnet synchronisé : %1$d entrées.</string>
     <string name="sync_status_done">Dernière synchronisation à %1$s.</string>
     <string name="sync_done_conflicts">Carnet synchronisé : %1$d entrées, %2$d demandent votre attention.</string>
-    <string name="sync_local_only">%1$d entrées restées sur cet appareil (plafond de l\'offre gratuite).</string>
+    <string name="sync_local_only">%1$d entrées restées sur cet appareil (plafond de ce compte).</string>
     <string name="sync_failed">Échec de la synchronisation : %1$s</string>
     <string name="sync_needs_key">Définissez d\'abord votre clef maîtresse : le carnet est chiffré avec elle avant de quitter cet appareil.</string>
     <string name="sync_no_secure_storage">Le stockage chiffré est indisponible sur cet appareil : les identifiants ne peuvent pas être conservés.</string>
     <string name="sync_unlinked">Déconnecté. Cet appareil ne se synchronise plus.</string>
     <string name="sync_nothing_to_unlink">Aucun compte n\'est lié.</string>
+    <!-- Suppression du compte depuis l'app (exigée par les magasins). -->
+    <string name="account_delete">Supprimer mon compte</string>
+    <string name="account_delete_title">Supprimer le compte ?</string>
+    <string name="account_delete_body">Le compte %1$s sera supprimé définitivement du service, avec son carnet chiffré synchronisé, ses réglages synchronisés et les sessions de tous ses appareils. C\'est irréversible.\n\nLe carnet enregistré sur cet appareil est conservé ; cet appareil ne se synchronise plus.</string>
+    <string name="account_delete_email_hint">Recopiez l\'adresse du compte pour confirmer</string>
+    <string name="account_delete_password_hint">Mot de passe du compte</string>
+    <string name="account_delete_confirm">Supprimer définitivement</string>
+    <string name="account_delete_loading">Vérification du compte…</string>
+    <string name="account_delete_running">Suppression du compte…</string>
+    <string name="account_delete_lookup_failed">Impossible de lire le compte : %1$s</string>
+    <string name="account_delete_wrong_password">Mot de passe incorrect.</string>
+    <string name="account_delete_email_mismatch">Cette adresse ne correspond pas à celle du compte.</string>
+    <string name="account_delete_unreachable">Service injoignable : le compte n\'a pas été supprimé. Réessayez plus tard.</string>
+    <string name="account_delete_failed">Le compte n\'a pas été supprimé : %1$s</string>
+    <string name="account_delete_done_title">Compte supprimé</string>
+    <string name="account_delete_done">Le compte et ses données synchronisées ont été supprimés. Le carnet reste sur cet appareil, qui ne se synchronise plus.</string>
     <string name="vault_save_entry">Enregistrer cette entrée</string>
     <string name="vault_update_entry">Mettre à jour l\'entrée</string>
     <string name="show_password">Voir</string>
@@ -117,6 +133,7 @@
     <string name="vault_renew">Renouveler ce mot de passe</string>
     <string name="vault_renew_paid">Le renouvellement n\'est pas activé sur ce compte.</string>
     <string name="sync_limit_reached">Limite de synchronisation atteinte : les entrées en trop restent sur cet appareil.</string>
+    <string name="sync_device_limit">Ce compte a atteint son nombre maximal d\'appareils connectés. Déconnectez un autre appareil, puis réessayez.</string>
     <string name="vault_renew_title">Renouveler « %1$s »</string>
     <string name="vault_password_pair">Actuel\n%1$s\n\nNouveau\n%2$s\n\nChangez-le sur le site, puis confirmez. Le nouveau ne sert à rien tant que ce n\'est pas fait, et l\'ancien reste celui qui vous connecte.</string>
     <string name="vault_renew_done">« %1$s » renouvelée, compteur %2$d.</string>

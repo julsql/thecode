@@ -205,16 +205,18 @@ public struct Sync {
     }
 
     /// Connexion (ou création du compte) à partir d'un jeton d'identité Apple
-    /// et du nonce *brut* dont l'empreinte a été confiée à Apple.
+    /// et du nonce *brut* dont l'empreinte a été confiée à Apple. Le code
+    /// d'autorisation, facultatif, sert à l'API à révoquer les jetons Apple
+    /// quand le compte est supprimé.
     public func appleSignIn(
         endpoint: String, identityToken: String, rawNonce: String, lang: String,
-        deviceLabel: String = ""
+        deviceLabel: String = "", authorizationCode: String = ""
     ) async throws -> SyncCredentials {
         let body = try await call(
             "\(endpoint)/v1/auth/apple", method: "POST",
             payload: AppleAuth.apiBody(
                 identityToken: identityToken, rawNonce: rawNonce, lang: lang,
-                deviceLabel: deviceLabel))
+                deviceLabel: deviceLabel, authorizationCode: authorizationCode))
         return try credentials(from: body, endpoint: endpoint)
     }
 
@@ -253,6 +255,69 @@ public struct Sync {
         _ = try? await call(
             "\(creds.endpoint)/v1/auth/logout", method: "POST",
             payload: ["refresh_token": creds.refreshToken])
+    }
+
+    // MARK: - Suppression du compte
+
+    /// Ce que la suppression du compte doit savoir de lui, lu à GET /v1/auth/me.
+    public struct AccountIdentity: Equatable {
+        /// L'adresse à recopier : le service l'exige pour supprimer.
+        public let email: String
+        /// Faux pour un compte créé par Google ou Apple sans mot de passe.
+        public let hasPassword: Bool
+        /// Éventuellement renouvelés, offre relue : à réenregistrer.
+        public let credentials: SyncCredentials
+    }
+
+    /// Relit le compte, en renouvelant le jeton s'il a expiré.
+    public func accountIdentity(credentials creds: SyncCredentials) async throws -> AccountIdentity
+    {
+        var current = creds
+        var body: [String: Any]
+        do {
+            body = try await call(
+                "\(creds.endpoint)/v1/auth/me", method: "GET", bearer: creds.accessToken)
+        } catch let error as SyncError where error.status == 401 {
+            current = try await refresh(creds)
+            body = try await call(
+                "\(current.endpoint)/v1/auth/me", method: "GET", bearer: current.accessToken)
+        }
+        // Absent d'un ancien service : le mot de passe est alors demandé, et le
+        // service l'ignore pour un compte qui n'en a pas.
+        return AccountIdentity(
+            email: body["email"] as? String ?? "",
+            hasPassword: body["has_password"] as? Bool ?? true,
+            credentials: current.withPlan(body["plan"] as? String ?? SyncPlan.free))
+    }
+
+    /// Supprime le compte sur le service : le compte, le carnet chiffré, les
+    /// réglages et les sessions de tous les appareils.
+    ///
+    /// Deux preuves, comme l'exige l'API : l'adresse recopiée et, si le compte
+    /// en a un, son mot de passe. Le jeton est renouvelé s'il a expiré.
+    public func deleteAccount(
+        credentials creds: SyncCredentials, confirmEmail: String, password: String
+    ) async throws {
+        let payload: [String: Any] = [
+            "confirm_email": confirmEmail.trimmingCharacters(in: .whitespacesAndNewlines),
+            "password": password,
+        ]
+        let url = "\(creds.endpoint)/v1/account"
+        do {
+            _ = try await call(url, method: "DELETE", payload: payload, bearer: creds.accessToken)
+        } catch let error as SyncError where error.status == 401 {
+            let renewed = try await refresh(creds)
+            _ = try await call(
+                url, method: "DELETE", payload: payload, bearer: renewed.accessToken)
+        }
+    }
+
+    /// Vrai quand l'adresse recopiée est celle du compte, casse et blancs ignorés.
+    public static func emailMatches(_ typed: String, _ accountEmail: String) -> Bool {
+        let account = accountEmail.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !account.isEmpty else { return false }
+        return typed.trimmingCharacters(in: .whitespacesAndNewlines)
+            .caseInsensitiveCompare(account) == .orderedSame
     }
 
     private func refresh(_ creds: SyncCredentials) async throws -> SyncCredentials {

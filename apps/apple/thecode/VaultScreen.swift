@@ -44,6 +44,7 @@ struct VaultScreen: View {
     /// commune avec la clef tient (voir `VaultLockController`).
     @StateObject private var lock = VaultLockController()
     @State private var showLockSettings = false
+    @State private var showDeleteAccount = false
 
     /// Entrée ouverte en détail. Relue dans le carnet à chaque rendu : un
     /// renouvellement doit s'y voir sans rouvrir l'écran.
@@ -91,6 +92,9 @@ struct VaultScreen: View {
         }
         .sheet(isPresented: $showLockSettings) {
             VaultLockSettingsView(lock: lock) { showLockSettings = false }
+        }
+        .sheet(isPresented: $showDeleteAccount) {
+            DeleteAccountView(onDeleted: accountDeleted) { showDeleteAccount = false }
         }
         }
         // Au niveau de la NavigationView : l'alerte doit pouvoir s'ouvrir
@@ -153,6 +157,7 @@ struct VaultScreen: View {
                 showSignIn = false
                 showTransfer = false
                 showLockSettings = false
+                showDeleteAccount = false
                 selectedID = nil
                 pending = nil
                 status = nil
@@ -187,10 +192,10 @@ struct VaultScreen: View {
                 if isLinked {
                     Text(
                         L10n.t(
-                            "Compte lié : le carnet se synchronise entre vos appareils, "
-                                + "chiffré sur chacun avant l'envoi.",
-                            "Account linked: the vault syncs across your devices, "
-                                + "encrypted on each one before it is sent.")
+                            "Compte lié : le carnet et les réglages par défaut se synchronisent "
+                                + "automatiquement, chiffrés sur chaque appareil avant l'envoi.",
+                            "Account linked: the vault and the default settings sync "
+                                + "automatically, encrypted on each device before they are sent.")
                     )
                     .font(.footnote)
                     .foregroundStyle(.secondary)
@@ -201,12 +206,14 @@ struct VaultScreen: View {
 
                     Text(
                         L10n.t(
-                            "Gardez votre carnet à jour entre vos appareils. Il est "
-                                + "chiffré sur cet appareil avant d'être envoyé : le "
-                                + "serveur ne peut lire ni vos sites, ni vos identifiants.",
-                            "Keep your vault up to date across your devices. It is "
-                                + "encrypted on this device before it is sent: the server "
-                                + "can read neither your sites nor your logins.")
+                            "Gardez votre carnet et vos réglages par défaut à jour entre vos "
+                                + "appareils. Tout est chiffré sur cet appareil avant d'être "
+                                + "envoyé : le serveur ne voit ni votre clef maîtresse, ni "
+                                + "vos sites, ni vos identifiants.",
+                            "Keep your vault and your default settings up to date across your "
+                                + "devices. Everything is encrypted on this device before it is "
+                                + "sent: the server sees neither your master key, nor your "
+                                + "sites, nor your logins.")
                     )
                     .font(.footnote)
                     .foregroundStyle(.secondary)
@@ -267,6 +274,45 @@ struct VaultScreen: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.vertical, 6)
         }
+
+        if isLinked {
+            accountSection
+        }
+    }
+
+    /// Suppression du compte, exigée par l'App Store pour un compte créé dans
+    /// l'app. Section à part et en rouge : on ne la déclenche pas en cherchant
+    /// la synchronisation.
+    private var accountSection: some View {
+        Section(
+            header: Text(L10n.t("Compte", "Account")),
+            footer: Text(
+                L10n.t(
+                    "Supprime le compte, son carnet synchronisé et ses réglages sur le "
+                        + "service. Le carnet de cet appareil est conservé.",
+                    "Deletes the account, its synced vault and its settings on the service. "
+                        + "The vault on this device is kept."))
+        ) {
+            Button(role: .destructive) {
+                showDeleteAccount = true
+            } label: {
+                Text(L10n.t("Supprimer mon compte", "Delete my account"))
+            }
+            .disabled(isBusy)
+        }
+    }
+
+    /// Compte supprimé : comme une déconnexion, sans révocation à faire (le
+    /// service a déjà effacé les sessions).
+    private func accountDeleted() {
+        showDeleteAccount = false
+        isLinked = false
+        autoSync.reset()
+        status = L10n.t(
+            "Compte supprimé, avec ses données synchronisées. Le carnet reste sur cet "
+                + "appareil, qui ne se synchronise plus.",
+            "Account deleted, together with its synced data. The vault stays on this "
+                + "device, which no longer syncs.")
     }
 
     private var unlockedContent: some View {
@@ -577,7 +623,7 @@ struct VaultScreen: View {
     /// Même suite que `signIn`, avec le jeton rendu par la feuille d'Apple.
     /// Fermée sans rien choisir, on revient au formulaire, sans message.
     private func signInWithApple(
-        _ result: Result<(identityToken: String, rawNonce: String), Error>
+        _ result: Result<AppleSignInResult, Error>
     ) {
         let endpoint = self.endpoint.trimmingCharacters(in: .whitespaces)
         switch result {
@@ -592,7 +638,8 @@ struct VaultScreen: View {
                 try await Sync().appleSignIn(
                     endpoint: endpoint, identityToken: signIn.identityToken,
                     rawNonce: signIn.rawNonce, lang: L10n.t("fr", "en"),
-                    deviceLabel: await UIDevice.current.name)
+                    deviceLabel: await UIDevice.current.name,
+                    authorizationCode: signIn.authorizationCode)
             }
         }
     }
@@ -646,7 +693,7 @@ struct VaultScreen: View {
                 isWorking = false
                 autoSync.syncNow()
             } catch {
-                status = AutoSync.failureMessage(error)
+                status = AutoSync.signInFailureMessage(error)
                 isWorking = false
             }
         }

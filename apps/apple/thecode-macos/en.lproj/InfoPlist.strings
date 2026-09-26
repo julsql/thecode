@@ -1,4 +1,2 @@
-/* Face ID : clef de l'écran principal et verrou du carnet. */
-"NSFaceIDUsageDescription" = "Face ID protects your master key and your vault.";
 /* Caméra : lecture du QR code de transfert du carnet. */
 "NSCameraUsageDescription" = "To read the encrypted QR code of a vault shown on another device. No image is saved or sent.";
