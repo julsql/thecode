@@ -11,6 +11,7 @@
          implicitement. -->
     <script defer src="fingerprint.js"></script>
     <script defer src="algo-theme.js"></script>
+    <script defer src="password-reveal.js"></script>
     <script defer src="i18n.js"></script>
     <script defer src="popup.js"></script>
     <title data-i18n="popup_title">TheCode - Clef</title>
@@ -160,8 +161,18 @@
           </div>
           <div class="result-row">
             <dt data-i18n="popup_password">Mot de passe</dt>
+            <!-- Masque par defaut : voir password-reveal.js. -->
             <dd class="password-line">
               <code id="passwordResult"></code>
+              <button
+                id="togglePassword"
+                type="button"
+                aria-pressed="false"
+                aria-controls="passwordResult"
+                data-i18n="popup_show"
+              >
+                Voir
+              </button>
               <button
                 id="copyPasswordBtn"
                 type="button"
@@ -184,6 +195,11 @@
                   />
                 </svg>
               </button>
+              <!-- Le seul point d'enregistrement : a cote de ce qu'il enregistre.
+                   Le carnet retient les reglages par compte. -->
+              <button id="saveEntry" type="button" class="save-entry" data-i18n="popup_save">
+                Enregistrer cette entrée
+              </button>
             </dd>
           </div>
           <div class="result-row">
@@ -193,11 +209,8 @@
         </dl>
         <p id="copyStatus" class="hint" role="status" aria-live="polite"></p>
 
-        <!-- Le carnet retient les reglages par compte : plus besoin de se
-             souvenir qu'un compte avait ete cree sans symboles. -->
         <div class="vault">
           <div class="row">
-            <button id="saveEntry" type="button" data-i18n="popup_save">Enregistrer</button>
             <!-- Renouveler : change un mot de passe deja en service. -->
             <button id="changeEntry" type="button" data-i18n="popup_renew" hidden>
               Renouveler

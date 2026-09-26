@@ -309,8 +309,15 @@ a {
 
 .password-line {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 4px;
+}
+
+/* Passe sous le mot de passe quand la ligne est trop etroite, sans quitter
+   la carte. */
+.save-entry {
+  flex: 1 0 auto;
 }
 
 #passwordSecurity::before {
