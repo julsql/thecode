@@ -69,9 +69,41 @@ const DEFAULT_PARAMS = {
   chiState: true,
 };
 
-// La clé reste volontairement en mémoire seule : elle disparaît avec le
-// service worker et n'est jamais écrite sur disque.
+// La clé n'est jamais écrite sur disque. Elle vit dans storage.session : en
+// mémoire, réservée aux pages de l'extension, effacée à la fermeture du
+// navigateur. Sans lui, le service worker MV3, déchargé après quelques
+// secondes d'inactivité, l'oubliait et il fallait la retaper sans cesse.
 let encodingKey = null;
+const KEY_SESSION = "encodingKey";
+const keyArea = browser?.storage?.session ?? null;
+// Chrome l'ouvre par défaut aux seules pages de l'extension ; on l'écrit pour
+// que ce soit une décision, pas un défaut : un content script ne doit jamais
+// pouvoir la lire.
+keyArea?.setAccessLevel?.({ accessLevel: "TRUSTED_CONTEXTS" })?.catch?.(() => {});
+
+async function readKeyFromSession() {
+  try {
+    const stored = await keyArea?.get(KEY_SESSION);
+    if (typeof stored?.[KEY_SESSION] === "string" && stored[KEY_SESSION]) {
+      encodingKey = stored[KEY_SESSION];
+    }
+  } catch {
+    // Stockage indisponible : on retombe sur la mémoire du worker.
+  }
+}
+
+/** Retrouvée au réveil du worker, avant de traiter le moindre message. */
+const keyReady = readKeyFromSession();
+
+async function rememberKey(key) {
+  encodingKey = key || null;
+  try {
+    if (encodingKey) await keyArea?.set({ [KEY_SESSION]: encodingKey });
+    else await keyArea?.remove(KEY_SESSION);
+  } catch {
+    // La clé reste au moins en mémoire.
+  }
+}
 
 // Les paramètres, eux, DOIVENT survivre au recyclage du service worker MV3 :
 // sinon une longueur réglée à 30 dans la popup retombait à 20 dès que le
@@ -382,6 +414,7 @@ function scheduleAutoSync() {
 
 browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
   (async () => {
+    await keyReady;
     if (PRIVILEGED_ACTIONS.has(request.action) && !isFromExtensionPage(sender)) {
       sendResponse({ error: "action reservee a l'extension" });
       return;
@@ -392,7 +425,7 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse({ encodingKey });
     } else if (request.action === "setEncodingKey") {
       try {
-        encodingKey = request.encodingKey;
+        await rememberKey(request.encodingKey);
         sendResponse({ ok: true });
       } catch (e) {
         sendResponse({ ok: false, error: e.message });
@@ -409,7 +442,7 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
         sendResponse({ ok: false, error: e.message });
       }
     } else if (request.action === "clearEncodingKey") {
-      encodingKey = null;
+      await rememberKey(null);
       sendResponse({ ok: true });
     } else if (request.action === "generatePassword") {
       // Seule la popup demande la v1 ou un identifiant : content.js n'envoie
