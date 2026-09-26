@@ -1,7 +1,7 @@
 """Client de synchronisation.
 
-Le carnet est chiffré **avant** de quitter l'appareil, avec la clef de
-transfert dérivée de la clef maîtresse. Le serveur ne reçoit que des blocs
+Le carnet est chiffré **avant** de quitter l'appareil, avec une clef dérivée
+de la clef maîtresse et du sel propre au compte (shared/spec/vault-sync.md). Le serveur ne reçoit que des blocs
 opaques : il ne peut ni lire les sites, ni les identifiants, ni rien déduire
 au-delà du nombre d'entrées.
 
@@ -21,10 +21,19 @@ from pathlib import Path
 from typing import Any
 
 from . import settings as settings_module
-from .transfer import TransferError, derive_transfer_key
+from .transfer import TransferError, _b64d, _b64e, pbkdf2
 from .vault import Conflict, merge, select_for_push
 
 DEFAULT_ENDPOINT = "https://thecode-api.julsql.fr"
+
+#: Préfixe du sel PBKDF2 de la clef de synchronisation ; le sel du compte
+#: (``kdf_salt``, 16 octets tirés par le serveur) lui est concaténé.
+SYNC_KDF_LABEL = b"thecode-sync/v2"
+KDF_SALT_BYTES = 16
+#: Données associées AES-GCM d'une entrée, suivies de son ``entry_id``.
+ENTRY_AAD_PREFIX = "thecode/entry/v2|"
+#: Données associées AES-GCM des réglages par défaut.
+SETTINGS_AAD = b"thecode/settings/v2"
 
 
 class SyncError(Exception):
@@ -53,6 +62,10 @@ class Credentials:
     #: cette trace, la commande ne saurait pas quoi autoriser tant que le
     #: service n'a pas répondu, et autoriserait donc tout.
     plan: str = PLAN_FREE
+    #: Sel de dérivation du compte, en base64url, tel que le service l'a
+    #: rendu à la connexion. Public : il ne sert qu'à rendre la clef propre au
+    #: compte, et le serveur le connaît de toute façon.
+    kdf_salt: str = ""
 
     @staticmethod
     def path() -> Path:
@@ -115,7 +128,9 @@ def register(endpoint: str, email: str, password: str, invite_code: str = "") ->
         f"{endpoint}/v1/auth/register",
         {"email": email, "password": password, "invite_code": invite_code},
     )
-    creds = Credentials(endpoint, body["access_token"], body["refresh_token"])
+    creds = Credentials(
+        endpoint, body["access_token"], body["refresh_token"], kdf_salt=body.get("kdf_salt", "")
+    )
     creds.save()
     return account_plan(creds)
 
@@ -125,7 +140,9 @@ def login(endpoint: str, email: str, password: str, device_label: str = "") -> C
         f"{endpoint}/v1/auth/login",
         {"email": email, "password": password, "device_label": device_label},
     )
-    creds = Credentials(endpoint, body["access_token"], body["refresh_token"])
+    creds = Credentials(
+        endpoint, body["access_token"], body["refresh_token"], kdf_salt=body.get("kdf_salt", "")
+    )
     creds.save()
     return creds
 
@@ -145,7 +162,11 @@ def account_plan(creds: Credentials) -> Credentials:
         return creds
 
     updated = Credentials(
-        creds.endpoint, creds.access_token, creds.refresh_token, body.get("plan", PLAN_FREE)
+        creds.endpoint,
+        creds.access_token,
+        creds.refresh_token,
+        body.get("plan", PLAN_FREE),
+        body.get("kdf_salt") or creds.kdf_salt,
     )
     updated.save()
     return updated
@@ -154,7 +175,11 @@ def account_plan(creds: Credentials) -> Credentials:
 def _refresh(creds: Credentials) -> Credentials:
     body = _request(f"{creds.endpoint}/v1/auth/refresh", {"refresh_token": creds.refresh_token})
     refreshed = Credentials(
-        creds.endpoint, body["access_token"], body["refresh_token"], creds.plan
+        creds.endpoint,
+        body["access_token"],
+        body["refresh_token"],
+        creds.plan,
+        body.get("kdf_salt") or creds.kdf_salt,
     )
     refreshed.save()
     return refreshed
@@ -176,36 +201,86 @@ def _authorised(creds: Credentials, call) -> tuple[Any, Credentials]:
         return call(creds.access_token), creds
 
 
-def _seal(value: dict[str, Any], key: bytes) -> dict[str, str]:
+def _account_salt(creds: Credentials) -> tuple[bytes, Credentials]:
+    """Le sel de dérivation du compte, relu auprès du service s'il manque."""
+    if not creds.kdf_salt:
+        creds = account_plan(creds)
+    try:
+        salt = _b64d(creds.kdf_salt)
+    except ValueError:
+        salt = b""
+    if len(salt) != KDF_SALT_BYTES:
+        raise SyncError(
+            "Le service n'a pas rendu le sel de dérivation du compte : reconnectez-vous."
+        )
+    return salt, creds
+
+
+def derive_sync_key(master_key: str, kdf_salt: bytes) -> bytes:
+    """Clef de synchronisation : propre à la clef maîtresse **et** au compte.
+
+    Le sel du compte empêche de précalculer une table valable pour tous les
+    comptes : qui vole la base doit s'attaquer à chacun séparément.
+    """
+    return pbkdf2(master_key, SYNC_KDF_LABEL + kdf_salt)
+
+
+def entry_aad(entry_id: str) -> bytes:
+    """Données associées d'une entrée : la lient à son identifiant en clair.
+
+    Sans elles, le serveur pourrait échanger les blobs de deux entrées — ou
+    rejouer un vieux blob sous un autre identifiant — sans que rien ne le
+    trahisse au déchiffrement.
+    """
+    return (ENTRY_AAD_PREFIX + entry_id).encode("utf-8")
+
+
+def _seal(value: dict[str, Any], key: bytes, aad: bytes) -> dict[str, str]:
     """Chiffre une valeur JSON : AES-256-GCM, nonce de 12 octets, base64url."""
-    import os as _os
-
     from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-    from .transfer import _b64e
-
-    nonce = _os.urandom(12)
+    nonce = os.urandom(12)
     plain = json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode()
-    return {"nonce": _b64e(nonce), "blob": _b64e(AESGCM(key).encrypt(nonce, plain, None))}
+    return {"nonce": _b64e(nonce), "blob": _b64e(AESGCM(key).encrypt(nonce, plain, aad))}
 
 
-def _encrypt_entry(entry: dict[str, Any], key: bytes) -> dict[str, str]:
-    return {"entry_id": entry["id"], **_seal(entry, key), "deleted": bool(entry.get("deleted"))}
-
-
-def _decrypt_entry(row: dict[str, str], key: bytes) -> dict[str, Any]:
+def _open(sealed: dict[str, str], key: bytes, aad: bytes) -> Any:
     from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-
-    from .transfer import _b64d
 
     try:
-        plain = AESGCM(key).decrypt(_b64d(row["nonce"]), _b64d(row["blob"]), None)
+        plain = AESGCM(key).decrypt(_b64d(sealed["nonce"]), _b64d(sealed["blob"]), aad)
     except Exception as exc:
         raise TransferError(
             "Déchiffrement impossible : la clef maîtresse n'est pas celle qui a "
-            "servi à synchroniser ce carnet."
+            "servi à synchroniser ce carnet, ou le bloc a été altéré."
         ) from exc
     return json.loads(plain)
+
+
+def _encrypt_entry(entry: dict[str, Any], key: bytes) -> dict[str, str]:
+    return {
+        "entry_id": entry["id"],
+        **_seal(entry, key, entry_aad(entry["id"])),
+        "deleted": bool(entry.get("deleted")),
+    }
+
+
+def _decrypt_entry(row: dict[str, str], key: bytes) -> dict[str, Any]:
+    entry = _open(row, key, entry_aad(row["entry_id"]))
+    # Les données associées lient déjà le blob à l'identifiant ; l'entrée doit
+    # en plus dire la même chose d'elle-même, pour ne jamais être fusionnée
+    # sous un autre identifiant que le sien.
+    if not isinstance(entry, dict) or entry.get("id") != row["entry_id"]:
+        raise TransferError("Entrée incohérente : son identifiant ne correspond pas à la ligne.")
+    return entry
+
+
+def seal_settings(value: dict[str, Any], key: bytes) -> dict[str, str]:
+    return _seal(value, key, SETTINGS_AAD)
+
+
+def open_settings(sealed: dict[str, str], key: bytes) -> Any:
+    return _open(sealed, key, SETTINGS_AAD)
 
 
 def sync(
@@ -220,7 +295,8 @@ def sync(
     Pousser sans avoir tiré écraserait ce qu'un autre appareil a écrit entre
     temps — et le serveur le refuse, précisément pour cette raison.
     """
-    key = derive_transfer_key(master_key)
+    salt, creds = _account_salt(creds)
+    key = derive_sync_key(master_key, salt)
 
     pulled, creds = _authorised(
         creds, lambda token: _request(f"{creds.endpoint}/v1/vault", token=token)
@@ -283,7 +359,8 @@ def sync_settings(
     Un blob illisible (autre clef maîtresse, contenu incohérent) est ignoré :
     ni les réglages locaux ni ceux du compte ne sont écrasés.
     """
-    key = derive_transfer_key(master_key)
+    salt, creds = _account_salt(creds)
+    key = derive_sync_key(master_key, salt)
     url = f"{creds.endpoint}/v1/settings"
 
     pulled, creds = _authorised(creds, lambda token: _request(url, token=token))
@@ -291,7 +368,7 @@ def sync_settings(
     remote = None
     if pulled:
         try:
-            remote = _decrypt_entry(pulled, key)
+            remote = open_settings(pulled, key)
         except (TransferError, KeyError, ValueError):
             return local, SETTINGS_IGNORED, creds
         if not settings_module.is_valid(remote):
@@ -306,6 +383,6 @@ def sync_settings(
     if not local["updatedAt"]:
         return local, SETTINGS_UNCHANGED, creds
 
-    payload = _seal(settings_module.normalise(local), key)
+    payload = seal_settings(settings_module.normalise(local), key)
     _, creds = _authorised(creds, lambda token: _request(url, payload, token=token, method="PUT"))
     return local, SETTINGS_PUSHED, creds

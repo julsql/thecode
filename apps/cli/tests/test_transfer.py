@@ -5,7 +5,16 @@ import json
 import pytest
 
 from thecode import vault
-from thecode.transfer import PREFIX, TransferError, export_vault, import_vault
+from thecode.transfer import (
+    AAD,
+    PREFIX,
+    TransferError,
+    _b64d,
+    _b64e,
+    derive_transfer_key,
+    export_vault,
+    import_vault,
+)
 
 
 @pytest.fixture
@@ -40,18 +49,55 @@ def test_tampering_is_detected(filled_vault):
     """AES-GCM authentifie : un octet modifié doit faire échouer, pas produire
     un carnet corrompu."""
     payload = export_vault(filled_vault, "clef")
-    head, nonce, cipher = payload.split(".")
+    head, salt, nonce, cipher = payload.split(".")
     altered = cipher[:-4] + ("AAAA" if cipher[-4:] != "AAAA" else "BBBB")
     with pytest.raises(TransferError):
-        import_vault(f"{head}.{nonce}.{altered}", "clef")
+        import_vault(f"{head}.{salt}.{nonce}.{altered}", "clef")
+
+
+def test_salt_is_authenticated(filled_vault):
+    """Un autre sel donne une autre clef : le déchiffrement doit échouer."""
+    head, salt, nonce, cipher = export_vault(filled_vault, "clef").split(".")
+    other = _b64e(bytes(b ^ 1 for b in _b64d(salt)))
+    with pytest.raises(TransferError):
+        import_vault(f"{head}.{other}.{nonce}.{cipher}", "clef")
+
+
+def test_associated_data_is_required(filled_vault):
+    """Un bloc chiffré sans les données associées du transfert est refusé."""
+    import os
+    import zlib
+
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+    salt, nonce = os.urandom(16), os.urandom(12)
+    plain = zlib.compress(json.dumps(filled_vault).encode())
+    cipher = AESGCM(derive_transfer_key("clef", salt)).encrypt(nonce, plain, None)
+    with pytest.raises(TransferError):
+        import_vault(f"{PREFIX}.{_b64e(salt)}.{_b64e(nonce)}.{_b64e(cipher)}", "clef")
+    # Et avec les bonnes données associées, le même carnet passe.
+    cipher = AESGCM(derive_transfer_key("clef", salt)).encrypt(nonce, plain, AAD)
+    assert import_vault(f"{PREFIX}.{_b64e(salt)}.{_b64e(nonce)}.{_b64e(cipher)}", "clef")
+
+
+def test_salt_length_is_checked(filled_vault):
+    head, _, nonce, cipher = export_vault(filled_vault, "clef").split(".")
+    with pytest.raises(TransferError, match="sel"):
+        import_vault(f"{head}.{_b64e(bytes(8))}.{nonce}.{cipher}", "clef")
+
+
+def test_tc1_is_no_longer_read():
+    """TC1 (sel fixe, sans données associées) est abandonné."""
+    with pytest.raises(TransferError, match="TC1"):
+        import_vault("TC1.tnzyJCrfA_LHr3Fa.pnevJMnfPcHN6deCIjQ8xmTM", "clef")
 
 
 def test_unknown_version_is_refused(filled_vault):
     """Interpréter un format inconnu au hasard serait pire que refuser."""
     payload = export_vault(filled_vault, "clef")
-    _, nonce, cipher = payload.split(".")
+    _, salt, nonce, cipher = payload.split(".")
     with pytest.raises(TransferError, match="inconnue"):
-        import_vault(f"TC9.{nonce}.{cipher}", "clef")
+        import_vault(f"TC9.{salt}.{nonce}.{cipher}", "clef")
 
 
 def test_malformed_payload_is_refused():
@@ -61,8 +107,10 @@ def test_malformed_payload_is_refused():
 
 def test_nonce_is_never_reused(filled_vault):
     """Réutiliser un nonce avec la même clef casse AES-GCM."""
-    nonces = {export_vault(filled_vault, "clef").split(".")[1] for _ in range(20)}
-    assert len(nonces) == 20
+    payloads = [export_vault(filled_vault, "clef").split(".") for _ in range(20)]
+    assert len({p[2] for p in payloads}) == 20
+    # Le sel aussi est tiré à chaque export.
+    assert len({p[1] for p in payloads}) == 20
 
 
 def test_compression_keeps_a_large_vault_scannable(filled_vault):
@@ -101,3 +149,8 @@ def test_shared_interoperability_vector():
 
     spec = json.loads((Path(__file__).parent / "transfer-vector.json").read_text())
     assert import_vault(spec["payload"], spec["masterKey"]) == spec["vault"]
+    salt = _b64d(spec["payload"].split(".")[1])
+    assert derive_transfer_key(spec["masterKey"], salt).hex() == spec["derivedTransferHex"]
+    for case in spec["rejected"]:
+        with pytest.raises(TransferError):
+            import_vault(case["payload"], spec["masterKey"])
