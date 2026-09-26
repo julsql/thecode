@@ -46,7 +46,7 @@ public final class SessionLock {
      * testable. Un horodatage nul (jamais authentifié) ou situé dans le futur
      * (horloge reculée) n'est pas valide.
      */
-    static boolean isWithinGrace(long stampedAt, long now) {
+    public static boolean isWithinGrace(long stampedAt, long now) {
         if (stampedAt <= 0L) return false;
         long elapsed = now - stampedAt;
         return elapsed >= 0L && elapsed <= GRACE_MILLIS;

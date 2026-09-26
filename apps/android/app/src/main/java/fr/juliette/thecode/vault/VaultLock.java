@@ -3,12 +3,16 @@ package fr.juliette.thecode.vault;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import fr.juliette.thecode.SessionLock;
+
 /**
  * Verrou de l'écran carnet (shared/spec/vault-lock.md).
  *
  * Protège l'écran, pas les données : le remplissage et la génération lisent le
- * carnet sans passer par ici. Déverrouillé en mémoire seulement : aucune
- * session n'est mémorisée, l'activité reverrouille dès qu'on la quitte.
+ * carnet sans passer par ici. Déverrouillé tant qu'on est sur l'écran ; en le
+ * quittant, seul l'instant de sortie est retenu ({@link Session}) : revenu
+ * dans la fenêtre de grâce de la clef ({@link SessionLock#GRACE_MILLIS}),
+ * l'écran est toujours ouvert, y compris dans une nouvelle instance.
  *
  * Logique pure, le stockage est injecté pour être testable sans Android.
  */
@@ -32,14 +36,43 @@ public final class VaultLock {
         void clear();
     }
 
+    /**
+     * Instant de sortie d'un écran déverrouillé (epoch ms, 0 si aucun). Un
+     * simple horodatage, hors du stockage chiffré : aucun secret n'y vit.
+     */
+    public interface Session {
+        long leftAt();
+        void setLeftAt(long at);
+        void clear();
+    }
+
+    /** Horloge injectable pour les tests. */
+    public interface Clock {
+        long now();
+    }
+
     public static final String BIOMETRIC = "biometric";
     public static final String PASSWORD = "password";
 
     private final Store store;
-    private volatile boolean unlocked = false;
+    private final Session session;
+    private final Clock clock;
+    private volatile boolean unlocked;
 
-    public VaultLock(@NonNull Store store) {
+    /**
+     * L'état initial se déduit de l'instant de sortie retenu : un écran
+     * recréé dans la fenêtre de grâce reste ouvert.
+     */
+    public VaultLock(@NonNull Store store, @NonNull Session session, @NonNull Clock clock) {
         this.store = store;
+        this.session = session;
+        this.clock = clock;
+        this.unlocked = withinGrace();
+    }
+
+    private boolean withinGrace() {
+        return method() != Method.NONE
+                && SessionLock.isWithinGrace(session.leftAt(), clock.now());
     }
 
     @NonNull
@@ -101,8 +134,10 @@ public final class VaultLock {
         store.setPasswordRecord(newRecord);
     }
 
+    /** Verrou explicite : referme l'écran et oublie la fenêtre de grâce. */
     public void lock() {
         unlocked = false;
+        session.clear();
     }
 
     /** Vrai pendant une auth système lancée par l'écran (biométrie, code de l'appareil). */
@@ -121,33 +156,59 @@ public final class VaultLock {
     }
 
     /**
-     * Sortie de l'écran. L'écran du code de l'appareil, ouvert par notre
-     * propre invite, fait quitter l'activité : on ne reverrouille pas pendant
-     * cette auth, on le fera si elle échoue.
-     *
-     * @return vrai si le verrou a été appliqué maintenant.
+     * Sortie de l'écran (arrière-plan, retour, fermeture). Ne verrouille pas :
+     * retient l'instant de sortie si l'écran était ouvert, pour le rouvrir
+     * sans auth dans la fenêtre de grâce. Pendant notre propre invite, l'écran
+     * du code de l'appareil fait quitter l'activité : la décision est
+     * différée jusqu'à l'issue de l'auth.
      */
-    public boolean onLeave() {
-        if (systemAuthInProgress) {
-            lockDeferred = true;
-            return false;
+    public void onLeave() {
+        if (isUnlocked()) {
+            session.setLeftAt(clock.now());
+        } else {
+            session.clear();
         }
-        lock();
-        return true;
+        if (systemAuthInProgress) lockDeferred = true;
     }
 
     /**
-     * Fin de l'auth système, dans chaque rappel. Un échec (annulation, mise en
-     * arrière-plan) applique le verrou différé ; un succès le lève.
+     * Retour sur l'écran : au-delà de la fenêtre de grâce (ou horloge
+     * reculée), l'écran se referme. Sans effet pendant une auth système, dont
+     * l'issue tranchera ({@link #endSystemAuth}).
      *
-     * @return vrai si un verrou différé vient d'être appliqué.
+     * @return vrai si le verrou vient d'être appliqué.
+     */
+    public boolean onReturn() {
+        if (systemAuthInProgress) return false;
+        return resolveSession();
+    }
+
+    /**
+     * Fin de l'auth système, dans chaque rappel. Si l'écran a été quitté
+     * pendant l'invite, un succès lève la question, un échec (annulation,
+     * mise en arrière-plan) applique la fenêtre de grâce.
+     *
+     * @return vrai si l'écran vient d'être reverrouillé.
      */
     public boolean endSystemAuth(boolean success) {
-        boolean relock = !success && lockDeferred;
+        boolean deferred = lockDeferred;
         systemAuthInProgress = false;
         lockDeferred = false;
-        if (relock) lock();
-        return relock;
+        if (!deferred) return false;
+        if (success) {
+            session.clear();
+            return false;
+        }
+        return resolveSession();
+    }
+
+    /** Applique puis efface l'instant de sortie retenu, s'il y en a un. */
+    private boolean resolveSession() {
+        if (session.leftAt() <= 0L) return false;
+        boolean wasUnlocked = unlocked;
+        unlocked = unlocked && withinGrace();
+        session.clear();
+        return wasUnlocked && !unlocked;
     }
 
     /**
@@ -156,6 +217,7 @@ public final class VaultLock {
      */
     public void forget() {
         store.clear();
+        session.clear();
         unlocked = false;
     }
 

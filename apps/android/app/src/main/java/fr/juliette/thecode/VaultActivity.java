@@ -58,7 +58,10 @@ public class VaultActivity extends AppCompatActivity {
     private final Handler main = new Handler(Looper.getMainLooper());
 
     private Preferences preferences;
-    /** Verrou de l'écran (shared/spec/vault-lock.md) : ouvert en mémoire seulement. */
+    /**
+     * Verrou de l'écran (shared/spec/vault-lock.md) : reste ouvert 3 minutes
+     * après la sortie, même si l'activité est recréée entre-temps.
+     */
     private VaultLock lock;
     /**
      * Incrémenté à chaque reverrouillage : un calcul PBKDF2 lancé avant que
@@ -77,7 +80,8 @@ public class VaultActivity extends AppCompatActivity {
         setContentView(R.layout.activity_vault);
 
         preferences = new Preferences(this);
-        lock = new VaultLock(preferences.vaultLockStore());
+        lock = new VaultLock(preferences.vaultLockStore(), preferences.vaultSession(),
+                System::currentTimeMillis);
 
         MaterialToolbar toolbar = findViewById(R.id.vaultToolbar);
         toolbar.setNavigationOnClickListener(v -> finish());
@@ -91,15 +95,17 @@ public class VaultActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
+        // Au-delà de la fenêtre de grâce, l'écran se referme et redemande l'auth.
+        lock.onReturn();
         applyLockState();
     }
 
     @Override
     protected void onStop() {
-        // Pas de déverrouillage mémorisé : quitter l'écran ou passer en
-        // arrière-plan referme le carnet. Sauf pendant notre propre invite :
-        // le code de l'appareil s'ouvre dans une autre activité, le verrou
-        // est alors différé jusqu'à l'issue de l'auth.
+        // Quitter l'écran fait courir la fenêtre de grâce (seul l'instant de
+        // sortie est retenu). Le contenu est masqué quand même : la capture du
+        // sélecteur d'applications ne doit rien montrer. onStart le réaffiche
+        // si l'on revient à temps.
         lock.onLeave();
         lockEpoch++;
         dismissOpenDialog();
@@ -231,7 +237,7 @@ public class VaultActivity extends AppCompatActivity {
                     public void onAuthenticationError(int code, @NonNull CharSequence message) {
                         // L'écran reste verrouillé, avec de quoi réessayer ou
                         // effacer le carnet. Si on l'a quitté pendant l'invite,
-                        // le verrou différé s'applique maintenant.
+                        // la fenêtre de grâce tranche maintenant.
                         if (lock.endSystemAuth(false)) {
                             dismissOpenDialog();
                             // Écran encore en arrière-plan : onStart s'en chargera.
@@ -446,6 +452,16 @@ public class VaultActivity extends AppCompatActivity {
         }
         if (id == R.id.action_sync) {
             startSync();
+            return true;
+        }
+        if (id == R.id.action_vault_lock) {
+            // Verrou explicite : efface la fenêtre de grâce. Pas d'invite
+            // automatique, le bouton « Déverrouiller » reste à portée.
+            lock.lock();
+            lockEpoch++;
+            dismissOpenDialog();
+            hideContent();
+            findViewById(R.id.vaultForgotAction).setVisibility(View.VISIBLE);
             return true;
         }
         if (id == R.id.action_vault_security) {

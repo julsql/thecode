@@ -169,6 +169,7 @@
     <string name="vault_lock_wrong">Mot de passe incorrect.</string>
     <string name="vault_lock_checking">Vérification…</string>
     <string name="vault_lock_settings">Verrou du carnet</string>
+    <string name="vault_lock_now">Verrouiller</string>
     <string name="vault_lock_change_password">Changer le mot de passe de carnet</string>
     <string name="vault_lock_switch_biometric">Utiliser plutôt la biométrie</string>
     <string name="vault_lock_switch_password">Utiliser plutôt un mot de passe de carnet</string>

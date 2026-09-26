@@ -169,6 +169,7 @@
     <string name="vault_lock_wrong">Wrong password.</string>
     <string name="vault_lock_checking">Checking…</string>
     <string name="vault_lock_settings">Vault lock</string>
+    <string name="vault_lock_now">Lock now</string>
     <string name="vault_lock_change_password">Change the vault password</string>
     <string name="vault_lock_switch_biometric">Use biometrics instead</string>
     <string name="vault_lock_switch_password">Use a vault password instead</string>

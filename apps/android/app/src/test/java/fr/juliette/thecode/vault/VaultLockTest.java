@@ -10,6 +10,8 @@ import androidx.annotation.Nullable;
 
 import org.junit.Test;
 
+import fr.juliette.thecode.SessionLock;
+
 /** Machine d'états du verrou de l'écran carnet. */
 public class VaultLockTest {
 
@@ -24,8 +26,25 @@ public class VaultLockTest {
         @Override public void clear() { method = ""; record = null; }
     }
 
+    static final class MemorySession implements VaultLock.Session {
+        long leftAt = 0L;
+
+        @Override public long leftAt() { return leftAt; }
+        @Override public void setLeftAt(long at) { leftAt = at; }
+        @Override public void clear() { leftAt = 0L; }
+    }
+
+    private static final long GRACE = SessionLock.GRACE_MILLIS;
+
     private final MemoryStore store = new MemoryStore();
-    private final VaultLock lock = new VaultLock(store);
+    private final MemorySession session = new MemorySession();
+    private long now = 1_000_000L;
+    private final VaultLock.Clock clock = () -> now;
+    private final VaultLock lock = newLock();
+
+    private VaultLock newLock() {
+        return new VaultLock(store, session, clock);
+    }
 
     @Test
     public void firstOpeningAsksForSetup() {
@@ -57,10 +76,9 @@ public class VaultLockTest {
     }
 
     @Test
-    public void aNewInstanceStartsLocked() {
-        // Pas de déverrouillage mémorisé : l'état « ouvert » ne vit qu'en mémoire.
+    public void aNewInstanceStartsLockedWithoutARecentLeave() {
         lock.chooseBiometric();
-        assertEquals(VaultLock.State.LOCKED, new VaultLock(store).state());
+        assertEquals(VaultLock.State.LOCKED, newLock().state());
     }
 
     @Test(expected = IllegalStateException.class)
@@ -112,10 +130,93 @@ public class VaultLockTest {
     }
 
     @Test
-    public void leavingOutsideSystemAuthLocksImmediately() {
+    public void leavingKeepsTheVaultOpenAndStoresOnlyATimestamp() {
         lock.chooseBiometric();
-        assertTrue(lock.onLeave());
+        lock.onLeave();
+
+        assertTrue(lock.isUnlocked());
+        assertEquals(now, session.leftAt);
+    }
+
+    @Test
+    public void comingBackWithinTheGraceKeepsTheVaultOpen() {
+        lock.chooseBiometric();
+        lock.onLeave();
+        now += GRACE;
+
+        assertFalse(lock.onReturn());
+        assertTrue(lock.isUnlocked());
+        assertEquals(0L, session.leftAt);
+    }
+
+    @Test
+    public void comingBackAfterTheGraceLocks() {
+        lock.chooseBiometric();
+        lock.onLeave();
+        now += GRACE + 1L;
+
+        assertTrue(lock.onReturn());
         assertEquals(VaultLock.State.LOCKED, lock.state());
+        assertEquals(0L, session.leftAt);
+    }
+
+    @Test
+    public void aRecreatedScreenWithinTheGraceStartsUnlocked() {
+        lock.choosePassword(VaultPassword.hash("vault-pass".toCharArray()));
+        lock.onLeave();
+        now += GRACE - 1L;
+
+        VaultLock recreated = newLock();
+        assertEquals(VaultLock.State.UNLOCKED, recreated.state());
+        assertFalse(recreated.onReturn());
+        assertTrue(recreated.isUnlocked());
+    }
+
+    @Test
+    public void aRecreatedScreenAfterTheGraceStartsLocked() {
+        lock.chooseBiometric();
+        lock.onLeave();
+        now += GRACE + 1L;
+
+        assertEquals(VaultLock.State.LOCKED, newLock().state());
+    }
+
+    @Test
+    public void clockGoingBackwardsLocks() {
+        lock.chooseBiometric();
+        lock.onLeave();
+        now -= 1L;
+
+        assertEquals(VaultLock.State.LOCKED, newLock().state());
+        assertTrue(lock.onReturn());
+        assertFalse(lock.isUnlocked());
+    }
+
+    @Test
+    public void leavingWhileLockedStoresNothing() {
+        lock.chooseBiometric();
+        lock.onLeave();
+        lock.lock();
+        lock.onLeave();
+
+        assertEquals(0L, session.leftAt);
+        assertEquals(VaultLock.State.LOCKED, newLock().state());
+    }
+
+    @Test
+    public void aStaleStampDoesNotOpenAnUnconfiguredVault() {
+        session.leftAt = now;
+        assertEquals(VaultLock.State.SETUP, newLock().state());
+    }
+
+    @Test
+    public void explicitLockClearsTheGrace() {
+        lock.chooseBiometric();
+        lock.onLeave();
+        lock.lock();
+
+        assertEquals(0L, session.leftAt);
+        assertEquals(VaultLock.State.LOCKED, newLock().state());
     }
 
     @Test
@@ -125,7 +226,8 @@ public class VaultLockTest {
 
         lock.beginSystemAuth();
         // L'écran du code de l'appareil fait quitter l'activité.
-        assertFalse(lock.onLeave());
+        lock.onLeave();
+        assertFalse(lock.onReturn());
         assertFalse(lock.endSystemAuth(true));
         lock.unlock(VaultLock.Method.BIOMETRIC);
 
@@ -138,9 +240,10 @@ public class VaultLockTest {
         lock.choosePassword(VaultPassword.hash("vault-pass".toCharArray()));
 
         lock.beginSystemAuth();
-        assertFalse(lock.onLeave());
+        lock.onLeave();
         assertTrue(lock.isUnlocked());
-        lock.endSystemAuth(true);
+        assertFalse(lock.endSystemAuth(true));
+        assertEquals(0L, session.leftAt);
         lock.chooseBiometric();
 
         assertEquals(VaultLock.Method.BIOMETRIC, lock.method());
@@ -148,12 +251,37 @@ public class VaultLockTest {
     }
 
     @Test
-    public void failedOrCancelledAuthAppliesTheDeferredLock() {
-        lock.chooseBiometric();
+    public void returnDuringSystemAuthIsDecidedByItsOutcome() {
+        lock.choosePassword(VaultPassword.hash("vault-pass".toCharArray()));
+        lock.beginSystemAuth();
+        lock.onLeave();
+        now += GRACE + 1L;
+
+        // onStart peut précéder le rappel de l'invite : il ne tranche pas.
+        assertFalse(lock.onReturn());
+        assertTrue(lock.isUnlocked());
+        assertTrue(lock.endSystemAuth(false));
+        assertEquals(VaultLock.State.LOCKED, lock.state());
+    }
+
+    @Test
+    public void failedAuthAfterLeavingWithinTheGraceKeepsTheVaultOpen() {
+        lock.choosePassword(VaultPassword.hash("vault-pass".toCharArray()));
         lock.beginSystemAuth();
         lock.onLeave();
 
-        assertTrue(lock.endSystemAuth(false));
+        assertFalse(lock.endSystemAuth(false));
+        assertTrue(lock.isUnlocked());
+    }
+
+    @Test
+    public void failedAuthFromALockedScreenDoesNotReportARelock() {
+        lock.chooseBiometric();
+        lock.lock();
+        lock.beginSystemAuth();
+        lock.onLeave();
+
+        assertFalse(lock.endSystemAuth(false));
         assertEquals(VaultLock.State.LOCKED, lock.state());
     }
 
@@ -164,17 +292,17 @@ public class VaultLockTest {
 
         assertFalse(lock.endSystemAuth(false));
         assertTrue(lock.isUnlocked());
-        // Plus d'auth en cours : la sortie suivante reverrouille.
-        assertTrue(lock.onLeave());
+        assertFalse(lock.isSystemAuthInProgress());
     }
 
     @Test
-    public void forgetResetsToSetup() {
+    public void forgetResetsToSetupAndClearsTheGrace() {
         lock.choosePassword(VaultPassword.hash("vault-pass".toCharArray()));
-        lock.lock();
+        lock.onLeave();
         lock.forget();
 
         assertEquals(VaultLock.State.SETUP, lock.state());
+        assertEquals(0L, session.leftAt);
         assertEquals("", store.method);
         assertNull(store.record);
     }
