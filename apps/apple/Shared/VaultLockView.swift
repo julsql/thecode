@@ -184,7 +184,9 @@ struct VaultLockView: View {
             Button {
                 let (first, second) = (password, confirmation)
                 Task {
-                    if await lock.createPassword(first, confirmation: second) { clearFields() }
+                    if await lock.createPassword(
+                        first, confirmation: second, reason: T.unlockReason)
+                    { clearFields() }
                 }
             } label: {
                 Text(T.t("Créer le mot de passe", "Create the password"))

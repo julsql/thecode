@@ -29,7 +29,17 @@ enum SessionLock {
     /// fois que l'app quitte le premier plan avec une session valide (c'est ce
     /// dernier point qui fait courir la fenêtre à partir de la mise en fond).
     static func stamp() {
-        store?.set(Date().timeIntervalSince1970, forKey: storageKey)
+        stamp(at: Date().timeIntervalSince1970)
+    }
+
+    static func stamp(at instant: TimeInterval) {
+        store?.set(instant, forKey: storageKey)
+    }
+
+    /// Dernier horodatage, `nil` si aucune session. Le carnet partage cette
+    /// session (voir vault-lock.md) et la lit avec sa propre horloge.
+    static var stampedAt: TimeInterval? {
+        store?.object(forKey: storageKey) as? Double
     }
 
     /// Invalide la session : la prochaine ouverture exigera une auth.

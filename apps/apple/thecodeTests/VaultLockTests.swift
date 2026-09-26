@@ -48,10 +48,12 @@ private final class FakeBiometrics: VaultBiometrics {
     }
 }
 
+/// Session commune clef + carnet, en mémoire.
 private final class MemorySessionStore: VaultSessionStore {
-    var leftAt: TimeInterval?
-    func loadLeftAt() -> TimeInterval? { leftAt }
-    func saveLeftAt(_ leftAt: TimeInterval?) { self.leftAt = leftAt }
+    var stampedAt: TimeInterval?
+    func loadStampedAt() -> TimeInterval? { stampedAt }
+    func stamp(at instant: TimeInterval) { stampedAt = instant }
+    func invalidate() { stampedAt = nil }
 }
 
 /// Horloge réglable à la main.
@@ -206,13 +208,13 @@ struct VaultLockControllerTests {
         let storage = MemoryLockStorage()
         let lock = makeLock(storage: storage)
 
-        #expect(await lock.createPassword("court", confirmation: "court") == false)
+        #expect(await lock.createPassword("court", confirmation: "court", reason: "test") == false)
         #expect(lock.error == .tooShort)
-        #expect(await lock.createPassword("12345678", confirmation: "87654321") == false)
+        #expect(await lock.createPassword("12345678", confirmation: "87654321", reason: "test") == false)
         #expect(lock.error == .mismatch)
         #expect(lock.phase == .setup)
 
-        #expect(await lock.createPassword("12345678", confirmation: "12345678"))
+        #expect(await lock.createPassword("12345678", confirmation: "12345678", reason: "test"))
         #expect(lock.phase == .unlocked(.password))
         #expect(lock.error == nil)
         #expect(storage.method == .password)
@@ -224,7 +226,7 @@ struct VaultLockControllerTests {
     func reopensLocked() async {
         let storage = MemoryLockStorage()
         let first = makeLock(storage: storage)
-        _ = await first.createPassword("12345678", confirmation: "12345678")
+        _ = await first.createPassword("12345678", confirmation: "12345678", reason: "test")
 
         #expect(makeLock(storage: storage).phase == .locked(.password))
     }
@@ -239,7 +241,7 @@ struct VaultLockControllerTests {
     @Test("Déverrouiller par mot de passe")
     func unlockWithPassword() async {
         let storage = MemoryLockStorage()
-        _ = await makeLock(storage: storage).createPassword("12345678", confirmation: "12345678")
+        _ = await makeLock(storage: storage).createPassword("12345678", confirmation: "12345678", reason: "test")
         let lock = makeLock(storage: storage)
 
         #expect(await lock.unlock(password: "00000000") == false)
@@ -270,7 +272,7 @@ struct VaultLockControllerTests {
     @Test("Reverrouiller garde la méthode")
     func relock() async {
         let lock = makeLock()
-        _ = await lock.createPassword("12345678", confirmation: "12345678")
+        _ = await lock.createPassword("12345678", confirmation: "12345678", reason: "test")
         lock.lock()
         #expect(lock.phase == .locked(.password))
         #expect(!lock.isUnlocked)
@@ -284,7 +286,7 @@ struct VaultLockControllerTests {
     func changePassword() async {
         let storage = MemoryLockStorage()
         let lock = makeLock(storage: storage)
-        _ = await lock.createPassword("ancien-mdp", confirmation: "ancien-mdp")
+        _ = await lock.createPassword("ancien-mdp", confirmation: "ancien-mdp", reason: "test")
         let before = storage.record
 
         #expect(await lock.changePassword(
@@ -304,7 +306,7 @@ struct VaultLockControllerTests {
     @Test("Pas de changement de méthode tant que c'est verrouillé")
     func noChangeWhileLocked() async {
         let storage = MemoryLockStorage()
-        _ = await makeLock(storage: storage).createPassword("12345678", confirmation: "12345678")
+        _ = await makeLock(storage: storage).createPassword("12345678", confirmation: "12345678", reason: "test")
         let lock = makeLock(storage: storage)
 
         #expect(await lock.switchToBiometrics(reason: "test") == false)
@@ -317,7 +319,7 @@ struct VaultLockControllerTests {
     func switchToBiometrics() async {
         let storage = MemoryLockStorage()
         let lock = makeLock(storage: storage)
-        _ = await lock.createPassword("12345678", confirmation: "12345678")
+        _ = await lock.createPassword("12345678", confirmation: "12345678", reason: "test")
 
         #expect(await lock.switchToBiometrics(reason: "test"))
         #expect(lock.phase == .unlocked(.biometrics))
@@ -341,7 +343,7 @@ struct VaultLockControllerTests {
     @Test("Oubli : efface le carnet puis le verrou")
     func forget() async {
         let storage = MemoryLockStorage()
-        _ = await makeLock(storage: storage).createPassword("12345678", confirmation: "12345678")
+        _ = await makeLock(storage: storage).createPassword("12345678", confirmation: "12345678", reason: "test")
         let lock = makeLock(storage: storage)
 
         var wiped = false
@@ -356,7 +358,7 @@ struct VaultLockControllerTests {
     func forgetKeepsLockWhenWipeFails() async {
         struct Failure: Error {}
         let storage = MemoryLockStorage()
-        _ = await makeLock(storage: storage).createPassword("12345678", confirmation: "12345678")
+        _ = await makeLock(storage: storage).createPassword("12345678", confirmation: "12345678", reason: "test")
         let lock = makeLock(storage: storage)
 
         #expect(lock.forget(wipeVault: { throw Failure() }) == false)
@@ -370,7 +372,7 @@ struct VaultLockControllerTests {
         let storage = MemoryLockStorage()
         storage.failWrites = true
         let lock = makeLock(storage: storage)
-        #expect(await lock.createPassword("12345678", confirmation: "12345678") == false)
+        #expect(await lock.createPassword("12345678", confirmation: "12345678", reason: "test") == false)
         #expect(lock.error == .storageFailed)
         #expect(lock.phase == .setup)
     }
@@ -390,18 +392,18 @@ struct VaultLockControllerTests {
 
 // MARK: - Session
 
-@Suite("Verrou du carnet — session de 3 minutes")
+@Suite("Verrou du carnet — session commune avec la clef")
 @MainActor
 struct VaultSessionTests {
 
     @Test("Logique pure : dans la grâce, au-delà, sans horodatage, horloge reculée")
     func pureLogic() {
-        #expect(VaultSession.resumesUnlocked(leftAt: 1_000, now: 1_000))
-        #expect(VaultSession.resumesUnlocked(leftAt: 1_000, now: 1_000 + 180))
-        #expect(!VaultSession.resumesUnlocked(leftAt: 1_000, now: 1_000 + 181))
-        #expect(!VaultSession.resumesUnlocked(leftAt: nil, now: 1_000))
-        #expect(!VaultSession.resumesUnlocked(leftAt: 1_000, now: 999))
-        #expect(!VaultSession.resumesUnlocked(leftAt: 0, now: 10))
+        #expect(VaultSession.isOpen(stampedAt: 1_000, now: 1_000))
+        #expect(VaultSession.isOpen(stampedAt: 1_000, now: 1_000 + 180))
+        #expect(!VaultSession.isOpen(stampedAt: 1_000, now: 1_000 + 181))
+        #expect(!VaultSession.isOpen(stampedAt: nil, now: 1_000))
+        #expect(!VaultSession.isOpen(stampedAt: 1_000, now: 999))
+        #expect(!VaultSession.isOpen(stampedAt: 0, now: 10))
     }
 
     /// Un carnet protégé par mot de passe, déverrouillé.
@@ -409,31 +411,112 @@ struct VaultSessionTests {
         _ storage: MemoryLockStorage, _ session: MemorySessionStore, _ clock: FakeClock
     ) async -> VaultLockController {
         let lock = makeLock(storage: storage, session: session, clock: clock)
-        _ = await lock.createPassword("12345678", confirmation: "12345678")
+        _ = await lock.createPassword("12345678", confirmation: "12345678", reason: "test")
         return lock
     }
 
-    @Test("Quitter l'écran horodate la sortie sans verrouiller")
+    /// Un mot de passe de carnet posé, sans session ouverte ensuite.
+    private func lockedWithPassword(_ storage: MemoryLockStorage) async {
+        _ = await makeLock(storage: storage)
+            .createPassword("12345678", confirmation: "12345678", reason: "test")
+    }
+
+    @Test("Clef déverrouillée depuis moins de 3 minutes : le carnet s'ouvre sans rien demander")
+    func keySessionOpensTheVault() async {
+        let storage = MemoryLockStorage()
+        await lockedWithPassword(storage)
+        let (session, clock) = (MemorySessionStore(), FakeClock())
+        session.stampedAt = clock.now - 120
+
+        #expect(makeLock(storage: storage, session: session, clock: clock).phase
+            == .unlocked(.password))
+    }
+
+    @Test("Clef déverrouillée il y a plus de 3 minutes : le carnet demande")
+    func expiredKeySessionKeepsTheVaultLocked() async {
+        let storage = MemoryLockStorage()
+        await lockedWithPassword(storage)
+        let (session, clock) = (MemorySessionStore(), FakeClock())
+        session.stampedAt = clock.now - 181
+
+        #expect(makeLock(storage: storage, session: session, clock: clock).phase
+            == .locked(.password))
+    }
+
+    @Test("Déverrouiller le carnet par mot de passe ouvre la session de la clef")
+    func passwordUnlockStampsTheSession() async {
+        let storage = MemoryLockStorage()
+        await lockedWithPassword(storage)
+        let (session, clock) = (MemorySessionStore(), FakeClock())
+        let lock = makeLock(storage: storage, session: session, clock: clock)
+
+        #expect(await lock.unlock(password: "00000000") == false)
+        #expect(session.stampedAt == nil)
+
+        #expect(await lock.unlock(password: "12345678"))
+        #expect(session.stampedAt == clock.now)
+    }
+
+    @Test("Déverrouiller le carnet par biométrie ouvre la session de la clef")
+    func biometricsUnlockStampsTheSession() async {
+        let storage = MemoryLockStorage()
+        storage.method = .biometrics
+        let (session, clock) = (MemorySessionStore(), FakeClock())
+        let lock = makeLock(storage: storage, session: session, clock: clock)
+
+        #expect(await lock.unlockWithBiometrics(reason: "test"))
+        #expect(session.stampedAt == clock.now)
+    }
+
+    @Test("Créer un mot de passe sans session exige l'authentification de l'appareil")
+    func createPasswordWithoutSessionAuthenticates() async {
+        let storage = MemoryLockStorage()
+        let biometrics = FakeBiometrics(succeeds: false)
+        let lock = makeLock(storage: storage, biometrics: biometrics)
+
+        #expect(await lock.createPassword("12345678", confirmation: "12345678", reason: "test")
+            == false)
+        #expect(biometrics.prompts == 1)
+        #expect(lock.error == .biometricsFailed)
+        #expect(lock.phase == .setup)
+        #expect(storage.record == nil)
+    }
+
+    @Test("Créer un mot de passe dans une session valide ne redemande rien")
+    func createPasswordWithinSession() async {
+        let (session, clock, biometrics) = (MemorySessionStore(), FakeClock(), FakeBiometrics())
+        session.stampedAt = clock.now
+        let lock = makeLock(biometrics: biometrics, session: session, clock: clock)
+
+        #expect(await lock.createPassword("12345678", confirmation: "12345678", reason: "test"))
+        #expect(biometrics.prompts == 0)
+        #expect(lock.phase == .unlocked(.password))
+    }
+
+    @Test("Quitter l'écran déverrouillé fait courir la fenêtre sans verrouiller")
     func leavingDoesNotLock() async {
         let (storage, session, clock) = (MemoryLockStorage(), MemorySessionStore(), FakeClock())
         let lock = await unlocked(storage, session, clock)
 
+        clock.now += 60
         lock.leave()
         #expect(lock.isUnlocked)
-        #expect(session.leftAt == clock.now)
+        #expect(session.stampedAt == clock.now)
     }
 
-    @Test("Quitter verrouillé n'ouvre rien")
-    func leavingLockedStoresNothing() async {
-        let (storage, session, clock) = (MemoryLockStorage(), MemorySessionStore(), FakeClock())
-        _ = await unlocked(storage, session, clock)
+    @Test("Quitter verrouillé ne touche pas la session de la clef")
+    func leavingLockedKeepsTheSession() async {
+        let storage = MemoryLockStorage()
+        await lockedWithPassword(storage)
+        let (session, clock) = (MemorySessionStore(), FakeClock())
         let lock = makeLock(storage: storage, session: session, clock: clock)
-        session.leftAt = clock.now - 10
 
         lock.leave()
-        #expect(session.leftAt == nil)
-        #expect(makeLock(storage: storage, session: session, clock: clock).phase
-            == .locked(.password))
+        #expect(session.stampedAt == nil)
+
+        session.stampedAt = clock.now - 200
+        lock.leave()
+        #expect(session.stampedAt == clock.now - 200)
     }
 
     @Test("Rouvrir la feuille dans les 3 minutes : toujours déverrouillé")
@@ -448,8 +531,6 @@ struct VaultSessionTests {
 
         second.resume()
         #expect(second.isUnlocked)
-        // Consommé : tant qu'on est sur l'écran, il n'a plus lieu d'être.
-        #expect(session.leftAt == nil)
     }
 
     @Test("Rouvrir la feuille après 3 minutes : verrouillé")
@@ -463,7 +544,7 @@ struct VaultSessionTests {
             == .locked(.password))
     }
 
-    @Test("Retour au premier plan : ouvert dans la grâce, verrouillé au-delà")
+    @Test("Retour au premier plan : ouvert dans la grâce (la fenêtre repart), verrouillé au-delà")
     func resumeFromBackground() async {
         let (storage, session, clock) = (MemoryLockStorage(), MemorySessionStore(), FakeClock())
         let lock = await unlocked(storage, session, clock)
@@ -472,11 +553,28 @@ struct VaultSessionTests {
         clock.now += 60
         lock.resume()
         #expect(lock.phase == .unlocked(.password))
+        #expect(session.stampedAt == clock.now)
 
         lock.leave()
         clock.now += 181
         lock.resume()
         #expect(lock.phase == .locked(.password))
+    }
+
+    @Test("Retour au premier plan verrouillé, clef déverrouillée entre-temps : ouvert")
+    func resumeOpensWhenTheKeyWasUnlocked() async {
+        let storage = MemoryLockStorage()
+        await lockedWithPassword(storage)
+        let (session, clock) = (MemorySessionStore(), FakeClock())
+        let lock = makeLock(storage: storage, session: session, clock: clock)
+        #expect(lock.phase == .locked(.password))
+
+        lock.resume()
+        #expect(lock.phase == .locked(.password))
+
+        session.stampedAt = clock.now
+        lock.resume()
+        #expect(lock.phase == .unlocked(.password))
     }
 
     @Test("Horloge reculée : verrouillé")
@@ -489,7 +587,7 @@ struct VaultSessionTests {
         lock.resume()
         #expect(lock.phase == .locked(.password))
 
-        session.leftAt = clock.now + 30
+        session.stampedAt = clock.now + 30
         #expect(makeLock(storage: storage, session: session, clock: clock).phase
             == .locked(.password))
     }
@@ -504,33 +602,33 @@ struct VaultSessionTests {
         #expect(lock.isUnlocked)
     }
 
-    @Test("Verrouiller efface la fenêtre de grâce")
-    func lockClearsTheStamp() async {
+    @Test("Verrouiller ferme la session, clef comprise")
+    func lockEndsTheSession() async {
         let (storage, session, clock) = (MemoryLockStorage(), MemorySessionStore(), FakeClock())
         let lock = await unlocked(storage, session, clock)
         lock.leave()
 
         lock.lock()
-        #expect(session.leftAt == nil)
+        #expect(session.stampedAt == nil)
         #expect(makeLock(storage: storage, session: session, clock: clock).phase
             == .locked(.password))
     }
 
-    @Test("Mot de passe oublié efface la fenêtre de grâce")
-    func forgetClearsTheStamp() async {
+    @Test("Mot de passe oublié ferme la session, clef comprise")
+    func forgetEndsTheSession() async {
         let (storage, session, clock) = (MemoryLockStorage(), MemorySessionStore(), FakeClock())
         let lock = await unlocked(storage, session, clock)
         lock.leave()
 
         #expect(lock.forget(wipeVault: {}))
-        #expect(session.leftAt == nil)
+        #expect(session.stampedAt == nil)
     }
 
-    @Test("Aucune méthode choisie : l'horodatage n'ouvre rien")
+    @Test("Aucune méthode choisie : la session n'ouvre rien")
     func stampWithoutMethod() {
         let session = MemorySessionStore()
         let clock = FakeClock()
-        session.leftAt = clock.now
+        session.stampedAt = clock.now
         #expect(makeLock(session: session, clock: clock).phase == .setup)
     }
 

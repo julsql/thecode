@@ -476,7 +476,9 @@ struct MainView: View {
                 InfoSheet(isPresented: $showInfoSheet)
             }
             .sheet(isPresented: $showV2Notice) { v2NoticeSheet }
-        .sheet(isPresented: $showVault) {
+        // Session commune (vault-lock.md) : déverrouiller le carnet ouvre la
+        // clef, le verrouiller la referme. On la relit au retour.
+        .sheet(isPresented: $showVault, onDismiss: restoreSession) {
                 VaultScreen(masterKey: encodingKey, isPresented: $showVault)
             }
             .alert(L10n.t("Aucun mot de passe à partager", "No password to share"), isPresented: $showNoPasswordAlert) {

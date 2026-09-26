@@ -257,8 +257,9 @@ struct MainView: View {
                 .buttonStyle(.borderless)
                 .help(L10n.t("Partager", "Share"))
 
-                // Le carnet a son propre verrou (voir vault-lock.md) : l'exiger
-                // ici aussi le rendait inaccessible sans Touch ID.
+                // Le carnet a son propre verrou et partage la session de la
+                // clef (voir vault-lock.md) : c'est lui qui demande le
+                // déverrouillage, clef verrouillée ou non.
                 Button(action: { showVault = true }) {
                     Image(systemName: "list.bullet.rectangle")
                 }
@@ -520,8 +521,13 @@ struct MainView: View {
             InfoSheet(isPresented: $showInfoSheet)
         }
         .sheet(isPresented: $showV2Notice) { v2NoticeSheet }
-        // Le carnet a pu gagner ou perdre l'entrée affichée.
-        .sheet(isPresented: $showVault, onDismiss: refreshVaultEntry) {
+        // Au retour du carnet : la session est commune (vault-lock.md), le
+        // déverrouiller a pu ouvrir la clef ou le verrouiller la refermer ; et
+        // il a pu gagner ou perdre l'entrée affichée.
+        .sheet(isPresented: $showVault, onDismiss: {
+            restoreSession()
+            refreshVaultEntry()
+        }) {
             VaultScreen(masterKey: encodingKey, isPresented: $showVault)
         }
         .alert(L10n.t("Aucun mot de passe à partager", "No password to share"), isPresented: $showNoPasswordAlert) {

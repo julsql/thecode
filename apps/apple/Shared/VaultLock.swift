@@ -243,43 +243,35 @@ nonisolated struct KeychainVaultLockStorage: VaultLockStorage {
 
 // MARK: - Session
 
-/// Instant où l'on a quitté l'écran carnet déverrouillé. Sa présence vaut
-/// « déverrouillé en partant » : on n'en écrit un que dans ce cas. Ce n'est
-/// qu'un horodatage, aucun secret. Abstrait pour les tests.
+/// La session partagée avec la clef (voir « Apps : une seule session avec la
+/// clef » dans vault-lock.md) : déverrouiller l'un ouvre l'autre, et la
+/// fenêtre de 3 minutes est commune. Ce n'est qu'un horodatage, aucun secret.
+/// Abstrait pour les tests.
 protocol VaultSessionStore {
-    func loadLeftAt() -> TimeInterval?
-    func saveLeftAt(_ leftAt: TimeInterval?)
+    /// Dernier horodatage de la session, `nil` si aucune.
+    func loadStampedAt() -> TimeInterval?
+    /// Déverrouillage, ou sortie de l'écran déverrouillé : la fenêtre repart.
+    func stamp(at instant: TimeInterval)
+    /// Verrouillage explicite ou oubli : clef et carnet se referment.
+    func invalidate()
 }
 
-/// Dans les UserDefaults du groupe d'app, comme l'horodatage de la clef
-/// (`SessionLock`) : la fenêtre survit à la fermeture de la feuille comme à
-/// celle de l'app. Clef distincte : quitter le carnet ne prolonge pas la clef.
-struct AppGroupVaultSessionStore: VaultSessionStore {
-    private static let appGroupID = "group.fr.julsql.thecode.params"
-    private static let key = "vaultLeftAt"
-
-    private var store: UserDefaults? { UserDefaults(suiteName: Self.appGroupID) }
-
-    func loadLeftAt() -> TimeInterval? {
-        store?.object(forKey: Self.key) as? Double
-    }
-
-    func saveLeftAt(_ leftAt: TimeInterval?) {
-        if let leftAt {
-            store?.set(leftAt, forKey: Self.key)
-        } else {
-            store?.removeObject(forKey: Self.key)
-        }
-    }
+/// La session de la clef elle-même (`SessionLock`), dans les UserDefaults du
+/// groupe d'app : elle survit à la fermeture de la feuille comme à celle de
+/// l'app.
+struct KeySessionStore: VaultSessionStore {
+    func loadStampedAt() -> TimeInterval? { SessionLock.stampedAt }
+    func stamp(at instant: TimeInterval) { SessionLock.stamp(at: instant) }
+    func invalidate() { SessionLock.invalidate() }
 }
 
 /// Logique pure de la session, sans stockage ni horloge.
 enum VaultSession {
-    /// Revenu dans la grâce de la clef (3 minutes) après avoir quitté l'écran
-    /// déverrouillé ? Pas d'horodatage, ou horloge reculée : verrouillé.
-    static func resumesUnlocked(leftAt: TimeInterval?, now: TimeInterval) -> Bool {
-        guard let leftAt else { return false }
-        return SessionLock.isWithinGrace(stampedAt: leftAt, now: now)
+    /// Session encore dans la grâce de 3 minutes ? Pas d'horodatage, ou
+    /// horloge reculée : verrouillé.
+    static func isOpen(stampedAt: TimeInterval?, now: TimeInterval) -> Bool {
+        guard let stampedAt else { return false }
+        return SessionLock.isWithinGrace(stampedAt: stampedAt, now: now)
     }
 }
 
@@ -319,9 +311,12 @@ nonisolated struct SystemVaultBiometrics: VaultBiometrics {
 
 /// État du verrou pour un passage sur l'écran carnet.
 ///
-/// Une instance par présentation de l'écran. Le déverrouillage survit
-/// pourtant à sa fermeture : quitter l'écran déverrouillé horodate la sortie
-/// (`leave`), et une instance créée dans les 3 minutes repart déverrouillée.
+/// Une instance par présentation de l'écran. Le déverrouillage vit dans la
+/// session partagée avec la clef (`VaultSessionStore`) : déverrouiller le
+/// carnet la (re)démarre, quitter l'écran déverrouillé la fait courir
+/// (`leave`), et une instance créée pendant qu'elle tient repart
+/// déverrouillée, que la session vienne du carnet ou de la clef. Le verrou
+/// propre au carnet ne sert qu'à défaut de session valide.
 @MainActor
 final class VaultLockController: ObservableObject {
 
@@ -348,7 +343,7 @@ final class VaultLockController: ObservableObject {
         storage: VaultLockStorage = KeychainVaultLockStorage(),
         biometrics: VaultBiometrics = SystemVaultBiometrics(),
         iterations: Int = VaultPasswordHasher.iterations,
-        session: VaultSessionStore = AppGroupVaultSessionStore(),
+        session: VaultSessionStore = KeySessionStore(),
         now: @escaping () -> TimeInterval = { Date().timeIntervalSince1970 }
     ) {
         self.storage = storage
@@ -359,7 +354,7 @@ final class VaultLockController: ObservableObject {
         self.biometryKind = biometrics.kind
         let initial = Self.initialPhase(storage)
         if case .locked(let method) = initial,
-            VaultSession.resumesUnlocked(leftAt: session.loadLeftAt(), now: now())
+            VaultSession.isOpen(stampedAt: session.loadStampedAt(), now: now())
         {
             self.phase = .unlocked(method)
         } else {
@@ -393,31 +388,59 @@ final class VaultLockController: ObservableObject {
         }
     }
 
+    /// Quitté déverrouillé depuis le dernier `resume` : seul cas où le retour
+    /// doit vérifier la fenêtre. Resté sur l'écran, rien n'expire.
+    private var hasLeft = false
+
     // MARK: Session
 
-    /// Verrouille tout de suite et efface la fenêtre de grâce.
+    /// Verrouille tout de suite et ferme la session : la clef aussi.
     func lock() {
-        session.saveLeftAt(nil)
+        session.invalidate()
+        hasLeft = false
         if case .unlocked(let method) = phase { phase = .locked(method) }
     }
 
-    /// L'écran est quitté (fermé, app en arrière-plan ou sans le focus) : on
-    /// horodate la sortie sans verrouiller. Verrouillé, rien ne doit rouvrir.
+    /// L'écran est quitté (fermé, app en arrière-plan ou sans le focus) :
+    /// déverrouillé, la fenêtre de 3 minutes part de maintenant, comme pour la
+    /// clef. Verrouillé, la session (celle de la clef) n'est pas touchée.
     func leave() {
-        session.saveLeftAt(isUnlocked ? now() : nil)
+        guard isUnlocked else { return }
+        session.stamp(at: now())
+        hasLeft = true
     }
 
-    /// L'écran est de nouveau visible. Revenu dans les 3 minutes : toujours
-    /// ouvert, et l'horodatage est consommé (il n'a plus lieu d'être tant
-    /// qu'on y est). Au-delà : verrouillé. Jamais quitté : rien ne change.
+    /// L'écran est de nouveau visible. Session valide : ouvert, et la fenêtre
+    /// repart (la clef a pu être déverrouillée entre-temps). Revenu trop tard :
+    /// verrouillé. Jamais quitté : rien ne change.
     func resume() {
-        guard case .unlocked(let method) = phase, let leftAt = session.loadLeftAt() else {
-            return
+        let open = VaultSession.isOpen(stampedAt: session.loadStampedAt(), now: now())
+        switch phase {
+        case .unlocked(let method):
+            guard hasLeft else { return }
+            hasLeft = false
+            if open {
+                session.stamp(at: now())
+            } else {
+                phase = .locked(method)
+            }
+        case .locked(let method):
+            guard open, !isBusy else { return }
+            session.stamp(at: now())
+            error = nil
+            phase = .unlocked(method)
+        case .setup:
+            break
         }
-        session.saveLeftAt(nil)
-        if !VaultSession.resumesUnlocked(leftAt: leftAt, now: now()) {
-            phase = .locked(method)
-        }
+    }
+
+    /// Déverrouillage prouvé (biométrie, code de l'appareil ou mot de passe de
+    /// carnet vérifié) : la session commune démarre, la clef suit.
+    private func openSession(_ method: VaultLockMethod) {
+        session.stamp(at: now())
+        hasLeft = false
+        error = nil
+        phase = .unlocked(method)
     }
 
     // MARK: Première ouverture
@@ -428,8 +451,27 @@ final class VaultLockController: ObservableObject {
         return await enableBiometrics(reason: reason)
     }
 
+    /// Le mot de passe de carnet déverrouille aussi la clef : le poser sans
+    /// session valide exige d'abord l'authentification de l'appareil, sinon un
+    /// « Mot de passe oublié » suivi d'un nouveau mot de passe contournerait
+    /// le verrou de la clef.
     @discardableResult
-    func createPassword(_ password: String, confirmation: String) async -> Bool {
+    func createPassword(_ password: String, confirmation: String, reason: String) async -> Bool {
+        guard case .setup = phase else { return false }
+        if let invalid = VaultPasswordPolicy.validate(password, confirmation: confirmation) {
+            error = invalid
+            return false
+        }
+        if !VaultSession.isOpen(stampedAt: session.loadStampedAt(), now: now()) {
+            guard !isBusy else { return false }
+            isBusy = true
+            let ok = await biometrics.authenticate(reason: reason)
+            isBusy = false
+            guard ok else {
+                error = .biometricsFailed
+                return false
+            }
+        }
         guard case .setup = phase else { return false }
         return await storeNewPassword(password, confirmation: confirmation)
     }
@@ -452,8 +494,7 @@ final class VaultLockController: ObservableObject {
             error = .wrongPassword
             return false
         }
-        error = nil
-        phase = .unlocked(.password)
+        openSession(.password)
         return true
     }
 
@@ -468,8 +509,7 @@ final class VaultLockController: ObservableObject {
             error = .biometricsFailed
             return false
         }
-        error = nil
-        phase = .unlocked(.biometrics)
+        openSession(.biometrics)
         return true
     }
 
@@ -522,7 +562,9 @@ final class VaultLockController: ObservableObject {
         }
         storage.savePasswordRecord(nil)
         storage.saveMethod(nil)
-        session.saveLeftAt(nil)
+        // Plus de verrou de carnet, plus de session : la clef se referme aussi.
+        session.invalidate()
+        hasLeft = false
         error = nil
         phase = .setup
         return true
@@ -560,8 +602,7 @@ final class VaultLockController: ObservableObject {
         }
         // L'empreinte d'un ancien mot de passe n'a plus de raison d'exister.
         storage.savePasswordRecord(nil)
-        error = nil
-        phase = .unlocked(.biometrics)
+        openSession(.biometrics)
         return true
     }
 
@@ -582,8 +623,7 @@ final class VaultLockController: ObservableObject {
             error = .storageFailed
             return false
         }
-        error = nil
-        phase = .unlocked(.password)
+        openSession(.password)
         return true
     }
 

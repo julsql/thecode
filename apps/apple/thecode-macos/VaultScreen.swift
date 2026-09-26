@@ -38,8 +38,8 @@ struct VaultScreen: View {
     /// `nil` tant que l'identifiant client n'est pas renseigné : pas de bouton.
     private let google = GoogleAuth.configured()
 
-    /// Neuf à chaque présentation ; repart déverrouillé si l'écran a été
-    /// quitté ouvert il y a moins de 3 minutes (voir `VaultLockController`).
+    /// Neuf à chaque présentation ; repart déverrouillé tant que la session
+    /// commune avec la clef tient (voir `VaultLockController`).
     @StateObject private var lock = VaultLockController()
     @State private var showLockSettings = false
 
