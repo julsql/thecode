@@ -19,8 +19,7 @@ import java.util.UUID;
  * les mots de passe.
  *
  * Aucune version d'algorithme : toute entrée du carnet dérive en v2. La v1
- * ne subsiste qu'en génération ponctuelle, hors carnet. Un « v » résiduel lu
- * dans un carnet est ignoré et jamais réécrit : shared/spec/vault-merge.md.
+ * ne subsiste qu'en génération ponctuelle, hors carnet.
  *
  * Schéma : shared/vault.schema.json
  */
@@ -105,7 +104,6 @@ public final class VaultEntry {
         e.upper = charset.getBoolean("upper");
         e.symbols = charset.getBoolean("symbols");
         e.numbers = charset.getBoolean("numbers");
-        // Un « v » résiduel est toléré : jamais lu, donc jamais réécrit.
         e.createdAt = o.has("createdAt") && !o.isNull("createdAt")
                 ? o.getString("createdAt") : null;
         e.updatedAt = o.getString("updatedAt");
