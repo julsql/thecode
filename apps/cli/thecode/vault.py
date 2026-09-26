@@ -95,20 +95,6 @@ def new_entry(
     }
 
 
-def drop_version(entry: dict[str, Any]) -> dict[str, Any]:
-    """Retire un champ ``v`` résiduel : une entrée dérive toujours en v2."""
-    return {k: v for k, v in entry.items() if k != "v"}
-
-
-def strip_versions(vault: dict[str, Any]) -> dict[str, Any]:
-    """Applique :func:`drop_version` à tout le carnet.
-
-    Appliqué à chaque lecture (chargement, import, fusion) : un ``v`` résiduel
-    est toléré, ignoré, et jamais réécrit (shared/spec/vault-merge.md).
-    """
-    return {**vault, "entries": [drop_version(e) for e in vault.get("entries", [])]}
-
-
 def default_vault_path() -> Path:
     """Emplacement du carnet, suivant la convention XDG.
 
@@ -254,7 +240,6 @@ def merge(
     doit pas changer le résultat, sinon ils ne convergent jamais.
     """
     conflicts: list[Conflict] = []
-    left, right = strip_versions(left), strip_versions(right)
     by_id: dict[str, dict[str, Any]] = {e["id"]: e for e in left.get("entries", [])}
 
     for entry in right.get("entries", []):
@@ -311,7 +296,7 @@ def load(path: Path) -> dict[str, Any]:
         raise ValueError(
             f"Carnet en version {data.get('schema')}, attendu {SCHEMA_VERSION}"
         )
-    return strip_versions(data)
+    return data
 
 
 def save(vault: dict[str, Any], path: Path) -> None:

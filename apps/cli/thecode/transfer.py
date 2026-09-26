@@ -19,8 +19,6 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
-from .vault import strip_versions
-
 PREFIX = "TC1"
 NONCE_BYTES = 12
 KDF_SALT = b"thecode-transfer/v1"
@@ -84,5 +82,4 @@ def import_vault(payload: str, master_key: str) -> dict[str, Any]:
             "Déchiffrement impossible : clef maîtresse différente, ou données altérées."
         ) from exc
 
-    # Un « v » résiduel est ignoré : une entrée dérive toujours en v2.
-    return strip_versions(json.loads(zlib.decompress(plain)))
+    return json.loads(zlib.decompress(plain))
