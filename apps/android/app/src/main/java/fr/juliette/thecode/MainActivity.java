@@ -179,7 +179,9 @@ public class MainActivity extends AppCompatActivity {
         // l'empreinte ne s'affiche que si on la retape.
         updateFingerprint(preferences.getEncodingKey());
 
-        showV2NoticeIfNeeded();
+        // Seulement à l'ouverture de l'app : basculer v1/v2 ou changer de thème
+        // recrée l'écran, et l'annonce revenait à chaque fois.
+        if (savedInstanceState == null) showV2NoticeIfNeeded();
         applyLoginMode();
         if (announceAlgo) {
             announceAlgo = false;
