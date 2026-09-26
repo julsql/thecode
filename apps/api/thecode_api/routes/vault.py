@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session as DbSession
 from ..auth import current_account
 from ..config import get_settings
 from ..db import get_db
-from ..models import Account, VaultEntry
+from ..models import Account, DefaultSettings, VaultEntry
 from ..plans import limits_for
 from ..schemas import (
     EntryResponse,
@@ -154,11 +154,15 @@ def purge(
     account: Account = Depends(current_account),
     db: DbSession = Depends(get_db),
 ) -> None:
-    """Efface toutes les entrées du compte.
+    """Efface toutes les entrées du compte, et ses réglages par défaut.
+
+    Les réglages voyagent avec le carnet : vider l'un en laissant l'autre
+    garderait sur le serveur une trace de ce que l'utilisateur a voulu effacer.
 
     Suppression réelle, pas une pierre tombale : c'est une action explicite de
     l'utilisateur sur son propre compte, pas une synchronisation.
     """
     db.query(VaultEntry).filter(VaultEntry.account_id == account.id).delete()
+    db.query(DefaultSettings).filter(DefaultSettings.account_id == account.id).delete()
     account.revision += 1
     db.commit()

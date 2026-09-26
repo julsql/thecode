@@ -79,6 +79,26 @@ class EntryPayload(BaseModel):
         return value
 
 
+class DefaultSettingsPayload(BaseModel):
+    """Les réglages par défaut chiffrés, dans un sens comme dans l'autre.
+
+    Même contrôle que pour une entrée : le serveur n'en lit rien, il vérifie
+    seulement que ce sont bien des octets.
+    """
+
+    nonce: str
+    blob: str
+
+    @field_validator("nonce", "blob")
+    @classmethod
+    def must_be_base64url(cls, value: str) -> str:
+        try:
+            b64decode(value)
+        except Exception as exc:
+            raise ValueError("base64url attendu") from exc
+        return value
+
+
 class PushRequest(BaseModel):
     """Écriture par lot.
 
