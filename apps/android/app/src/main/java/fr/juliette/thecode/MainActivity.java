@@ -61,6 +61,14 @@ public class MainActivity extends AppCompatActivity {
     private TextInputEditText loginEditText;
     private TextInputLayout passwordInputLayout;
     private TextInputEditText passwordEditText;
+    private MaterialButton passwordRevealButton;
+    private MaterialButton saveEntryButton;
+    /**
+     * Mot de passe généré, en clair. Le champ n'affiche qu'un masque tant que
+     * l'utilisateur ne demande pas à le voir : copie et partage lisent ici.
+     */
+    private String currentPassword = "";
+    private boolean passwordRevealed = false;
     private EditText lengthEditText;
     private TextView securityLabelTextView;
     private View resultCard;
@@ -227,7 +235,7 @@ public class MainActivity extends AppCompatActivity {
         // remasque la clé et on efface le mot de passe pour qu'il n'y figure
         // pas. Les deux sont restitués à la reprise (cf. onStart).
         applyKeyHidden();
-        passwordEditText.setText("");
+        showPassword("");
         resultCard.setVisibility(View.GONE);
     }
 
@@ -241,6 +249,8 @@ public class MainActivity extends AppCompatActivity {
         loginEditText = findViewById(R.id.loginEditText);
         passwordInputLayout = findViewById(R.id.passwordInputLayout);
         passwordEditText = findViewById(R.id.passwordEditText);
+        passwordRevealButton = findViewById(R.id.passwordRevealButton);
+        saveEntryButton = findViewById(R.id.saveEntryButton);
         lengthEditText = findViewById(R.id.lengthEditText);
         securityLabelTextView = findViewById(R.id.securityLabelTextView);
         resultCard = findViewById(R.id.resultCard);
@@ -340,6 +350,11 @@ public class MainActivity extends AppCompatActivity {
         chiSwitch.setOnCheckedChangeListener((b, checked) -> { preferences.setChiState(checked); regenerate(); });
 
         passwordInputLayout.setEndIconOnClickListener(v -> copyPassword());
+        passwordRevealButton.setOnClickListener(v -> {
+            passwordRevealed = !passwordRevealed;
+            applyPasswordDisplay();
+        });
+        saveEntryButton.setOnClickListener(v -> saveToVault());
 
         keyInputLayout.setEndIconOnClickListener(v -> onKeyToggleClicked());
 
@@ -366,7 +381,7 @@ public class MainActivity extends AppCompatActivity {
             // Le nom du site n'est pas un secret : on le conserve (le flux de
             // déverrouillage par code PIN passe par onStart avant la réussite
             // de l'auth, l'effacer ferait perdre la saisie).
-            passwordEditText.setText("");
+            showPassword("");
             resultCard.setVisibility(View.GONE);
         } else {
             regenerate();
@@ -672,10 +687,15 @@ public class MainActivity extends AppCompatActivity {
         String key = textOf(keyEditText);
         String site = textOf(siteEditText);
 
+        // Chaque nouvelle génération repart masquée : un mot de passe révélé
+        // pour un site ne doit pas rester à l'écran pour le suivant.
+        passwordRevealed = false;
+
         boolean anyCharset = minSwitch.isChecked() || majSwitch.isChecked()
                 || symSwitch.isChecked() || chiSwitch.isChecked();
 
         if (key.isEmpty() || site.isEmpty() || !anyCharset) {
+            showPassword("");
             resultCard.setVisibility(View.GONE);
             return;
         }
@@ -685,9 +705,11 @@ public class MainActivity extends AppCompatActivity {
         // frappe : tant que la session est verrouillée le champ « nom du
         // site » n'est même pas affiché (cf. applySessionState).
         if (!sessionUnlocked) {
+            showPassword("");
             resultCard.setVisibility(View.GONE);
             return;
         }
+        applyPasswordDisplay();
 
         code.setMinState(minSwitch.isChecked());
         code.setMajState(majSwitch.isChecked());
@@ -706,7 +728,7 @@ public class MainActivity extends AppCompatActivity {
 
         if (useV1) {
             // La v1 est un simple SHA-256 : instantané, rien à déporter.
-            passwordEditText.setText(code.getCode(key, site));
+            showPassword(code.getCode(key, site));
             return;
         }
 
@@ -723,14 +745,44 @@ public class MainActivity extends AppCompatActivity {
                 // Une réponse arrivée après une frappe plus récente
                 // afficherait le mot de passe d'un autre site.
                 main.post(() -> {
-                    if (ticket == generation) passwordEditText.setText(result);
+                    if (ticket == generation) showPassword(result);
                 });
             } catch (java.security.GeneralSecurityException e) {
                 main.post(() -> {
-                    if (ticket == generation) passwordEditText.setText("");
+                    if (ticket == generation) showPassword("");
                 });
             }
         });
+    }
+
+    /** Retient le mot de passe généré et l'affiche selon le masquage en cours. */
+    private void showPassword(String password) {
+        currentPassword = password == null ? "" : password;
+        applyPasswordDisplay();
+        updateSaveButton();
+    }
+
+    private void applyPasswordDisplay() {
+        passwordEditText.setText(GeneratedPassword.display(currentPassword, passwordRevealed));
+        passwordRevealButton.setIconResource(passwordRevealed
+                ? R.drawable.ic_visibility_off : R.drawable.ic_visibility);
+        passwordRevealButton.setContentDescription(getString(passwordRevealed
+                ? R.string.hide_password : R.string.show_password));
+    }
+
+    /**
+     * Le bouton d'enregistrement n'apparaît qu'avec un mot de passe, et dit
+     * s'il crée l'entrée ou met à jour celle du compte. Pas en v1 : le carnet
+     * n'admet que la v2, l'entrée donnerait un autre mot de passe que celui
+     * affiché.
+     */
+    private void updateSaveButton() {
+        boolean shown = !useV1 && !currentPassword.isEmpty();
+        saveEntryButton.setVisibility(shown ? View.VISIBLE : View.GONE);
+        if (!shown) return;
+        boolean update = GeneratedPassword.hasEntry(vault,
+                textOf(siteEditText), textOf(loginEditText));
+        saveEntryButton.setText(update ? R.string.vault_update_entry : R.string.vault_save_entry);
     }
 
     @Override
@@ -753,7 +805,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void copyPassword() {
-        String password = textOf(passwordEditText);
+        String password = currentPassword;
         if (password.isEmpty()) {
             Snackbar.make(resultCard, R.string.no_password_to_copy, Snackbar.LENGTH_SHORT).show();
             return;
@@ -790,7 +842,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void share() {
-        String password = textOf(passwordEditText);
+        String password = currentPassword;
         String site = textOf(siteEditText);
         if (password.isEmpty()) {
             Snackbar.make(findViewById(android.R.id.content),
@@ -914,9 +966,6 @@ public class MainActivity extends AppCompatActivity {
         if (id == R.id.action_algo) {
             toggleAlgo();
             return true;
-        } else if (id == R.id.action_save_to_vault) {
-            saveToVault();
-            return true;
         } else if (id == R.id.action_vault) {
             startActivity(new android.content.Intent(this, VaultActivity.class));
             return true;
@@ -942,11 +991,8 @@ public class MainActivity extends AppCompatActivity {
      */
     private void saveToVault() {
         String site = textOf(siteEditText).trim();
-        if (site.isEmpty()) {
-            Snackbar.make(findViewById(android.R.id.content),
-                    R.string.vault_save_needs_site, Snackbar.LENGTH_LONG).show();
-            return;
-        }
+        // Le bouton n'apparaît qu'avec un mot de passe, donc avec un site.
+        if (site.isEmpty() || currentPassword.isEmpty()) return;
 
         String login = textOf(loginEditText).trim();
         // Relu juste avant d'écrire : la copie de l'écran peut dater.
@@ -959,6 +1005,7 @@ public class MainActivity extends AppCompatActivity {
         // Une entrée du carnet dérive toujours en v2, même enregistrée depuis
         // l'écran réglé en v1 : elle ne porte aucune version.
         vault.save(this);
+        updateSaveButton();
 
         // Une entrée existante garde son siteKey : le réécrire changerait un
         // mot de passe déjà en service. On le dit plutôt que de laisser croire
