@@ -278,6 +278,8 @@ public struct Sync {
         /// Blob distant indéchiffrable ou invalide : rien n'est touché, ni
         /// localement ni sur le serveur.
         case ignoredRemote
+        /// Réglages locaux jamais modifiés, compte vide : rien n'est poussé.
+        case keptLocal
     }
 
     /// Synchronise les réglages par défaut. Voir shared/spec/default-settings.md.
@@ -298,6 +300,10 @@ public struct Sync {
             }
             if remote.updatedAt >= local.updatedAt { return .applyRemote(remote) }
         }
+
+        // Jamais modifiés ici : ce sont les valeurs d'usine, pas un choix. Les
+        // pousser les imposerait aux autres appareils du compte.
+        if local.updatedAt == SharedSettings.neverUpdated { return .keptLocal }
 
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
@@ -400,6 +406,10 @@ public struct SharedSettings: Codable, Equatable {
     public var length: Int
     public var charset: Charset
     public var updatedAt: String
+
+    /// Date des réglages jamais modifiés sur l'appareil : ils perdent contre
+    /// ceux du compte et ne sont jamais poussés.
+    public static let neverUpdated = "1970-01-01T00:00:00Z"
 
     public init(length: Int, charset: Charset, updatedAt: String) {
         self.length = length

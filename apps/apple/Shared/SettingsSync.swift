@@ -21,7 +21,7 @@ extension PasswordSettings {
     static let stampKey = "settingsStamp"
 
     /// Un réglage jamais daté perd contre n'importe quelle valeur distante.
-    static let neverUpdated = "1970-01-01T00:00:00Z"
+    static let neverUpdated = SharedSettings.neverUpdated
 
     private static func stamp(_ values: Values) -> String {
         [

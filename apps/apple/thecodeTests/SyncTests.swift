@@ -370,6 +370,18 @@ private func freshDefaults() -> UserDefaults {
 @Suite("Synchronisation des réglages par défaut")
 struct SettingsSyncTests {
 
+    @Test("Des réglages jamais modifiés ne sont jamais poussés")
+    func neverPushesUntouchedSettings() async throws {
+        let server = FakeVaultServer()
+        let local = settings(length: 20, symbols: true, at: SharedSettings.neverUpdated)
+
+        let outcome = try await Sync(transport: server)
+            .syncSettings(local, masterKey: "clef", credentials: credentials)
+
+        #expect(outcome == .keptLocal)
+        #expect(await server.settings == nil)
+    }
+
     @Test("Sans réglages sur le compte, les locaux sont poussés, chiffrés")
     func pushesWhenTheAccountHasNone() async throws {
         let server = FakeVaultServer()
