@@ -7,14 +7,19 @@ import os
 import sys
 from pathlib import Path
 
+from . import settings as default_settings
 from .canonical import canonical_site
 from .core import generate_password, generate_password_v2
 from .fingerprint import fingerprint, fingerprint_color
 from .sync import (
     DEFAULT_ENDPOINT,
+    SETTINGS_IGNORED,
+    SETTINGS_PULLED,
+    SETTINGS_PUSHED,
     Credentials,
     SyncError,
     is_paid_plan,
+    sync_settings,
 )
 from .sync import (
     login as sync_login,
@@ -28,7 +33,6 @@ from .sync import (
 from .transfer import TransferError, export_vault, import_vault
 from .variants import variants
 from .vault import (
-    DEFAULT_LENGTH,
     Conflict,
     default_vault_path,
     find_all_by_domain,
@@ -45,19 +49,43 @@ def build_parser() -> argparse.ArgumentParser:
         prog="thecode",
         description="Génère un mot de passe déterministe à partir d'une clef et d'un site.",
     )
-    parser.add_argument("-p", "--password", required=True, help="Mot de passe maître (clef)")
-    parser.add_argument("site", help="Site pour lequel générer le mot de passe (ex: google.com)")
+    parser.add_argument("-p", "--password", help="Mot de passe maître (clef)")
+    parser.add_argument(
+        "site", nargs="?", help="Site pour lequel générer le mot de passe (ex: google.com)"
+    )
     parser.add_argument(
         "-l",
         "--length",
         type=int,
         default=None,
-        help=f"Longueur du mot de passe (défaut: {DEFAULT_LENGTH}, ou celle de l'entrée du carnet)",
+        help="Longueur du mot de passe (défaut: celle de l'entrée du carnet, sinon le "
+        "réglage par défaut, 20 d'usine)",
     )
-    parser.add_argument("--no-lower", action="store_true", help="Désactive les minuscules")
-    parser.add_argument("--no-upper", action="store_true", help="Désactive les majuscules")
-    parser.add_argument("--no-symbols", action="store_true", help="Désactive les symboles")
-    parser.add_argument("--no-numbers", action="store_true", help="Désactive les chiffres")
+    # --lower/--no-lower… : l'absence d'option reprend l'entrée du carnet ou le
+    # réglage par défaut, la forme positive sert à réactiver un jeu éteint.
+    for name, label in (
+        ("lower", "les minuscules"),
+        ("upper", "les majuscules"),
+        ("symbols", "les symboles"),
+        ("numbers", "les chiffres"),
+    ):
+        parser.add_argument(
+            f"--{name}",
+            action=argparse.BooleanOptionalAction,
+            default=None,
+            help=f"Active (--{name}) ou désactive (--no-{name}) {label}",
+        )
+    parser.add_argument(
+        "--save-defaults",
+        action="store_true",
+        help="Retient --length et --[no-]lower/upper/symbols/numbers comme réglages par "
+        "défaut des sites absents du carnet, puis sort (partagés avec le compte au --sync)",
+    )
+    parser.add_argument(
+        "--defaults",
+        action="store_true",
+        help="Affiche les réglages par défaut retenus et sort",
+    )
     parser.add_argument(
         "-s",
         "--show",
@@ -168,12 +196,17 @@ def _copy_to_clipboard(value: str) -> bool:
         return False
 
 
-def _resolve(args, vault_data):
+def _explicit_charset(args) -> dict[str, bool | None]:
+    """Les jeux de caractères donnés en option ; None pour ceux laissés libres."""
+    return {k: getattr(args, k) for k in default_settings.CHARSET_KEYS}
+
+
+def _resolve(args, vault_data, defaults=None):
     """Choisit l'entrée du carnet à utiliser, et les paramètres qui vont avec.
 
-    Le carnet prime sur les valeurs par défaut : c'est tout son intérêt, ne plus
-    avoir à se souvenir qu'un site avait été réglé sans symboles. Un argument
-    explicite reste prioritaire sur le carnet.
+    Le carnet prime sur les réglages par défaut : c'est tout son intérêt, ne
+    plus avoir à se souvenir qu'un site avait été réglé sans symboles. Un
+    argument explicite reste prioritaire sur les deux.
     """
     domain = canonical_site(args.site)
     matches = find_all_by_domain(vault_data, domain)
@@ -196,33 +229,15 @@ def _resolve(args, vault_data):
 
     entry = matches[0] if matches else None
 
-    explicit = {
-        "length": args.length,
-        "lower": False if args.no_lower else None,
-        "upper": False if args.no_upper else None,
-        "symbols": False if args.no_symbols else None,
-        "numbers": False if args.no_numbers else None,
+    base = entry or defaults or default_settings.factory()
+    charset = {
+        k: base["charset"][k] if v is None else v for k, v in _explicit_charset(args).items()
     }
-
-    if entry:
-        charset = entry["charset"]
-        params = {
-            "site": entry["siteKey"],
-            "length": explicit["length"] or entry["length"],
-            "lower": charset["lower"] if explicit["lower"] is None else False,
-            "upper": charset["upper"] if explicit["upper"] is None else False,
-            "symbols": charset["symbols"] if explicit["symbols"] is None else False,
-            "numbers": charset["numbers"] if explicit["numbers"] is None else False,
-        }
-    else:
-        params = {
-            "site": domain,
-            "length": explicit["length"] or DEFAULT_LENGTH,
-            "lower": not args.no_lower,
-            "upper": not args.no_upper,
-            "symbols": not args.no_symbols,
-            "numbers": not args.no_numbers,
-        }
+    params = {
+        "site": entry["siteKey"] if entry else domain,
+        "length": args.length or base["length"],
+        **charset,
+    }
 
     return entry, params
 
@@ -282,6 +297,52 @@ def _describe_conflict(conflict: Conflict) -> str:
     )
 
 
+def _describe_defaults(chosen) -> str:
+    return default_settings.describe(chosen, _t("caractères", "characters"))
+
+
+def _sync_default_settings(master_key: str, creds) -> None:
+    """Partage les réglages par défaut, après le carnet.
+
+    Un échec ne défait pas la synchronisation du carnet, déjà enregistrée : on
+    le signale et on garde les réglages locaux.
+    """
+    try:
+        chosen, outcome, _ = sync_settings(default_settings.load(), master_key, creds)
+    except (SyncError, TransferError) as exc:
+        print(
+            _t(
+                f"⚠ Réglages par défaut non synchronisés : {exc}",
+                f"⚠ Default settings not synced: {exc}",
+            ),
+            file=sys.stderr,
+        )
+        return
+    if outcome == SETTINGS_PULLED:
+        default_settings.save(chosen)
+        print(
+            _t(
+                f"✓ Réglages par défaut repris du compte : {_describe_defaults(chosen)}.",
+                f"✓ Default settings taken from the account: "
+                f"{_describe_defaults(chosen)}.",
+            ),
+            file=sys.stderr,
+        )
+    elif outcome == SETTINGS_PUSHED:
+        print(
+            _t("✓ Réglages par défaut envoyés au compte.", "✓ Default settings sent to the account."),
+            file=sys.stderr,
+        )
+    elif outcome == SETTINGS_IGNORED:
+        print(
+            _t(
+                "⚠ Réglages par défaut du compte illisibles (autre clef maîtresse ?) : ignorés.",
+                "⚠ The account's default settings are unreadable (another master key?): ignored.",
+            ),
+            file=sys.stderr,
+        )
+
+
 def _print_vault(vault_data) -> int:
     entries = [e for e in vault_data.get("entries", []) if not e.get("deleted")]
     if not entries:
@@ -301,7 +362,47 @@ def _print_vault(vault_data) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
+
+    if args.defaults:
+        current = default_settings.load()
+        origin = (
+            _t(f"retenus le {current['updatedAt']}", f"saved on {current['updatedAt']}")
+            if current["updatedAt"]
+            else _t("valeurs d'usine", "factory values")
+        )
+        print(f"{_describe_defaults(current)}  ({origin})")
+        return 0
+
+    if args.save_defaults:
+        try:
+            chosen = default_settings.updated(
+                default_settings.load(), args.length, _explicit_charset(args)
+            )
+        except ValueError as exc:
+            print(exc, file=sys.stderr)
+            return 1
+        default_settings.save(chosen)
+        print(
+            _t(
+                f"✓ Réglages par défaut : {_describe_defaults(chosen)} "
+                f"({default_settings.settings_path()}).",
+                f"✓ Default settings: {_describe_defaults(chosen)} "
+                f"({default_settings.settings_path()}).",
+            ),
+            file=sys.stderr,
+        )
+        return 0
+
+    offline = args.list or args.logout or args.login or args.register
+    if not offline and not args.password:
+        parser.error("l'option -p/--password est requise")
+    needs_site = not (
+        offline or args.sync or args.fingerprint or args.export or args.import_payload
+    )
+    if needs_site and not args.site:
+        parser.error("le site est requis (ex: google.com)")
 
     if args.save and args.algo != 2:
         # Le carnet n'accepte que la v2 : la v1 ne sert plus qu'à retrouver
@@ -361,7 +462,7 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 1
         try:
-            merged, conflicts, local_only, _ = sync_vault(vault_data, args.password, creds)
+            merged, conflicts, local_only, creds = sync_vault(vault_data, args.password, creds)
         except (SyncError, TransferError) as exc:
             print(
                 _t(f"Échec de synchronisation : {exc}", f"Sync failed: {exc}"), file=sys.stderr
@@ -390,6 +491,7 @@ def main(argv: list[str] | None = None) -> int:
             ),
             file=sys.stderr,
         )
+        _sync_default_settings(args.password, creds)
         return 0
 
     if args.fingerprint:
@@ -443,7 +545,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
 
-    entry, params = _resolve(args, vault_data)
+    entry, params = _resolve(args, vault_data, default_settings.load())
 
     if args.renew:
         if entry is None:

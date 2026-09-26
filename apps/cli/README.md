@@ -35,11 +35,28 @@ thecode -p password google.com
 
 - `-p, --password` : clef maître (obligatoire)
 - `-s, --show` : affiche le mot de passe sur stdout (par défaut il est copié dans le presse-papiers)
-- `-l, --length` : longueur du mot de passe (défaut : 20)
-- `--no-lower` : désactive les minuscules
-- `--no-upper` : désactive les majuscules
-- `--no-symbols` : désactive les symboles
-- `--no-numbers` : désactive les chiffres
+- `-l, --length` : longueur du mot de passe (défaut : celle de l'entrée du carnet, sinon le réglage par défaut)
+- `--no-lower` / `--lower` : désactive / active les minuscules
+- `--no-upper` / `--upper` : désactive / active les majuscules
+- `--no-symbols` / `--symbols` : désactive / active les symboles
+- `--no-numbers` / `--numbers` : désactive / active les chiffres
+
+Une option explicite prime toujours, pour la commande en cours, sur l'entrée du carnet et sur les
+réglages par défaut.
+
+### Réglages par défaut
+
+Longueur et jeux de caractères utilisés pour un site absent du carnet (d'usine : 20, tous les jeux).
+Ils sont retenus dans `~/.config/thecode/settings.json` (ou `$XDG_CONFIG_HOME/thecode/`).
+
+```bash
+thecode --save-defaults -l 16 --no-symbols   # retient 16 caractères, sans symboles
+thecode --save-defaults --symbols            # réactive les symboles, garde le reste
+thecode --defaults                           # affiche les réglages retenus
+```
+
+Longueur bornée entre 4 et 40, au moins un jeu actif. Avec un compte lié, `--sync` les partage
+après le carnet, chiffrés comme une entrée : la modification la plus récente l'emporte.
 
 ## Sans installation
 

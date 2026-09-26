@@ -20,7 +20,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .transfer import derive_transfer_key
+from . import settings as settings_module
+from .transfer import TransferError, derive_transfer_key
 from .vault import Conflict, merge, select_for_push
 
 DEFAULT_ENDPOINT = "https://thecode-api.julsql.fr"
@@ -175,7 +176,8 @@ def _authorised(creds: Credentials, call) -> tuple[Any, Credentials]:
         return call(creds.access_token), creds
 
 
-def _encrypt_entry(entry: dict[str, Any], key: bytes) -> dict[str, str]:
+def _seal(value: dict[str, Any], key: bytes) -> dict[str, str]:
+    """Chiffre une valeur JSON : AES-256-GCM, nonce de 12 octets, base64url."""
     import os as _os
 
     from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -183,20 +185,18 @@ def _encrypt_entry(entry: dict[str, Any], key: bytes) -> dict[str, str]:
     from .transfer import _b64e
 
     nonce = _os.urandom(12)
-    plain = json.dumps(entry, ensure_ascii=False, separators=(",", ":")).encode()
-    cipher = AESGCM(key).encrypt(nonce, plain, None)
-    return {
-        "entry_id": entry["id"],
-        "nonce": _b64e(nonce),
-        "blob": _b64e(cipher),
-        "deleted": bool(entry.get("deleted")),
-    }
+    plain = json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode()
+    return {"nonce": _b64e(nonce), "blob": _b64e(AESGCM(key).encrypt(nonce, plain, None))}
+
+
+def _encrypt_entry(entry: dict[str, Any], key: bytes) -> dict[str, str]:
+    return {"entry_id": entry["id"], **_seal(entry, key), "deleted": bool(entry.get("deleted"))}
 
 
 def _decrypt_entry(row: dict[str, str], key: bytes) -> dict[str, Any]:
     from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-    from .transfer import TransferError, _b64d
+    from .transfer import _b64d
 
     try:
         plain = AESGCM(key).decrypt(_b64d(row["nonce"]), _b64d(row["blob"]), None)
@@ -262,3 +262,50 @@ def sync(
     )
 
     return merged, conflicts, len(local_only), creds
+
+
+#: Issues de :func:`sync_settings`.
+SETTINGS_PULLED = "pulled"
+SETTINGS_PUSHED = "pushed"
+SETTINGS_UNCHANGED = "unchanged"
+SETTINGS_IGNORED = "ignored"
+
+
+def sync_settings(
+    local: dict[str, Any], master_key: str, creds: Credentials
+) -> tuple[dict[str, Any], str, Credentials]:
+    """Partage les réglages par défaut avec le compte (shared/spec/default-settings.md).
+
+    À appeler après la synchronisation du carnet. Tire, garde le plus récent
+    (à égalité, le distant), puis pousse si le local l'emportait. Rend les
+    réglages à appliquer localement, l'issue, et la session.
+
+    Un blob illisible (autre clef maîtresse, contenu incohérent) est ignoré :
+    ni les réglages locaux ni ceux du compte ne sont écrasés.
+    """
+    key = derive_transfer_key(master_key)
+    url = f"{creds.endpoint}/v1/settings"
+
+    pulled, creds = _authorised(creds, lambda token: _request(url, token=token))
+
+    remote = None
+    if pulled:
+        try:
+            remote = _decrypt_entry(pulled, key)
+        except (TransferError, KeyError, ValueError):
+            return local, SETTINGS_IGNORED, creds
+        if not settings_module.is_valid(remote):
+            return local, SETTINGS_IGNORED, creds
+        remote = settings_module.normalise(remote)
+
+    if remote is not None and settings_module.instant(remote) >= settings_module.instant(local):
+        return remote, SETTINGS_UNCHANGED if remote == local else SETTINGS_PULLED, creds
+
+    # Des réglages jamais modifiés sur cet appareil n'ont rien à apprendre au
+    # compte : les pousser ferait passer les valeurs d'usine pour un choix.
+    if not local["updatedAt"]:
+        return local, SETTINGS_UNCHANGED, creds
+
+    payload = _seal(settings_module.normalise(local), key)
+    _, creds = _authorised(creds, lambda token: _request(url, payload, token=token, method="PUT"))
+    return local, SETTINGS_PUSHED, creds

@@ -32,6 +32,9 @@ class FakeServer:
         self.valid_token = valid_token
         #: Tout ce qui est passé sur le réseau, pour vérifier l'absence de clair.
         self.sent: list[str] = []
+        #: Réglages par défaut du compte : ``{"nonce", "blob"}``, ou None (204).
+        self.settings: dict | None = None
+        self.settings_puts = 0
 
     def __call__(self, url, payload=None, token="", method=""):
         if payload is not None:
@@ -44,6 +47,15 @@ class FakeServer:
 
         if token != self.valid_token:
             raise SyncError("401 : Jeton expiré")
+
+        if url.endswith("/v1/settings"):
+            if payload is None:
+                return self.settings
+            assert method == "PUT"
+            assert set(payload) == {"nonce", "blob"}
+            self.settings = payload
+            self.settings_puts += 1
+            return None
 
         if payload is None:
             body = {"revision": self.revision, "entries": list(self.rows.values())}
