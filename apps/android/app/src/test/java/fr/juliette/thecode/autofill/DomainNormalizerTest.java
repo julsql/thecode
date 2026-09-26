@@ -2,6 +2,7 @@ package fr.juliette.thecode.autofill;
 
 import static org.junit.Assert.assertEquals;
 
+import org.junit.Before;
 import org.junit.Test;
 
 /**
@@ -9,6 +10,15 @@ import org.junit.Test;
  * le même domaine canonique — ce qui garantit le même mot de passe généré.
  */
 public class DomainNormalizerTest {
+
+    /**
+     * Charge la liste des suffixes ici : ce test en dépend, et comptait jusqu'ici
+     * sur un autre test pour l'avoir chargée avant lui dans la même JVM.
+     */
+    @Before
+    public void loadPublicSuffixList() throws Exception {
+        new DomainCanonicalTest().loadPublicSuffixList();
+    }
 
     private static String normalize(String input) {
         // Méthode package-private : on est dans le même package.
