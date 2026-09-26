@@ -93,10 +93,10 @@ PARTOUT, AVEC LA MÊME CLEF
 La même clef vous redonne les mêmes mots de passe sur chacun d'eux, même sans synchronisation.
 
 ━━━━━━━━━━━━━━━━━━━━━
-GRATUIT, AVEC UNE OFFRE COMPLÈTE
+SANS PUBLICITÉ
 ━━━━━━━━━━━━━━━━━━━━━
 
-La génération, le carnet et le remplissage sont gratuits et illimités, sans publicité. Un compte gratuit synchronise quelques entrées sur trois appareils. L'offre complète lève ces limites.
+Aucune publicité, aucun traceur. La génération, le carnet et le remplissage fonctionnent sans compte ; un compte sert seulement à synchroniser vos appareils.
 
 ━━━━━━━━━━━━━━━━━━━━━
 COMMENT ÇA MARCHE ?
@@ -154,7 +154,7 @@ Requêtes visées, intégrées ci-dessus :
 | Tags Google Play        | `Sécurité`, `Productivité`                               |
 | Public cible            | 18 ans et plus (pas de contenu pour enfants)             |
 | Contient des publicités | **Non**                                                  |
-| Achats intégrés         | **Non** (l'offre complète se souscrit sur le site)      |
+| Achats intégrés         | **Non**      |
 | Accès au contenu        | Sans restriction ; un compte n'est jamais obligatoire    |
 
 **Questionnaire IARC** : aucun contenu sensible → PEGI 3 / ESRB Everyone.

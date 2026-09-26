@@ -93,10 +93,10 @@ EVERYWHERE, WITH THE SAME KEY
 The same key gives you the same passwords on each of them, even without sync.
 
 ━━━━━━━━━━━━━━━━━━━━━
-FREE, WITH A COMPLETE PLAN
+NO ADS
 ━━━━━━━━━━━━━━━━━━━━━
 
-Generation, the vault and autofill are free and unlimited, with no ads. A free account syncs a few entries across three devices. The complete plan lifts those limits.
+No ads, no trackers. Generation, the vault and autofill work without an account; an account is only used to sync your devices.
 
 ━━━━━━━━━━━━━━━━━━━━━
 HOW IT WORKS
@@ -154,7 +154,7 @@ above:
 | Play tags        | `Security`, `Productivity`                             |
 | Target audience  | 18+ (not designed for children)                        |
 | Contains ads     | **No**                                                 |
-| In-app purchases | **No** (the complete plan is taken out on the website) |
+| In-app purchases | **No** |
 | Content access   | Unrestricted; an account is never required             |
 
 **IARC questionnaire**: no sensitive content → PEGI 3 / ESRB Everyone.

@@ -63,8 +63,9 @@ Tout le reste : **non collecté**. En particulier :
 - **Carnet et réglages par défaut** : chiffrés de bout en bout, illisibles par le développeur.
   Google exclut explicitement ces données de la déclaration.
 - **Position** : non. L'adresse IP est dans les journaux mais ne sert pas à localiser.
-- **Informations financières / historique d'achat** : non collectées par l'app. L'abonnement est
-  souscrit sur le site, via Stripe.
+- **Informations financières / historique d'achat** : non collectées par l'app. (Note interne,
+  à ne pas recopier dans un formulaire ni une fiche : le paiement éventuel passe par Stripe, sur le
+  site, jamais depuis l'app.)
 - **Activité dans l'app, historique de navigation, diagnostics, identifiants de l'appareil** : non.
   Le modèle de l'appareil (`Build.MODEL`, ex. « Pixel 8 ») sert de libellé dans la liste des
   appareils : ce n'est pas un identifiant au sens de Google.
@@ -97,7 +98,7 @@ et de recherche, achats, utilisation, diagnostics, données sensibles).
 
 - **Contenu utilisateur** : le carnet synchronisé est chiffré de bout en bout ; le développeur ne
   peut pas y accéder. Au sens d'Apple, ce n'est pas une donnée « collectée ».
-- **Achats** : non. Aucun achat intégré ; l'abonnement se prend sur le site.
+- **Achats** : non. Aucun achat intégré.
 - **Nom de l'appareil** : `UIDevice.current.name` (générique, « iPhone », depuis iOS 16) et le nom
   de l'ordinateur sur macOS servent de libellé dans la liste des appareils. Sur macOS, ce nom
   contient souvent le prénom de l'utilisateur : le déclarer en « Autres types de données », lié,
@@ -173,3 +174,10 @@ synchronisation étant facultative : `"required": ["none"]` et
    (la configuration par défaut pointe vers le SMTP de Gmail).
 5. **Durées non vérifiables dans le code** : journaux techniques « quelques jours », sauvegardes
    « sept jours au maximum ». À confirmer côté hébergement.
+
+## Règle : aucune promotion d'une offre payante
+
+Ni les fiches des stores, ni les textes des apps ne mentionnent d'offre payante, de prix,
+d'abonnement ou de « débloquer » : le service deviendra payant plus tard, et Apple comme Google
+refusent qu'une app oriente vers un paiement hors de leur système. Les textes à recopier dans les
+formulaires restent neutres.
