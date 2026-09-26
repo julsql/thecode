@@ -41,6 +41,7 @@ function fakeService(overrides: Record<string, unknown> = {}) {
       {
         id: "11111111-1111-1111-1111-111111111111",
         label: "site web",
+        client: "app",
         created_at: "2026-09-01T10:00:00Z",
         expires_at: "2026-10-01T10:00:00Z",
       },
@@ -427,6 +428,24 @@ describe("page du compte", () => {
       expect(wrapper.text()).toContain("4 / 20");
       expect(wrapper.text()).toContain("1 / 2");
       expect(wrapper.text()).toContain("site web");
+    });
+
+    it("présente une session du site comme un navigateur", async () => {
+      const service = fakeService();
+      service.state.devices = [
+        {
+          id: "22222222-2222-2222-2222-222222222222",
+          label: "site web",
+          client: "web",
+          created_at: "2026-09-01T10:00:00Z",
+          expires_at: "2026-10-01T10:00:00Z",
+        },
+      ];
+      const wrapper = await mountAccount();
+
+      expect(wrapper.text()).toContain("Navigateur (site)");
+      expect(wrapper.text()).toContain("ne comptent pas dans la limite");
+      expect(button(wrapper, "Déconnecter")).toBeDefined();
     });
 
     it("signale une adresse non confirmée", async () => {

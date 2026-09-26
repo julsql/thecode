@@ -275,6 +275,9 @@ export const translations = {
     acc_device_disconnect: "Disconnect",
     acc_device_since: "connected on",
     acc_device_none: "No device connected.",
+    acc_device_web: "Browser (website)",
+    acc_device_web_hint:
+      "Website sessions do not count toward the device limit: the website always signs in, so you can disconnect a device from here.",
     acc_code_title: "Use a code",
     acc_code_unlocks: "A code lifts the sync limits on this account.",
     acc_code_apply: "Apply",
@@ -714,6 +717,9 @@ export const translations = {
     acc_device_disconnect: "Déconnecter",
     acc_device_since: "connecté le",
     acc_device_none: "Aucun appareil connecté.",
+    acc_device_web: "Navigateur (site)",
+    acc_device_web_hint:
+      "Les sessions du site ne comptent pas dans la limite d'appareils : le site s'ouvre toujours, pour pouvoir déconnecter un appareil d'ici.",
     acc_code_title: "Utiliser un code",
     acc_code_unlocks: "Un code lève les limites de synchronisation sur ce compte.",
     acc_code_apply: "Appliquer",

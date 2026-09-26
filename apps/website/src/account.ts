@@ -50,6 +50,8 @@ export interface PlanInfo {
 export interface Device {
   id: string;
   label: string;
+  /** Session du site : hors du plafond d'appareils, mais déconnectable. */
+  web: boolean;
   createdAt: string;
   expiresAt: string;
 }
@@ -95,11 +97,18 @@ export async function fetchPlans(endpoint: string): Promise<PlanInfo> {
 export async function fetchDevices(session: Session): Promise<Device[]> {
   const body = (await authorized(session, (token) =>
     request(`${session.endpoint}/v1/account/devices`, { token }),
-  )) as Array<{ id: string; label: string; created_at: string; expires_at: string }>;
+  )) as Array<{
+    id: string;
+    label: string;
+    client?: string;
+    created_at: string;
+    expires_at: string;
+  }>;
 
   return body.map((row) => ({
     id: row.id,
     label: row.label,
+    web: row.client === "web",
     createdAt: row.created_at,
     expiresAt: row.expires_at,
   }));

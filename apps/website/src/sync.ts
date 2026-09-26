@@ -157,6 +157,7 @@ export async function register(
       invite_code: code,
       lang,
       device_label: "site web",
+      client: "web",
     },
   })) as { access_token: string; refresh_token: string };
 
@@ -167,9 +168,16 @@ export async function register(
   };
 }
 
+/**
+ * Ouvre une session du site.
+ *
+ * `client: "web"` (comme à l'inscription et avec Google) : le site est
+ * l'endroit où l'on déconnecte un appareil, ses sessions ne comptent donc pas
+ * dans le plafond d'appareils et ne sont jamais refusées à cause de lui.
+ */
 export async function login(endpoint: string, email: string, password: string): Promise<Session> {
   const body = await request(`${endpoint}/v1/auth/login`, {
-    payload: { email, password, device_label: "site web" },
+    payload: { email, password, device_label: "site web", client: "web" },
   });
   return {
     endpoint,
@@ -197,6 +205,7 @@ export async function googleSignIn(
       invite_code: code,
       lang,
       device_label: "site web",
+      client: "web",
     },
   });
   return {

@@ -366,7 +366,9 @@
             <p v-if="devices.length === 0" class="hint">{{ t("acc_device_none") }}</p>
             <ul v-else class="device-list">
               <li v-for="device in devices" :key="device.id">
-                <span class="device-name">{{ device.label }}</span>
+                <span class="device-name">{{
+                  device.web ? t("acc_device_web") : device.label
+                }}</span>
                 <span class="device-date">
                   {{ t("acc_device_since") }} {{ formatDate(device.createdAt) }}
                 </span>
@@ -375,6 +377,9 @@
                 </button>
               </li>
             </ul>
+            <p v-if="devices.some((d) => d.web)" class="hint">
+              {{ t("acc_device_web_hint") }}
+            </p>
             <p class="hint">{{ t("acc_sync_hint") }}</p>
           </section>
         </template>
