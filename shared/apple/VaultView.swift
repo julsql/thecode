@@ -52,6 +52,21 @@ public struct VaultView<Header: View>: View {
         List {
             header
 
+            // Chaque entrée est chiffrée avec la clef : une autre clef ne voit
+            // pas celles des autres appareils, sans erreur visible.
+            Section {
+                Text(
+                    L10nVault.t(
+                        "Si vous ne voyez pas tous vos mots de passe, vérifiez que vous "
+                            + "utilisez la même clef.",
+                        "If you don't see all your passwords, check that you are using "
+                            + "the same key.")
+                )
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            }
+
             if visibleEntries.isEmpty {
                 // Une liste vide sans explication se lit comme une panne.
                 //

@@ -136,6 +136,17 @@
             <!-- Sous la synchronisation, affiché seulement quand il n'y a
                  rien : une liste vide sans explication laisse croire à une
                  panne. -->
+            <!-- Chaque entrée est chiffrée avec la clef : une autre clef ne
+                 voit pas celles des autres appareils, sans erreur visible. -->
+            <TextView
+                android:id="@+id/vaultSameKeyHint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="@string/vault_same_key_hint"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:visibility="gone" />
+
             <TextView
                 android:id="@+id/vaultEmpty"
                 android:layout_width="match_parent"
