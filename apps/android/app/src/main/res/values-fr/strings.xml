@@ -92,6 +92,7 @@
     <string name="sync_pitch_title">Synchronisez votre carnet</string>
     <string name="sync_pitch_body">Gardez votre carnet à jour entre vos appareils. Il est chiffré sur cet appareil avant d\'être envoyé : le serveur ne peut lire ni vos sites, ni vos identifiants.</string>
     <string name="sync_pitch_action">Créer un compte</string>
+    <string name="sync_pitch_sign_in">Se connecter</string>
     <string name="sync_account_url" translatable="false">https://thecode.julsql.fr/fr/account?from=app</string>
     <string name="sync_running">Synchronisation…</string>
     <string name="sync_done">Carnet synchronisé : %1$d entrées.</string>
