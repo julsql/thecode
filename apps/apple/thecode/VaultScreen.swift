@@ -43,7 +43,6 @@ struct VaultScreen: View {
     /// Neuf à chaque présentation ; repart déverrouillé tant que la session
     /// commune avec la clef tient (voir `VaultLockController`).
     @StateObject private var lock = VaultLockController()
-    @State private var showLockSettings = false
     @State private var showDeleteAccount = false
 
     /// Entrée ouverte en détail. Relue dans le carnet à chaque rendu : un
@@ -89,9 +88,6 @@ struct VaultScreen: View {
             // rend la synchronisation facultative.
             TransferView(masterKey: masterKey, isPresented: $showTransfer)
                 .onDisappear(perform: reloadAfterTransfer)
-        }
-        .sheet(isPresented: $showLockSettings) {
-            VaultLockSettingsView(lock: lock) { showLockSettings = false }
         }
         .sheet(isPresented: $showDeleteAccount) {
             DeleteAccountView(onDeleted: accountDeleted) { showDeleteAccount = false }
@@ -150,13 +146,12 @@ struct VaultScreen: View {
         }
         .onChange(of: lock.isUnlocked) { unlocked in
             if unlocked {
-                // Un oubli a pu effacer le carnet entre-temps.
+                // Il a pu changer pendant que l'écran était verrouillé.
                 vault = VaultStore.load()
             } else {
                 // Rien de ce qui était ouvert ne doit rester par-dessus le verrou.
                 showSignIn = false
                 showTransfer = false
-                showLockSettings = false
                 showDeleteAccount = false
                 selectedID = nil
                 pending = nil
@@ -172,10 +167,10 @@ struct VaultScreen: View {
         Button(L10n.t("Transférer", "Transfer")) { showTransfer = true }
             .buttonStyle(.borderless)
 
-        Button { showLockSettings = true } label: {
+        Button { lock.lock() } label: {
             Image(systemName: "lock")
         }
-        .accessibilityLabel(L10n.t("Verrou du carnet", "Vault lock"))
+        .accessibilityLabel(L10n.t("Verrouiller le carnet", "Lock the vault"))
     }
 
     /// Section du haut, comme sur Android : la synchronisation à part, avant
