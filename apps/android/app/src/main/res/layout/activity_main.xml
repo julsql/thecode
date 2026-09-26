@@ -496,6 +496,10 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="4dp"
+                                android:layout_gravity="end"
+                                android:minHeight="52dp"
+                                android:paddingHorizontal="24dp"
+                                android:textSize="15sp"
                                 android:text="@string/vault_save_entry"
                                 android:visibility="gone" />
 

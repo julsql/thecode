@@ -374,6 +374,7 @@ struct MainView: View {
                                     .foregroundColor(securityColor)
 
                                 saveEntryButton
+                                    .frame(maxWidth: .infinity, alignment: .trailing)
 
                                 if let vaultSaveMessage {
                                     Text(vaultSaveMessage)
@@ -589,11 +590,11 @@ struct MainView: View {
         if !useV1 {
             Button(action: saveToVault) {
                 Text(saveEntryTitle)
-                    .font(.footnote)
+                    .font(.subheadline.weight(.semibold))
                     .lineLimit(1)
             }
             .buttonStyle(.bordered)
-            .controlSize(.small)
+            .controlSize(.regular)
         }
     }
 
