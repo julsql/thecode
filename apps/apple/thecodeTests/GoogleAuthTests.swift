@@ -145,12 +145,13 @@ struct GoogleAuthTests {
 
     @Test func googleSignInPostsTokenAndStoresSessionTokens() async throws {
         let transport = RecordingTransport(
-            body: #"{"access_token":"acc","refresh_token":"ref","expires_in":900}"#)
+            body: #"{"access_token":"acc","refresh_token":"ref","expires_in":900,"kdf_salt":"AAECAwQFBgcICQoLDA0ODw"}"#)
         let creds = try await Sync(transport: transport).googleSignIn(
             endpoint: "https://api.test", idToken: "idt", lang: "fr")
 
         #expect(creds == SyncCredentials(
-            endpoint: "https://api.test", accessToken: "acc", refreshToken: "ref"))
+            endpoint: "https://api.test", accessToken: "acc", refreshToken: "ref",
+            kdfSalt: "AAECAwQFBgcICQoLDA0ODw"))
         #expect(transport.url == "https://api.test/v1/auth/google")
         #expect(transport.method == "POST")
         let sent = try JSONSerialization.jsonObject(with: transport.body ?? Data()) as? [String: Any]

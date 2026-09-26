@@ -88,13 +88,14 @@ struct AppleAuthTests {
 
     @Test func appleSignInPostsTokenAndRawNonce() async throws {
         let transport = RecordingTransport(
-            body: #"{"access_token":"acc","refresh_token":"ref","expires_in":900}"#)
+            body: #"{"access_token":"acc","refresh_token":"ref","expires_in":900,"kdf_salt":"AAECAwQFBgcICQoLDA0ODw"}"#)
         let creds = try await Sync(transport: transport).appleSignIn(
             endpoint: "https://api.test", identityToken: "jwt", rawNonce: "raw", lang: "fr",
             deviceLabel: "iPhone", authorizationCode: "c-1")
 
         #expect(creds == SyncCredentials(
-            endpoint: "https://api.test", accessToken: "acc", refreshToken: "ref"))
+            endpoint: "https://api.test", accessToken: "acc", refreshToken: "ref",
+            kdfSalt: "AAECAwQFBgcICQoLDA0ODw"))
         #expect(transport.url == "https://api.test/v1/auth/apple")
         #expect(transport.method == "POST")
         let sent = try JSONSerialization.jsonObject(with: transport.body ?? Data()) as? [String: Any]

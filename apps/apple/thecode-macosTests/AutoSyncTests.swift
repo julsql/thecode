@@ -12,7 +12,7 @@ private let t0 = Date(timeIntervalSince1970: 1_000_000)
 
 private let linked = SyncCredentials(
     endpoint: "https://sync.example.test", accessToken: "access-token-fixture",
-    refreshToken: "refresh-token-fixture")
+    refreshToken: "refresh-token-fixture", kdfSalt: "AAECAwQFBgcICQoLDA0ODw")
 
 private let sampleKey = "fixture-master-key"
 

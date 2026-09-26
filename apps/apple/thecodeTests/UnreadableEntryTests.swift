@@ -15,7 +15,8 @@ import Testing
 @testable import TheCode
 
 private let credentials = SyncCredentials(
-    endpoint: "https://example.test/api", accessToken: "access-1", refreshToken: "refresh-0")
+    endpoint: "https://example.test/api", accessToken: "access-1", refreshToken: "refresh-0",
+    kdfSalt: "AAECAwQFBgcICQoLDA0ODw")
 
 private func rawEntry(_ entry: VaultEntry) throws -> [String: Any] {
     try JSONSerialization.jsonObject(with: JSONEncoder().encode(entry)) as? [String: Any] ?? [:]
@@ -193,9 +194,13 @@ struct UnreadableEntryTests {
     @Test("L'import garde les entrées lisibles")
     func importSkipsOnlyTheBadEntry() throws {
         let good = sample()
-        let sealed = try Transfer.seal(zlib(vaultData(good)), with: Transfer.deriveKey("clef"))
-        let payload =
-            "\(Transfer.prefix).\(Base64URL.encode(sealed.nonce)).\(Base64URL.encode(sealed.blob))"
+        let salt = Data(repeating: 3, count: 16)
+        let sealed = try Transfer.seal(
+            zlib(vaultData(good)), with: Transfer.deriveKey("clef", salt: salt), aad: Transfer.aad)
+        let payload = [
+            Transfer.prefix, Base64URL.encode(salt), Base64URL.encode(sealed.nonce),
+            Base64URL.encode(sealed.blob),
+        ].joined(separator: ".")
 
         let imported = try Transfer.importVault(payload, masterKey: "clef")
 
@@ -205,10 +210,12 @@ struct UnreadableEntryTests {
 
     @Test("La synchronisation écarte l'entrée distante illisible sans échouer")
     func syncSkipsOnlyTheBadEntry() async throws {
-        let key = try Transfer.deriveKey("clef")
+        let key = try Sync.deriveKey(
+            masterKey: "clef", kdfSalt: #require(credentials.decodedKdfSalt))
         let good = VaultEntry(siteKey: "google.com")
+        let other = VaultEntry(siteKey: "github.com")
         func row(_ id: String, _ plain: Data) throws -> [String: Any] {
-            let sealed = try Transfer.seal(plain, with: key)
+            let sealed = try Transfer.seal(plain, with: key, aad: Sync.entryAAD(id))
             return [
                 "entry_id": id, "nonce": Base64URL.encode(sealed.nonce),
                 "blob": Base64URL.encode(sealed.blob), "deleted": false,
@@ -217,14 +224,19 @@ struct UnreadableEntryTests {
         let server = FrozenServer(rows: [
             try row(good.id, JSONEncoder().encode(good)),
             try row("abimee", Data("{\"id\": \"abimee\"}".utf8)),
+            // Bonne AAD pour la ligne, mais l'entrée dit un autre id.
+            try row("usurpee", JSONEncoder().encode(other)),
         ])
-        let local = VaultEntry(siteKey: "github.com")
+        let local = VaultEntry(siteKey: "gitlab.com")
 
         let result = try await Sync(transport: server)
             .sync(Vault(entries: [local]), masterKey: "clef", credentials: credentials)
 
         #expect(Set(result.vault.entries.map(\.id)) == [good.id, local.id])
         // L'entrée illisible n'est pas repoussée : le serveur la garde telle quelle.
-        #expect(await !server.pushedIds.contains("abimee"))
+        let pushed = await server.pushedIds
+        #expect(!pushed.contains("abimee"))
+        #expect(!pushed.contains("usurpee"))
+        #expect(!pushed.contains(other.id))
     }
 }

@@ -176,6 +176,11 @@ public struct TransferView: View {
                 : L10nQr.t(
                     "Carnet fusionné : \(kept) entrées, \(conflicts.count) à vérifier.",
                     "Vault merged: \(kept) entries, \(conflicts.count) to check.")
+        } catch Transfer.TransferError.unreadable {
+            // Version inconnue (TC1 compris) ou code abîmé : la clef n'y est pour rien.
+            status = L10nQr.t(
+                "Code illisible : il vient peut-être d'une autre version de TheCode.",
+                "Unreadable code: it may come from another version of TheCode.")
         } catch {
             status = L10nQr.t(
                 "Lecture impossible : ce code vient-il d'une autre clef maîtresse ?",
