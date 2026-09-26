@@ -33,16 +33,6 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- Affiché seulement quand il n'y a rien : une liste vide sans
-                 explication laisse croire à une panne. -->
-            <TextView
-                android:id="@+id/vaultEmpty"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/vault_empty"
-                android:textAppearance="?attr/textAppearanceBodyMedium"
-                android:visibility="gone" />
-
             <!-- Affiche tant que la session n'est pas authentifiee. Le contenu
                  du carnet n'est jamais rendu avant : une capture du selecteur
                  d'applications suffirait a le reveler. -->
@@ -107,15 +97,42 @@
                         android:text="@string/sync_pitch_body"
                         android:textAppearance="?attr/textAppearanceBodySmall" />
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/vaultSyncPitchAction"
-                        style="?attr/materialButtonOutlinedStyle"
+                    <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
-                        android:text="@string/sync_pitch_action" />
+                        android:orientation="horizontal">
+
+                        <!-- Ouvre la meme connexion que le menu : un compte
+                             deja cree se lie sans quitter l'application. -->
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/vaultSyncPitchSignIn"
+                            style="?attr/materialButtonOutlinedStyle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="8dp"
+                            android:text="@string/sync_pitch_sign_in" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/vaultSyncPitchAction"
+                            style="?attr/materialButtonOutlinedStyle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/sync_pitch_action" />
+                    </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
+
+            <!-- Sous la synchronisation, affiché seulement quand il n'y a
+                 rien : une liste vide sans explication laisse croire à une
+                 panne. -->
+            <TextView
+                android:id="@+id/vaultEmpty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/vault_empty"
+                android:textAppearance="?attr/textAppearanceBodyMedium"
+                android:visibility="gone" />
 
             <LinearLayout
                 android:id="@+id/vaultList"

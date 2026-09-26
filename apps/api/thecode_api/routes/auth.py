@@ -27,7 +27,14 @@ from ..google import GoogleError, verify_id_token
 from ..links import consume_link, new_link
 from ..mailer import MailError, send_password_reset_email, send_verification_email
 from ..models import Account, EmailVerification, Session
-from ..plans import PRO, active_device_count, limits_for, live_entry_count
+from ..plans import (
+    PRO,
+    WEB,
+    active_device_count,
+    limits_for,
+    live_entry_count,
+    trim_web_sessions,
+)
 from ..schemas import (
     AccountResponse,
     ForgotPasswordRequest,
@@ -94,14 +101,20 @@ def pending_email(db: DbSession, account: Account) -> str:
     return row.new_email if row is not None else ""
 
 
-def _enforce_device_limit(db: DbSession, account: Account) -> None:
+def _enforce_device_limit(db: DbSession, account: Account, client: str = "app") -> None:
     """Refuse une connexion de plus que ce que l'offre autorise.
 
     Refuser plutôt que déconnecter le plus ancien appareil : un utilisateur
     dont le téléphone se déconnecte tout seul pendant qu'il travaille sur le
     site ne comprendrait pas, et la synchronisation est précisément ce qu'il
     paie.
+
+    Le site n'est jamais refusé : c'est là que l'on déconnecte un appareil, et
+    le message d'erreur y renvoie. Ses sessions sont bornées à part
+    (`trim_web_sessions`).
     """
+    if client == WEB:
+        return
     settings = get_settings()
     limits = limits_for(account, settings)
     if active_device_count(db, account) < limits.max_devices:
@@ -144,7 +157,9 @@ def _send_verification(db: DbSession, account: Account, lang: str, strict: bool 
         logger.error("Lien de confirmation non envoyé à %s", account.email)
 
 
-def _issue_tokens(db: DbSession, account: Account, device_label: str = "") -> TokenResponse:
+def _issue_tokens(
+    db: DbSession, account: Account, device_label: str = "", client: str = "app"
+) -> TokenResponse:
     settings = get_settings()
     token, token_hash = new_refresh_token()
 
@@ -152,12 +167,15 @@ def _issue_tokens(db: DbSession, account: Account, device_label: str = "") -> To
         account_id=account.id,
         token_hash=token_hash,
         label=device_label[:120],
+        client=client,
         expires_at=datetime.now(UTC) + timedelta(days=settings.refresh_token_days),
     )
     db.add(session)
     # Le jeton d'accès porte l'identifiant de la session : c'est ce qui permet
     # de déconnecter les autres appareils sans se déconnecter soi-même.
     db.flush()
+    if client == WEB:
+        trim_web_sessions(db, account, settings)
     db.commit()
 
     return TokenResponse(
@@ -268,7 +286,7 @@ def register(payload: RegisterRequest, db: DbSession = Depends(get_db)) -> Token
     # pas pu être créé promènerait l'utilisateur pour rien.
     _send_verification(db, account, payload.lang)
 
-    return _issue_tokens(db, account, payload.device_label)
+    return _issue_tokens(db, account, payload.device_label, payload.client)
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -296,8 +314,8 @@ def login(payload: LoginRequest, db: DbSession = Depends(get_db)) -> TokenRespon
     if not valid or account is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Identifiants invalides")
 
-    _enforce_device_limit(db, account)
-    return _issue_tokens(db, account, payload.device_label)
+    _enforce_device_limit(db, account, payload.client)
+    return _issue_tokens(db, account, payload.device_label, payload.client)
 
 
 @router.post("/refresh", response_model=TokenResponse)
@@ -310,7 +328,9 @@ def refresh(payload: RefreshRequest, db: DbSession = Depends(get_db)) -> TokenRe
     # intercepté resterait valable jusqu'à son expiration.
     session.revoked = True
     account = db.get(Account, session.account_id)
-    return _issue_tokens(db, account, session.label)
+    # Le renouvellement garde la nature de la session : sinon un site
+    # redeviendrait un appareil au bout de quinze minutes.
+    return _issue_tokens(db, account, session.label, session.client)
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
@@ -444,8 +464,8 @@ def google_sign_in(payload: GoogleRequest, db: DbSession = Depends(get_db)) -> T
                 status.HTTP_409_CONFLICT, "Cette adresse est déjà inscrite"
             ) from None
 
-    _enforce_device_limit(db, account)
-    return _issue_tokens(db, account, payload.device_label or "Google")
+    _enforce_device_limit(db, account, payload.client)
+    return _issue_tokens(db, account, payload.device_label or "Google", payload.client)
 
 
 @router.post("/password/forgot", status_code=status.HTTP_202_ACCEPTED)
@@ -496,4 +516,5 @@ def reset_password(payload: ResetPasswordRequest, db: DbSession = Depends(get_db
     ).update({"revoked": True})
     db.commit()
 
-    return _issue_tokens(db, account, "site web")
+    # Le lien de réinitialisation mène au site : la session ouverte est la sienne.
+    return _issue_tokens(db, account, "site web", WEB)

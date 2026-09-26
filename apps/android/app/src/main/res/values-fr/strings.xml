@@ -92,6 +92,7 @@
     <string name="sync_pitch_title">Synchronisez votre carnet</string>
     <string name="sync_pitch_body">Gardez votre carnet à jour entre vos appareils. Il est chiffré sur cet appareil avant d\'être envoyé : le serveur ne peut lire ni vos sites, ni vos identifiants.</string>
     <string name="sync_pitch_action">Créer un compte</string>
+    <string name="sync_pitch_sign_in">Se connecter</string>
     <string name="sync_account_url" translatable="false">https://thecode.julsql.fr/fr/account?from=app</string>
     <string name="sync_running">Synchronisation…</string>
     <string name="sync_done">Carnet synchronisé : %1$d entrées.</string>
@@ -102,13 +103,15 @@
     <string name="sync_no_secure_storage">Le stockage chiffré est indisponible sur cet appareil : les identifiants ne peuvent pas être conservés.</string>
     <string name="sync_unlinked">Compte délié. Cet appareil ne se synchronise plus.</string>
     <string name="sync_nothing_to_unlink">Aucun compte n\'est lié.</string>
-    <string name="vault_save">Enregistrer les réglages au carnet</string>
+    <string name="vault_save_entry">Enregistrer cette entrée</string>
+    <string name="vault_update_entry">Mettre à jour l\'entrée</string>
+    <string name="show_password">Voir</string>
+    <string name="hide_password">Cacher</string>
     <string name="vault_saved">« %1$s » enregistré au carnet.</string>
     <string name="vault_saved_other_key">« %1$s » enregistré. Attention : cette entrée génère son mot de passe depuis « %2$s », pas depuis ce que vous avez saisi.</string>
     <string name="vault_propose_save">Enregistrer ce site dans le carnet ?</string>
     <string name="vault_propose_save_copied">Mot de passe copié. Enregistrer ce site dans le carnet ?</string>
     <string name="vault_propose_save_action">Enregistrer</string>
-    <string name="vault_save_needs_site">Saisissez d\'abord un site.</string>
     <string name="vault_entry_actions">Que faire de « %1$s » ?</string>
     <string name="vault_renew">Renouveler ce mot de passe</string>
     <string name="vault_renew_paid">Le renouvellement n\'est pas activé sur ce compte.</string>

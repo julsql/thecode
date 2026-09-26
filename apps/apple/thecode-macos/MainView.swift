@@ -67,6 +67,9 @@ struct MainView: View {
     /// Entrée du carnet pour le compte affiché (domaine + identifiant) : le
     /// bouton dit s'il crée une entrée ou met à jour celle qui existe.
     @State private var vaultEntry: VaultEntry?
+    /// Mot de passe généré révélé : masqué par défaut, et remasqué à chaque
+    /// nouvelle génération.
+    @State private var showGenerated = false
     /// Proposition d'enregistrer au carnet un site qu'il ne connaît pas.
     @State private var showSaveProposal = false
     /// Comptes pour lesquels la proposition a été refusée, le temps de la
@@ -373,16 +376,43 @@ struct MainView: View {
 
                         if !generatedValue.isEmpty {
                             VStack(alignment: .leading, spacing: 4) {
-                                HStack {
-                                    TextField(L10n.t("Valeur générée", "Generated value"), text: $generatedValue)
-                                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                                        .disabled(true)
+                                // Une seule porte d'entrée vers le carnet : le
+                                // bouton vit à côté du mot de passe qu'il
+                                // enregistre.
+                                HStack(spacing: 10) {
+                                    generatedPasswordText
 
                                     Button(action: copyGeneratedValue) {
                                         Image(systemName: "doc.on.doc")
                                     }
                                     .buttonStyle(BorderlessButtonStyle())
-                                    .padding(.leading, 8)
+                                    .help(L10n.t("Copier", "Copy"))
+                                    .accessibilityLabel(L10n.t("Copier", "Copy"))
+
+                                    Button(action: { showGenerated.toggle() }) {
+                                        Image(systemName: showGenerated ? "eye.slash" : "eye")
+                                    }
+                                    .buttonStyle(BorderlessButtonStyle())
+                                    .help(revealLabel)
+                                    .accessibilityLabel(revealLabel)
+
+                                    // Le carnet dérive en v2 : enregistrer depuis la v1
+                                    // donnerait plus tard un autre mot de passe.
+                                    if !useV1 {
+                                        Button(action: saveToVault) {
+                                            Label(
+                                                vaultEntry == nil
+                                                    ? L10n.t("Enregistrer cette entrée",
+                                                             "Save this entry")
+                                                    : L10n.t("Mettre à jour l'entrée",
+                                                             "Update the entry"),
+                                                systemImage: vaultEntry == nil
+                                                    ? "square.and.arrow.down"
+                                                    : "arrow.triangle.2.circlepath")
+                                        }
+                                        .buttonStyle(.bordered)
+                                        .fixedSize()
+                                    }
                                 }
                                 // La version en cours doit se lire sans ouvrir
                                 // de menu : c'est elle qui décide quel mot de
@@ -392,20 +422,6 @@ struct MainView: View {
                                         + localizedSecurityLabel(securityLabel)
                                         + (useV1 ? "  ·  v1" : "  ·  v2"))
                                     .foregroundColor(securityColor)
-
-                                Button(action: saveToVault) {
-                                    Label(
-                                        vaultEntry == nil
-                                            ? L10n.t("Enregistrer les réglages au carnet",
-                                                     "Save settings to vault")
-                                            : L10n.t("Mettre à jour l'entrée du carnet",
-                                                     "Update the vault entry"),
-                                        systemImage: vaultEntry == nil
-                                            ? "square.and.arrow.down"
-                                            : "arrow.triangle.2.circlepath")
-                                }
-                                .buttonStyle(.bordered)
-                                .padding(.top, 4)
 
                                 if let vaultSaveMessage {
                                     Text(vaultSaveMessage)
@@ -461,6 +477,7 @@ struct MainView: View {
             // d'auth n'est plus révoquée : on ré-horodate la fenêtre de grâce
             // pour qu'elle courre à partir de maintenant.
             showRealKey = false
+            showGenerated = false
             generatedValue = ""
             if unlocked { SessionLock.stamp() }
         }
@@ -663,11 +680,29 @@ struct MainView: View {
     /// Relit l'entrée du compte affiché, appariée comme `Vault.upsert` : même
     /// domaine, même identifiant.
     private func refreshVaultEntry() {
-        let site = siteName.trimmingCharacters(in: .whitespaces)
-        let login = trimmedLogin
-        vaultEntry = site.isEmpty
-            ? nil
-            : VaultStore.load().findAll(domain: site).first { ($0.login ?? "") == login }
+        vaultEntry = VaultStore.load().entry(site: siteName, login: trimmedLogin)
+    }
+
+    /// Le mot de passe généré, masqué tant qu'il n'est pas révélé.
+    private var generatedPasswordText: some View {
+        Text(GeneratedPassword.display(generatedValue, revealed: showGenerated))
+            .font(.body.monospaced())
+            .lineLimit(1)
+            .truncationMode(.middle)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(Color.secondary.opacity(0.4), lineWidth: 1))
+            .accessibilityLabel(
+                showGenerated
+                    ? generatedValue
+                    : L10n.t("Mot de passe masqué", "Hidden password"))
+    }
+
+    private var revealLabel: String {
+        showGenerated ? L10n.t("Cacher", "Hide") : L10n.t("Voir", "Show")
     }
 
     // MARK: - Sécurité
@@ -784,6 +819,8 @@ struct MainView: View {
 
     private func generatePassword() {
         // Verrou d'autorisation : pas de génération sans auth de session.
+        // Chaque nouveau mot de passe repart masqué.
+        showGenerated = false
         guard unlocked else { return }
         if siteName.isEmpty || encodingKey.isEmpty || (!minState && !majState && !symState && !chiState) {
             return

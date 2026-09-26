@@ -59,18 +59,13 @@ struct VaultScreen: View {
 
                 Spacer()
 
+                // Connexion, synchronisation et déliaison vivent dans la
+                // section du haut, avec l'état du compte.
                 if lock.isUnlocked {
+                    // Aussi pendant le calcul d'un renouvellement, lancé depuis
+                    // le détail où la section du haut n'est pas.
                     if isWorking {
                         ProgressView().controlSize(.small)
-                    }
-
-                    if isLinked {
-                        Button(L10n.t("Délier", "Unlink"), action: unlink)
-                            .buttonStyle(.borderless)
-                    } else {
-                        // Seule l'icône de synchronisation menait à la
-                        // connexion, sans que rien ne le dise.
-                        Button(L10n.t("Se connecter", "Sign in")) { showSignIn = true }
                     }
 
                     Button { showLockSettings = true } label: {
@@ -78,13 +73,6 @@ struct VaultScreen: View {
                     }
                     .buttonStyle(.borderless)
                     .help(L10n.t("Verrou du carnet", "Vault lock"))
-
-                    Button(action: startSync) {
-                        Image(systemName: "arrow.triangle.2.circlepath")
-                    }
-                    .buttonStyle(.borderless)
-                    .disabled(isWorking)
-                    .help(L10n.t("Synchroniser", "Sync"))
                 }
 
                 Button(L10n.t("Fermer", "Close")) { isPresented = false }
@@ -181,54 +169,100 @@ struct VaultScreen: View {
         }
     }
 
+    /// Section du haut, comme sur Android : la synchronisation à part, avant
+    /// le carnet, et non centrée au-dessus de l'état vide.
+    ///
+    /// La synchronisation est la principale raison de créer un compte, et
+    /// rien ne le disait tant qu'aucun n'était lié. Aucune mention d'offre ni
+    /// de prix : les règles des magasins d'applications interdisent
+    /// d'orienter vers un paiement.
     @ViewBuilder
-    private var unlockedContent: some View {
-        if let status {
-            Text(status)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal)
-                .padding(.vertical, 8)
-        }
+    private var syncSection: some View {
+        Section(header: Text(L10n.t("Synchronisation", "Sync"))) {
+            VStack(alignment: .leading, spacing: 10) {
+                if isLinked {
+                    Text(
+                        L10n.t(
+                            "Compte lié : le carnet se synchronise entre vos appareils, "
+                                + "chiffré sur chacun avant l'envoi.",
+                            "Account linked: the vault syncs across your devices, "
+                                + "encrypted on each one before it is sent.")
+                    )
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    Text(L10n.t("Synchronisez votre carnet", "Sync your vault"))
+                        .font(.headline)
 
-        // La synchronisation est la principale raison de créer un compte,
-        // et rien ne le disait tant qu'aucun n'était lié. Aucune mention
-        // d'offre ni de prix : les règles des magasins d'applications
-        // interdisent d'orienter vers un paiement.
-        if !isLinked {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(L10n.t("Synchronisez votre carnet", "Sync your vault"))
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
+                    Text(
+                        L10n.t(
+                            "Gardez votre carnet à jour entre vos appareils. Il est chiffré "
+                                + "sur cet appareil avant d'être envoyé : le serveur ne peut "
+                                + "lire ni vos sites, ni vos identifiants.",
+                            "Keep your vault up to date across your devices. It is encrypted "
+                                + "on this device before it is sent: the server can read "
+                                + "neither your sites nor your logins.")
+                    )
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                }
 
-                Text(
-                    L10n.t(
-                        "Gardez votre carnet à jour entre vos appareils. Il est chiffré "
-                            + "sur cet appareil avant d'être envoyé : le serveur ne peut "
-                            + "lire ni vos sites, ni vos identifiants.",
-                        "Keep your vault up to date across your devices. It is encrypted "
-                            + "on this device before it is sent: the server can read "
-                            + "neither your sites nor your logins.")
-                )
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+                if let status {
+                    statusText(status)
+                }
 
                 HStack(spacing: 12) {
-                    Button(L10n.t("Se connecter", "Sign in")) { showSignIn = true }
-                        .controlSize(.small)
-                    Link(L10n.t("Créer un compte", "Create an account"), destination: accountURL)
-                        .font(.footnote)
+                    if isLinked {
+                        Button(action: startSync) {
+                            Label(
+                                L10n.t("Synchroniser", "Sync"),
+                                systemImage: "arrow.triangle.2.circlepath")
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(isWorking)
+
+                        Button(L10n.t("Délier", "Unlink"), action: unlink)
+                            .buttonStyle(.borderless)
+                            .disabled(isWorking)
+                    } else {
+                        // La connexion ouvre la feuille de l'app (e-mail et mot
+                        // de passe, ou Google) ; la création de compte reste
+                        // sur le site.
+                        Button(L10n.t("Se connecter", "Sign in")) { showSignIn = true }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(isWorking)
+
+                        Link(L10n.t("Créer un compte", "Create an account"), destination: accountURL)
+                            .font(.footnote)
+                    }
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 20)
-            .padding(.bottom, 12)
+            .padding(.vertical, 6)
         }
+    }
 
+    private func statusText(_ status: String) -> some View {
+        Text(status)
+            .font(.footnote)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private var unlockedContent: some View {
         if let entry = selectedEntry {
+            // Le détail n'a pas la section du haut : un renouvellement ou une
+            // suppression doit quand même s'y dire.
+            if let status {
+                statusText(status)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal)
+                    .padding(.top, 8)
+            }
+
             // Sur place plutôt qu'en feuille par-dessus la feuille.
             HStack {
                 Button {
@@ -250,7 +284,9 @@ struct VaultScreen: View {
 
             VaultEntryDetailView(entry: entry, onRenew: propose, onDelete: delete)
         } else {
-            VaultView(vault: vault, onSelect: { selectedID = $0.id })
+            VaultView(vault: vault, onSelect: { selectedID = $0.id }) {
+                syncSection
+            }
         }
     }
 

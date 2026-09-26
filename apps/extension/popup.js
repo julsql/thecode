@@ -10,6 +10,12 @@ const statusDiv = document.getElementById("status");
 const generateBtn = document.getElementById("generatePassword");
 const site = document.getElementById("site");
 const passwordResult = document.getElementById("passwordResult");
+// Masque par defaut, sans trahir la longueur : voir password-reveal.js.
+const passwordReveal = bindPasswordReveal(
+  passwordResult,
+  document.getElementById("togglePassword"),
+  { show: msg("popup_show", "Voir"), hide: msg("popup_hide", "Cacher") },
+);
 const passwordSecurity = document.getElementById("passwordSecurity");
 const error = document.getElementById("error");
 const resultBox = document.getElementById("result");
@@ -221,7 +227,7 @@ clearBtn.addEventListener("click", () => {
 
 // Copier le mot de passe
 document.getElementById("copyPasswordBtn").addEventListener("click", () => {
-  const pwd = passwordResult.textContent;
+  const pwd = passwordReveal.value();
   if (!pwd) return;
   navigator.clipboard.writeText(pwd).then(
     () => (copyStatus.textContent = msg("popup_copied", "Copié.")),
@@ -288,6 +294,9 @@ function generatePassword(vaultMessage) {
         } else if (response.password) {
           hideError();
           showResult();
+          // Le carnet dérive en v2 : enregistrer depuis la v1 donnerait plus
+          // tard un autre mot de passe.
+          saveEntryBtn.hidden = selectedVersion() === 1;
           if (!loginResolved) {
             loginInput.value = response.login || "";
             loginResolved = true;
@@ -295,7 +304,7 @@ function generatePassword(vaultMessage) {
           currentEntryId = response.entryId || null;
           site.textContent = response.site;
           refreshVault(response.site, vaultMessage);
-          passwordResult.textContent = response.password;
+          passwordReveal.set(response.password);
           // La couleur du niveau va sur une pastille : en texte, le vert vif
           // ne se lirait pas sur fond clair.
           passwordSecurity.style.setProperty("--level", response.color);
@@ -374,7 +383,7 @@ function refreshVault(domain, message) {
     if (message) vaultStatus.textContent = message;
     saveEntryBtn.textContent = known
       ? msg("popup_update_entry", "Mettre à jour l'entrée")
-      : msg("popup_save", "Enregistrer");
+      : msg("popup_save", "Enregistrer cette entrée");
 
     // Rien a renouveler tant que le compte n'est pas dans le carnet.
     refreshChangeButton();
@@ -602,7 +611,7 @@ function showError(message) {
 function hideResult() {
   resultBox.hidden = true;
   site.textContent = "";
-  passwordResult.textContent = "";
+  passwordReveal.set("");
   passwordSecurity.textContent = "";
   copyStatus.textContent = "";
 }

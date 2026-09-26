@@ -28,6 +28,10 @@ ENV_FILE = ROOT / "apps" / "api" / ".env"
 #: Ce que le service lit, et d'où ça vient dans `keys.yml`.
 MAPPING = {
     "THECODE_GOOGLE_CLIENT_ID": "OAuth_Client.ID_client",
+    # Client OAuth de type iOS, partagé par les apps iOS et macOS : leurs
+    # jetons Google portent cet identifiant en audience. Public, comme tout
+    # identifiant client ; c'est le code secret du client web qui ne l'est pas.
+    "THECODE_GOOGLE_EXTRA_CLIENT_IDS": "OAuth_Client.ID_client_iOS",
     "THECODE_MAIL_USER": "Email.Host_User",
     "THECODE_MAIL_PASSWORD": "Email.Host_Password",
     # Facultatif : l'adresse affichée aux destinataires, quand elle diffère du

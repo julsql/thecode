@@ -436,10 +436,20 @@
                             android:layout_marginTop="16dp"
                             android:visibility="gone">
 
+                            <!-- Mot de passe masqué par défaut, derrière des
+                                 points en nombre fixe : la longueur ne se lit
+                                 pas par-dessus l'épaule. -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
                             <com.google.android.material.textfield.TextInputLayout
                                 android:id="@+id/passwordInputLayout"
                                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                                android:layout_width="match_parent"
+                                android:layout_width="0dp"
+                                android:layout_weight="1"
                                 android:layout_height="wrap_content"
                                 android:hint="@string/generated_password_hint"
                                 app:endIconMode="custom"
@@ -460,13 +470,38 @@
                                     android:textIsSelectable="true" />
                             </com.google.android.material.textfield.TextInputLayout>
 
-                            <TextView
-                                android:id="@+id/securityLabelTextView"
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/passwordRevealButton"
+                                style="@style/Widget.Material3.Button.IconButton"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
                                 android:layout_marginStart="4dp"
-                                android:textAppearance="@style/TextAppearance.Material3.LabelLarge" />
+                                android:contentDescription="@string/show_password"
+                                app:icon="@drawable/ic_visibility" />
+                            </LinearLayout>
+
+                            <!-- Sous le mot de passe : la sécurité en petit, puis
+                                 le seul point d'enregistrement au carnet. -->
+                            <TextView
+                                android:id="@+id/securityLabelTextView"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:layout_marginStart="4dp"
+                                android:textAppearance="@style/TextAppearance.Material3.LabelSmall" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/saveEntryButton"
+                                style="@style/Widget.Material3.Button.TonalButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:layout_gravity="end"
+                                android:minHeight="52dp"
+                                android:paddingHorizontal="24dp"
+                                android:textSize="15sp"
+                                android:text="@string/vault_save_entry"
+                                android:visibility="gone" />
 
                         </LinearLayout>
 

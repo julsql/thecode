@@ -64,3 +64,9 @@ xcuserdata/
 e2e/node_modules/
 e2e/test-results/
 e2e/playwright-report/
+
+# Fichiers téléchargés depuis la console Google Cloud : les identifiants
+# utiles sont reportés dans le projet, les fichiers eux-mêmes n'ont rien à
+# faire dans le dépôt.
+client_*.apps.googleusercontent.com.plist
+client_secret_*.json

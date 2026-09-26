@@ -13,13 +13,6 @@
         app:showAsAction="never" />
 
 
-    <!-- Enregistre les reglages du site affiche, pour ne plus avoir a les
-         retenir. -->
-    <item
-        android:id="@+id/action_save_to_vault"
-        android:title="@string/vault_save"
-        app:showAsAction="never" />
-
     <!-- La v1 n'est qu'un secours : retrouver un mot de passe pose avant la v2. -->
     <!-- Visible dans la barre, comme le theme : c'est un mode, pas une option
          enfouie — il decide quel mot de passe sort. -->

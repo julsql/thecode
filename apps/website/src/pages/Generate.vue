@@ -149,13 +149,53 @@
         <!-- Résultat -->
         <div class="result">
           <h2>{{ t("gen_section_result") }}</h2>
-          <input
-            type="text"
-            id="password"
-            v-model="motDePasse"
-            readonly
-            :placeholder="t('gen_placeholder_result')"
-          />
+          <!-- Masque par defaut, par un nombre fixe de points : autant de
+               points que de caracteres trahirait la longueur. La copie copie
+               la vraie valeur. Enregistrer vit ici, a cote de ce qu'il
+               enregistre, et nulle part ailleurs. -->
+          <div class="password-row">
+            <input
+              type="text"
+              id="password"
+              :value="motDePasseAffiche"
+              readonly
+              :placeholder="t('gen_placeholder_result')"
+            />
+            <template v-if="motDePasse">
+              <button
+                id="togglePasswordResult"
+                type="button"
+                class="ghost-btn"
+                aria-controls="password"
+                :aria-pressed="motDePasseVisible"
+                @click="motDePasseVisible = !motDePasseVisible"
+              >
+                {{ motDePasseVisible ? t("gen_result_hide") : t("gen_result_show") }}
+              </button>
+              <button
+                id="copyPassword"
+                type="button"
+                class="ghost-btn"
+                :aria-label="t('gen_copy_password')"
+                @click="copyPassword"
+              >
+                {{ t("gen_copy") }}
+              </button>
+              <!-- Le carnet dérive en v2 : enregistrer depuis la v1 donnerait plus
+                   tard un autre mot de passe. -->
+              <button
+                v-if="!enV1"
+                id="saveEntry"
+                type="button"
+                class="ghost-btn primary"
+                @click="saveEntry"
+              >
+                {{ matchedEntry ? t("vault_update") : t("vault_save") }}
+              </button>
+            </template>
+          </div>
+          <p v-if="copyMessage" class="hint" role="status">{{ copyMessage }}</p>
+          <p v-if="vaultMessage" class="hint" role="status">{{ vaultMessage }}</p>
           <p class="security-line">
             {{ t("gen_security_label") }} :
             <span :style="{ color: couleurSecurite }">{{ niveauSecurite }}</span>
@@ -183,14 +223,7 @@
             <h3 class="panel-title">{{ t("vault_title") }}</h3>
             <p class="panel-lead">{{ t("vault_lead") }}</p>
 
-            <div class="panel-actions centered">
-              <button type="button" class="ghost-btn" @click="saveEntry">
-                {{ matchedEntry ? t("vault_update") : t("vault_save") }}
-              </button>
-            </div>
-
-            <p v-if="vaultMessage" class="hint">{{ vaultMessage }}</p>
-            <p v-else-if="vaultEntries.length" class="hint">
+            <p v-if="vaultEntries.length" class="hint">
               {{ tf("vault_known", { n: vaultEntries.length }) }}
             </p>
 
@@ -309,6 +342,9 @@ import { encodeQr } from "@/qr.js";
 import { useI18n } from "@/i18n";
 import type { TranslationKey } from "@/i18n";
 
+/** Masque de longueur fixe : il ne dit rien de la longueur du mot de passe. */
+const PASSWORD_MASK = "•".repeat(10);
+
 export default defineComponent({
   name: "Generator",
   setup() {
@@ -371,6 +407,22 @@ export default defineComponent({
     });
     const showPassword = ref(false);
     const motDePasse = ref("");
+    /** Le mot de passe genere se revele sur demande, jamais par defaut. */
+    const motDePasseVisible = ref(false);
+    const motDePasseAffiche = computed(() =>
+      motDePasse.value ? (motDePasseVisible.value ? motDePasse.value : PASSWORD_MASK) : "",
+    );
+    const copyMessage = ref("");
+
+    async function copyPassword() {
+      if (!motDePasse.value) return;
+      try {
+        await navigator.clipboard.writeText(motDePasse.value);
+        copyMessage.value = t("gen_copied");
+      } catch {
+        copyMessage.value = t("gen_copy_failed");
+      }
+    }
     const fingerprint = ref<Fingerprint>({ text: "", color: "", colorName: "" });
     const vaultEntries = ref<VaultEntry[]>([]);
     /** Entree du carnet pour ce site et cet identifiant, s'il y en a une. */
@@ -468,6 +520,8 @@ export default defineComponent({
       // service worker de l'extension refuse deja ce cas ; on s'aligne.
       if (!clef.value) {
         motDePasse.value = "";
+        motDePasseVisible.value = false;
+        copyMessage.value = "";
         return;
       }
       if (generation !== generationCourante) return;
@@ -502,6 +556,9 @@ export default defineComponent({
               login: cleanLogin.value,
             });
       if (generation !== generationCourante) return;
+      // Chaque nouvelle generation repart masquee.
+      motDePasseVisible.value = false;
+      copyMessage.value = "";
       motDePasse.value = mdp ?? "";
     };
 
@@ -777,6 +834,10 @@ export default defineComponent({
       chiffres,
       showPassword,
       motDePasse,
+      motDePasseVisible,
+      motDePasseAffiche,
+      copyMessage,
+      copyPassword,
       togglePassword,
       scoreSecurite,
       couleurSecurite,
@@ -936,6 +997,19 @@ input[type="text"]:read-only {
 
 .input-with-button input {
   flex: 1;
+}
+
+/* Mot de passe et ses actions dans la meme rangee ; les boutons passent
+   dessous quand la place manque. */
+.password-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.password-row input {
+  flex: 1 1 220px;
+  min-width: 0;
 }
 
 /* Annonce du passage a la v2, en fenetre modale a l'ouverture. */

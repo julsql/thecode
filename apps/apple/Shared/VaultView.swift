@@ -12,7 +12,7 @@
 
 import SwiftUI
 
-public struct VaultView: View {
+public struct VaultView<Header: View>: View {
 
     /// Entrées réellement affichées : filtrées et triées.
     ///
@@ -27,8 +27,16 @@ public struct VaultView: View {
     /// maîtresse, et l'app décide quoi en faire.
     private let onSelect: ((VaultEntry) -> Void)?
 
-    public init(vault: Vault, onSelect: ((VaultEntry) -> Void)? = nil) {
+    /// Sections posées en tête de liste, avant les entrées : l'app y met la
+    /// synchronisation, qui touche au réseau et n'a rien à faire ici.
+    private let header: Header
+
+    public init(
+        vault: Vault, onSelect: ((VaultEntry) -> Void)? = nil,
+        @ViewBuilder header: () -> Header
+    ) {
         self.onSelect = onSelect
+        self.header = header()
         // Les entrées supprimées portent une pierre tombale pour que la
         // suppression se propage à la synchronisation ; elles n'ont rien à
         // faire à l'écran.
@@ -38,65 +46,88 @@ public struct VaultView: View {
     }
 
     public var body: some View {
-        Group {
+        // Une seule liste, en sections : la tête et le carnet (ou son état
+        // vide) restent séparés et alignés à gauche, au lieu d'un bloc
+        // centré collé sous ce qui précède.
+        List {
+            header
+
             if visibleEntries.isEmpty {
                 // Une liste vide sans explication se lit comme une panne.
                 //
                 // ContentUnavailableView serait plus idiomatique mais demande
                 // iOS 17, au-dessus de la cible de deploiement de l'app.
-                VStack(spacing: 12) {
-                    Image(systemName: "tray")
-                        .font(.largeTitle)
-                        .foregroundStyle(.secondary)
+                Section {
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(systemName: "tray")
+                            .font(.title2)
+                            .foregroundStyle(.secondary)
 
-                    Text(L10nVault.t("Carnet vide", "Empty vault"))
-                        .font(.headline)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(L10nVault.t("Carnet vide", "Empty vault"))
+                                .font(.headline)
 
-                    Text(
-                        L10nVault.t(
-                            "Aucun site enregistré. Enregistrez-en un depuis l'écran principal "
-                                + "pour ne plus avoir à retenir ses réglages.",
-                            "No site saved yet. Save one from the main screen so you no longer "
-                                + "have to remember its settings.")
-                    )
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                }
-                .padding()
-            } else {
-                List(visibleEntries, id: \.id) { entry in
-                    let row = VStack(alignment: .leading, spacing: 4) {
-                        Text(Self.label(of: entry))
-                            .font(.headline)
-
-                        if let login = entry.login, !login.isEmpty {
-                            Text(login)
-                                .font(.subheadline)
+                            Text(
+                                L10nVault.t(
+                                    "Aucun site enregistré. Enregistrez-en un depuis l'écran "
+                                        + "principal pour ne plus avoir à retenir ses réglages.",
+                                    "No site saved yet. Save one from the main screen so you "
+                                        + "no longer have to remember its settings.")
+                            )
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                         }
-
-                        Text(entry.domains.joined(separator: ", "))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-
-                        Text(settings(of: entry))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
                     }
-                    .padding(.vertical, 4)
-
-                    if let onSelect {
-                        Button { onSelect(entry) } label: {
-                            row.frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        .buttonStyle(.plain)
-                    } else {
-                        row
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 6)
+                }
+            } else {
+                Section(header: Text(L10nVault.t("Sites", "Sites"))) {
+                    ForEach(visibleEntries, id: \.id) { entry in
+                        row(for: entry)
                     }
                 }
             }
         }
+        #if os(iOS)
+        .listStyle(.insetGrouped)
+        #else
+        .listStyle(.inset)
+        #endif
         .navigationTitle(L10nVault.t("Carnet", "Vault"))
+    }
+
+    @ViewBuilder
+    private func row(for entry: VaultEntry) -> some View {
+        let row = VStack(alignment: .leading, spacing: 4) {
+            Text(Self.label(of: entry))
+                .font(.headline)
+
+            if let login = entry.login, !login.isEmpty {
+                Text(login)
+                    .font(.subheadline)
+            }
+
+            Text(entry.domains.joined(separator: ", "))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Text(settings(of: entry))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 4)
+
+        if let onSelect {
+            Button { onSelect(entry) } label: {
+                row.frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        } else {
+            row
+        }
     }
 
     // Statique : le tri s'en sert dans l'init, avant que l'instance existe.
@@ -114,5 +145,12 @@ public struct VaultView: View {
         if entry.charset.numbers { charset += "1" }
         return L10nVault.t(
             "\(entry.length) caractères, \(charset)", "\(entry.length) characters, \(charset)")
+    }
+}
+
+extension VaultView where Header == EmptyView {
+    /// Le carnet seul, sans rien en tête.
+    public init(vault: Vault, onSelect: ((VaultEntry) -> Void)? = nil) {
+        self.init(vault: vault, onSelect: onSelect) { EmptyView() }
     }
 }

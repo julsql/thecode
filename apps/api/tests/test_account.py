@@ -23,10 +23,15 @@ def register(client, email="nouveau@exemple.fr", code="", lang="fr"):
     )
 
 
-def login(client, email="nouveau@exemple.fr", label=""):
+def login(client, email="nouveau@exemple.fr", label="", client_kind="app"):
     return client.post(
         "/v1/auth/login",
-        json={"email": email, "password": PASSWORD, "device_label": label},
+        json={
+            "email": email,
+            "password": PASSWORD,
+            "device_label": label,
+            "client": client_kind,
+        },
     )
 
 
@@ -172,6 +177,99 @@ class TestDevices:
         refused = login(client, label="tablette")
         assert refused.status_code == 403
         assert "Offre" not in refused.json()["detail"]
+
+
+class TestWebSessions:
+    """Le site gère les appareils : le plafond ne doit jamais lui fermer la porte."""
+
+    def test_a_web_session_is_not_counted(self, client, settings, sent_emails):
+        settings.free_max_devices = 2
+        created = register(client)
+        login(client, label="site web", client_kind="web")
+
+        me = client.get("/v1/auth/me", headers=bearer(created)).json()
+        assert me["device_count"] == 1
+        assert login(client, label="téléphone").status_code == 200
+
+    def test_the_website_signs_in_at_the_cap(self, client, settings, sent_emails):
+        settings.free_max_devices = 2
+        register(client)
+        login(client, label="téléphone")
+        assert login(client, label="tablette").status_code == 402
+
+        allowed = login(client, label="site web", client_kind="web")
+        assert allowed.status_code == 200
+        me = client.get("/v1/auth/me", headers=bearer(allowed)).json()
+        assert me["device_count"] == 2
+
+    def test_the_paid_cap_does_not_stop_the_website(
+        self, client, settings, db_session, sent_emails
+    ):
+        settings.pro_max_devices = 1
+        register(client)
+        account = db_session.query(Account).one()
+        account.plan = "pro"
+        account.subscription_status = "active"
+        db_session.commit()
+
+        assert login(client, label="tablette").status_code == 403
+        assert login(client, label="site web", client_kind="web").status_code == 200
+
+    def test_a_refreshed_web_session_stays_web(self, client, settings, sent_emails):
+        settings.free_max_devices = 1
+        register(client)
+        web = login(client, label="site web", client_kind="web").json()
+
+        renewed = client.post("/v1/auth/refresh", json={"refresh_token": web["refresh_token"]})
+        assert renewed.status_code == 200
+        devices = client.get(
+            "/v1/account/devices",
+            headers={"Authorization": f"Bearer {renewed.json()['access_token']}"},
+        ).json()
+        assert [d["client"] for d in devices if d["label"] == "site web"] == ["web"]
+
+    def test_too_many_web_sessions_sign_out_the_oldest(self, client, settings, sent_emails):
+        settings.web_max_sessions = 2
+        created = register(client)
+        first = login(client, label="site web", client_kind="web").json()
+        login(client, label="site web", client_kind="web")
+        latest = login(client, label="site web", client_kind="web")
+        assert latest.status_code == 200
+
+        devices = client.get("/v1/account/devices", headers=bearer(latest)).json()
+        assert sum(d["client"] == "web" for d in devices) == 2
+        # L'inscription n'a pas dit « web » : c'est un appareil, jamais écarté.
+        assert sum(d["client"] == "app" for d in devices) == 1
+        refused = client.post("/v1/auth/refresh", json={"refresh_token": first["refresh_token"]})
+        assert refused.status_code == 401
+        assert client.get("/v1/auth/me", headers=bearer(created)).status_code == 200
+
+    def test_a_web_session_can_be_disconnected(self, client, sent_emails):
+        created = register(client)
+        login(client, label="site web", client_kind="web")
+
+        devices = client.get("/v1/account/devices", headers=bearer(created)).json()
+        web = next(d for d in devices if d["client"] == "web")
+        response = client.delete(f"/v1/account/devices/{web['id']}", headers=bearer(created))
+        assert response.status_code == 204
+
+    def test_the_reset_link_opens_a_web_session(self, client, settings, sent_emails):
+        settings.free_max_devices = 1
+        register(client, email="oubli@exemple.fr")
+        login(client, email="oubli@exemple.fr", label="téléphone")
+        client.post("/v1/auth/password/forgot", json={"email": "oubli@exemple.fr"})
+        reset = client.post(
+            "/v1/auth/password/reset",
+            json={"token": sent_emails[-1]["token"], "password": PASSWORD + "-bis"},
+        )
+        assert reset.status_code == 200
+
+        me = client.get("/v1/auth/me", headers=bearer(reset)).json()
+        assert me["device_count"] == 0
+
+    def test_an_unknown_client_is_rejected(self, client, sent_emails):
+        register(client)
+        assert login(client, client_kind="admin").status_code == 422
 
 
 @pytest.fixture

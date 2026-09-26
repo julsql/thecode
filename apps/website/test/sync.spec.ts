@@ -12,6 +12,8 @@ import { fileURLToPath } from "node:url";
 import { KDF_ITERATIONS, KDF_SALT, deriveTransferKey } from "@/transfer";
 import {
   clearSession,
+  googleSignIn,
+  login,
   loadSession,
   register,
   registrationState,
@@ -293,7 +295,11 @@ describe("inscription", () => {
     );
 
     // Le code part tel quel : c'est le serveur qui décide s'il est requis.
-    expect(sent).toMatchObject({ email: "moi@example.fr", invite_code: "parrainage" });
+    expect(sent).toMatchObject({
+      email: "moi@example.fr",
+      invite_code: "parrainage",
+      client: "web",
+    });
     expect(session).toStrictEqual({
       endpoint: "https://example.test/api",
       accessToken: "a",
@@ -313,5 +319,38 @@ describe("inscription", () => {
     await expect(register("https://example.test/api", "moi@example.fr", "x")).rejects.toThrow(
       /parrainage/,
     );
+  });
+});
+
+describe("sessions du site", () => {
+  // Le site est l'endroit où l'on déconnecte un appareil : il s'annonce comme
+  // tel, pour que le plafond d'appareils ne lui ferme jamais la porte.
+  function capture(): Array<{ url: string; body: unknown }> {
+    const bodies: Array<{ url: string; body: unknown }> = [];
+    vi.stubGlobal("fetch", (url: string, init?: RequestInit) => {
+      bodies.push({ url, body: JSON.parse(init!.body as string) });
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ access_token: "a", refresh_token: "r" }),
+      } as Response);
+    });
+    return bodies;
+  }
+
+  it("se connecte en tant que site", async () => {
+    const bodies = capture();
+    await login("https://example.test/api", "moi@example.fr", "phrase-de-test");
+
+    expect(bodies[0].url).toBe("https://example.test/api/v1/auth/login");
+    expect(bodies[0].body).toMatchObject({ client: "web" });
+  });
+
+  it("passe par Google en tant que site", async () => {
+    const bodies = capture();
+    await googleSignIn("https://example.test/api", "jeton-google");
+
+    expect(bodies[0].url).toBe("https://example.test/api/v1/auth/google");
+    expect(bodies[0].body).toMatchObject({ id_token: "jeton-google", client: "web" });
   });
 });

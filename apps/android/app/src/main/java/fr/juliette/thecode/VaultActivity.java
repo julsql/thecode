@@ -855,6 +855,8 @@ public class VaultActivity extends AppCompatActivity {
         boolean linked = preferences.getSyncCredentials() != null;
         pitch.setVisibility(linked ? View.GONE : View.VISIBLE);
         if (!linked) {
+            // Même connexion que le menu : un compte déjà créé se lie ici.
+            findViewById(R.id.vaultSyncPitchSignIn).setOnClickListener(v -> startSync());
             findViewById(R.id.vaultSyncPitchAction).setOnClickListener(v -> startActivity(
                     new android.content.Intent(android.content.Intent.ACTION_VIEW,
                             android.net.Uri.parse(getString(R.string.sync_account_url)))));

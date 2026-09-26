@@ -46,6 +46,7 @@ struct VaultScreen: View {
         vault.entries.first { $0.id == selectedID && $0.deleted != true }
     }
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         NavigationView {
@@ -148,9 +149,8 @@ struct VaultScreen: View {
 
     @ViewBuilder
     private var trailingActions: some View {
-        if isLinked {
-            Button(L10n.t("Délier", "Unlink"), action: unlink)
-        }
+        // Synchroniser et délier vivent dans la section du haut, avec l'état
+        // du compte : la barre ne garde que ce qui ne touche pas au compte.
         Button(L10n.t("Transférer", "Transfer")) { showTransfer = true }
             .buttonStyle(.borderless)
 
@@ -158,39 +158,33 @@ struct VaultScreen: View {
             Image(systemName: "lock")
         }
         .accessibilityLabel(L10n.t("Verrou du carnet", "Vault lock"))
-
-        Button(action: startSync) {
-            if isWorking {
-                ProgressView()
-            } else {
-                Image(systemName: "arrow.triangle.2.circlepath")
-            }
-        }
-        .disabled(isWorking)
-        .accessibilityLabel(L10n.t("Synchroniser", "Sync"))
     }
 
-    private var unlockedContent: some View {
-        VStack(spacing: 0) {
-            if let status {
-                Text(status)
+    /// Section du haut, comme sur Android : la synchronisation à part, avant
+    /// le carnet, et non centrée au-dessus de l'état vide.
+    ///
+    /// La synchronisation est la principale raison de créer un compte, et
+    /// rien ne le disait tant qu'aucun n'était lié. Aucune mention d'offre ni
+    /// de prix : les règles de l'App Store interdisent d'orienter vers un
+    /// paiement.
+    @ViewBuilder
+    private var syncSection: some View {
+        Section(header: Text(L10n.t("Synchronisation", "Sync"))) {
+            VStack(alignment: .leading, spacing: 10) {
+                if isLinked {
+                    Text(
+                        L10n.t(
+                            "Compte lié : le carnet se synchronise entre vos appareils, "
+                                + "chiffré sur chacun avant l'envoi.",
+                            "Account linked: the vault syncs across your devices, "
+                                + "encrypted on each one before it is sent.")
+                    )
                     .font(.footnote)
                     .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
-                    .padding(.horizontal)
-                    .padding(.vertical, 8)
-            }
-
-            // La synchronisation est la principale raison de créer un
-            // compte, et rien ne le disait tant qu'aucun n'était lié.
-            // Aucune mention d'offre ni de prix : les règles de l'App
-            // Store interdisent d'orienter vers un paiement.
-            if !isLinked {
-                VStack(alignment: .leading, spacing: 6) {
+                    .fixedSize(horizontal: false, vertical: true)
+                } else {
                     Text(L10n.t("Synchronisez votre carnet", "Sync your vault"))
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
+                        .font(.headline)
 
                     Text(
                         L10n.t(
@@ -204,16 +198,58 @@ struct VaultScreen: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
-
-                    Link(L10n.t("Créer un compte", "Create an account"), destination: accountURL)
-                        .font(.footnote)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal)
-                .padding(.vertical, 10)
-            }
 
-            VaultView(vault: vault, onSelect: { selectedID = $0.id })
+                if let status {
+                    Text(status)
+                        .font(.footnote)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                HStack(spacing: 16) {
+                    if isLinked {
+                        Button(action: startSync) {
+                            HStack(spacing: 6) {
+                                if isWorking {
+                                    ProgressView()
+                                } else {
+                                    Image(systemName: "arrow.triangle.2.circlepath")
+                                }
+                                Text(L10n.t("Synchroniser", "Sync"))
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(isWorking)
+
+                        Button(L10n.t("Délier", "Unlink"), role: .destructive, action: unlink)
+                            .buttonStyle(.borderless)
+                            .disabled(isWorking)
+                    } else {
+                        // La connexion ouvre la feuille de l'app (e-mail et mot
+                        // de passe, ou Google) ; la création de compte reste
+                        // sur le site.
+                        Button(L10n.t("Se connecter", "Sign in")) { showSignIn = true }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(isWorking)
+
+                        // Un bouton plutôt qu'un Link : dans une ligne de liste,
+                        // un Link prend le toucher de toute la ligne.
+                        Button(L10n.t("Créer un compte", "Create an account")) {
+                            openURL(accountURL)
+                        }
+                        .font(.footnote)
+                        .buttonStyle(.borderless)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 6)
+        }
+    }
+
+    private var unlockedContent: some View {
+        VaultView(vault: vault, onSelect: { selectedID = $0.id }) {
+            syncSection
         }
         .background(
             NavigationLink(

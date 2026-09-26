@@ -168,6 +168,12 @@ export const translations = {
     gen_numbers: "Numbers",
     gen_section_result: "Generated password",
     gen_placeholder_result: "Fill in the fields to generate a password",
+    gen_result_show: "Show",
+    gen_result_hide: "Hide",
+    gen_copy: "Copy",
+    gen_copy_password: "Copy the password",
+    gen_copied: "Copied.",
+    gen_copy_failed: "Could not copy.",
     v2_notice_title: "New algorithm",
     v2_notice_intro:
       "Passwords are now computed with a new algorithm (v2). Please migrate your passwords to this new algorithm.",
@@ -269,6 +275,9 @@ export const translations = {
     acc_device_disconnect: "Disconnect",
     acc_device_since: "connected on",
     acc_device_none: "No device connected.",
+    acc_device_web: "Browser (website)",
+    acc_device_web_hint:
+      "Website sessions do not count toward the device limit: the website always signs in, so you can disconnect a device from here.",
     acc_code_title: "Use a code",
     acc_code_unlocks: "A code lifts the sync limits on this account.",
     acc_code_apply: "Apply",
@@ -329,7 +338,7 @@ export const translations = {
     vault_lead:
       "Remembers each site's settings, so you no longer need to remember that an account was created without symbols, or under which login.",
     vault_update: "Update the entry",
-    vault_save: "Save this site",
+    vault_save: "Save this entry",
     vault_known: "{n} known entries for this site.",
     vault_renew: "Renew",
     vault_current: "Current password",
@@ -600,6 +609,12 @@ export const translations = {
     gen_numbers: "Chiffres",
     gen_section_result: "Mot de passe généré",
     gen_placeholder_result: "Remplissez les champs pour générer un mot de passe",
+    gen_result_show: "Voir",
+    gen_result_hide: "Cacher",
+    gen_copy: "Copier",
+    gen_copy_password: "Copier le mot de passe",
+    gen_copied: "Copié.",
+    gen_copy_failed: "Copie impossible.",
     v2_notice_title: "Nouvel algorithme",
     v2_notice_intro:
       "Les mots de passe se calculent désormais avec un nouvel algorithme (v2). Veuillez migrer vos mots de passe dans ce nouvel algorithme.",
@@ -702,6 +717,9 @@ export const translations = {
     acc_device_disconnect: "Déconnecter",
     acc_device_since: "connecté le",
     acc_device_none: "Aucun appareil connecté.",
+    acc_device_web: "Navigateur (site)",
+    acc_device_web_hint:
+      "Les sessions du site ne comptent pas dans la limite d'appareils : le site s'ouvre toujours, pour pouvoir déconnecter un appareil d'ici.",
     acc_code_title: "Utiliser un code",
     acc_code_unlocks: "Un code lève les limites de synchronisation sur ce compte.",
     acc_code_apply: "Appliquer",
@@ -764,7 +782,7 @@ export const translations = {
     vault_lead:
       "Retient les réglages de chaque site, pour ne plus avoir à se souvenir qu'un compte a été créé sans symboles, ni sous quel identifiant.",
     vault_update: "Mettre à jour l'entrée",
-    vault_save: "Enregistrer ce site",
+    vault_save: "Enregistrer cette entrée",
     vault_known: "{n} entrée(s) connue(s) pour ce site.",
     vault_renew: "Renouveler",
     vault_current: "Mot de passe actuel",
