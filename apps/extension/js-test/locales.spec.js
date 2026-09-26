@@ -74,6 +74,8 @@ describe("traductions du popup", () => {
     expect(description.length).toBeLessThanOrEqual(132);
     // Faux depuis le carnet et la synchronisation.
     expect(description).not.toMatch(/no storage|aucun stockage|no risk|zéro risque/i);
+    // Ce qui distingue TheCode vient en premier.
+    expect(description).toMatch(/^(Passwords never stored|Mots de passe jamais stockés)/);
   });
 
   it.each(["en", "fr"])("aucun texte n'oriente vers une offre payante en %s", (lang) => {

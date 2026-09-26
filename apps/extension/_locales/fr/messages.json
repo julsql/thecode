@@ -4,7 +4,7 @@
     "description": "The display name for the extension."
   },
   "extension_description": {
-    "message": "Mots de passe calculés depuis une clef maîtresse, jamais stockés. Carnet verrouillé et synchro chiffrée de bout en bout, en option.",
+    "message": "Mots de passe jamais stockés : recalculés depuis votre clef maîtresse. Carnet et synchro chiffrée en option. Partout les mêmes.",
     "description": "Description of what the extension does."
   },
   "v2_notice_title": {

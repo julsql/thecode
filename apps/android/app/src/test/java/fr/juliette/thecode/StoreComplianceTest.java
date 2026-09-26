@@ -29,7 +29,8 @@ public class StoreComplianceTest {
 
     /** Affirmations de l'ancienne app, fausses depuis le carnet et le compte. */
     private static final String[] OUTDATED = {
-            "no account", "sans compte", "no internet", "sans connexion internet", "sha-256",
+            "no account, no tracking", "sans compte, sans pistage", "no internet connection",
+            "sans connexion internet", "sha-256", "free and open-source", "libre et open-source",
     };
 
     @Test
@@ -59,7 +60,8 @@ public class StoreComplianceTest {
             for (String claim : OUTDATED) {
                 assertFalse(path + " : info_app affirme « " + claim + " »", text.contains(claim));
             }
-            for (String fact : new String[] {"v2", "v1", "keystore", "google"}) {
+            for (String fact : new String[] {
+                    "v2", "v1", "keystore", "google", "qr", "iphone", "mac", "brave"}) {
                 assertTrue(path + " : info_app ne parle pas de « " + fact + " »",
                         text.contains(fact));
             }

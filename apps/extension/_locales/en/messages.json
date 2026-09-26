@@ -4,7 +4,7 @@
     "description": "The display name for the extension."
   },
   "extension_description": {
-    "message": "Passwords computed from a single master key, never stored. Optional locked vault, end-to-end encrypted sync and autofill.",
+    "message": "Passwords never stored: recomputed from your master key. Optional vault and encrypted sync. Same passwords on every device.",
     "description": "Description of what the extension does."
   },
   "v2_notice_title": {
