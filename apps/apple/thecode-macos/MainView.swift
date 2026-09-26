@@ -172,15 +172,15 @@ struct MainView: View {
     private var v2NoticeSheet: some View {
         let intro = L10n.t(
             "Les mots de passe se calculent désormais avec un nouvel algorithme "
-                + "(v2). Veuillez migrer vos mots de passe dans ce nouvel algorithme.",
-            "Passwords are now computed with a new algorithm (v2). Please migrate "
-                + "your passwords to this new algorithm.")
+                + "(v2). Changez-les site par site pour adopter les nouveaux.",
+            "Passwords are now computed with a new algorithm (v2). Change them "
+                + "site by site to switch to the new ones.")
         let detail = L10n.t(
-            "Le remplissage automatique utilise le nouveau : pour un site que vous "
-                + "n'avez pas encore mis à jour, générez le mot de passe en v1 depuis "
-                + "l'application avec l'ancien algorithme.",
-            "Autofill uses the new one: for a site you have not updated yet, "
-                + "generate the password in v1 from the app with the old algorithm.")
+            "Le remplissage automatique utilise la v2. Pour un site pas encore mis "
+                + "à jour, le bouton v1 redonne ponctuellement l'ancien mot de passe : "
+                + "l'app passe alors en rose.",
+            "AutoFill uses v2. For a site you have not updated yet, the v1 button "
+                + "gives back the old password, one time: the app then turns pink.")
 
         // Pas de ScrollView : elle n'a pas de hauteur propre, ce qui obligeait à
         // fixer celle de la fenêtre — d'où un grand vide sous un texte court.
@@ -343,8 +343,8 @@ struct MainView: View {
 
                 Section(header: Text(L10n.t("Remplissage automatique", "AutoFill"))) {
                     Text(L10n.t(
-                        "TheCode peut remplir vos mots de passe dans Safari et les apps. Activez-le dans Réglages Système → Mots de passe → Options, puis cochez TheCode.",
-                        "TheCode can fill your passwords in Safari and apps. Enable it in System Settings → Passwords → Options, then tick TheCode."))
+                        "TheCode peut remplir vos mots de passe, avec l'identifiant, dans Safari et les apps. Activez-le dans Réglages Système → Général → Remplissage automatique et mots de passe (Mots de passe → Options avant macOS 15), puis cochez TheCode.",
+                        "TheCode can fill your passwords, with the username, in Safari and apps. Enable it in System Settings → General → AutoFill & Passwords (Passwords → Options before macOS 15), then tick TheCode."))
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
 
@@ -894,27 +894,43 @@ private struct InfoSheet: View {
     @Binding var isPresented: Bool
 
     private static let infoFR: String = """
-TheCode est un gestionnaire de mots de passe libre et open-source qui ne stocke aucun mot de passe : il les régénère à la volée à partir d'une seule clé secrète que vous mémorisez.
+TheCode ne stocke aucun mot de passe : il les recalcule à la demande à partir de votre clef maîtresse et du nom du site. Même clef + même site = même mot de passe, sur chaque appareil. Rien n'est enregistré, ni sur l'appareil, ni sur un serveur : il n'y a rien à voler.
 
-Choisissez votre clé, entrez le nom du site (par exemple « google.com » pour votre compte Google), ajustez la longueur et les options (minuscules, majuscules, chiffres, symboles), et le mot de passe est généré. Pour le retrouver, il vous suffit de revenir avec la même clé et le même nom de site.
+Générer : saisissez le site (par exemple « apple.com »), l'identifiant si besoin, puis la longueur et les caractères voulus. Le mot de passe est calculé avec l'algorithme v2 et masqué par défaut. Le bouton v1 redonne ponctuellement un mot de passe de l'ancien algorithme, le temps de le changer sur le site : l'app passe alors en rose.
 
-En interne, TheCode combine votre clé avec le nom du site et applique une fonction cryptographique (SHA-256). Le résultat est converti en un mot de passe robuste qui respecte vos critères. Même clé + même site = même mot de passe, à chaque fois, de manière déterministe.
+Clef maîtresse : gardée dans le trousseau de l'appareil et protégée par Touch ID ou le mot de passe de la session. Elle ne peut pas être récupérée : ne l'oubliez pas.
 
-Aucun mot de passe n'est jamais sauvegardé ni transmis : tous les calculs ont lieu localement, sans connexion internet, sans compte, sans pistage.
+Tout le reste est facultatif : sans carnet ni compte, l'app fonctionne entièrement.
 
-TheCode vous suit partout : extensions navigateur (Chrome, Firefox, Safari, Edge, Opera) et applications natives iOS et Android. Avec la même clé, vous retrouvez les mêmes mots de passe sur toutes vos plateformes.
+Carnet : retient pour chaque site l'identifiant, la longueur et les caractères, jamais le mot de passe. Il reste sur l'appareil, verrouillé par Touch ID ou un mot de passe de carnet. Un déverrouillage vaut 3 minutes pour la clef comme pour le carnet. Sans compte, il passe à vos autres apps TheCode par QR code chiffré.
+
+Compte : synchronise automatiquement le carnet et les réglages par défaut entre vos appareils, chiffrés de bout en bout. Le serveur ne voit ni votre clef maîtresse, ni vos sites, ni vos identifiants. Connexion par e-mail, avec Apple ou avec Google ; le compte se supprime depuis l'app.
+
+Remplissage automatique : une fois TheCode activé dans les réglages du système, il propose le mot de passe et l'identifiant dans Safari et les apps.
+
+Partout, avec la même clef : apps iPhone, iPad, Mac et Android, extensions Chrome, Firefox, Edge, Brave et Safari, et le site thecode.julsql.fr. La même clef y redonne les mêmes mots de passe.
+
+Sans compte, rien ne quitte l'appareil. Aucune publicité, aucun traceur, code source ouvert.
 """
 
     private static let infoEN: String = """
-TheCode is a free and open-source password manager that stores no passwords: it regenerates them on the fly from a single secret key that you remember.
+TheCode stores no passwords: it recomputes them on demand from your master key and the website name. Same key + same website = same password, on every device. Nothing is saved, neither on the device nor on a server: there is nothing to steal.
 
-Choose your key, enter the website name (for example « google.com » for your Google account), tweak the length and the options (lowercase, uppercase, digits, symbols), and the password is generated. To find it again, just come back with the same key and the same website name.
+Generate: type the website (for example "apple.com"), the username if needed, then the length and characters you want. The password is computed with the v2 algorithm and hidden by default. The v1 button gives back a password from the old algorithm, one time, while you change it on the site: the app then turns pink.
 
-Internally, TheCode combines your key with the website name and applies a cryptographic function (SHA-256). The result is converted into a strong password that matches your criteria. Same key + same website = same password, every time, deterministically.
+Master key: kept in the device keychain and protected by Touch ID or your login password. It cannot be recovered: don't forget it.
 
-No password is ever saved or transmitted: every computation happens locally, with no internet connection, no account, no tracking.
+Everything else is optional: without a vault or an account, the app works fully.
 
-TheCode follows you everywhere: browser extensions (Chrome, Firefox, Safari, Edge, Opera) and native iOS and Android apps. With the same key, you find the same passwords across all your platforms.
+Vault: remembers each site's username, length and characters, never the password. It stays on the device, locked by Touch ID or a vault password. One unlock lasts 3 minutes for both the key and the vault. Without an account, it moves to your other TheCode apps through an encrypted QR code.
+
+Account: automatically syncs the vault and the default settings across your devices, end-to-end encrypted. The server sees neither your master key, nor your sites, nor your usernames. Sign in with email, Apple or Google; the account can be deleted from the app.
+
+AutoFill: once TheCode is enabled in the system settings, it suggests the password and the username in Safari and apps.
+
+Everywhere, with the same key: iPhone, iPad, Mac and Android apps, Chrome, Firefox, Edge, Brave and Safari extensions, and the thecode.julsql.fr website. The same key gives back the same passwords on each of them.
+
+Without an account, nothing leaves the device. No ads, no trackers, open source.
 """
 
     var body: some View {

@@ -192,10 +192,10 @@ struct VaultScreen: View {
                 if isLinked {
                     Text(
                         L10n.t(
-                            "Compte lié : le carnet se synchronise entre vos appareils, "
-                                + "chiffré sur chacun avant l'envoi.",
-                            "Account linked: the vault syncs across your devices, "
-                                + "encrypted on each one before it is sent.")
+                            "Compte lié : le carnet et les réglages par défaut se synchronisent "
+                                + "automatiquement, chiffrés sur chaque appareil avant l'envoi.",
+                            "Account linked: the vault and the default settings sync "
+                                + "automatically, encrypted on each device before they are sent.")
                     )
                     .font(.footnote)
                     .foregroundStyle(.secondary)
@@ -206,12 +206,14 @@ struct VaultScreen: View {
 
                     Text(
                         L10n.t(
-                            "Gardez votre carnet à jour entre vos appareils. Il est "
-                                + "chiffré sur cet appareil avant d'être envoyé : le "
-                                + "serveur ne peut lire ni vos sites, ni vos identifiants.",
-                            "Keep your vault up to date across your devices. It is "
-                                + "encrypted on this device before it is sent: the server "
-                                + "can read neither your sites nor your logins.")
+                            "Gardez votre carnet et vos réglages par défaut à jour entre vos "
+                                + "appareils. Tout est chiffré sur cet appareil avant d'être "
+                                + "envoyé : le serveur ne voit ni votre clef maîtresse, ni "
+                                + "vos sites, ni vos identifiants.",
+                            "Keep your vault and your default settings up to date across your "
+                                + "devices. Everything is encrypted on this device before it is "
+                                + "sent: the server sees neither your master key, nor your "
+                                + "sites, nor your logins.")
                     )
                     .font(.footnote)
                     .foregroundStyle(.secondary)
