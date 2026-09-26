@@ -2,11 +2,10 @@
 //  ContentView.swift
 //  thecode-macos-autofill
 //
-//  Vue racine du NSHostingController de l'extension. Sur macOS, le flux Safari
-//  ne présente pas l'UI custom de l'extension : le remplissage est piloté
-//  automatiquement (Touch ID déclenché dès qu'une clé est définie, sinon
-//  ouverture de l'app). Cette vue n'est donc qu'un placeholder de marque ;
-//  toute la logique vit dans CredentialProviderViewController / AutofillModel.
+//  Vue racine du NSHostingController de l'extension : les comptes connus du
+//  site (un geste chacun), et un champ identifiant pour un site inconnu ou un
+//  autre compte. Le système ne dit pas au fournisseur l'identifiant du
+//  formulaire : c'est ici qu'on le demande.
 //
 
 import SwiftUI
@@ -14,8 +13,7 @@ import SwiftUI
 // MARK: - Localisation (FR si appareil en français, EN sinon par défaut)
 //
 // Doublon volontaire de l'enum `L10n` du target principal : les extensions
-// AutoFill ne partagent pas le code de l'app hôte. Toujours utilisé par
-// AutofillModel pour les libellés d'authentification.
+// AutoFill ne partagent pas le code de l'app hôte.
 
 enum L10n {
     static let isFrench: Bool = {
@@ -31,54 +29,89 @@ enum L10n {
 struct ContentView: View {
 
     @ObservedObject var model: AutofillModel
+    @FocusState private var loginFocused: Bool
 
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 14) {
             Image(systemName: "lock.shield.fill")
-                .font(.system(size: 56, weight: .regular))
+                .font(.system(size: 40, weight: .regular))
                 .foregroundColor(.accentColor)
 
             Text("TheCode")
                 .font(.title)
                 .fontWeight(.bold)
 
-            // Choisir d'abord, s'authentifier ensuite : demander Touch ID avant
-            // de savoir quel compte remplir obligerait à le redemander.
-            if model.mustChoose {
-                Text(L10n.t("Plusieurs comptes pour \(model.domain)",
-                            "Several accounts for \(model.domain)"))
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
+            Text(model.domain)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
 
+            if !model.accounts.isEmpty {
                 ScrollView {
                     VStack(spacing: 8) {
                         ForEach(model.accounts) { account in
                             Button {
                                 model.choose(account)
+                                if account.login.isEmpty { loginFocused = true }
                             } label: {
                                 Text(account.label)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                             }
+                            .disabled(model.busy)
                         }
+                    }
+                }
+                .frame(maxHeight: 160)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text(loginPrompt)
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+
+                TextField(L10n.t("Identifiant", "Username"), text: $model.login)
+                    .textFieldStyle(.roundedBorder)
+                    .textContentType(.username)
+                    .disableAutocorrection(true)
+                    .focused($loginFocused)
+                    .onSubmit { model.fillTyped() }
+
+                // Demandé avant de remplir, faute de moment après : l'extension
+                // disparaît une fois le mot de passe rendu.
+                if model.canSave {
+                    Toggle(isOn: $model.saveToVault) {
+                        Text(L10n.t("Enregistrer ce compte dans le carnet",
+                                    "Save this account to the vault"))
+                            .font(.footnote)
                     }
                 }
             }
 
-            // Demandé avant de remplir, faute de moment après : l'extension
-            // disparaît une fois le mot de passe rendu.
-            if model.canSave && !model.busy {
-                Toggle(isOn: $model.saveToVault) {
-                    Text(L10n.t("Enregistrer ce site dans le carnet",
-                                "Save this site to the vault"))
-                        .font(.footnote)
+            HStack {
+                Button(L10n.t("Annuler", "Cancel")) { model.cancel() }
+                    .keyboardShortcut(.cancelAction)
+                Spacer()
+                if model.busy {
+                    ProgressView().controlSize(.small)
                 }
-            }
-
-            if model.busy {
-                ProgressView()
+                Button(L10n.t("Remplir", "Fill")) { model.fillTyped() }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(model.busy || model.typedFill == nil)
             }
         }
-        .frame(minWidth: 260, minHeight: 200)
+        .frame(minWidth: 320, minHeight: 300)
         .padding()
+        .onAppear {
+            if model.accounts.isEmpty { loginFocused = true }
+        }
+    }
+
+    private var loginPrompt: String {
+        if let pinned = model.pinned {
+            return L10n.t("Identifiant du compte \(pinned.label)",
+                          "Username for \(pinned.label)")
+        }
+        return model.accounts.isEmpty
+            ? L10n.t("Identifiant du compte sur ce site", "Your username on this site")
+            : L10n.t("Ou un autre compte", "Or another account")
     }
 }

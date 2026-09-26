@@ -23,6 +23,7 @@ from sqlalchemy import (
     LargeBinary,
     String,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -45,6 +46,14 @@ class Account(Base):
     """
 
     __tablename__ = "accounts"
+    __table_args__ = (
+        Index(
+            "ix_accounts_apple_sub",
+            "apple_sub",
+            unique=True,
+            postgresql_where=text("apple_sub <> ''"),
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email: Mapped[str] = mapped_column(String(320), unique=True, index=True)
@@ -86,6 +95,12 @@ class Account(Base):
     #: `sub` et non l'adresse : Google permet d'en changer, et une adresse
     #: réattribuée à quelqu'un d'autre lui ouvrirait le compte.
     google_sub: Mapped[str] = mapped_column(String(64), default="", index=True)
+
+    #: Identifiant Apple du compte (`sub`), vide quand il n'est pas lié.
+    #:
+    #: Unique parmi les valeurs non vides (index partiel) : deux comptes
+    #: ouverts par le même identifiant Apple rendraient la connexion ambiguë.
+    apple_sub: Mapped[str] = mapped_column(String(255), default="")
 
     entries: Mapped[list[VaultEntry]] = relationship(back_populates="account", cascade="all, delete-orphan")
     sessions: Mapped[list[Session]] = relationship(back_populates="account", cascade="all, delete-orphan")

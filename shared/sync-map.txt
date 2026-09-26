@@ -45,6 +45,9 @@ apple/Sync.swift|apps/apple/Shared
 apple/GoogleAuth.swift|apps/apple/Shared
 apple/GoogleSignIn.swift|apps/apple/thecode
 apple/GoogleSignIn.swift|apps/apple/thecode-macos
+apple/AppleAuth.swift|apps/apple/Shared
+apple/AppleSignIn.swift|apps/apple/thecode
+apple/AppleSignIn.swift|apps/apple/thecode-macos
 apple/SyncCredentialsStore.swift|apps/apple/Shared
 vault-fixtures/sync-row.json|apps/android/app/src/test/resources
 vault-fixtures/sync-row.json|apps/apple/thecodeTests/Resources

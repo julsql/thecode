@@ -160,6 +160,7 @@ class AccountResponse(BaseModel):
     #: Faux pour un compte créé par Google et qui n'a pas posé de mot de passe.
     has_password: bool = True
     google_linked: bool = False
+    apple_linked: bool = False
     #: Adresse en attente de confirmation, vide s'il n'y en a pas.
     pending_email: str = ""
     #: Faux quand le paiement n'est pas configuré : le site doit alors dire
@@ -181,6 +182,21 @@ class GoogleRequest(BaseModel):
     id_token: Annotated[str, Field(min_length=1, max_length=4096)]
     #: Le nonce passé à Google pour obtenir ce jeton. Facultatif ; s'il est
     #: fourni, le jeton doit porter le même.
+    nonce: Annotated[str, Field(max_length=256)] = ""
+    device_label: Annotated[str, Field(max_length=120)] = ""
+    client: SessionClient = "app"
+    invite_code: Annotated[str, Field(max_length=128)] = ""
+    lang: Annotated[str, Field(max_length=5)] = "en"
+
+
+class AppleRequest(BaseModel):
+    """Le jeton d'identité rendu par « Se connecter avec Apple » aux
+    applications iOS et macOS."""
+
+    identity_token: Annotated[str, Field(min_length=1, max_length=8192)]
+    #: Le nonce **brut** tiré par le client. Apple a reçu son empreinte
+    #: SHA-256 (hexadécimal) et l'a recopiée dans le jeton ; le serveur hache
+    #: celui-ci et compare. Facultatif.
     nonce: Annotated[str, Field(max_length=256)] = ""
     device_label: Annotated[str, Field(max_length=120)] = ""
     client: SessionClient = "app"

@@ -101,20 +101,29 @@ public class TheCodeAutofillService extends AutofillService {
         AutofillId[] ids = parsed.passwordIds.toArray(new AutofillId[0]);
 
         // Le carnet dit sous quelle clef dériver, avec quels réglages, et pour
-        // lequel des comptes du site. Plusieurs entrées pour un même domaine,
-        // c'est plusieurs comptes : on les propose toutes.
+        // lequel des comptes du site. L'identifiant déjà saisi dans le
+        // formulaire désigne le compte, comme dans le menu de l'extension ;
+        // sans lui, plusieurs entrées pour un même domaine, c'est plusieurs
+        // comptes : on les propose toutes.
+        //
+        // Limite : le système interroge le service à la prise de focus. Un
+        // identifiant tapé après que le champ mot de passe a déjà reçu le
+        // focus n'entre pas dans la réponse déjà rendue ; le framework ne
+        // redemande qu'au focus d'un champ qu'elle ne couvrait pas (ou après
+        // une nouvelle session, AutofillManager#requestAutofill côté app).
+        String pageLogin = SiteResolution.normalizeLogin(parsed.usernameValue);
         Vault vault = Vault.load(this);
-        List<SiteResolution> resolutions = SiteResolution.forDomain(
-                vault, domain, prefs.getLength(), prefs.getMinState(),
+        List<SiteResolution> resolutions = SiteResolution.forPageLogin(
+                vault, domain, pageLogin, prefs.getLength(), prefs.getMinState(),
                 prefs.getMajState(), prefs.getSymState(), prefs.getChiState());
 
         // Même règle que l'écran de génération : compte de synchronisation lié
-        // et site inconnu du carnet.
+        // et compte inconnu du carnet (site inconnu, ou nouvel identifiant).
         boolean proposeSave = SaveProposal.shouldPropose(
-                prefs.getSyncCredentials() != null, vault, domain);
+                prefs.getSyncCredentials() != null, resolutions);
 
         callback.onSuccess(buildAuthenticatedResponse(request, domain, resolutions, ids,
-                proposeSave ? parsed.usernameId : null, proposeSave));
+                parsed.usernameId, proposeSave));
     }
 
     /**
@@ -172,6 +181,12 @@ public class TheCodeAutofillService extends AutofillService {
                 return;
             }
             Vault vault = Vault.load(this);
+            // Compte déjà au carnet (une synchronisation a pu l'y mettre) :
+            // ses réglages produisent son mot de passe, on n'y touche pas.
+            if (vault.findAccount(domain, login) != null) {
+                main.post(callback::onSuccess);
+                return;
+            }
             // Le siteKey d'une entrée existante n'est jamais réécrit : il
             // produit le mot de passe, le modifier en changerait un déjà en
             // service.
@@ -212,7 +227,8 @@ public class TheCodeAutofillService extends AutofillService {
                                                     boolean proposeSave) {
         FillResponse.Builder response = new FillResponse.Builder();
         for (int i = 0; i < resolutions.size(); i++) {
-            response.addDataset(buildDataset(request, domain, resolutions.get(i), i, passwordIds));
+            response.addDataset(buildDataset(request, domain, resolutions.get(i), i, passwordIds,
+                    usernameId));
         }
 
         // Le carnet ne connaît pas encore ce site : on demande au système de
@@ -230,13 +246,23 @@ public class TheCodeAutofillService extends AutofillService {
     }
 
     private Dataset buildDataset(FillRequest request, String domain, SiteResolution resolution,
-                                 int index, AutofillId[] passwordIds) {
+                                 int index, AutofillId[] passwordIds,
+                                 @Nullable AutofillId usernameId) {
         RemoteViews presentation = buildPresentation(resolution.label);
 
         Intent authIntent = new Intent(this, AutofillAuthActivity.class);
         authIntent.putExtra(AutofillAuthActivity.EXTRA_DOMAIN, domain);
         authIntent.putExtra(AutofillAuthActivity.EXTRA_ENTRY_ID, resolution.entryId);
         authIntent.putExtra(AutofillAuthActivity.EXTRA_PASSWORD_IDS, passwordIds);
+        // Nouveau compte dérivé avec l'identifiant de la page : l'activité en
+        // a besoin pour redonner le même mot de passe, et remplit le champ
+        // identifiant avec la valeur déjà saisie.
+        if (resolution.entryId.isEmpty() && !resolution.login.isEmpty()) {
+            authIntent.putExtra(AutofillAuthActivity.EXTRA_LOGIN, resolution.login);
+            if (usernameId != null) {
+                authIntent.putExtra(AutofillAuthActivity.EXTRA_USERNAME_ID, usernameId);
+            }
+        }
 
         int flags = PendingIntent.FLAG_UPDATE_CURRENT;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {

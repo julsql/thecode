@@ -204,6 +204,28 @@ public struct Sync {
         return try credentials(from: body, endpoint: endpoint)
     }
 
+    /// Connexion (ou création du compte) à partir d'un jeton d'identité Apple
+    /// et du nonce *brut* dont l'empreinte a été confiée à Apple.
+    public func appleSignIn(
+        endpoint: String, identityToken: String, rawNonce: String, lang: String,
+        deviceLabel: String = ""
+    ) async throws -> SyncCredentials {
+        let body = try await call(
+            "\(endpoint)/v1/auth/apple", method: "POST",
+            payload: AppleAuth.apiBody(
+                identityToken: identityToken, rawNonce: rawNonce, lang: lang,
+                deviceLabel: deviceLabel))
+        return try credentials(from: body, endpoint: endpoint)
+    }
+
+    /// Vrai si le service accepte « Se connecter avec Apple ». Toute erreur
+    /// (réseau, ancien serveur) vaut non : le bouton reste caché.
+    public func appleEnabled(endpoint: String) async -> Bool {
+        guard let body = try? await call("\(endpoint)/v1/auth/registration", method: "GET")
+        else { return false }
+        return AppleAuth.isEnabled(registration: body)
+    }
+
     /// Relit l'offre du compte, en renouvelant le jeton s'il a expiré.
     ///
     /// Rend les identifiants mis à jour : l'appelant doit les réenregistrer,

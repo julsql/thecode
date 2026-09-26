@@ -39,6 +39,8 @@ struct VaultScreen: View {
     @State private var email = ""
     @State private var password = ""
     @State private var isGoogleWorking = false
+    /// Dit par GET /v1/auth/registration ; faux tant qu'il n'a pas répondu.
+    @State private var isAppleEnabled = false
 
     /// `nil` tant que l'identifiant client n'est pas renseigné : pas de bouton.
     private let google = GoogleAuth.configured()
@@ -352,6 +354,15 @@ struct VaultScreen: View {
                 destination: accountURL)
                 .font(.callout)
 
+            // Apple sur sa propre ligne, pleine largeur : la règle 4.8 le veut
+            // au moins aussi visible que Google.
+            if isAppleEnabled {
+                AppleSignInButton(onCompletion: signInWithApple)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 32)
+                    .disabled(endpoint.isEmpty)
+            }
+
             HStack {
                 if google != nil {
                     Button(
@@ -373,6 +384,7 @@ struct VaultScreen: View {
         }
         .padding(20)
         .frame(width: 420)
+        .task(id: endpoint) { await refreshAppleEnabled() }
     }
 
 
@@ -564,6 +576,44 @@ struct VaultScreen: View {
                     deviceLabel: Host.current().localizedName ?? "Mac")
             }
         }
+    }
+
+    /// Même suite que `signIn`, avec le jeton rendu par la feuille d'Apple.
+    /// Fermée sans rien choisir, on revient au formulaire, sans message.
+    private func signInWithApple(
+        _ result: Result<(identityToken: String, rawNonce: String), Error>
+    ) {
+        let endpoint = self.endpoint.trimmingCharacters(in: .whitespaces)
+        switch result {
+        case .failure(let error):
+            if let message = AppleSignIn.message(for: error) {
+                showSignIn = false
+                status = message
+            }
+        case .success(let signIn):
+            showSignIn = false
+            link {
+                try await Sync().appleSignIn(
+                    endpoint: endpoint, identityToken: signIn.identityToken,
+                    rawNonce: signIn.rawNonce, lang: L10n.t("fr", "en"),
+                    deviceLabel: Host.current().localizedName ?? "Mac")
+            }
+        }
+    }
+
+    /// Relu à chaque adresse saisie, après une courte pause : chaque service
+    /// dit s'il accepte Apple.
+    private func refreshAppleEnabled() async {
+        let endpoint = self.endpoint.trimmingCharacters(in: .whitespaces)
+        guard !endpoint.isEmpty else {
+            isAppleEnabled = false
+            return
+        }
+        try? await Task.sleep(nanoseconds: 400_000_000)
+        guard !Task.isCancelled else { return }
+        let enabled = await Sync().appleEnabled(endpoint: endpoint)
+        guard !Task.isCancelled else { return }
+        isAppleEnabled = enabled
     }
 
     private func unlink() {

@@ -12,6 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DbSession
 
 from .. import codes as code_rules
+from ..apple import AppleError, verify_identity_token
 from ..auth import (
     create_access_token,
     current_account,
@@ -37,6 +38,7 @@ from ..plans import (
 )
 from ..schemas import (
     AccountResponse,
+    AppleRequest,
     ForgotPasswordRequest,
     GoogleRequest,
     LoginRequest,
@@ -78,6 +80,7 @@ def account_response(db: DbSession, account: Account) -> AccountResponse:
         plans_enforced=settings.plans_enabled,
         has_password=bool(account.password_hash),
         google_linked=bool(account.google_sub),
+        apple_linked=bool(account.apple_sub),
         pending_email=pending_email(db, account),
     )
 
@@ -245,14 +248,21 @@ def registration_state(db: DbSession = Depends(get_db)) -> dict[str, object]:
     # L'identifiant client Google est public par construction : il voyage dans
     # chaque page qui propose le bouton. Le donner ici évite de le recopier
     # dans le site, où il finirait par ne plus correspondre.
-    google = settings.google_client_id
+    # Pour Apple, seul le Services ID du site est publié : chaque application
+    # embarque son bundle id, et n'a besoin que de savoir si le bouton a un
+    # sens.
+    providers = {
+        "googleClientId": settings.google_client_id,
+        "appleEnabled": settings.apple_enabled,
+        "appleWebClientId": settings.apple_web_client_id,
+    }
 
     if settings.registration_closed:
-        return {"open": False, "needsCode": True, "freeSlots": 0, "googleClientId": google}
+        return {"open": False, "needsCode": True, "freeSlots": 0, **providers}
     if settings.registration_open:
-        return {"open": True, "needsCode": False, "freeSlots": None, "googleClientId": google}
+        return {"open": True, "needsCode": False, "freeSlots": None, **providers}
     if not settings.registration_quota:
-        return {"open": True, "needsCode": True, "freeSlots": None, "googleClientId": google}
+        return {"open": True, "needsCode": True, "freeSlots": None, **providers}
 
     taken = db.scalar(select(func.count()).select_from(Account)) or 0
     free = max(0, settings.free_accounts - taken)
@@ -260,7 +270,7 @@ def registration_state(db: DbSession = Depends(get_db)) -> dict[str, object]:
         "open": True,
         "needsCode": free == 0,
         "freeSlots": free,
-        "googleClientId": google,
+        **providers,
     }
 
 
@@ -306,9 +316,10 @@ def login(payload: LoginRequest, db: DbSession = Depends(get_db)) -> TokenRespon
     # invalides » enverrait son propriétaire chercher une faute de frappe dans
     # un mot de passe qui n'existe pas.
     if account is not None and not account.password_hash:
+        provider = "Google" if account.google_sub or not account.apple_sub else "Apple"
         raise HTTPException(
             status.HTTP_401_UNAUTHORIZED,
-            "Ce compte se connecte avec Google. Depuis votre compte sur le site, "
+            f"Ce compte se connecte avec {provider}. Depuis votre compte sur le site, "
             "définissez un mot de passe pour l'utiliser dans les applications.",
         )
     if not valid or account is None:
@@ -466,6 +477,75 @@ def google_sign_in(payload: GoogleRequest, db: DbSession = Depends(get_db)) -> T
 
     _enforce_device_limit(db, account, payload.client)
     return _issue_tokens(db, account, payload.device_label or "Google", payload.client)
+
+
+@router.post("/apple", response_model=TokenResponse)
+def apple_sign_in(payload: AppleRequest, db: DbSession = Depends(get_db)) -> TokenResponse:
+    """Crée le compte ou ouvre la session, à partir d'un jeton Apple.
+
+    Même contrat que `/google` : une seule route pour l'inscription et la
+    connexion. Le lien se fait sur le `sub` d'Apple ; à défaut, sur l'adresse
+    si Apple la dit vérifiée ; à défaut, un compte gratuit est créé.
+    """
+    settings = get_settings()
+    try:
+        identity = verify_identity_token(payload.identity_token, settings, payload.nonce)
+    except AppleError as exc:
+        logger.info("Jeton Apple refusé : %s", exc)
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Connexion Apple refusée.") from None
+
+    account = db.scalars(
+        select(Account).where(Account.apple_sub == identity.sub)
+    ).one_or_none()
+
+    if account is None and identity.email:
+        account = db.scalars(
+            select(Account).where(Account.email == identity.email)
+        ).one_or_none()
+        if account is not None:
+            # Un autre identifiant Apple tient déjà ce compte : le remplacer en
+            # silence donnerait le compte au dernier venu.
+            if account.apple_sub:
+                raise HTTPException(
+                    status.HTTP_409_CONFLICT,
+                    "Ce compte est déjà lié à un autre identifiant Apple.",
+                )
+            account.apple_sub = identity.sub
+            if account.email_verified_at is None:
+                account.email_verified_at = datetime.now(UTC)
+            db.commit()
+
+    if account is None:
+        if not identity.email:
+            # Sans adresse, pas de compte : c'est elle qui l'identifie sur le
+            # site et reçoit les liens. Apple la fournit dès que l'utilisateur
+            # accepte de la partager, fût-ce par relais.
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                "Apple n'a pas fourni d'adresse e-mail vérifiée pour créer le compte.",
+            )
+        stored_code = _check_registration(db, payload.invite_code)
+        account = Account(
+            email=identity.email,
+            password_hash="",
+            apple_sub=identity.sub,
+            # Vérifiée par Apple, relais privé compris.
+            email_verified_at=datetime.now(UTC),
+        )
+        db.add(account)
+        try:
+            db.flush()
+            if stored_code is not None:
+                code_rules.redeem(db, account, stored_code)
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            raise HTTPException(
+                status.HTTP_409_CONFLICT, "Cette adresse est déjà inscrite"
+            ) from None
+
+    _enforce_device_limit(db, account, payload.client)
+    return _issue_tokens(db, account, payload.device_label or "Apple", payload.client)
 
 
 @router.post("/password/forgot", status_code=status.HTTP_202_ACCEPTED)

@@ -112,6 +112,18 @@ class Settings(BaseSettings):
     #: `/v1/auth/registration` : chaque application embarque le sien.
     google_extra_client_ids: str = ""
 
+    #: Identifiants acceptés en audience des jetons « Se connecter avec
+    #: Apple » obtenus par les applications, séparés par des virgules : le
+    #: bundle id (p. ex. `fr.julsql.thecode`). Jamais publiés : chaque
+    #: application embarque le sien.
+    apple_client_ids: str = ""
+    #: Services ID du site (Apple JS, p. ex. `fr.julsql.thecode.web`), accepté
+    #: lui aussi en audience. Public par construction : il est publié par
+    #: `/v1/auth/registration` pour que le site n'ait pas à le recopier.
+    #:
+    #: Sans aucun des deux, Apple est désactivé et le service refuse ses jetons.
+    apple_web_client_id: str = ""
+
     #: Vérification d'adresse. Par défaut la vérification est proposée mais pas
     #: exigée : tant que l'envoi d'e-mail n'est pas branché, l'exiger
     #: enfermerait tout le monde dehors.
@@ -179,6 +191,20 @@ class Settings(BaseSettings):
             return []
         extra = [cid.strip() for cid in self.google_extra_client_ids.split(",") if cid.strip()]
         return [self.google_client_id, *(cid for cid in extra if cid != self.google_client_id)]
+
+    @property
+    def apple_audiences(self) -> list[str]:
+        """Les applications d'abord, puis le site, sans doublon."""
+        seen: list[str] = []
+        for cid in [*self.apple_client_ids.split(","), self.apple_web_client_id]:
+            cid = cid.strip()
+            if cid and cid not in seen:
+                seen.append(cid)
+        return seen
+
+    @property
+    def apple_enabled(self) -> bool:
+        return bool(self.apple_audiences)
 
     @property
     def billing_enabled(self) -> bool:

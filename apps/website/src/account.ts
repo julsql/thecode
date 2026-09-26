@@ -27,9 +27,10 @@ export interface AccountInfo {
   hasPendingCoupon: boolean;
   billingAvailable: boolean;
   plansEnforced: boolean;
-  /** Faux pour un compte créé par Google qui n'a pas posé de mot de passe. */
+  /** Faux pour un compte créé par Google ou Apple qui n'a pas posé de mot de passe. */
   hasPassword: boolean;
   googleLinked: boolean;
+  appleLinked: boolean;
   /** Adresse en attente de confirmation, vide s'il n'y en a pas. */
   pendingEmail: string;
 }
@@ -76,6 +77,7 @@ export async function fetchAccount(session: Session): Promise<AccountInfo> {
     plansEnforced: Boolean(body.plans_enforced),
     hasPassword: body.has_password ?? true,
     googleLinked: Boolean(body.google_linked),
+    appleLinked: Boolean(body.apple_linked),
     pendingEmail: body.pending_email ?? "",
   };
 }
@@ -290,5 +292,12 @@ export async function deleteAccount(
 export async function unlinkGoogle(session: Session): Promise<void> {
   await authorized(session, (token) =>
     request(`${session.endpoint}/v1/account/google`, { token, method: "DELETE" }),
+  );
+}
+
+/** Détache le compte Apple, aux mêmes conditions que Google. */
+export async function unlinkApple(session: Session): Promise<void> {
+  await authorized(session, (token) =>
+    request(`${session.endpoint}/v1/account/apple`, { token, method: "DELETE" }),
   );
 }

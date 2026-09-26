@@ -32,6 +32,10 @@ MAPPING = {
     # jetons Google portent cet identifiant en audience. Public, comme tout
     # identifiant client ; c'est le code secret du client web qui ne l'est pas.
     "THECODE_GOOGLE_EXTRA_CLIENT_IDS": "OAuth_Client.ID_client_iOS",
+    # « Se connecter avec Apple » : bundle id des apps iOS/macOS (audience de
+    # leurs jetons) et Services ID du site. Publics, comme les précédents.
+    "THECODE_APPLE_CLIENT_IDS": "Apple.Client_IDs",
+    "THECODE_APPLE_WEB_CLIENT_ID": "Apple.Web_Client_ID",
     "THECODE_MAIL_USER": "Email.Host_User",
     "THECODE_MAIL_PASSWORD": "Email.Host_Password",
     # Facultatif : l'adresse affichée aux destinataires, quand elle diffère du

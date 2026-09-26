@@ -3,6 +3,8 @@ package fr.juliette.thecode.vault;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import java.util.List;
+
 /**
  * Quand proposer d'enregistrer un site au carnet, et sous quel identifiant.
  *
@@ -29,6 +31,20 @@ public final class SaveProposal {
     }
 
     /**
+     * Même règle, pour le remplissage : proposer quand ce qui est rempli ne
+     * vient d'aucune entrée du carnet — site inconnu, ou identifiant saisi qui
+     * désigne un nouveau compte sur un site connu.
+     */
+    public static boolean shouldPropose(boolean syncLinked,
+                                        @NonNull List<SiteResolution> resolutions) {
+        if (!syncLinked || resolutions.isEmpty()) return false;
+        for (SiteResolution r : resolutions) {
+            if (!r.entryId.isEmpty()) return false;
+        }
+        return true;
+    }
+
+    /**
      * L'identifiant à enregistrer pour un mot de passe soumis, ou {@code null}
      * s'il ne faut rien enregistrer.
      *
@@ -38,8 +54,9 @@ public final class SaveProposal {
      * comme sur iOS.
      *
      * L'identifiant entre dans la dérivation v2 : on garde celui qui redonne le
-     * mot de passe soumis, puis l'identifiant vide, qui est ce qu'utilise le
-     * remplissage d'un site inconnu.
+     * mot de passe soumis — le remplissage dérive désormais avec l'identifiant
+     * saisi, il le redonne donc directement — puis l'identifiant vide, qui est
+     * ce qu'utilise le remplissage quand rien n'était saisi.
      */
     @Nullable
     public static String loginToStore(@Nullable String submittedPassword,

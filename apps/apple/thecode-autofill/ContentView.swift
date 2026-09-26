@@ -3,9 +3,9 @@
 //  thecode-autofill
 //
 //  Vue présentée par l'extension AutoFill. On ne montre JAMAIS le mot de
-//  passe ni la clé : juste « un mot de passe est disponible pour ce
-//  domaine » et un bouton qui déclenche l'authentification biométrique.
-//  La validation effective ne se produit qu'après auth réussie.
+//  passe ni la clé : les comptes connus du site (un geste chacun) et un champ
+//  identifiant pour un site inconnu ou un autre compte. La validation
+//  effective ne se produit qu'après auth biométrique réussie.
 //
 
 import SwiftUI
@@ -33,14 +33,14 @@ enum L10n {
 struct ContentView: View {
 
     @ObservedObject var model: AutofillModel
+    @FocusState private var loginFocused: Bool
 
     var body: some View {
-        VStack(spacing: 24) {
-            Spacer()
-
+        VStack(spacing: 20) {
             Image(systemName: "lock.shield.fill")
-                .font(.system(size: 64, weight: .regular))
+                .font(.system(size: 48, weight: .regular))
                 .foregroundColor(.accentColor)
+                .padding(.top, 24)
 
             VStack(spacing: 8) {
                 Text("TheCode")
@@ -51,12 +51,6 @@ struct ContentView: View {
                     Text(L10n.t("Aucun domaine détecté", "No domain detected"))
                         .foregroundColor(.secondary)
                 } else {
-                    Text(
-                        model.mustChoose
-                            ? L10n.t("Plusieurs comptes pour", "Several accounts for")
-                            : L10n.t("Mot de passe disponible pour", "Password available for")
-                    )
-                    .foregroundColor(.secondary)
                     Text(model.domain)
                         .font(.title3)
                         .fontWeight(.semibold)
@@ -73,47 +67,59 @@ struct ContentView: View {
                     .padding(.horizontal, 24)
             }
 
-            Spacer()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 8) {
+                    // Un geste par compte connu : biométrie puis remplissage.
+                    ForEach(model.accounts) { account in
+                        Button {
+                            model.choose(account)
+                            if account.login.isEmpty { loginFocused = true }
+                        } label: {
+                            Text(account.label)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.vertical, 4)
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(model.busy)
+                    }
 
-            // Choisir d'abord, s'authentifier ensuite : demander la biométrie
-            // avant de savoir quel compte remplir obligerait à la redemander.
-            if model.mustChoose {
-                ScrollView {
-                    VStack(spacing: 8) {
-                        ForEach(model.accounts) { account in
-                            Button {
-                                model.choose(account)
-                            } label: {
-                                Text(account.label)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.vertical, 4)
-                            }
-                            .buttonStyle(.bordered)
+                    // Le système ne dit pas l'identifiant du formulaire : on
+                    // le demande pour un site inconnu ou un autre compte.
+                    Text(loginPrompt)
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                        .padding(.top, model.accounts.isEmpty ? 0 : 8)
+
+                    TextField(L10n.t("Identifiant", "Username"), text: $model.login)
+                        .textFieldStyle(.roundedBorder)
+                        .textContentType(.username)
+                        .textInputAutocapitalization(.never)
+                        .disableAutocorrection(true)
+                        .focused($loginFocused)
+                        .submitLabel(.go)
+                        .onSubmit { model.fillTyped() }
+
+                    // Demandé avant de remplir, faute de moment après :
+                    // l'extension disparaît une fois le mot de passe rendu.
+                    if model.canSave {
+                        Toggle(isOn: $model.saveToVault) {
+                            Text(L10n.t("Enregistrer ce compte dans le carnet",
+                                        "Save this account to the vault"))
+                                .font(.footnote)
                         }
                     }
-                    .padding(.horizontal, 24)
-                }
-            }
-
-            // Demandé avant de remplir, faute de moment après : l'extension
-            // disparaît une fois le mot de passe rendu.
-            if model.canSave {
-                Toggle(isOn: $model.saveToVault) {
-                    Text(L10n.t("Enregistrer ce site dans le carnet",
-                                "Save this site to the vault"))
-                        .font(.footnote)
                 }
                 .padding(.horizontal, 24)
             }
 
             Button {
-                model.startBiometric()
+                model.fillTyped()
             } label: {
                 HStack {
                     Image(systemName: "faceid")
                     Text(model.busy
                          ? L10n.t("Authentification…", "Authenticating…")
-                         : L10n.t("Authentifier pour remplir", "Authenticate to fill"))
+                         : L10n.t("Remplir", "Fill"))
                         .fontWeight(.semibold)
                 }
                 .frame(maxWidth: .infinity)
@@ -121,7 +127,7 @@ struct ContentView: View {
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
-            .disabled(model.busy || model.domain.isEmpty || model.mustChoose)
+            .disabled(model.busy || model.typedFill == nil)
             .padding(.horizontal, 24)
 
             Button(L10n.t("Annuler", "Cancel"), role: .cancel) {
@@ -129,5 +135,18 @@ struct ContentView: View {
             }
             .padding(.bottom, 24)
         }
+        .onAppear {
+            if model.accounts.isEmpty { loginFocused = true }
+        }
+    }
+
+    private var loginPrompt: String {
+        if let pinned = model.pinned {
+            return L10n.t("Identifiant du compte \(pinned.label)",
+                          "Username for \(pinned.label)")
+        }
+        return model.accounts.isEmpty
+            ? L10n.t("Identifiant du compte sur ce site", "Your username on this site")
+            : L10n.t("Ou un autre compte", "Or another account")
     }
 }

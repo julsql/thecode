@@ -5,10 +5,12 @@
 //  Cycle de vie de l'extension AutoFill :
 //    1. iOS instancie ce ViewController et appelle prepareCredentialList(...)
 //       ou prepareInterfaceToProvideCredential(...) avec le domaine cible.
-//    2. La vue SwiftUI montre « mot de passe disponible pour {domaine} »
-//       — JAMAIS le mot de passe ni la clé.
+//    2. La vue SwiftUI montre les comptes connus du domaine et un champ
+//       identifiant — JAMAIS le mot de passe ni la clé. Le système ne donne
+//       que l'adresse du site, pas l'identifiant du formulaire.
 //    3. AutofillModel déclenche Face ID / Touch ID. Le mot de passe n'est
-//       calculé puis transmis à iOS qu'après authentification réussie.
+//       calculé puis transmis à iOS qu'après authentification réussie, avec
+//       un identifiant jamais vide.
 //
 
 import AuthenticationServices
@@ -46,35 +48,41 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
     }
 
     /// L'utilisateur a demandé à voir nos suggestions. On extrait le domaine
-    /// de la première identité de service et on déclenche la biométrie.
+    /// de la première identité de service et on propose ses comptes.
     override func prepareCredentialList(
         for serviceIdentifiers: [ASCredentialServiceIdentifier]
     ) {
         guard let first = serviceIdentifiers.first else { return }
-        let domain = DomainNormalizer.normalize(first)
-        let accounts = resolutions(for: domain)
-        Task { @MainActor in
-            model.domain = domain
-            model.accounts = accounts
-            // Une entrée sans identifiant est un repli, pas une entrée connue.
-            model.canSave = accounts.first?.entryId.isEmpty ?? false
-            model.startBiometricIfNeeded()
-        }
+        present(domain: DomainNormalizer.normalize(first))
     }
 
     /// L'utilisateur a déjà choisi notre proposition (chemin direct depuis
-    /// la barre QuickType). Même flux que ci-dessus : auth puis remplissage.
+    /// la barre QuickType). Même flux que ci-dessus : choix du compte, auth
+    /// puis remplissage.
     override func prepareInterfaceToProvideCredential(
         for credentialIdentity: ASPasswordCredentialIdentity
     ) {
-        let domain = DomainNormalizer.normalize(credentialIdentity.serviceIdentifier)
-        let accounts = resolutions(for: domain)
+        present(domain: DomainNormalizer.normalize(credentialIdentity.serviceIdentifier))
+    }
+
+    /// Les comptes du carnet pour ce domaine, et de quoi résoudre un
+    /// identifiant saisi. Carnet et réglages sont lus une fois : la résolution
+    /// tourne à chaque frappe.
+    private func present(domain: String) {
+        let settings = PasswordSettings.load(from: UserDefaults(suiteName: appGroupID))
+        let vault = VaultStore.load()
+        let charset = Charset(
+            lower: settings.minState, upper: settings.majState,
+            symbols: settings.symState, numbers: settings.chiState)
+        let accounts = vault.findAll(domain: domain).map(SiteResolution.init(entry:))
         Task { @MainActor in
             model.domain = domain
             model.accounts = accounts
-            // Une entrée sans identifiant est un repli, pas une entrée connue.
-            model.canSave = accounts.first?.entryId.isEmpty ?? false
-            model.startBiometricIfNeeded()
+            model.resolveLogin = { login, pinned in
+                AutofillLogin.resolve(
+                    login: login, domain: domain, vault: vault, pinned: pinned,
+                    length: settings.length, charset: charset)
+            }
         }
     }
 
@@ -146,27 +154,28 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
 
     // MARK: – Appelé par AutofillModel après auth
 
-    func completeFill(domain: String, resolution: SiteResolution?, saveToVault: Bool) {
-        let password = generatePassword(domainName: domain, resolution: resolution)
+    func completeFill(domain: String, fill: AutofillLogin.Fill, saveToVault: Bool) {
+        let password = generatePassword(domainName: domain, resolution: fill.resolution)
 
         // Le mot de passe n'est pas stocké — il se recalcule. Ce qu'on retient,
-        // ce sont les réglages qui ont servi et le domaine : sans eux, un autre
-        // appareil ne saurait pas les rejouer.
+        // ce sont les réglages qui ont servi, le domaine et l'identifiant : sans
+        // eux, un autre appareil ne saurait pas les rejouer.
         if saveToVault, !password.isEmpty {
-            rememberSite(domain)
+            rememberAccount(fill.resolution.siteKey, login: fill.user)
         }
-        guard !password.isEmpty else {
-            // Cas pathologique : clé absente ou aucun charset coché dans l'app.
+        // Jamais d'identifiant vide rendu au système (voir AutofillLogin).
+        guard !password.isEmpty, !fill.user.isEmpty else {
+            // Cas pathologique : clé absente, aucun charset coché dans l'app,
+            // ou identifiant manquant (la vue ne le permet pas).
             extensionContext.cancelRequest(withError: NSError(
                 domain: ASExtensionErrorDomain,
                 code: ASExtensionError.failed.rawValue
             ))
             return
         }
-        // Le login est rendu au site quand le carnet le connaît : il fait
-        // partie de ce qu'on ne devait plus avoir à retenir.
-        let credential = ASPasswordCredential(
-            user: resolution?.login ?? "", password: password)
+        // L'identifiant est rendu au site : le système le remplit s'il trouve
+        // un champ pour lui, et ne remplit que le mot de passe sinon.
+        let credential = ASPasswordCredential(user: fill.user, password: password)
         extensionContext.completeRequest(
             withSelectedCredential: credential,
             completionHandler: nil
@@ -182,29 +191,19 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
 
     // MARK: – Génération
 
-    /// Enregistre le site avec les réglages en vigueur.
-    private func rememberSite(_ domain: String) {
+    /// Enregistre le compte (domaine + identifiant) avec les réglages en vigueur.
+    private func rememberAccount(_ domain: String, login: String) {
         let settings = PasswordSettings.load(from: UserDefaults(suiteName: appGroupID))
         var vault = VaultStore.load()
         vault.upsert(
-            site: domain, length: settings.length,
+            site: domain, login: login, length: settings.length,
             charset: Charset(
                 lower: settings.minState, upper: settings.majState,
                 symbols: settings.symState, numbers: settings.chiState))
         try? VaultStore.save(vault)
     }
 
-    /// Ce que le carnet sait de ce domaine, réglages généraux en repli.
-    private func resolutions(for domain: String) -> [SiteResolution] {
-        let settings = PasswordSettings.load(from: UserDefaults(suiteName: appGroupID))
-        return SiteResolution.forDomain(
-            domain, in: VaultStore.load(), length: settings.length,
-            charset: Charset(
-                lower: settings.minState, upper: settings.majState,
-                symbols: settings.symState, numbers: settings.chiState))
-    }
-
-    private func generatePassword(domainName: String, resolution: SiteResolution?) -> String {
+    private func generatePassword(domainName: String, resolution: SiteResolution) -> String {
         let defaults = UserDefaults(suiteName: appGroupID)
         // Lecture centralisée (cf. PasswordSettings) : une clé jamais écrite
         // prend sa valeur par défaut. Avant, `integer(forKey:)` renvoyait 0
@@ -219,22 +218,10 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
             return ""
         }
 
-        // Le carnet dit sous quelle clef dériver, avec quels réglages et en
-        // quelle version. Sans lui, on prenait le domaine tel quel avec les
-        // réglages généraux, et les trois problèmes d'usage restaient entiers
-        // dans ce chemin-là.
-        let chosen =
-            resolution
-            ?? SiteResolution(
-                fallbackFor: domainName, length: settings.length,
-                charset: Charset(
-                    lower: settings.minState, upper: settings.majState,
-                    symbols: settings.symState, numbers: settings.chiState))
-
         // Toujours en v2, quelle que soit la version notée dans le carnet : le
         // remplissage ne propose aucun choix, il doit être prévisible. Un site
         // encore en v1 se génère depuis l'application.
         return PasswordUtils()
-            .generatePassword(for: chosen, masterKey: encodingKey, forcing: 2).code
+            .generatePassword(for: resolution, masterKey: encodingKey, forcing: 2).code
     }
 }

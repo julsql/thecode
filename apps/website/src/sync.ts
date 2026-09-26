@@ -127,6 +127,10 @@ export interface RegistrationState {
    * visible.
    */
   googleClientId?: string;
+  /** Vrai quand la connexion Apple est configurée côté service. */
+  appleEnabled?: boolean;
+  /** Services ID d'Apple pour le site, vide quand Apple n'est pas configuré. */
+  appleWebClientId?: string;
 }
 
 export async function registrationState(endpoint: string): Promise<RegistrationState> {
@@ -202,6 +206,36 @@ export async function googleSignIn(
   const body = await request(`${endpoint}/v1/auth/google`, {
     payload: {
       id_token: idToken,
+      invite_code: code,
+      lang,
+      device_label: "site web",
+      client: "web",
+    },
+  });
+  return {
+    endpoint,
+    accessToken: body.access_token,
+    refreshToken: body.refresh_token,
+  };
+}
+
+/**
+ * Ouvre la session à partir d'un jeton Apple, en créant le compte au besoin.
+ *
+ * `nonce` est le nonce **brut** : Apple a reçu son empreinte SHA-256, et le
+ * service la recalcule pour la comparer à celle du jeton.
+ */
+export async function appleSignIn(
+  endpoint: string,
+  identityToken: string,
+  nonce: string,
+  code = "",
+  lang = "en",
+): Promise<Session> {
+  const body = await request(`${endpoint}/v1/auth/apple`, {
+    payload: {
+      identity_token: identityToken,
+      nonce,
       invite_code: code,
       lang,
       device_label: "site web",

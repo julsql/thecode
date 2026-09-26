@@ -34,6 +34,8 @@ struct VaultScreen: View {
     @State private var email = ""
     @State private var password = ""
     @State private var isGoogleWorking = false
+    /// Dit par GET /v1/auth/registration ; faux tant qu'il n'a pas répondu.
+    @State private var isAppleEnabled = false
 
     /// `nil` tant que l'identifiant client n'est pas renseigné : pas de bouton.
     private let google = GoogleAuth.configured()
@@ -332,18 +334,28 @@ struct VaultScreen: View {
                         text: $password)
                 }
 
-                if google != nil {
+                // Apple d'abord : la règle 4.8 le veut au moins aussi visible
+                // que Google.
+                if isAppleEnabled || google != nil {
                     Section {
-                        Button(action: signInWithGoogle) {
-                            HStack {
-                                Text(L10n.t("Continuer avec Google", "Continue with Google"))
-                                if isGoogleWorking {
-                                    Spacer()
-                                    ProgressView()
+                        if isAppleEnabled {
+                            AppleSignInButton(onCompletion: signInWithApple)
+                                .frame(height: 44)
+                                .listRowInsets(EdgeInsets())
+                                .disabled(endpoint.isEmpty)
+                        }
+                        if google != nil {
+                            Button(action: signInWithGoogle) {
+                                HStack {
+                                    Text(L10n.t("Continuer avec Google", "Continue with Google"))
+                                    if isGoogleWorking {
+                                        Spacer()
+                                        ProgressView()
+                                    }
                                 }
                             }
+                            .disabled(endpoint.isEmpty || isGoogleWorking)
                         }
-                        .disabled(endpoint.isEmpty || isGoogleWorking)
                     }
                 }
 
@@ -358,6 +370,7 @@ struct VaultScreen: View {
             }
             .navigationBarTitle(
                 L10n.t("Synchronisation chiffrée", "Encrypted sync"), displayMode: .inline)
+            .task(id: endpoint) { await refreshAppleEnabled() }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button(L10n.t("Annuler", "Cancel")) { showSignIn = false }
@@ -559,6 +572,44 @@ struct VaultScreen: View {
                     deviceLabel: await UIDevice.current.name)
             }
         }
+    }
+
+    /// Même suite que `signIn`, avec le jeton rendu par la feuille d'Apple.
+    /// Fermée sans rien choisir, on revient au formulaire, sans message.
+    private func signInWithApple(
+        _ result: Result<(identityToken: String, rawNonce: String), Error>
+    ) {
+        let endpoint = self.endpoint.trimmingCharacters(in: .whitespaces)
+        switch result {
+        case .failure(let error):
+            if let message = AppleSignIn.message(for: error) {
+                showSignIn = false
+                status = message
+            }
+        case .success(let signIn):
+            showSignIn = false
+            link {
+                try await Sync().appleSignIn(
+                    endpoint: endpoint, identityToken: signIn.identityToken,
+                    rawNonce: signIn.rawNonce, lang: L10n.t("fr", "en"),
+                    deviceLabel: await UIDevice.current.name)
+            }
+        }
+    }
+
+    /// Relu à chaque adresse saisie, après une courte pause : chaque service
+    /// dit s'il accepte Apple.
+    private func refreshAppleEnabled() async {
+        let endpoint = self.endpoint.trimmingCharacters(in: .whitespaces)
+        guard !endpoint.isEmpty else {
+            isAppleEnabled = false
+            return
+        }
+        try? await Task.sleep(nanoseconds: 400_000_000)
+        guard !Task.isCancelled else { return }
+        let enabled = await Sync().appleEnabled(endpoint: endpoint)
+        guard !Task.isCancelled else { return }
+        isAppleEnabled = enabled
     }
 
     private func unlink() {
