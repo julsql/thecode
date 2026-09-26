@@ -47,6 +47,20 @@ session du navigateur) pour survivre à la fermeture de l'écran carnet. Il n'es
 qu'un horodatage : aucun secret n'y est stocké. « Verrouiller » et « Mot de passe
 oublié » l'effacent : le carnet se referme aussitôt.
 
+### Apps : une seule session avec la clef
+
+Sur Android, iOS et macOS, la clef a déjà son verrou (biométrie, grâce de 3
+minutes). Le carnet partage **la même session** : déverrouiller la clef ouvre le
+carnet, déverrouiller le carnet ouvre la clef, et la fenêtre de 3 minutes est
+commune. Le verrou propre au carnet ne sert qu'à défaut de session valide.
+
+L'écran carnet reste toujours **accessible** depuis l'écran principal, clef
+verrouillée ou non : c'est lui qui demande le déverrouillage. Un bouton grisé
+tant que la clef n'est pas déverrouillée n'explique rien.
+
+Le verrou autonome (mot de passe de carnet, grâce propre) concerne surtout le
+site et l'extension, qui n'ont pas de verrou de clef.
+
 ## Oubli
 
 « Mot de passe oublié » propose d'**effacer le carnet local** et le verrou, après
