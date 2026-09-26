@@ -28,8 +28,7 @@ public struct Charset: Codable, Equatable {
 }
 
 /// Une entrée ne porte pas de version : toute entrée du carnet dérive en v2.
-/// La v1 ne subsiste qu'en génération ponctuelle, hors carnet. Un `v` résiduel
-/// en entrée est ignoré par le décodage et n'est jamais réécrit : voir
+/// La v1 ne subsiste qu'en génération ponctuelle, hors carnet : voir
 /// shared/spec/vault-merge.md, « Pas de version par entrée ».
 public struct VaultEntry: Codable, Equatable {
     public var id: String
