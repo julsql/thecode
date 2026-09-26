@@ -139,7 +139,10 @@ public struct Sync {
         } catch let error as SyncError {
             throw error
         } catch {
-            throw SyncError(message: "Service injoignable : \(error.localizedDescription)")
+            throw SyncError(
+                message: L10nSync.t(
+                    "Service injoignable : \(error.localizedDescription)",
+                    "Service unreachable: \(error.localizedDescription)"))
         }
 
         let parsed =
@@ -151,7 +154,9 @@ public struct Sync {
             let detail = parsed["detail"] as? String ?? ""
             throw SyncError(
                 status: response.status,
-                message: "\(response.status) : \(detail.isEmpty ? "échec" : detail)")
+                message: L10nSync.t(
+                    "\(response.status) : \(detail.isEmpty ? "échec" : detail)",
+                    "\(response.status): \(detail.isEmpty ? "failed" : detail)"))
         }
         return parsed
     }
@@ -160,7 +165,10 @@ public struct Sync {
         guard let access = body["access_token"] as? String,
             let refresh = body["refresh_token"] as? String
         else {
-            throw SyncError(message: "Réponse inattendue du service d'authentification")
+            throw SyncError(
+                message: L10nSync.t(
+                    "Réponse inattendue du service d'authentification",
+                    "Unexpected response from the authentication service"))
         }
         return SyncCredentials(endpoint: endpoint, accessToken: access, refreshToken: refresh)
     }
@@ -351,7 +359,10 @@ public struct Sync {
             guard let nonce = (row["nonce"] as? String).flatMap(Base64URL.decode),
                 let blob = (row["blob"] as? String).flatMap(Base64URL.decode)
             else {
-                throw SyncError(message: "Carnet distant illisible : encodage invalide")
+                throw SyncError(
+                    message: L10nSync.t(
+                        "Carnet distant illisible : encodage invalide",
+                        "Remote vault unreadable: invalid encoding"))
             }
 
             let plain: Data
@@ -359,8 +370,11 @@ public struct Sync {
                 plain = try Transfer.open(nonce: nonce, blob: blob, with: key)
             } catch {
                 throw SyncError(
-                    message: "Déchiffrement impossible : la clef maîtresse n'est pas celle "
-                        + "qui a servi à synchroniser ce carnet.")
+                    message: L10nSync.t(
+                        "Déchiffrement impossible : la clef maîtresse n'est pas celle "
+                            + "qui a servi à synchroniser ce carnet.",
+                        "Cannot decrypt: this is not the master key that was used to sync "
+                            + "this vault."))
             }
 
             // Une entrée illisible est écartée, pas le carnet entier : elle
@@ -461,7 +475,9 @@ public struct URLSessionTransport: SyncTransport {
         url: String, method: String, body: Data?, bearer: String?
     ) async throws -> SyncResponse {
         guard let target = URL(string: url) else {
-            throw SyncError(message: "Adresse de service invalide : \(url)")
+            throw SyncError(
+                message: L10nSync.t(
+                    "Adresse de service invalide : \(url)", "Invalid service address: \(url)"))
         }
 
         var request = URLRequest(url: target)
@@ -477,5 +493,14 @@ public struct URLSessionTransport: SyncTransport {
         let (data, response) = try await session.data(for: request)
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
         return SyncResponse(status: status, body: data)
+    }
+}
+
+/// Localisation minimale des messages d'erreur affichés, dupliquée ici parce
+/// que ce fichier est partagé par des cibles qui ne voient pas toutes le même
+/// L10n (même raison que `L10nQr`).
+enum L10nSync {
+    static func t(_ fr: String, _ en: String) -> String {
+        (Locale.preferredLanguages.first?.lowercased().hasPrefix("fr") ?? false) ? fr : en
     }
 }

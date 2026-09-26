@@ -49,12 +49,15 @@ public struct VaultView: View {
                         .font(.largeTitle)
                         .foregroundStyle(.secondary)
 
-                    Text("Carnet vide")
+                    Text(L10nVault.t("Carnet vide", "Empty vault"))
                         .font(.headline)
 
                     Text(
-                        "Aucun site enregistré. Enregistrez-en un depuis l'écran principal "
-                            + "pour ne plus avoir à retenir ses réglages."
+                        L10nVault.t(
+                            "Aucun site enregistré. Enregistrez-en un depuis l'écran principal "
+                                + "pour ne plus avoir à retenir ses réglages.",
+                            "No site saved yet. Save one from the main screen so you no longer "
+                                + "have to remember its settings.")
                     )
                     .font(.callout)
                     .foregroundStyle(.secondary)
@@ -93,7 +96,7 @@ public struct VaultView: View {
                 }
             }
         }
-        .navigationTitle("Carnet")
+        .navigationTitle(L10nVault.t("Carnet", "Vault"))
     }
 
     // Statique : le tri s'en sert dans l'init, avant que l'instance existe.
@@ -109,6 +112,7 @@ public struct VaultView: View {
         if entry.charset.upper { charset += "A" }
         if entry.charset.symbols { charset += "#" }
         if entry.charset.numbers { charset += "1" }
-        return "\(entry.length) caractères, \(charset)"
+        return L10nVault.t(
+            "\(entry.length) caractères, \(charset)", "\(entry.length) characters, \(charset)")
     }
 }

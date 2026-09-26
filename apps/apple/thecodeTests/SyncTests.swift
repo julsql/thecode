@@ -236,7 +236,8 @@ struct SyncTests {
             _ = try await sync.sync(Vault(), masterKey: "mauvaise", credentials: credentials)
         } catch let error as SyncError {
             // Message explicite : sinon on croirait à une panne du service.
-            #expect(error.message.contains("clef maîtresse"))
+            #expect(
+                error.message.contains("clef maîtresse") || error.message.contains("master key"))
         }
     }
 
@@ -298,7 +299,7 @@ struct SyncTests {
                 .sync(Vault(), masterKey: "clef", credentials: credentials)
             Issue.record("une panne réseau a été avalée")
         } catch let error as SyncError {
-            #expect(error.message.contains("injoignable"))
+            #expect(error.message.contains("injoignable") || error.message.contains("unreachable"))
         }
     }
 
