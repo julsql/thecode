@@ -386,7 +386,7 @@
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, onMounted, ref } from "vue";
+import { computed, defineComponent, onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { useI18n } from "@/i18n";
 import {
@@ -450,6 +450,23 @@ export default defineComponent({
     const deletePassword = ref("");
     const googleButton = ref<HTMLElement | null>(null);
     const googleReady = ref(false);
+    const googleClientId = ref("");
+
+    // Le formulaire de connexion, et donc la place du bouton, n'existe que
+    // déconnecté. Dessiner le bouton au seul montage le perdait dès qu'on
+    // arrivait connecté puis se déconnectait : on le redessine à chaque fois
+    // que sa place réapparaît.
+    watch(
+      [googleButton, googleClientId],
+      async ([el, clientId]) => {
+        if (!el || !clientId) {
+          googleReady.value = false;
+          return;
+        }
+        googleReady.value = await renderGoogleButton(el, clientId, continueWithGoogle, lang.value);
+      },
+      { flush: "post" },
+    );
     const priceCents = ref(200);
     const currency = ref("EUR");
 
@@ -542,14 +559,7 @@ export default defineComponent({
       try {
         const state = await registrationState(DEFAULT_ENDPOINT);
         freeSlots.value = state.freeSlots;
-        if (state.googleClientId && googleButton.value) {
-          googleReady.value = await renderGoogleButton(
-            googleButton.value,
-            state.googleClientId,
-            continueWithGoogle,
-            lang.value,
-          );
-        }
+        googleClientId.value = state.googleClientId ?? "";
       } catch {
         freeSlots.value = null;
       }

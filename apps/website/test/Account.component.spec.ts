@@ -267,6 +267,22 @@ describe("page du compte", () => {
       expect(localStorage.getItem("thecode.session")).toContain("jeton");
     });
 
+    it("redessine le bouton quand on se déconnecte", async () => {
+      // Arrivé connecté, le formulaire n'existait pas au montage : le bouton
+      // Google manquait ensuite pour se reconnecter.
+      fakeService();
+      const wrapper = await mountAccount();
+      await returnFromGoogle("jeton-google");
+      await flush();
+      vi.mocked(renderGoogleButton).mockClear();
+
+      await button(wrapper, "Se déconnecter")!.trigger("click");
+      await flush();
+
+      expect(renderGoogleButton).toHaveBeenCalled();
+      expect(wrapper.find(".google-zone").isVisible()).toBe(true);
+    });
+
     it("transmet le code de parrainage saisi", async () => {
       const service = fakeService();
       const wrapper = await mountAccount();
