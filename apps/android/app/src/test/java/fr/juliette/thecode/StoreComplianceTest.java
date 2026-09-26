@@ -24,6 +24,12 @@ public class StoreComplianceTest {
     private static final String[] FORBIDDEN = {
             "offre gratuite", "offre complète", "free plan", "full plan", "paid plan",
             "abonn", "subscri", "upgrade", "débloquer", "tarif", "pricing", "€",
+            "premium", "price", "prix",
+    };
+
+    /** Affirmations de l'ancienne app, fausses depuis le carnet et le compte. */
+    private static final String[] OUTDATED = {
+            "no account", "sans compte", "no internet", "sans connexion internet", "sha-256",
     };
 
     @Test
@@ -38,6 +44,24 @@ public class StoreComplianceTest {
                     assertFalse(path + " : " + strings.group(1) + " contient « " + word + " »",
                             text.contains(word));
                 }
+            }
+        }
+    }
+
+    @Test
+    public void theInformationDescribesTheCurrentApp() throws IOException {
+        for (String path : new String[] {
+                "src/main/res/values/strings.xml", "src/main/res/values-fr/strings.xml"}) {
+            Matcher info = Pattern.compile("<string name=\"info_app\">(.*?)</string>",
+                    Pattern.DOTALL).matcher(read(path));
+            assertTrue(path, info.find());
+            String text = info.group(1).toLowerCase(Locale.ROOT);
+            for (String claim : OUTDATED) {
+                assertFalse(path + " : info_app affirme « " + claim + " »", text.contains(claim));
+            }
+            for (String fact : new String[] {"v2", "v1", "keystore", "google"}) {
+                assertTrue(path + " : info_app ne parle pas de « " + fact + " »",
+                        text.contains(fact));
             }
         }
     }

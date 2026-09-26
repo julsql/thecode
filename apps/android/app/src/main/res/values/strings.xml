@@ -45,7 +45,7 @@
 
     <!-- Autofill -->
     <string name="autofill_section">Autofill</string>
-    <string name="autofill_card_description">Enable TheCode as your autofill service to generate a password directly inside any app or website.</string>
+    <string name="autofill_card_description">Enable TheCode as your autofill service to fill in your username and password directly inside any app or website.</string>
     <string name="autofill_status_active">Active on this device</string>
     <string name="autofill_status_inactive">Disabled — tap to set up</string>
     <string name="autofill_status_unsupported">Not available on this device</string>
@@ -69,7 +69,7 @@
 
     <!-- Help -->
     <string name="help_title">Information</string>
-    <string name="info_app">"      TheCode is a free and open-source password manager that stores no passwords: it regenerates them on the fly from a single secret key that you remember.\n\n      Choose your key, enter the website name (for example « google.com » for your Google account), tweak the length and the options (lowercase, uppercase, digits, symbols), and the password is generated. To find it again, just come back with the same key and the same website name.\n\n      Internally, TheCode combines your key with the website name and applies a cryptographic function (SHA-256). The result is converted into a strong password that matches your criteria. Same key + same website = same password, every time, deterministically.\n\n      No password is ever saved or transmitted: every computation happens locally, with no internet connection, no account, no tracking.\n\n      TheCode follows you everywhere: browser extensions (Chrome, Firefox, Safari, Edge, Opera) and native iOS and Android apps. With the same key, you find the same passwords across all your platforms.</string>
+    <string name="info_app">"      TheCode is an open-source password manager that stores no passwords: it computes them on the fly from a single master key that you remember.\n\n      Enter your key, the website name (for example « google.com ») and, if you like, your username on that site; set the length and the characters, and the password is computed. Same key + same site + same username = same password, on every device.\n\n      The computation (algorithm v2) happens locally, on this device. The old algorithm (v1) remains available for a one-off generation, to find a password set before v2.\n\n      Your key is kept in the Android Keystore. No password is ever saved or sent.\n\n      Optional vault: save a site with its settings and username so you no longer have to remember them. It is stored on this device and locked with biometrics or a vault password.\n\n      Optional account: sign in with an email and a password, or with Google, and your vault and default settings sync automatically across your devices. They are end-to-end encrypted: the server never sees your master key, your sites or your logins. You can delete the account from the app.\n\n      Autofill fills in the username and the password in your apps and websites.\n\n      TheCode also exists as browser extensions (Chrome, Firefox, Safari, Edge, Opera) and an iOS app. With the same key, you find the same passwords everywhere."</string>
     <string name="fingerprint_label">Fingerprint</string>
     <string name="vault_title">Vault</string>
     <string name="vault_empty">No site saved yet. Save one from the main screen to stop having to remember its settings.</string>
