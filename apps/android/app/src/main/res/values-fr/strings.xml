@@ -194,4 +194,5 @@
     <string name="vault_delete_title">Supprimer « %1$s » ?</string>
     <string name="vault_delete_body">L\'entrée quitte ce carnet et, à la prochaine synchronisation, vos autres appareils. Le mot de passe lui-même ne change pas sur le site.</string>
     <string name="vault_delete_done">« %1$s » supprimé.</string>
+    <string name="vault_same_key_hint">Si vous ne voyez pas tous vos mots de passe, vérifiez que vous utilisez la même clef.</string>
 </resources>

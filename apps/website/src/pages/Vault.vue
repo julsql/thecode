@@ -99,6 +99,9 @@
             <h2 id="vaultListTitle" ref="heading" tabindex="-1" class="panel-title">
               {{ t("vault_list_title") }}
             </h2>
+            <!-- Chaque entrée est chiffrée avec la clef : une autre clef ne
+                 voit pas celles des autres appareils, sans erreur visible. -->
+            <p class="hint same-key-hint">{{ t("vault_same_key_hint") }}</p>
             <p v-if="!entries.length" class="panel-lead">{{ t("vault_empty") }}</p>
             <ul v-else class="entry-list">
               <li v-for="entry in entries" :key="entry.id">

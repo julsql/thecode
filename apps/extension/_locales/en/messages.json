@@ -695,5 +695,9 @@
   "sync_auto_failed_forbidden": {
     "message": "Last sync: refused by the service.",
     "description": "Automatic sync failure, shown in the popup's sync area."
+  },
+  "vault_same_key_hint": {
+    "message": "If you don't see all your passwords, check that you are using the same key.",
+    "description": "Above the vault list: entries encrypted with another key are not visible."
   }
 }

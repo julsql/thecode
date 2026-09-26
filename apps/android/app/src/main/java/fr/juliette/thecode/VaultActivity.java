@@ -171,6 +171,7 @@ public class VaultActivity extends AppCompatActivity {
     private void hideContent() {
         ((LinearLayout) findViewById(R.id.vaultList)).removeAllViews();
         findViewById(R.id.vaultEmpty).setVisibility(View.GONE);
+        findViewById(R.id.vaultSameKeyHint).setVisibility(View.GONE);
         findViewById(R.id.vaultSyncPitch).setVisibility(View.GONE);
         findViewById(R.id.vaultSyncStatus).setVisibility(View.GONE);
         findViewById(R.id.vaultLocked).setVisibility(View.VISIBLE);
@@ -814,6 +815,7 @@ public class VaultActivity extends AppCompatActivity {
         // rien afficher.
         if (!lock.isUnlocked()) return;
         LinearLayout list = findViewById(R.id.vaultList);
+        findViewById(R.id.vaultSameKeyHint).setVisibility(View.VISIBLE);
         View empty = findViewById(R.id.vaultEmpty);
         list.removeAllViews();
 

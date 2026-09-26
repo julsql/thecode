@@ -389,6 +389,8 @@ export const translations = {
     transfer_failed: "Failed: {error}",
     nav_vault: "Vault",
     gen_vault_manage: "Manage the vault (entries, deletion, renewal)",
+    vault_same_key_hint:
+      "If you don't see all your passwords, check that you are using the same key.",
     vault_page_lead:
       "The settings of each site, behind a password that stays on this device. Generating and autofill keep reading the vault without asking.",
     vault_setup_title: "Create a vault password",
@@ -838,6 +840,8 @@ export const translations = {
     transfer_failed: "Impossible : {error}",
     nav_vault: "Carnet",
     gen_vault_manage: "Gérer le carnet (entrées, suppression, renouvellement)",
+    vault_same_key_hint:
+      "Si vous ne voyez pas tous vos mots de passe, vérifiez que vous utilisez la même clef.",
     vault_page_lead:
       "Les réglages de chaque site, derrière un mot de passe qui reste sur cet appareil. La génération et le remplissage continuent de lire le carnet sans rien demander.",
     vault_setup_title: "Créer un mot de passe de carnet",
