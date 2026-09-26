@@ -16,26 +16,27 @@ With TheCode, you never store passwords and never need to remember them.
 Just enter the same secret key again, and the extension will regenerate the exact same password for each website.
 
 ➡️ One key to unlock secure passwords everywhere.\
-➡️ No storage, no sync, no risk.
+➡️ No stored password. Sync is optional and end-to-end encrypted.
 
 ## 🔧 Features
 
 - 🔍 Detects password fields on any website
 - ⚡ Suggests a deterministic password generated from your session key + domain
 - 🔒 Never stores generated passwords
-- 💾 Your session key is kept only in memory while the service worker is active
+- 💾 Your master key is kept in `storage.session`: in memory only, erased when the browser closes
+- 📒 A local vault remembers each site's login, length and characters — never the password
+- 🔄 Optional sync of the vault, end-to-end encrypted, with an email or Google account
 - 🌍 Works across Chrome, Edge, Brave, Firefox (desktop & Android), and Safari
 - 🧪 Password generation algorithm is fully unit-tested
-- 🧂 Optional local storage of a non-secret salt per site to allow consistent derivations after browser restarts
 
-Your session key is neither transmitted nor persisted.
+Your master key is never transmitted nor written to disk.
 All generation is performed locally within the browser.
 
 ## 🔐 How It Works
 
 1. You open the extension popup
 2. You enter your session key
-3. The background service worker holds the derived key in memory only
+3. The background service worker holds the key in `storage.session` (memory only)
 4. When you visit a site, the extension:
 
 - detects password fields
@@ -43,7 +44,7 @@ All generation is performed locally within the browser.
 - generates a deterministic password
 - injects it into the form field
 
-If the service worker is restarted (MV3 behavior), the session key is lost and must be re-entered.
+The key survives service worker restarts, but not a browser restart: it must then be re-entered.
 
 ## Installation
 
@@ -113,10 +114,24 @@ Production install: use the AMO listing once published
 
 ## 🔒 Security & Behavior
 
-- Your session key is not stored, not logged, and not synced
-- A derived version of the key is kept only in memory by the MV3 service worker
+- Your master key is not logged, not synced, and never written to disk (`storage.session` only)
 - Generated passwords are never saved — only inserted into the active field
-- If the service worker shuts down (normal MV3 behavior), the key must be re-entered
+- The vault screen is locked behind a vault password, kept as a PBKDF2 hash in `storage.local`
+- Without an account, the extension contacts no server
+
+## 🔏 Permissions & data
+
+| Permission                    | Why                                                                                                   |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `storage`                     | Vault, settings, vault-lock hash and sync session on the device; master key in `storage.session`      |
+| `activeTab`                   | Know the current tab's site when the popup opens                                                      |
+| `identity`                    | Only for the optional "Continue with Google" sign-in (`launchWebAuthFlow`, scopes `openid email`)     |
+| `<all_urls>` + content script | Find password fields on any login page and offer the computed password; nothing from the page is sent |
+
+With a sync account, the server receives the account email, the account password (kept as an
+Argon2id hash) or the Google ID token, and the vault encrypted end to end. No analytics, no
+tracking, no remote code. Store answers: `docs/store-privacy.md`; policy:
+https://thecode.julsql.fr/en/privacy.
 
 ## 🧪 Testing
 
@@ -129,7 +144,7 @@ The password generation algorithm and supporting logic are covered by unit tests
 - Firefox for Android requires the `firefox-android` manifest (adds the
   `gecko_android` block, drops `theme_icons`, uses PNG toolbar icons)
 - Safari builds must be packaged through Xcode
-- MV3 service workers may stop/restart at any moment — session key persistence is intentionally avoided for security
+- MV3 service workers may stop/restart at any moment — the key lives in `storage.session`, never on disk
 
 ## 🤝 Contributing
 

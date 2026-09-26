@@ -1,286 +1,246 @@
 # TheCode — Fiche Google Play Store
 
-Document prêt à coller dans la console Google Play. Toutes les limites de caractères imposées par Google sont indiquées et respectées.
+Document prêt à coller dans la console Google Play. Toutes les limites de caractères imposées par
+Google sont indiquées et respectées.
 
 ---
 
-## 1. Nom de l'application *(30 caractères max)*
+## 1. Nom de l'application _(30 caractères max)_
 
 **Proposition principale**
+
 ```
 TheCode — Mots de passe
 ```
-*(23 caractères)*
+
+_(23 caractères)_
 
 **Variantes**
-- `TheCode : Mot de passe local` *(28)*
-- `TheCode — Coffre sans stockage` *(30)*
-- `TheCode Password Generator` *(26)* — version anglophone
+
+- `TheCode : Mots de passe calculés` _(30)_
+- `TheCode Password Manager` _(24)_ — version anglophone
 
 ---
 
-## 2. Description courte *(80 caractères max)*
+## 2. Description courte _(80 caractères max)_
 
 **Proposition principale**
+
 ```
-Générez vos mots de passe localement à partir d'une seule clé. Rien n'est stocké.
+Vos mots de passe, recalculés sur l'appareil à partir d'une clef. Aucun stocké.
 ```
-*(80 caractères)*
+
+_(79 caractères)_
 
 **Variantes**
-- `Une clé, un site, un mot de passe. 100 % local, zéro stockage, zéro compte.` *(75)*
-- `Mots de passe déterministes, hors ligne et chiffrés SHA-256. Sans coffre.` *(72)*
-- `Un gestionnaire de mots de passe sans coffre : tout est recalculé à la volée.` *(77)*
+
+- `Une clef, un site, un mot de passe. Hors ligne, sans compte obligatoire.` _(73)_
+- `Un gestionnaire de mots de passe qui n'en stocke aucun. Open source.` _(68)_
 
 ---
 
-## 3. Description complète *(4 000 caractères max)*
+## 3. Description complète _(4 000 caractères max)_
 
 ```
-TheCode réinvente le gestionnaire de mots de passe : aucun mot de passe n'est jamais stocké. Tous sont régénérés à la volée, en local, à partir d'une seule clé secrète que vous seul connaissez.
+TheCode est un gestionnaire de mots de passe qui n'en stocke aucun. Chaque mot de passe est recalculé sur votre téléphone, à la demande, à partir d'une clef maîtresse que vous seul connaissez et du nom du site.
 
 ━━━━━━━━━━━━━━━━━━━━━
-UNE CLÉ. UNE INFINITÉ DE MOTS DE PASSE.
+UNE CLEF. UN MOT DE PASSE PAR SITE.
 ━━━━━━━━━━━━━━━━━━━━━
 
-Le principe est simple : vous mémorisez UNE clé secrète. Pour chaque site, TheCode combine votre clé avec le nom du site et applique une fonction cryptographique SHA-256 pour générer un mot de passe unique et reproductible.
+→ Même clef + même site = exactement le même mot de passe, à chaque fois, sur chaque appareil.
+→ Sites différents = mots de passe sans rapport entre eux.
+→ Rien à voler : aucun mot de passe n'est enregistré, ni sur le téléphone, ni sur un serveur.
 
-→ Même clé + même site = exactement le même mot de passe, à chaque fois.
-→ Sites différents = mots de passe totalement différents.
-→ Aucune base de données. Aucun coffre à protéger. Rien à synchroniser.
+La dérivation (PBKDF2 à 600 000 itérations, puis HMAC-SHA256) est documentée, testée et reproductible : vos mots de passe ne dépendent pas de la survie d'un service.
 
 ━━━━━━━━━━━━━━━━━━━━━
 FONCTIONNALITÉS
 ━━━━━━━━━━━━━━━━━━━━━
 
-• Génération déterministe SHA-256 entièrement locale
-• Longueur ajustable de 4 à 40 caractères
-• Choix des classes de caractères : minuscules, majuscules, chiffres, symboles
-• Indicateur d'entropie en bits et niveau de sécurité en temps réel
-• Remplissage automatique système (Android 8.0+) : TheCode propose un mot de passe directement dans n'importe quelle app ou site web, validé par votre empreinte digitale ou votre visage
-• Authentification biométrique pour révéler la clé ou autoriser le remplissage
-• Copie en un clic dans le presse-papier
-• Partage rapide vers vos applications
+• Remplissage automatique Android : TheCode propose le mot de passe dans les apps et les pages web, avec l'identifiant du compte
+• Carnet : retenez pour chaque site l'identifiant, la longueur et les caractères voulus — jamais le mot de passe
+• Proposition d'enregistrement : un site nouveau est proposé au carnet
+• Verrou du carnet par biométrie ou mot de passe dédié
+• Mot de passe masqué par défaut, affiché d'un geste
+• Longueur de 4 à 40 caractères, choix des minuscules, majuscules, chiffres, symboles
+• Réglages par défaut retenus, et partagés entre vos appareils si vous avez un compte
+• Transfert du carnet d'un appareil à l'autre par QR code chiffré
+• Synchronisation automatique et chiffrée de bout en bout, facultative
+• Connexion avec Google ou par adresse e-mail
 • Mode sombre, clair ou automatique
-• Interface Material Design 3 fluide et épurée
-• Aucun compte requis — aucune publicité — aucune télémétrie
+• Aucune publicité, aucun traceur, aucune mesure d'audience
 
 ━━━━━━━━━━━━━━━━━━━━━
-CONFIDENTIALITÉ ABSOLUE
+CONFIDENTIALITÉ
 ━━━━━━━━━━━━━━━━━━━━━
 
-• Votre clé ne quitte JAMAIS votre téléphone.
-• Aucun mot de passe n'est sauvegardé, ni en local, ni dans le cloud.
-• Aucune connexion internet n'est nécessaire — l'app fonctionne entièrement hors ligne.
-• Les sauvegardes Android (transfert d'appareil, sauvegarde cloud) sont volontairement désactivées pour les préférences sensibles.
+• Votre clef maîtresse ne quitte jamais votre téléphone. Elle y est chiffrée par le Keystore d'Android.
+• Sans compte, l'app ne contacte aucun serveur : tout fonctionne hors ligne.
+• Avec un compte, le carnet est chiffré sur le téléphone avant d'être envoyé : le serveur ne voit ni vos sites, ni vos identifiants.
+• La caméra ne sert qu'à lire un QR code de transfert ; aucune image n'est enregistrée.
 • Code source ouvert sous licence Apache 2.0 : tout est vérifiable.
 
-Pas de coffre = pas de fuite possible. Vos mots de passe n'existent nulle part tant que vous ne les régénérez pas.
-
 ━━━━━━━━━━━━━━━━━━━━━
-UN ÉCOSYSTÈME COMPLET
+PARTOUT, AVEC LA MÊME CLEF
 ━━━━━━━━━━━━━━━━━━━━━
-
-TheCode vous suit partout, avec la même clé :
 
 • Application Android (vous y êtes)
-• Applications iOS et macOS
-• Extensions navigateur : Chrome, Firefox, Safari, Edge, Brave, Opera
-• Générateur en ligne sur thecode.julsql.fr
+• Applications iPhone, iPad et Mac
+• Extensions pour Chrome, Firefox, Edge, Brave et Safari
+• Site thecode.julsql.fr
 
-La même clé sur toutes vos plateformes vous redonne tous vos mots de passe, instantanément.
+La même clef vous redonne les mêmes mots de passe sur chacun d'eux, même sans synchronisation.
 
 ━━━━━━━━━━━━━━━━━━━━━
-POUR QUI ?
+GRATUIT, AVEC UNE OFFRE COMPLÈTE
 ━━━━━━━━━━━━━━━━━━━━━
 
-• Vous en avez assez des coffres-forts qui se font pirater
-• Vous voulez quitter LastPass, 1Password, Bitwarden ou Dashlane
-• Vous changez souvent de téléphone et détestez tout reconfigurer
-• Vous voulez accéder à vos comptes sans dépendance à un service tiers
-• Vous aimez les solutions élégantes et minimalistes
+La génération, le carnet et le remplissage sont gratuits et illimités, sans publicité. Un compte gratuit synchronise quelques entrées sur trois appareils. L'offre complète lève ces limites.
 
 ━━━━━━━━━━━━━━━━━━━━━
 COMMENT ÇA MARCHE ?
 ━━━━━━━━━━━━━━━━━━━━━
 
-1. Choisissez une clé secrète robuste (mémorisez-la — elle n'existe que dans votre tête)
-2. Saisissez le nom d'un site (ex. « google.com »)
-3. Ajustez la longueur et les caractères autorisés
-4. Le mot de passe apparaît instantanément
-5. Copiez-le, partagez-le, ou laissez le remplissage automatique l'insérer pour vous
+1. Choisissez une clef maîtresse longue et mémorisez-la : elle ne peut pas être récupérée.
+2. Saisissez un site (ex. « google.com ») et, si besoin, l'identifiant.
+3. Le mot de passe apparaît. Copiez-le, ou laissez le remplissage automatique l'insérer.
 
-Pour vous reconnecter plus tard : même clé, même nom de site → même mot de passe.
-
-━━━━━━━━━━━━━━━━━━━━━
-OPEN SOURCE & GRATUIT
-━━━━━━━━━━━━━━━━━━━━━
-
-TheCode est entièrement gratuit, sans achat intégré, sans abonnement, sans publicité. Le code est publié sous licence Apache 2.0 et auditable par tous.
-
-Reprenez le contrôle de vos mots de passe. Téléchargez TheCode.
+Plus tard, sur n'importe quel appareil : même clef, même site → même mot de passe.
 ```
-*(≈ 3 500 caractères — marge confortable sous la limite de 4 000)*
+
+_(≈ 3 100 caractères)_
 
 ---
 
-## 4. Texte promotionnel / What's new *(500 caractères max)*
+## 4. Nouveautés _(500 caractères max)_
 
-**Pour la version 2.2**
+**Pour cette version**
+
 ```
-• Service de remplissage automatique Android : TheCode propose vos mots de passe dans n'importe quelle app ou page web.
-• Authentification biométrique pour révéler votre clé ou valider le remplissage.
-• Indicateur d'entropie repensé.
-• Mode sombre / clair / système.
-• Compatibilité Android 5.0 → 14, optimisé pour Android 14.
+• Verrou du carnet : biométrie ou mot de passe dédié
+• Carnet en v2 et identifiant par compte
+• Remplissage automatique avec l'identifiant
+• Proposition d'ajouter un site nouveau au carnet
+• Mot de passe masqué par défaut
+• Synchronisation automatique et chiffrée de bout en bout
+• Réglages par défaut partagés entre appareils
+• Connexion avec Google
 ```
-*(≈ 380 caractères)*
+
+_(≈ 360 caractères)_
 
 ---
 
-## 5. Mots-clés / ASO (Optimisation Play Store)
+## 5. Mots-clés / ASO
 
-Google Play n'a pas de champ « keywords » dédié comme l'App Store ; les mots-clés sont indexés depuis le titre + description courte + description longue. La description ci-dessus a été rédigée pour intégrer naturellement les requêtes utiles :
+Google Play n'a pas de champ « mots-clés » : ils sont indexés depuis le titre et les descriptions.
+Requêtes visées, intégrées ci-dessus :
 
-**Cibles principales**
 - gestionnaire de mots de passe
-- mot de passe sans coffre
 - générateur de mot de passe
-- mot de passe déterministe
-- SHA-256 password
-- password manager open source
-- hors ligne / offline
-- pas de cloud / no cloud
+- mot de passe déterministe / sans coffre
 - remplissage automatique Android
 - biométrie mot de passe
-
-**Concurrents à viser dans la description**
-LastPass, 1Password, Bitwarden, Dashlane, KeePass — utilisés ci-dessus dans une formulation comparative naturelle, conforme aux règles Google Play.
+- open source, hors ligne
 
 ---
 
 ## 6. Catégorie & classification
 
-| Champ | Valeur |
-|---|---|
-| Catégorie principale | **Outils** (Tools) |
-| Catégorie secondaire | Productivité (Productivity) |
-| Tags Google Play | `Sécurité`, `Productivité` |
-| Public cible | Tout public (3+) |
-| Contient des publicités | **Non** |
-| Achats intégrés | **Non** |
-| Accès au contenu | Sans restriction |
+| Champ                   | Valeur                                                   |
+| ----------------------- | -------------------------------------------------------- |
+| Catégorie principale    | **Outils** (Tools)                                       |
+| Tags Google Play        | `Sécurité`, `Productivité`                               |
+| Public cible            | 18 ans et plus (pas de contenu pour enfants)             |
+| Contient des publicités | **Non**                                                  |
+| Achats intégrés         | **Non** (l'offre complète se souscrit sur le site)      |
+| Accès au contenu        | Sans restriction ; un compte n'est jamais obligatoire    |
 
-**Questionnaire IARC à prévoir**
-- Aucune violence, aucun contenu sensible → classification PEGI 3 / ESRB Everyone.
+**Questionnaire IARC** : aucun contenu sensible → PEGI 3 / ESRB Everyone.
+
+**Accès pour l'examen** : l'app s'utilise sans compte. Pour tester la synchronisation, fournir un
+compte de démonstration (adresse + mot de passe) dans « Accès aux applications ».
 
 ---
 
 ## 7. Coordonnées & liens
 
-| Champ | À renseigner |
-|---|---|
-| Site web de l'app | https://thecode.julsql.fr |
-| E-mail développeur | *(votre adresse de contact publique)* |
-| Politique de confidentialité | https://thecode.julsql.fr/privacy *(à confirmer / créer)* |
-| Code source | Lien GitHub : https://github.com/julsql/thecode |
-
-> **Important :** Google exige une URL de politique de confidentialité valide et accessible publiquement. Si elle n'existe pas encore, créez une page dédiée sur thecode.julsql.fr avant publication.
-
----
-
-## 8. Déclaration sur la sécurité des données (Data Safety)
-
-Section obligatoire dans Play Console. Voici les réponses correctes pour TheCode :
-
-### Données collectées
-**Aucune.** L'app ne collecte, ne transmet ni ne partage aucune donnée utilisateur.
-
-### Données partagées avec des tiers
-**Aucune.**
-
-### Pratiques de sécurité
-- ☑ Les données sont chiffrées en transit *(non applicable, aucune donnée n'est envoyée)*
-- ☑ L'utilisateur peut demander la suppression des données *(non applicable, aucune donnée n'est stockée côté serveur)*
-- ☑ L'app suit les bonnes pratiques de la Mobile App Security *(MASVS)*
-
-### Stockage local sensible
-- La clé de l'utilisateur est stockée dans `SharedPreferences` privées de l'app
-- Sauvegardes Android désactivées (`android:allowBackup="false"` dans le manifest)
-- Accès gardé par authentification biométrique pour la révélation et l'autofill
+| Champ                              | Valeur                                    |
+| ---------------------------------- | ----------------------------------------- |
+| Site web de l'app                  | https://thecode.julsql.fr                 |
+| E-mail développeur                 | contact@thecode.julsql.fr                 |
+| Politique de confidentialité       | https://thecode.julsql.fr/fr/privacy      |
+| Suppression du compte (URL web)    | https://thecode.julsql.fr/fr/account      |
+| Code source                        | https://github.com/julsql/thecode         |
 
 ---
 
-## 9. Section « Permissions » à expliquer
+## 8. Sécurité des données (Data Safety)
 
-Si Google vous interroge sur l'usage des permissions :
+Réponses complètes et justifiées : [`docs/store-privacy.md`](../../docs/store-privacy.md).
 
-| Permission | Justification |
-|---|---|
-| `BIND_AUTOFILL_SERVICE` | Service de remplissage automatique de mots de passe — fonctionnalité principale de l'app, équivalent de l'autofill iOS. |
-| `USE_BIOMETRIC` / `USE_FINGERPRINT` | Protection de la clé secrète et validation des opérations sensibles via empreinte/visage. |
-| Accès Internet | **Aucune** — l'app n'a pas la permission `INTERNET`. |
+En résumé : collecte **Oui**, seulement avec un compte facultatif ; adresse e-mail et ID
+utilisateur, non partagés, pour les fonctionnalités et la gestion du compte ; carnet chiffré de
+bout en bout, donc non déclaré ; chiffrement en transit **Oui** ; suppression **Oui**.
 
-L'absence de permission Internet est un argument de vente : à mettre en avant dans la description et dans la réponse aux questions de la Play Console.
+---
+
+## 9. Permissions à expliquer
+
+| Permission                         | Justification                                                                                   |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `INTERNET`, `ACCESS_NETWORK_STATE` | Synchronisation facultative et connexion avec Google. Sans compte, aucun serveur n'est contacté. |
+| `CAMERA` (facultative)             | Lire le QR code d'un carnet affiché sur un autre appareil. Aucune image enregistrée ni envoyée. |
+| `BIND_AUTOFILL_SERVICE`            | Service de remplissage automatique, fonctionnalité principale de l'app.                         |
+| Biométrie                          | Déverrouiller la clef maîtresse et le carnet ; vérifiée par le système.                         |
 
 ---
 
 ## 10. Assets graphiques requis
 
-| Asset | Format | Dimensions | Notes |
-|---|---|---|---|
-| Icône Play Store | PNG 32 bits | 512 × 512 px | Réutiliser le logo TheCode actuel |
-| Image de présentation (feature graphic) | PNG / JPG | 1024 × 500 px | **Obligatoire** — bandeau en haut de la fiche |
-| Captures d'écran téléphone | PNG / JPG | min 320 px côté court, max 3840 px côté long | Min 2, max 8. Conseillé : 1080 × 1920 |
-| Captures d'écran tablette 7" | Optionnel | 1024 × 600 px min | Recommandé |
-| Captures d'écran tablette 10" | Optionnel | 1280 × 800 px min | Recommandé |
-| Vidéo promo | YouTube | — | Optionnel mais recommandé (30 s à 2 min) |
+| Asset                          | Format      | Dimensions                                  | Notes                         |
+| ------------------------------ | ----------- | ------------------------------------------- | ----------------------------- |
+| Icône Play Store               | PNG 32 bits | 512 × 512 px                                | Logo TheCode actuel           |
+| Image de présentation          | PNG / JPG   | 1024 × 500 px                               | **Obligatoire**               |
+| Captures d'écran téléphone     | PNG / JPG   | min 320 px côté court, max 3840 px côté long | Min 2, max 8 ; 1080 × 1920    |
+| Captures d'écran tablette      | Optionnel   | 1024 × 600 / 1280 × 800 px min              | Recommandé                    |
 
-### Captures d'écran à produire (suggestions)
-1. **Écran principal** avec un mot de passe généré pour `google.com`, badge « Sécurité : Très élevé »
-2. **Curseur de longueur** + cases à cocher des classes de caractères
-3. **Activation du remplissage automatique** + écran système Android Autofill
-4. **Prompt biométrique** lors de l'autofill
-5. **Mode sombre** sur le même écran principal
-6. **Écran d'aide** expliquant le principe en une phrase
+### Captures d'écran à produire
 
-### Suggestions de bandeau (feature graphic)
-- Texte gauche : « Une clé. Aucune base. Aucun risque. »
-- Visuel droite : capture du logo + mockup du téléphone
-- Couleurs : palette de l'app (vérifier `colors.xml`)
+1. Écran principal : mot de passe masqué pour `google.com`, identifiant renseigné
+2. Carnet : liste des entrées, section synchronisation en tête
+3. Verrou du carnet : invite biométrique
+4. Remplissage automatique dans une app, avec l'identifiant
+5. Proposition d'enregistrement au carnet
+6. Mode sombre
 
 ---
 
-## 11. Stratégie de positionnement (rappel marketing)
+## 11. Positionnement
 
-**Promesse unique**
-> *« Le seul gestionnaire de mots de passe qui ne stocke rien. »*
+**Promesse** : _« Le gestionnaire de mots de passe qui n'en stocke aucun. »_
 
-**Trois piliers à marteler**
-1. **Zéro stockage** = zéro fuite possible
-2. **100 % local** = aucune dépendance à un cloud
-3. **Une seule clé à mémoriser** = aucun coffre à protéger
+1. **Aucun mot de passe stocké** = rien à fuiter
+2. **Hors ligne par défaut** = la synchronisation est un choix, chiffrée de bout en bout
+3. **Une seule clef à retenir**, qui ne quitte jamais l'appareil
 
-**Réponses aux objections fréquentes** (à intégrer dans la FAQ du site, et à mentionner dans la section « À propos du développeur ») :
-- *« Et si je perds ma clé ? »* → la clé n'est connue que de vous, mais elle peut être retapée à l'identique sur n'importe quel appareil, à tout moment.
-- *« Et si on devine ma clé ? »* → SHA-256 est cryptographiquement sûr ; choisissez une clé longue, comme une phrase de passe.
-- *« Pourquoi est-ce mieux qu'un coffre chiffré ? »* → un coffre peut fuiter (Bitwarden, LastPass…). TheCode ne stocke rien à compromettre.
+Objections :
+
+- _« Et si j'oublie ma clef ? »_ → personne ne peut la récupérer, pas même le service. Choisissez
+  une phrase de passe mémorisable.
+- _« Et si mon compte fuit ? »_ → le carnet est chiffré avec une clef dérivée de la clef
+  maîtresse, que le serveur n'a jamais.
 
 ---
 
 ## 12. Checklist avant publication
 
-- [ ] Versionner `versionCode` à 12 et `versionName` à 2.2 *(déjà fait dans `app/build.gradle`)*
+- [ ] Aligner `versionName` / `versionCode` de `app/build.gradle` (2.3 / 13) sur la version publiée
+      (le CHANGELOG annonce 3.0.0)
 - [ ] Générer un AAB signé en release (`./gradlew bundleRelease`)
-- [ ] Vérifier que `targetSdk` est ≥ 34 (Android 14) — Play Store l'impose
-- [ ] Préparer 6 captures d'écran 1080 × 1920
-- [ ] Créer le bandeau feature graphic 1024 × 500
-- [ ] Publier la politique de confidentialité sur thecode.julsql.fr
-- [ ] Remplir le questionnaire IARC dans la console
-- [ ] Remplir la section Data Safety
-- [ ] Soumettre en test interne d'abord, puis production
-- [ ] Programmer la sortie en parallèle de l'annonce sur le site et l'extension
-
----
-
-*Document généré pour la fiche Play Store — version de l'app : 2.2 (versionCode 12).*
+- [ ] Préparer les captures d'écran
+- [ ] Remplir « Sécurité des données » d'après `docs/store-privacy.md`
+- [ ] Renseigner l'URL de suppression du compte
+- [ ] Fournir un compte de démonstration pour l'examen
+- [ ] Soumettre en test interne, puis en production
