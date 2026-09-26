@@ -688,9 +688,11 @@ public class VaultActivity extends AppCompatActivity {
                             return;
                         }
                         Log.w("TheCode", "Connexion Google impossible", e);
-                        CharSequence detail = e.getErrorMessage();
+                        // getErrorMessage() et getType() sont réservées à la
+                        // bibliothèque : getMessage() rend le même texte.
+                        String detail = e.getMessage();
                         toast(getString(R.string.sync_google_failed, detail != null
-                                ? detail.toString() : e.getType()));
+                                ? detail : e.getClass().getSimpleName()));
                     }
                 });
     }
