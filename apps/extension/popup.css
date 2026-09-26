@@ -16,6 +16,7 @@
   --accent-fg: #ffffff;
   --ok: #1a7f37;
   --danger: #c62828;
+  --warn: #9a6700;
   --focus: #2456d6;
 }
 
@@ -30,6 +31,7 @@
     --accent-fg: #0d1020;
     --ok: #5fd07a;
     --danger: #ff7b72;
+    --warn: #e3b341;
     --focus: #8fb0ff;
   }
 }
@@ -257,6 +259,35 @@ a {
 .checkbox-group legend {
   padding: 0 0 4px;
   font-weight: 600;
+}
+
+/* Guide de robustesse de la clef : discret, sous le champ. */
+.key-guide {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.key-strength {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.key-strength:empty {
+  display: none;
+}
+
+.key-strength[data-level="weak"] {
+  color: var(--danger);
+}
+
+.key-strength[data-level="fair"] {
+  color: var(--warn);
+}
+
+.key-strength[data-level="strong"] {
+  color: var(--ok);
 }
 
 /* Empreinte de clef : un repere visuel, pas une decoration. Elle doit

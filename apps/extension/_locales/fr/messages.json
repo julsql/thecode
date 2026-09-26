@@ -695,5 +695,21 @@
   "vault_same_key_hint": {
     "message": "Si vous ne voyez pas tous vos mots de passe, vérifiez que vous utilisez la même clef.",
     "description": "Above the vault list: entries encrypted with another key are not visible."
+  },
+  "popup_key_hint": {
+    "message": "Choisissez une clef longue et unique, par exemple une phrase de plusieurs mots : elle protège tous vos mots de passe et votre carnet.",
+    "description": "Popup, near the master key field (shared/spec/key-strength.md)."
+  },
+  "popup_key_strength_weak": {
+    "message": "Robustesse : faible",
+    "description": "Popup, near the master key field (shared/spec/key-strength.md)."
+  },
+  "popup_key_strength_fair": {
+    "message": "Robustesse : moyenne",
+    "description": "Popup, near the master key field (shared/spec/key-strength.md)."
+  },
+  "popup_key_strength_strong": {
+    "message": "Robustesse : bonne",
+    "description": "Popup, near the master key field (shared/spec/key-strength.md)."
   }
 }

@@ -10,6 +10,7 @@
          document et ne trouveraient aucun element. type="module" le faisait
          implicitement. -->
     <script defer src="fingerprint.js"></script>
+    <script defer src="key-strength.js"></script>
     <script defer src="algo-theme.js"></script>
     <script defer src="password-reveal.js"></script>
     <script defer src="i18n.js"></script>
@@ -88,7 +89,13 @@
       <section class="field">
         <label for="passphrase" data-i18n="popup_key">Clef</label>
         <div class="row">
-          <input type="password" id="passphrase" autocomplete="off" spellcheck="false" />
+          <input
+            type="password"
+            id="passphrase"
+            autocomplete="off"
+            spellcheck="false"
+            aria-describedby="keyHint"
+          />
           <button
             id="toggleKey"
             type="button"
@@ -98,6 +105,17 @@
           >
             Voir
           </button>
+        </div>
+        <!-- Guide discret, jamais bloquant : la securite du carnet synchronise
+             repose sur la robustesse de la clef (shared/spec/key-strength.md).
+             Le niveau n'apparait que pendant la saisie ou clef affichee, pour
+             ne pas trahir la longueur d'une clef masquee. -->
+        <div class="key-guide">
+          <p id="keyHint" class="hint" data-i18n="popup_key_hint">
+            Choisissez une clef longue et unique, par exemple une phrase de plusieurs mots : elle
+            protège tous vos mots de passe et votre carnet.
+          </p>
+          <p id="keyStrength" class="key-strength" aria-live="polite"></p>
         </div>
         <div class="row">
           <button id="setKey" type="button" data-i18n="popup_set_key">Définir</button>

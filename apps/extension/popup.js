@@ -23,6 +23,8 @@ const copyStatus = document.getElementById("copyStatus");
 const errorContainer = document.getElementById("errorContainer");
 const fingerprintRow = document.getElementById("fingerprintRow");
 const fingerprintChip = document.getElementById("fingerprint");
+const keyHint = document.getElementById("keyHint");
+const keyStrengthLine = document.getElementById("keyStrength");
 const loginInput = document.getElementById("login");
 const loginOptions = document.getElementById("loginOptions");
 const saveEntryBtn = document.getElementById("saveEntry");
@@ -108,6 +110,7 @@ window.addEventListener("DOMContentLoaded", () => {
       browser.runtime.sendMessage({ action: "getEncodingKey" }, (resp) => {
         passInput.value = resp.encodingKey;
         refreshFingerprint(passInput.value.trim());
+        refreshKeyGuide();
       });
     }
   });
@@ -179,6 +182,7 @@ toggleBtn.addEventListener("click", () => {
   passInput.type = isHidden ? "text" : "password";
   toggleBtn.textContent = isHidden ? msg("popup_hide", "Cacher") : msg("popup_show", "Voir");
   toggleBtn.setAttribute("aria-pressed", String(isHidden));
+  refreshKeyGuide();
 });
 
 // Définir la clef
@@ -188,7 +192,12 @@ setBtn.addEventListener("click", () => {
 
 // Déclenche setPassword() si on appuie sur "Entrée" dans passInput
 // L'empreinte suit la saisie, pour que l'erreur se voie avant de generer.
-passInput.addEventListener("input", () => refreshFingerprint(passInput.value.trim()));
+passInput.addEventListener("input", () => {
+  refreshFingerprint(passInput.value.trim());
+  refreshKeyGuide();
+});
+passInput.addEventListener("focus", refreshKeyGuide);
+passInput.addEventListener("blur", refreshKeyGuide);
 
 passInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") {
@@ -222,6 +231,7 @@ clearBtn.addEventListener("click", () => {
       setStatus(msg("popup_key_cleared", "Clef effacée."));
       passInput.value = "";
       refreshFingerprint("");
+      refreshKeyGuide();
       hideResult();
       hideError();
     }
@@ -344,6 +354,29 @@ async function refreshFingerprint(key) {
   } catch {
     fingerprintRow.hidden = true;
   }
+}
+
+/**
+ * Conseil et niveau de robustesse de la clef (shared/spec/key-strength.md).
+ *
+ * Le niveau ne s'affiche que pendant la saisie ou clef en clair : clef masquee
+ * et champ sans focus, il trahirait une indication de longueur. Jamais
+ * bloquant, rien n'est journalise ni stocke.
+ */
+function refreshKeyGuide() {
+  const key = passInput.value.trim();
+  const active = document.activeElement === passInput || passInput.type === "text";
+  const level = active ? keyStrength(key) : "none";
+  keyHint.hidden = key !== "" && !active;
+  keyStrengthLine.dataset.level = level;
+  keyStrengthLine.textContent =
+    level === "none"
+      ? ""
+      : {
+          weak: msg("popup_key_strength_weak", "Robustesse : faible"),
+          fair: msg("popup_key_strength_fair", "Robustesse : moyenne"),
+          strong: msg("popup_key_strength_strong", "Robustesse : bonne"),
+        }[level];
 }
 
 /**

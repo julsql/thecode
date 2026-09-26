@@ -695,5 +695,21 @@
   "vault_same_key_hint": {
     "message": "If you don't see all your passwords, check that you are using the same key.",
     "description": "Above the vault list: entries encrypted with another key are not visible."
+  },
+  "popup_key_hint": {
+    "message": "Choose a long, unique key, such as a phrase of several words: it protects all your passwords and your vault.",
+    "description": "Popup, near the master key field (shared/spec/key-strength.md)."
+  },
+  "popup_key_strength_weak": {
+    "message": "Strength: weak",
+    "description": "Popup, near the master key field (shared/spec/key-strength.md)."
+  },
+  "popup_key_strength_fair": {
+    "message": "Strength: fair",
+    "description": "Popup, near the master key field (shared/spec/key-strength.md)."
+  },
+  "popup_key_strength_strong": {
+    "message": "Strength: strong",
+    "description": "Popup, near the master key field (shared/spec/key-strength.md)."
   }
 }
