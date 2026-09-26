@@ -858,7 +858,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				GOOGLE_IOS_CLIENT_ID = "";
+				GOOGLE_IOS_CLIENT_ID = "960250331904-df1118sj6k1oto8mjerf64i0pfosuvbj.apps.googleusercontent.com";
 				GOOGLE_IOS_REVERSED_CLIENT_ID = "com.googleusercontent.apps.$(GOOGLE_IOS_CLIENT_ID:base:base:base:default=unset)";
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -925,7 +925,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				GOOGLE_IOS_CLIENT_ID = "";
+				GOOGLE_IOS_CLIENT_ID = "960250331904-df1118sj6k1oto8mjerf64i0pfosuvbj.apps.googleusercontent.com";
 				GOOGLE_IOS_REVERSED_CLIENT_ID = "com.googleusercontent.apps.$(GOOGLE_IOS_CLIENT_ID:base:base:base:default=unset)";
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
