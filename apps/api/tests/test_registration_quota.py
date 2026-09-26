@@ -74,6 +74,8 @@ def test_the_state_says_what_the_form_must_ask(client, quota):
         # site doit alors ne pas proposer le bouton plutôt que d'en afficher un
         # qui échouerait.
         "googleClientId": "",
+        "appleEnabled": False,
+        "appleWebClientId": "",
     }
 
     register(client, "libre0@exemple.fr")

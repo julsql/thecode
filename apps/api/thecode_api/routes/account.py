@@ -229,6 +229,7 @@ def export_account(
             "subscription_status": account.subscription_status,
             "current_period_end": account.current_period_end,
             "google_linked": bool(account.google_sub),
+            "apple_linked": bool(account.apple_sub),
             # L'identifiant client Stripe fait partie des données du compte :
             # c'est lui qui relie cette personne à ses factures.
             "stripe_customer_id": account.stripe_customer_id,
@@ -338,7 +339,8 @@ def unlink_google(
         raise HTTPException(
             status.HTTP_409_CONFLICT, "Aucun compte Google n'est lié à ce compte."
         )
-    if not account.password_hash:
+    # Apple, s'il est lié, reste une porte d'entrée.
+    if not account.password_hash and not account.apple_sub:
         raise HTTPException(
             status.HTTP_409_CONFLICT,
             "Définissez d'abord un mot de passe : sans lui, délier Google "
@@ -346,4 +348,26 @@ def unlink_google(
         )
 
     account.google_sub = ""
+    db.commit()
+
+
+@router.delete("/apple", status_code=status.HTTP_204_NO_CONTENT)
+def unlink_apple(
+    account: Account = Depends(current_account), db: DbSession = Depends(get_db)
+) -> None:
+    """Détache l'identifiant Apple. Mêmes règles que pour Google : refusé
+    quand ce serait la dernière porte d'entrée du compte (ni mot de passe, ni
+    Google)."""
+    if not account.apple_sub:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "Aucun identifiant Apple n'est lié à ce compte."
+        )
+    if not account.password_hash and not account.google_sub:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Définissez d'abord un mot de passe : sans lui, délier Apple "
+            "fermerait la seule porte d'entrée de ce compte.",
+        )
+
+    account.apple_sub = ""
     db.commit()

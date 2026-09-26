@@ -179,7 +179,7 @@ Le site est l'endroit où l'on déconnecte un appareil — c'est là que renvoie
 message du 402/403. Le plafond ne doit donc jamais lui fermer la porte.
 
 Le site s'annonce à l'ouverture de session : `"client": "web"` dans
-`POST /v1/auth/login`, `/register` et `/google`. Tout autre client envoie
+`POST /v1/auth/login`, `/register`, `/google` et `/apple`. Tout autre client envoie
 `"app"` ou n'envoie rien (`app` par défaut) ; une autre valeur répond 422. La
 nature de la session est stockée (`sessions.client`) et conservée par
 `/refresh`. La session ouverte par `POST /v1/auth/password/reset` est une
@@ -249,8 +249,8 @@ divergence se découvre en s'y cognant.
 ## Compte, codes et abonnement
 
 Le **site est le seul endroit** où l'on choisit son offre, paie et déconnecte
-un appareil. Les clients se connectent et synchronisent — et, avec Google,
-peuvent créer un compte **gratuit**, sans offre à choisir : un
+un appareil. Les clients se connectent et synchronisent — et, avec Google ou
+Apple, peuvent créer un compte **gratuit**, sans offre à choisir : un
 écran de facturation par plateforme multiplierait les endroits où une erreur de
 droits peut se glisser, pour un geste qu'on fait deux fois par an.
 
@@ -268,6 +268,12 @@ droits peut se glisser, pour un geste qu'on fait deux fois par an.
   adresse vérifiée est **relié**, pas dupliqué — deux comptes pour la même
   personne couperaient son carnet en deux. Voir « Se connecter avec Google »
   plus bas pour le contrat et la façon dont chaque client obtient son jeton.
+- `POST /v1/auth/apple` — la même chose avec un jeton « Se connecter avec
+  Apple » (applications iOS/macOS, et site). Voir « Se connecter avec Apple ».
+- `DELETE /v1/account/google`, `DELETE /v1/account/apple` — délie le
+  fournisseur. Refusé (409) quand ce serait la dernière porte d'entrée : ni mot
+  de passe, ni l'autre fournisseur. `GET /v1/auth/me` et l'export du compte
+  disent ce qui est lié (`google_linked`, `apple_linked`).
 - `POST /v1/account/password` — change le mot de passe. L'actuel est exigé, et
   les **autres** appareils sont déconnectés : pas celui qui vient de le
   changer. Un compte créé par Google n'a pas de mot de passe et en pose un ici,
@@ -332,14 +338,76 @@ même (`nonce` du jeton), sinon 401 — un jeton sans nonce est refusé lui auss
 Le flux implicite de l'extension en exige un de Google : l'extension le tire au
 hasard, le passe à Google puis le renvoie ici tel quel.
 
-Pas de « Se connecter avec Apple ».
-
 Un premier passage par Google **crée un compte gratuit** : aucune offre à
 choisir, aucun paiement, aucun écran de facturation dans l'application. Le
 compte est ouvert (adresse vérifiée par Google, pas de mot de passe) et suit les
 plafonds de l'offre gratuite ; passer à l'offre complète se fait sur le site,
 comme pour tout compte. Seule la configuration d'inscription s'applique :
 `invite_code` sert quand le service demande un code.
+
+### Se connecter avec Apple
+
+Proposé par les applications iOS et macOS (règle 4.8 de l'App Store : elles
+offrent Google) et par le site. Même contrat que Google :
+
+```
+POST /v1/auth/apple
+{ "identity_token": "<jeton d'identité Apple>",
+  "nonce": "<nonce BRUT, facultatif>",
+  "device_label": "iPhone de Julie",
+  "client": "app",
+  "invite_code": "",
+  "lang": "fr" }
+
+200 → { "access_token", "refresh_token", "token_type", "expires_in" }
+400 → aucun compte trouvé et pas d'adresse vérifiée pour en créer un
+401 → jeton refusé (« Connexion Apple refusée. », sans détail)
+402 / 403 → comme Google
+409 → l'adresse appartient à un compte déjà lié à un autre identifiant Apple
+```
+
+Le serveur vérifie la signature RS256 contre les clefs publiques d'Apple
+(`https://appleid.apple.com/auth/keys`, gardées en cache), l'émetteur
+(`https://appleid.apple.com`), l'expiration, la présence de `sub`, et
+l'**audience**, qui doit être l'une de :
+
+- `THECODE_APPLE_CLIENT_IDS` — bundle id des applications (`fr.julsql.thecode`),
+  séparés par des virgules. Jamais publiés ;
+- `THECODE_APPLE_WEB_CLIENT_ID` — Services ID du site (`fr.julsql.thecode.web`),
+  publié par `GET /v1/auth/registration` (`appleWebClientId`, vide sinon).
+
+Sans aucun des deux, Apple est désactivé : `appleEnabled` vaut `false` dans
+`GET /v1/auth/registration` et la route répond 401.
+
+| Client      | Obtention du jeton                                        | Audience    | `client` |
+| ----------- | --------------------------------------------------------- | ----------- | -------- |
+| iOS / macOS | `ASAuthorizationAppleIDProvider`, portée `.email`         | bundle id   | `app`    |
+| Site        | Apple JS (`AppleID.auth.signIn`, mode popup), Services ID | Services ID | `web`    |
+
+Le **nonce** suit la convention d'Apple, qui diffère de Google : le client tire
+un nonce brut aléatoire, passe son empreinte `SHA-256` en hexadécimal minuscule
+à Apple (`ASAuthorizationAppleIDRequest.nonce`, ou `nonce` d'Apple JS), et le
+jeton porte cette empreinte. Le client envoie ici le nonce **brut** ; le
+serveur le hache et compare. Envoyer l'empreinte au lieu du nonce brut est
+refusé. Sans nonce dans la requête, rien n'est contrôlé ; avec, un jeton sans
+nonce est refusé.
+
+**Liaison**, dans cet ordre :
+
+1. un compte dont `apple_sub` est le `sub` du jeton ;
+2. sinon un compte à la même adresse, si Apple la dit vérifiée
+   (`email_verified`, booléen ou chaîne `"true"`) — il est relié, sauf s'il
+   l'est déjà à un autre identifiant Apple (409) ;
+3. sinon un **compte gratuit** est créé (mêmes règles d'inscription que Google,
+   `invite_code` compris, pas de mot de passe, adresse considérée vérifiée).
+
+Apple n'envoie pas toujours l'adresse : le `sub` suffit à retrouver un compte
+déjà lié. Une adresse de relais `@privaterelay.appleid.com` est une adresse
+comme une autre : elle crée un compte distinct, que l'utilisateur pourra
+rapprocher en changeant d'adresse sur le site.
+
+`accounts.apple_sub` est unique parmi les valeurs non vides (index partiel,
+migration `e5b9c3d7a214`).
 
 ## Implémentations
 
