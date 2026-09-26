@@ -64,6 +64,9 @@ struct MainView: View {
     @State private var showNoPasswordAlert: Bool = false
     @State private var showVault: Bool = false
     @State private var vaultSaveMessage: String?
+    /// Entrée du carnet pour le compte affiché (domaine + identifiant) : le
+    /// bouton dit s'il crée une entrée ou met à jour celle qui existe.
+    @State private var vaultEntry: VaultEntry?
     /// Proposition d'enregistrer au carnet un site qu'il ne connaît pas.
     @State private var showSaveProposal = false
     /// Comptes pour lesquels la proposition a été refusée, le temps de la
@@ -390,12 +393,17 @@ struct MainView: View {
                                     .foregroundColor(securityColor)
 
                                 Button(action: saveToVault) {
-                                    HStack {
-                                        Image(systemName: "square.and.arrow.down")
-                                        Text(L10n.t("Enregistrer les réglages au carnet",
-                                                    "Save settings to vault"))
-                                    }
+                                    Label(
+                                        vaultEntry == nil
+                                            ? L10n.t("Enregistrer les réglages au carnet",
+                                                     "Save settings to vault")
+                                            : L10n.t("Mettre à jour l'entrée du carnet",
+                                                     "Update the vault entry"),
+                                        systemImage: vaultEntry == nil
+                                            ? "square.and.arrow.down"
+                                            : "arrow.triangle.2.circlepath")
                                 }
+                                .buttonStyle(.bordered)
                                 .padding(.top, 4)
 
                                 if let vaultSaveMessage {
@@ -443,6 +451,7 @@ struct MainView: View {
             restoreSession()
             lengthDraft = String(lengthNumber)
             refreshFingerprint(encodingKey)
+            refreshVaultEntry()
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didResignActiveNotification)) { _ in
             // Dès qu'on bascule sur une autre app : re-masquage de la clé
@@ -499,17 +508,20 @@ struct MainView: View {
         .onChange(of: siteName) { newSite in
             vaultSaveMessage = nil
             prefillLogin(for: newSite)
+            refreshVaultEntry()
             generatePassword()
         }
         .onChange(of: loginName) { _ in
             vaultSaveMessage = nil
+            refreshVaultEntry()
             generatePassword()
         }
         .sheet(isPresented: $showInfoSheet) {
             InfoSheet(isPresented: $showInfoSheet)
         }
         .sheet(isPresented: $showV2Notice) { v2NoticeSheet }
-        .sheet(isPresented: $showVault) {
+        // Le carnet a pu gagner ou perdre l'entrée affichée.
+        .sheet(isPresented: $showVault, onDismiss: refreshVaultEntry) {
             VaultScreen(masterKey: encodingKey, isPresented: $showVault)
         }
         .alert(L10n.t("Aucun mot de passe à partager", "No password to share"), isPresented: $showNoPasswordAlert) {
@@ -621,18 +633,35 @@ struct MainView: View {
                 "Le carnet n'a pas pu être enregistré.", "The vault could not be saved.")
             return
         }
+        let updated = vaultEntry != nil
+        vaultEntry = entry
 
         // Une entrée existante garde son siteKey : le réécrire changerait un
         // mot de passe déjà en service. On le dit plutôt que de laisser croire
         // que le mot de passe affiché est celui de l'entrée.
-        vaultSaveMessage =
-            entry.siteKey == site
-            ? L10n.t("« \(site) » enregistré au carnet.", "\"\(site)\" saved to the vault.")
-            : L10n.t(
+        if entry.siteKey != site {
+            vaultSaveMessage = L10n.t(
                 "« \(site) » enregistré. Attention : cette entrée génère son mot de passe "
                     + "depuis « \(entry.siteKey) », pas depuis ce que vous avez saisi.",
                 "\"\(site)\" saved. Careful: this entry generates its password from "
                     + "\"\(entry.siteKey)\", not from what you typed.")
+        } else if updated {
+            vaultSaveMessage = L10n.t(
+                "Entrée « \(site) » mise à jour.", "\"\(site)\" entry updated.")
+        } else {
+            vaultSaveMessage = L10n.t(
+                "« \(site) » enregistré au carnet.", "\"\(site)\" saved to the vault.")
+        }
+    }
+
+    /// Relit l'entrée du compte affiché, appariée comme `Vault.upsert` : même
+    /// domaine, même identifiant.
+    private func refreshVaultEntry() {
+        let site = siteName.trimmingCharacters(in: .whitespaces)
+        let login = trimmedLogin
+        vaultEntry = site.isEmpty
+            ? nil
+            : VaultStore.load().findAll(domain: site).first { ($0.login ?? "") == login }
     }
 
     // MARK: - Sécurité
