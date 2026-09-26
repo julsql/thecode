@@ -34,7 +34,8 @@ struct VaultScreen: View {
     @State private var email = ""
     @State private var password = ""
 
-    /// Neuf à chaque présentation : aucun déverrouillage n'est mémorisé.
+    /// Neuf à chaque présentation ; repart déverrouillé si l'écran a été
+    /// quitté ouvert il y a moins de 3 minutes (voir `VaultLockController`).
     @StateObject private var lock = VaultLockController()
     @State private var showLockSettings = false
 
@@ -133,7 +134,10 @@ struct VaultScreen: View {
                     Change it on the site, then confirm.
                     """))
         }
-        .onAppear { vault = VaultStore.load() }
+        .onAppear {
+            lock.resume()
+            vault = VaultStore.load()
+        }
         .sheet(isPresented: $showSignIn) { signInSheet }
         .sheet(isPresented: $showTransfer) {
             // Le QR transporte le carnet sans serveur : c'est l'option qui
@@ -144,14 +148,19 @@ struct VaultScreen: View {
         .sheet(isPresented: $showLockSettings) {
             VaultLockSettingsView(lock: lock) { showLockSettings = false }
         }
-        // Session : jusqu'à la fermeture de la feuille ou le passage à une
-        // autre app, comme la clef de l'écran principal.
+        // Session : fermer la feuille ou passer à une autre app fait courir
+        // les 3 minutes de grâce de la clef, sans verrouiller.
         .onReceive(
             NotificationCenter.default.publisher(for: NSApplication.didResignActiveNotification)
         ) { _ in
-            lock.lock()
+            lock.leave()
         }
-        .onDisappear { lock.lock() }
+        .onReceive(
+            NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)
+        ) { _ in
+            lock.resume()
+        }
+        .onDisappear { lock.leave() }
         .onChange(of: lock.isUnlocked) { _, unlocked in
             if unlocked {
                 // Un oubli a pu effacer le carnet entre-temps.

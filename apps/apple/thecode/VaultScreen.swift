@@ -29,7 +29,8 @@ struct VaultScreen: View {
     @State private var email = ""
     @State private var password = ""
 
-    /// Neuf à chaque présentation : aucun déverrouillage n'est mémorisé.
+    /// Neuf à chaque présentation ; repart déverrouillé si l'écran a été
+    /// quitté ouvert il y a moins de 3 minutes (voir `VaultLockController`).
     @StateObject private var lock = VaultLockController()
     @State private var showLockSettings = false
 
@@ -64,7 +65,10 @@ struct VaultScreen: View {
                     }
                 }
             }
-        .onAppear { vault = VaultStore.load() }
+        .onAppear {
+            lock.resume()
+            vault = VaultStore.load()
+        }
             .sheet(isPresented: $showSignIn) { signInSheet }
         .sheet(isPresented: $showTransfer) {
             // Le QR transporte le carnet sans serveur : c'est l'option qui
@@ -111,12 +115,17 @@ struct VaultScreen: View {
                     Change it on the site, then confirm.
                     """))
         }
-        // Session : jusqu'à la sortie de l'écran ou la mise en arrière-plan.
-        // Pas sur `.inactive`, que Face ID déclenche lui-même en s'affichant.
+        // Session : la sortie de l'écran ou la mise en arrière-plan fait
+        // courir les 3 minutes de grâce de la clef, sans verrouiller. Pas sur
+        // `.inactive`, que Face ID déclenche lui-même en s'affichant.
         .onChange(of: scenePhase) { phase in
-            if phase == .background { lock.lock() }
+            switch phase {
+            case .background: lock.leave()
+            case .active: lock.resume()
+            default: break
+            }
         }
-        .onDisappear { lock.lock() }
+        .onDisappear { lock.leave() }
         .onChange(of: lock.isUnlocked) { unlocked in
             if unlocked {
                 // Un oubli a pu effacer le carnet entre-temps.

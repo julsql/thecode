@@ -290,8 +290,8 @@ struct VaultLockView: View {
         // changement de scenePhase rappellera.
         guard scenePhase == .active else { return }
         #elseif os(macOS)
-        // Reverrouillé parce que l'app est passée derrière : on attend son
-        // retour au premier plan (scenePhase rappellera).
+        // Verrouillé pendant que l'app était derrière : on attend son retour
+        // au premier plan (scenePhase rappellera).
         guard NSApplication.shared.isActive else { return }
         #endif
         autoPrompted = true

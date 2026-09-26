@@ -241,6 +241,48 @@ nonisolated struct KeychainVaultLockStorage: VaultLockStorage {
     }
 }
 
+// MARK: - Session
+
+/// Instant où l'on a quitté l'écran carnet déverrouillé. Sa présence vaut
+/// « déverrouillé en partant » : on n'en écrit un que dans ce cas. Ce n'est
+/// qu'un horodatage, aucun secret. Abstrait pour les tests.
+protocol VaultSessionStore {
+    func loadLeftAt() -> TimeInterval?
+    func saveLeftAt(_ leftAt: TimeInterval?)
+}
+
+/// Dans les UserDefaults du groupe d'app, comme l'horodatage de la clef
+/// (`SessionLock`) : la fenêtre survit à la fermeture de la feuille comme à
+/// celle de l'app. Clef distincte : quitter le carnet ne prolonge pas la clef.
+struct AppGroupVaultSessionStore: VaultSessionStore {
+    private static let appGroupID = "group.fr.julsql.thecode.params"
+    private static let key = "vaultLeftAt"
+
+    private var store: UserDefaults? { UserDefaults(suiteName: Self.appGroupID) }
+
+    func loadLeftAt() -> TimeInterval? {
+        store?.object(forKey: Self.key) as? Double
+    }
+
+    func saveLeftAt(_ leftAt: TimeInterval?) {
+        if let leftAt {
+            store?.set(leftAt, forKey: Self.key)
+        } else {
+            store?.removeObject(forKey: Self.key)
+        }
+    }
+}
+
+/// Logique pure de la session, sans stockage ni horloge.
+enum VaultSession {
+    /// Revenu dans la grâce de la clef (3 minutes) après avoir quitté l'écran
+    /// déverrouillé ? Pas d'horodatage, ou horloge reculée : verrouillé.
+    static func resumesUnlocked(leftAt: TimeInterval?, now: TimeInterval) -> Bool {
+        guard let leftAt else { return false }
+        return SessionLock.isWithinGrace(stampedAt: leftAt, now: now)
+    }
+}
+
 // MARK: - Biométrie
 
 nonisolated protocol VaultBiometrics {
@@ -277,8 +319,9 @@ nonisolated struct SystemVaultBiometrics: VaultBiometrics {
 
 /// État du verrou pour un passage sur l'écran carnet.
 ///
-/// Une instance par présentation de l'écran : rien n'est mémorisé d'une
-/// ouverture à l'autre, la session s'arrête avec l'écran.
+/// Une instance par présentation de l'écran. Le déverrouillage survit
+/// pourtant à sa fermeture : quitter l'écran déverrouillé horodate la sortie
+/// (`leave`), et une instance créée dans les 3 minutes repart déverrouillée.
 @MainActor
 final class VaultLockController: ObservableObject {
 
@@ -298,17 +341,30 @@ final class VaultLockController: ObservableObject {
     private let storage: VaultLockStorage
     private let biometrics: VaultBiometrics
     private let iterations: Int
+    private let session: VaultSessionStore
+    private let now: () -> TimeInterval
 
     init(
         storage: VaultLockStorage = KeychainVaultLockStorage(),
         biometrics: VaultBiometrics = SystemVaultBiometrics(),
-        iterations: Int = VaultPasswordHasher.iterations
+        iterations: Int = VaultPasswordHasher.iterations,
+        session: VaultSessionStore = AppGroupVaultSessionStore(),
+        now: @escaping () -> TimeInterval = { Date().timeIntervalSince1970 }
     ) {
         self.storage = storage
         self.biometrics = biometrics
         self.iterations = iterations
+        self.session = session
+        self.now = now
         self.biometryKind = biometrics.kind
-        self.phase = Self.initialPhase(storage)
+        let initial = Self.initialPhase(storage)
+        if case .locked(let method) = initial,
+            VaultSession.resumesUnlocked(leftAt: session.loadLeftAt(), now: now())
+        {
+            self.phase = .unlocked(method)
+        } else {
+            self.phase = initial
+        }
     }
 
     var biometricsAvailable: Bool { biometryKind != .none }
@@ -339,8 +395,29 @@ final class VaultLockController: ObservableObject {
 
     // MARK: Session
 
+    /// Verrouille tout de suite et efface la fenêtre de grâce.
     func lock() {
+        session.saveLeftAt(nil)
         if case .unlocked(let method) = phase { phase = .locked(method) }
+    }
+
+    /// L'écran est quitté (fermé, app en arrière-plan ou sans le focus) : on
+    /// horodate la sortie sans verrouiller. Verrouillé, rien ne doit rouvrir.
+    func leave() {
+        session.saveLeftAt(isUnlocked ? now() : nil)
+    }
+
+    /// L'écran est de nouveau visible. Revenu dans les 3 minutes : toujours
+    /// ouvert, et l'horodatage est consommé (il n'a plus lieu d'être tant
+    /// qu'on y est). Au-delà : verrouillé. Jamais quitté : rien ne change.
+    func resume() {
+        guard case .unlocked(let method) = phase, let leftAt = session.loadLeftAt() else {
+            return
+        }
+        session.saveLeftAt(nil)
+        if !VaultSession.resumesUnlocked(leftAt: leftAt, now: now()) {
+            phase = .locked(method)
+        }
     }
 
     // MARK: Première ouverture
@@ -445,6 +522,7 @@ final class VaultLockController: ObservableObject {
         }
         storage.savePasswordRecord(nil)
         storage.saveMethod(nil)
+        session.saveLeftAt(nil)
         error = nil
         phase = .setup
         return true
