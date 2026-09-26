@@ -41,15 +41,20 @@ extension PasswordSettings {
     /// prises comme référence, sans date. C'est le cas à la première
     /// synchronisation, où dater des réglages d'usine à maintenant les ferait
     /// gagner contre ceux du compte.
+    ///
+    /// Rend vrai si les valeurs ont changé : c'est ce qui demande une
+    /// synchronisation, et non l'écho des réglages distants tout juste appliqués.
+    @discardableResult
     static func touch(
         _ defaults: UserDefaults?, now: String = Vault.nowIso(), datesFirstStamp: Bool = true
-    ) {
-        guard let defaults else { return }
+    ) -> Bool {
+        guard let defaults else { return false }
         let current = stamp(load(from: defaults))
         let previous = defaults.string(forKey: stampKey)
-        guard previous != current else { return }
+        guard previous != current else { return false }
         if previous != nil || datesFirstStamp { defaults.set(now, forKey: updatedAtKey) }
         defaults.set(current, forKey: stampKey)
+        return true
     }
 
     /// Les réglages retenus, tels qu'ils partent au compte.

@@ -63,6 +63,8 @@ struct MainView: View {
     @State private var showInfoSheet: Bool = false
     @State private var showNoPasswordAlert: Bool = false
     @State private var showVault: Bool = false
+    /// Synchronisation automatique, commune avec l'écran du carnet.
+    @ObservedObject private var autoSync = AutoSync.shared
     @State private var vaultSaveMessage: String?
     /// Entrée du carnet pour le compte affiché (domaine + identifiant) : le
     /// bouton dit s'il crée une entrée ou met à jour celle qui existe.
@@ -469,6 +471,9 @@ struct MainView: View {
             lengthDraft = String(lengthNumber)
             refreshFingerprint(encodingKey)
             refreshVaultEntry()
+            // Lancement : ce qu'un autre appareil (ou l'extension AutoFill) a
+            // écrit entre-temps.
+            autoSync.request(.open)
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didResignActiveNotification)) { _ in
             // Dès qu'on bascule sur une autre app : re-masquage de la clé
@@ -483,9 +488,13 @@ struct MainView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             restoreSession()
+            autoSync.request(.open)
         }
         .onChange(of: darkMode) { _ in applyAppAppearance() }
         .onChange(of: useV1) { _ in generatePassword() }
+        // Une synchronisation a pu gagner ou perdre l'entrée affichée ; les
+        // réglages, eux, suivent d'eux-mêmes par @AppStorage.
+        .onChange(of: autoSync.completedRuns) { _ in refreshVaultEntry() }
         .onChange(of: encodingKey) { newValue in
             SecureKeyStore.write(newValue)
             refreshFingerprint(newValue)
@@ -494,7 +503,7 @@ struct MainView: View {
         .onChange(of: lengthNumber) { newVal in
             // Le slider (ou un clamp) a bougé la valeur : on réaligne le champ.
             if lengthDraft != String(newVal) { lengthDraft = String(newVal) }
-            PasswordSettings.touch(UserDefaults(suiteName: appGroupID))
+            settingsTouched()
             generatePassword()
         }
         .onChange(of: lengthDraft) { newVal in
@@ -508,19 +517,19 @@ struct MainView: View {
             if !focused { commitLengthDraft() }
         }
         .onChange(of: minState) { _ in
-            PasswordSettings.touch(UserDefaults(suiteName: appGroupID))
+            settingsTouched()
             generatePassword()
         }
         .onChange(of: majState) { _ in
-            PasswordSettings.touch(UserDefaults(suiteName: appGroupID))
+            settingsTouched()
             generatePassword()
         }
         .onChange(of: symState) { _ in
-            PasswordSettings.touch(UserDefaults(suiteName: appGroupID))
+            settingsTouched()
             generatePassword()
         }
         .onChange(of: chiState) { _ in
-            PasswordSettings.touch(UserDefaults(suiteName: appGroupID))
+            settingsTouched()
             generatePassword()
         }
         .onChange(of: siteName) { newSite in
@@ -658,6 +667,7 @@ struct MainView: View {
         }
         let updated = vaultEntry != nil
         vaultEntry = entry
+        autoSync.request(.write)
 
         // Une entrée existante garde son siteKey : le réécrire changerait un
         // mot de passe déjà en service. On le dit plutôt que de laisser croire
@@ -811,6 +821,14 @@ struct MainView: View {
 
     /// Valide le brouillon : une saisie vide, partielle ou hors bornes est
     /// ramenée dans les limites plutôt que silencieusement ignorée.
+    /// Un réglage par défaut a vraiment changé : il part au compte. L'écho des
+    /// réglages distants tout juste appliqués ne relance rien.
+    private func settingsTouched() {
+        if PasswordSettings.touch(UserDefaults(suiteName: appGroupID)) {
+            autoSync.request(.settings)
+        }
+    }
+
     private func commitLengthDraft() {
         let clamped = PasswordSettings.clampLength(Int(lengthDraft) ?? lengthNumber)
         lengthNumber = clamped

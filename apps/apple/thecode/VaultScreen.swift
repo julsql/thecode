@@ -20,6 +20,11 @@ struct VaultScreen: View {
     @State private var vault = Vault()
     @State private var status: String?
     @State private var isWorking = false
+    /// Synchronisation automatique, commune avec l'écran de génération.
+    @ObservedObject private var autoSync = AutoSync.shared
+
+    /// Un calcul local ou une synchronisation en cours.
+    private var isBusy: Bool { isWorking || autoSync.isRunning }
     @State private var pending: PendingChange? = nil
     @State private var isLinked = SyncCredentialsStore.load() != nil
 
@@ -73,13 +78,14 @@ struct VaultScreen: View {
         .onAppear {
             lock.resume()
             vault = VaultStore.load()
+            autoSync.request(.open)
         }
             .sheet(isPresented: $showSignIn) { signInSheet }
         .sheet(isPresented: $showTransfer) {
             // Le QR transporte le carnet sans serveur : c'est l'option qui
             // rend la synchronisation facultative.
             TransferView(masterKey: masterKey, isPresented: $showTransfer)
-                .onDisappear { vault = VaultStore.load() }
+                .onDisappear(perform: reloadAfterTransfer)
         }
         .sheet(isPresented: $showLockSettings) {
             VaultLockSettingsView(lock: lock) { showLockSettings = false }
@@ -131,6 +137,11 @@ struct VaultScreen: View {
             }
         }
         .onDisappear { lock.leave() }
+        // Après une synchronisation réussie, le carnet affiché est relu.
+        .onChange(of: autoSync.completedRuns) { _ in
+            vault = VaultStore.load()
+            isLinked = SyncCredentialsStore.load() != nil
+        }
         .onChange(of: lock.isUnlocked) { unlocked in
             if unlocked {
                 // Un oubli a pu effacer le carnet entre-temps.
@@ -206,11 +217,20 @@ struct VaultScreen: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
+                // Dernier état de la synchronisation, automatique ou non :
+                // jamais une alerte, rien que cette ligne.
+                if isLinked, let last = autoSync.status {
+                    Text(last)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
                 HStack(spacing: 16) {
                     if isLinked {
                         Button(action: startSync) {
                             HStack(spacing: 6) {
-                                if isWorking {
+                                if isBusy {
                                     ProgressView()
                                 } else {
                                     Image(systemName: "arrow.triangle.2.circlepath")
@@ -219,18 +239,18 @@ struct VaultScreen: View {
                             }
                         }
                         .buttonStyle(.borderedProminent)
-                        .disabled(isWorking)
+                        .disabled(isBusy)
 
                         Button(L10n.t("Délier", "Unlink"), role: .destructive, action: unlink)
                             .buttonStyle(.borderless)
-                            .disabled(isWorking)
+                            .disabled(isBusy)
                     } else {
                         // La connexion ouvre la feuille de l'app (e-mail et mot
                         // de passe, ou Google) ; la création de compte reste
                         // sur le site.
                         Button(L10n.t("Se connecter", "Sign in")) { showSignIn = true }
                             .buttonStyle(.borderedProminent)
-                            .disabled(isWorking)
+                            .disabled(isBusy)
 
                         // Un bouton plutôt qu'un Link : dans une ligne de liste,
                         // un Link prend le toucher de toute la ligne.
@@ -445,6 +465,8 @@ struct VaultScreen: View {
             return
         }
 
+        autoSync.request(.write)
+
         let label = change.entry.label.flatMap { $0.isEmpty ? nil : $0 } ?? change.entry.siteKey
         status = L10n.t(
             "« \(label) » renouvelée, compteur \(vault.entries[index].counter).",
@@ -469,6 +491,7 @@ struct VaultScreen: View {
 
         vault = updated
         selectedID = nil
+        autoSync.request(.write)
         let label = VaultEntryDetailView.label(of: entry)
         status = L10n.t("« \(label) » supprimée.", "\"\(label)\" deleted.")
     }
@@ -485,12 +508,12 @@ struct VaultScreen: View {
             return
         }
 
-        guard let credentials = SyncCredentialsStore.load() else {
+        guard SyncCredentialsStore.load() != nil else {
             showSignIn = true
             return
         }
-        run { try await Sync().syncRenewing(
-            VaultStore.load(), masterKey: masterKey, credentials: credentials) }
+        status = nil
+        autoSync.syncNow()
     }
 
     private func signIn() {
@@ -500,14 +523,10 @@ struct VaultScreen: View {
         let password = self.password
         self.password = ""
 
-        run {
-            let sync = Sync()
-            let credentials = try await sync.login(
+        link {
+            try await Sync().login(
                 endpoint: endpoint, email: email, password: password,
                 deviceLabel: await UIDevice.current.name)
-            SyncCredentialsStore.save(credentials)
-            return try await sync.syncRenewing(
-                VaultStore.load(), masterKey: masterKey, credentials: credentials)
         }
     }
 
@@ -534,14 +553,10 @@ struct VaultScreen: View {
             isGoogleWorking = false
             showSignIn = false
 
-            run {
-                let sync = Sync()
-                let credentials = try await sync.googleSignIn(
+            link {
+                try await Sync().googleSignIn(
                     endpoint: endpoint, idToken: idToken, lang: L10n.t("fr", "en"),
                     deviceLabel: await UIDevice.current.name)
-                SyncCredentialsStore.save(credentials)
-                return try await sync.syncRenewing(
-                    VaultStore.load(), masterKey: masterKey, credentials: credentials)
             }
         }
     }
@@ -551,84 +566,36 @@ struct VaultScreen: View {
         // n'efface rien.
         SyncCredentialsStore.clear()
         isLinked = false
+        autoSync.reset()
         status = L10n.t(
             "Compte délié. Cet appareil ne se synchronise plus.",
             "Account unlinked. This device no longer syncs.")
     }
 
-    private func run(_ operation: @escaping () async throws -> Sync.Result) {
+    /// Connexion, puis première synchronisation par le même chemin que les
+    /// autres : son état s'affiche dans la même ligne.
+    private func link(_ login: @escaping () async throws -> SyncCredentials) {
         isWorking = true
-        status = L10n.t("Synchronisation…", "Syncing…")
+        status = L10n.t("Connexion…", "Signing in…")
 
         Task {
             do {
-                let result = try await operation()
-                // Les jetons peuvent avoir été renouvelés pendant l'appel : ne
-                // pas les réenregistrer forcerait une reconnexion.
-                // L'offre du compte peut avoir changé depuis la dernière
-                // fois : elle est relue ici, sans quoi l'app resterait sur son
-                // ancienne idée jusqu'à la reconnexion.
-                let refreshed =
-                    (try? await Sync().accountPlan(credentials: result.credentials))
-                    ?? result.credentials
-                SyncCredentialsStore.save(refreshed)
-                try VaultStore.save(result.vault, to: VaultStore.url())
-
-                // Réglages par défaut, après le carnet. Un échec ici ne remet
-                // pas en cause le carnet, déjà synchronisé et enregistré.
-                if let renewed = try? await PasswordSettings.syncShared(
-                    masterKey: masterKey, credentials: refreshed), renewed != refreshed
-                {
-                    SyncCredentialsStore.save(renewed)
-                }
-
-                await MainActor.run {
-                    vault = result.vault
-                    isLinked = true
-                    let kept =
-                        result.vault.entries.filter { $0.deleted != true }.count
-                        - result.localOnly
-                    // Au-delà du plafond, le reste ne part pas : le dire, sinon
-                    // on croit retrouver sur l'autre appareil ce qui n'y est
-                    // jamais allé.
-                    let local =
-                        result.localOnly == 0
-                        ? ""
-                        : L10n.t(
-                            ", \(result.localOnly) restées sur cet appareil "
-                                + "(plafond de l'offre gratuite)",
-                            ", \(result.localOnly) kept on this device (free plan limit)")
-                    status =
-                        result.conflicts.isEmpty
-                        ? L10n.t(
-                            "Carnet synchronisé : \(kept) entrées\(local).",
-                            "Vault synced: \(kept) entries\(local).")
-                        : L10n.t(
-                            "Carnet synchronisé : \(kept) entrées\(local), "
-                                + "\(result.conflicts.count) demandent votre attention.",
-                            "Vault synced: \(kept) entries\(local), \(result.conflicts.count) need "
-                                + "your attention.")
-                    isWorking = false
-                }
+                SyncCredentialsStore.save(try await login())
+                isLinked = true
+                status = nil
+                isWorking = false
+                autoSync.syncNow()
             } catch {
-                // 402 : le serveur explique comment lever la limite, ce qu'une
-                // app du Store n'a pas le droit de relayer. On garde le fait,
-                // pas l'invitation.
-                let syncError = error as? SyncError
-                let message =
-                    syncError?.status == 402
-                    ? L10n.t(
-                        "Limite de synchronisation atteinte : les entrées en trop restent "
-                            + "sur cet appareil.",
-                        "Sync limit reached: the extra entries stay on this device.")
-                    : L10n.t(
-                        "Échec de la synchronisation : \(syncError?.message ?? error.localizedDescription)",
-                        "Sync failed: \(syncError?.message ?? error.localizedDescription)")
-                await MainActor.run {
-                    status = message
-                    isWorking = false
-                }
+                status = AutoSync.failureMessage(error)
+                isWorking = false
             }
         }
+    }
+
+    /// Au retour du transfert : un import a pu fusionner des entrées.
+    private func reloadAfterTransfer() {
+        let before = vault.entries
+        vault = VaultStore.load()
+        if vault.entries != before { autoSync.request(.write) }
     }
 }
