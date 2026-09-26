@@ -9,6 +9,17 @@
 
     <div class="content-container fadeIn">
       <div class="account-card">
+        <!-- Les messages de la page elle-même (retour du paiement, service
+             injoignable) : en tête, pas au bas d'une longue page. -->
+        <p
+          v-if="message && messageScope === 'page'"
+          id="acc_message_page"
+          class="hint account-message"
+          role="status"
+          aria-live="polite"
+        >
+          {{ message }}
+        </p>
         <!-- Déconnecté : se connecter ou créer un compte, rien d'autre. -->
         <template v-if="!connected">
           <div class="tabs" role="tablist">
@@ -48,6 +59,8 @@
               type="password"
               :placeholder="t('acc_password')"
               :autocomplete="mode === 'register' ? 'new-password' : 'current-password'"
+              :aria-invalid="authPasswordInvalid || undefined"
+              :aria-describedby="authPasswordInvalid ? 'acc_message_auth' : undefined"
             />
           </div>
 
@@ -61,6 +74,8 @@
                 type="password"
                 :placeholder="t('acc_password_confirm')"
                 autocomplete="new-password"
+                :aria-invalid="authPasswordInvalid || undefined"
+                :aria-describedby="authPasswordInvalid ? 'acc_message_auth' : undefined"
               />
             </div>
             <div class="field-row">
@@ -114,6 +129,15 @@
               {{ t("acc_forgot") }}
             </button>
           </p>
+          <p
+            v-if="message && messageScope === 'auth'"
+            id="acc_message_auth"
+            class="hint account-message"
+            role="status"
+            aria-live="polite"
+          >
+            {{ message }}
+          </p>
 
           <!-- Le bouton Google n'apparaît que si le service l'annonce et si
                son script a pu se charger : un bouton qui ne répond pas serait
@@ -151,6 +175,15 @@
             <button type="button" class="ghost-btn small" @click="resend">
               {{ t("acc_verify_resend") }}
             </button>
+          </p>
+          <p
+            v-if="message && messageScope === 'verify'"
+            id="acc_message_verify"
+            class="hint account-message"
+            role="status"
+            aria-live="polite"
+          >
+            {{ message }}
           </p>
 
           <dl class="usage">
@@ -207,6 +240,15 @@
             <p v-if="info && !info.billingAvailable" class="hint">
               {{ t("acc_billing_unavailable") }}
             </p>
+            <p
+              v-if="message && messageScope === 'plan'"
+              id="acc_message_plan"
+              class="hint account-message"
+              role="status"
+              aria-live="polite"
+            >
+              {{ message }}
+            </p>
           </section>
 
           <section class="panel">
@@ -231,6 +273,15 @@
                 {{ t("acc_google_unlink") }}
               </button>
             </div>
+            <p
+              v-if="message && messageScope === 'google'"
+              id="acc_message_google"
+              class="hint account-message"
+              role="status"
+              aria-live="polite"
+            >
+              {{ message }}
+            </p>
             <p v-if="info?.googleLinked && !info?.hasPassword" class="hint">
               {{ t("acc_google_needs_password") }}
             </p>
@@ -257,6 +308,8 @@
                 type="password"
                 :placeholder="t('acc_password_new')"
                 autocomplete="new-password"
+                :aria-invalid="newPasswordInvalid || undefined"
+                :aria-describedby="newPasswordInvalid ? 'acc_message_password' : undefined"
               />
               <input
                 id="acc_new_password_confirm"
@@ -264,8 +317,19 @@
                 type="password"
                 :placeholder="t('acc_password_confirm')"
                 autocomplete="new-password"
+                :aria-invalid="newPasswordInvalid || undefined"
+                :aria-describedby="newPasswordInvalid ? 'acc_message_password' : undefined"
               />
             </div>
+            <p
+              v-if="message && messageScope === 'password'"
+              id="acc_message_password"
+              class="hint account-message"
+              role="status"
+              aria-live="polite"
+            >
+              {{ message }}
+            </p>
             <div class="panel-actions">
               <button type="button" class="ghost-btn" @click="submitPassword">
                 {{ info && info.hasPassword ? t("acc_password_change") : t("acc_password_set") }}
@@ -300,6 +364,15 @@
                 {{ t("acc_email_change") }}
               </button>
             </div>
+            <p
+              v-if="message && messageScope === 'email'"
+              id="acc_message_email"
+              class="hint account-message"
+              role="status"
+              aria-live="polite"
+            >
+              {{ message }}
+            </p>
           </section>
 
           <section class="panel">
@@ -319,6 +392,15 @@
                 {{ t("acc_code_apply") }}
               </button>
             </div>
+            <p
+              v-if="message && messageScope === 'code'"
+              id="acc_message_code"
+              class="hint account-message"
+              role="status"
+              aria-live="polite"
+            >
+              {{ message }}
+            </p>
           </section>
 
           <section class="panel">
@@ -329,6 +411,15 @@
                 {{ t("acc_export") }}
               </button>
             </div>
+            <p
+              v-if="message && messageScope === 'export'"
+              id="acc_message_export"
+              class="hint account-message"
+              role="status"
+              aria-live="polite"
+            >
+              {{ message }}
+            </p>
 
             <h3 class="panel-title danger-title">{{ t("acc_delete_title") }}</h3>
             <p class="panel-lead">{{ t("acc_delete_lead") }}</p>
@@ -359,6 +450,15 @@
                 {{ t("acc_delete_btn") }}
               </button>
             </div>
+            <p
+              v-if="message && messageScope === 'delete'"
+              id="acc_message_delete"
+              class="hint account-message"
+              role="status"
+              aria-live="polite"
+            >
+              {{ message }}
+            </p>
           </section>
 
           <section class="panel">
@@ -377,14 +477,21 @@
                 </button>
               </li>
             </ul>
+            <p
+              v-if="message && messageScope === 'devices'"
+              id="acc_message_devices"
+              class="hint account-message"
+              role="status"
+              aria-live="polite"
+            >
+              {{ message }}
+            </p>
             <p v-if="devices.some((d) => d.web)" class="hint">
               {{ t("acc_device_web_hint") }}
             </p>
             <p class="hint">{{ t("acc_sync_hint") }}</p>
           </section>
         </template>
-
-        <p v-if="message" class="hint account-message">{{ message }}</p>
       </div>
     </div>
   </div>
@@ -426,6 +533,20 @@ import {
   SyncError,
 } from "@/sync";
 
+/** Les endroits de la page où un message peut s'afficher. */
+type MessageScope =
+  | "page"
+  | "auth"
+  | "verify"
+  | "plan"
+  | "google"
+  | "password"
+  | "email"
+  | "code"
+  | "export"
+  | "delete"
+  | "devices";
+
 export default defineComponent({
   name: "Account",
   setup() {
@@ -443,6 +564,25 @@ export default defineComponent({
     // service, et refuser prend un clic, comme l'accepter.
     const chosenPlan = ref<"free" | "pro">("pro");
     const message = ref("");
+    /**
+     * Où afficher `message` : à côté de l'action qui l'a produit, plutôt qu'au
+     * bas d'une page longue où on ne le voit pas.
+     */
+    const messageScope = ref<MessageScope>("page");
+    /** Le message porte sur des mots de passe saisis, à signaler comme tels. */
+    const invalidField = ref<"" | "auth-password" | "new-password">("");
+    const authPasswordInvalid = computed(
+      () => Boolean(message.value) && invalidField.value === "auth-password",
+    );
+    const newPasswordInvalid = computed(
+      () => Boolean(message.value) && invalidField.value === "new-password",
+    );
+
+    /** Chaque action place ses messages près d'elle. */
+    function scopeTo(scope: MessageScope) {
+      messageScope.value = scope;
+      invalidField.value = "";
+    }
     const info = ref<AccountInfo | null>(null);
     const devices = ref<Device[]>([]);
     const freeSlots = ref<number | null>(null);
@@ -544,6 +684,7 @@ export default defineComponent({
           connected.value = false;
           return;
         }
+        scopeTo("page");
         message.value = (e as Error).message;
       }
     }
@@ -578,10 +719,12 @@ export default defineComponent({
         return false;
       }
       if (withConfirmation && password.value.length < 12) {
+        invalidField.value = "auth-password";
         message.value = t("acc_password_short");
         return false;
       }
       if (withConfirmation && password.value !== passwordConfirm.value) {
+        invalidField.value = "auth-password";
         message.value = t("acc_password_mismatch");
         return false;
       }
@@ -605,11 +748,14 @@ export default defineComponent({
     }
 
     async function signIn() {
+      scopeTo("auth");
       if (!checkCredentials(false)) return;
       message.value = t("acc_connecting");
       try {
         saveSession(await login(DEFAULT_ENDPOINT, email.value, password.value));
         password.value = "";
+        // Le formulaire disparaît une fois connecté : le message passe en tête.
+        messageScope.value = "page";
         message.value = t("acc_connected");
         await refresh();
       } catch (e) {
@@ -618,6 +764,7 @@ export default defineComponent({
     }
 
     async function createAccount() {
+      scopeTo("auth");
       if (!checkCredentials(true)) return;
       message.value = t("acc_creating");
       try {
@@ -627,6 +774,7 @@ export default defineComponent({
         password.value = "";
         passwordConfirm.value = "";
         code.value = "";
+        messageScope.value = "page";
         message.value = t("acc_created");
         await refresh();
 
@@ -642,10 +790,13 @@ export default defineComponent({
     }
 
     async function continueWithGoogle(idToken: string) {
+      scopeTo("auth");
       message.value = t("acc_connecting");
       try {
         saveSession(await googleSignIn(DEFAULT_ENDPOINT, idToken, code.value, lang.value));
         code.value = "";
+        // Le formulaire disparaît une fois connecté : le message passe en tête.
+        messageScope.value = "page";
         message.value = t("acc_connected");
         await refresh();
       } catch (e) {
@@ -654,6 +805,7 @@ export default defineComponent({
     }
 
     async function forgot() {
+      scopeTo("auth");
       if (!email.value) {
         message.value = t("acc_fill");
         return;
@@ -668,13 +820,16 @@ export default defineComponent({
     }
 
     async function submitPassword() {
+      scopeTo("password");
       const session = loadSession();
       if (!session) return;
       if (newPassword.value.length < 12) {
+        invalidField.value = "new-password";
         message.value = t("acc_password_short");
         return;
       }
       if (newPassword.value !== newPasswordConfirm.value) {
+        invalidField.value = "new-password";
         message.value = t("acc_password_mismatch");
         return;
       }
@@ -691,6 +846,7 @@ export default defineComponent({
     }
 
     async function submitEmail() {
+      scopeTo("email");
       const session = loadSession();
       if (!session || !newEmail.value) {
         message.value = t("acc_fill");
@@ -708,6 +864,7 @@ export default defineComponent({
     }
 
     async function unlink() {
+      scopeTo("google");
       const session = loadSession();
       if (!session) return;
       try {
@@ -720,6 +877,7 @@ export default defineComponent({
     }
 
     async function downloadData() {
+      scopeTo("export");
       const session = loadSession();
       if (!session) return;
       try {
@@ -740,6 +898,7 @@ export default defineComponent({
     }
 
     async function removeAccount() {
+      scopeTo("delete");
       const session = loadSession();
       if (!session || !info.value) return;
       if (deleteEmail.value !== info.value.email) {
@@ -756,6 +915,8 @@ export default defineComponent({
         devices.value = [];
         deleteEmail.value = "";
         deletePassword.value = "";
+        // La section a disparu avec le compte : le message passe en tête.
+        messageScope.value = "page";
         message.value = t("acc_delete_done");
       } catch (e) {
         message.value = (e as Error).message;
@@ -771,6 +932,7 @@ export default defineComponent({
     }
 
     async function upgrade() {
+      scopeTo("plan");
       const session = loadSession();
       if (!session) return;
       try {
@@ -785,6 +947,7 @@ export default defineComponent({
     }
 
     async function manage() {
+      scopeTo("plan");
       const session = loadSession();
       if (!session) return;
       try {
@@ -795,6 +958,7 @@ export default defineComponent({
     }
 
     async function applyCode() {
+      scopeTo("code");
       const session = loadSession();
       if (!session || !code.value) return;
       try {
@@ -807,6 +971,7 @@ export default defineComponent({
     }
 
     async function resend() {
+      scopeTo("verify");
       const session = loadSession();
       if (!session) return;
       try {
@@ -818,6 +983,7 @@ export default defineComponent({
     }
 
     async function disconnect(id: string) {
+      scopeTo("devices");
       const session = loadSession();
       if (!session) return;
       try {
@@ -840,6 +1006,9 @@ export default defineComponent({
       promoCode,
       chosenPlan,
       message,
+      messageScope,
+      authPasswordInvalid,
+      newPasswordInvalid,
       info,
       devices,
       freeSlots,
