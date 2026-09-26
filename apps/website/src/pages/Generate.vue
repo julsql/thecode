@@ -60,12 +60,25 @@
                 :placeholder="t('gen_placeholder_key')"
                 id="id_clef"
                 required
+                aria-describedby="keyHint"
                 @change="keyEntered"
+                @focus="keyFocused = true"
+                @blur="keyFocused = false"
               />
               <button type="button" class="ghost-btn" @click="togglePassword">
                 {{ showPassword ? t("gen_hide") : t("gen_show") }}
               </button>
             </div>
+            <!-- Guide discret, jamais bloquant (shared/spec/key-strength.md). Le
+                 niveau n'apparait que pendant la saisie ou clef affichee : clef
+                 masquee et champ sans focus, il trahirait une indication de
+                 longueur. -->
+            <p v-show="!clef || keyGuideActive" id="keyHint" class="hint">
+              {{ t("gen_key_hint") }}
+            </p>
+            <p class="key-strength" :data-level="keyLevel" aria-live="polite">
+              <span v-if="keyLevelLabel">{{ keyLevelLabel }}</span>
+            </p>
           </div>
 
           <div class="form-group">
@@ -324,6 +337,7 @@ import { defineComponent, ref, watch, computed, onMounted, onUnmounted } from "v
 import { generatePassword, calculateEntropyBits, getSecurityLevel } from "@/utils";
 import { canonicalSite, loadPublicSuffixList } from "@/canonicalSite";
 import { keyFingerprint, type Fingerprint } from "@/fingerprint";
+import { keyStrength } from "@/keyStrength";
 import { loadSession, signOutSession } from "@/sync";
 import { loadSettings, rememberSettings, sameSettings, type DefaultSettings } from "@/settings";
 import { lastSyncFailure, runSyncNow, scheduleAutoSync, useAutoSync } from "@/autoSync";
@@ -414,6 +428,22 @@ export default defineComponent({
       if (!sameSettings(before, after)) scheduleAutoSync();
     });
     const showPassword = ref(false);
+    const keyFocused = ref(false);
+    const keyGuideActive = computed(() => keyFocused.value || showPassword.value);
+    // Calcul local seulement : la clef n'est ni journalisee ni stockee.
+    const keyLevel = computed(() => (keyGuideActive.value ? keyStrength(clef.value) : "none"));
+    const keyLevelLabel = computed(() => {
+      switch (keyLevel.value) {
+        case "weak":
+          return t("gen_key_strength_weak");
+        case "fair":
+          return t("gen_key_strength_fair");
+        case "strong":
+          return t("gen_key_strength_strong");
+        default:
+          return "";
+      }
+    });
     const motDePasse = ref("");
     /** Le mot de passe genere se revele sur demande, jamais par defaut. */
     const motDePasseVisible = ref(false);
@@ -833,6 +863,10 @@ export default defineComponent({
       symboles,
       chiffres,
       showPassword,
+      keyFocused,
+      keyGuideActive,
+      keyLevel,
+      keyLevelLabel,
       motDePasse,
       motDePasseVisible,
       motDePasseAffiche,
@@ -848,6 +882,28 @@ export default defineComponent({
 </script>
 
 <style scoped>
+.key-strength {
+  margin: 4px 0 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.key-strength:empty {
+  display: none;
+}
+
+.key-strength[data-level="weak"] {
+  color: #ff7b72;
+}
+
+.key-strength[data-level="fair"] {
+  color: #e3b341;
+}
+
+.key-strength[data-level="strong"] {
+  color: #5fd07a;
+}
+
 .page-wrapper {
   display: flex;
   flex-direction: column;

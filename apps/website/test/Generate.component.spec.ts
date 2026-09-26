@@ -70,6 +70,29 @@ describe("page de generation", () => {
     expect(wrapper.find("#id_clef").attributes("type")).toBe("password");
   });
 
+  // Le niveau trahirait une indication de longueur : clef masquee et champ
+  // sans focus, il disparait. Il ne bloque jamais la saisie.
+  it("indique la robustesse de la clef seulement pendant la saisie", async () => {
+    const field = wrapper.find("#id_clef");
+    const strength = () => wrapper.find(".key-strength").text();
+    // v-show : le conseil reste dans le DOM, masque par un style en ligne.
+    const hintShown = () => !(wrapper.find("#keyHint").attributes("style") ?? "").includes("none");
+    expect(hintShown()).toBe(true);
+
+    await field.trigger("focus");
+    await field.setValue("soleil");
+    expect(strength()).toBe("Robustesse : faible");
+    await field.setValue("un chat va ici");
+    expect(strength()).toBe("Robustesse : bonne");
+
+    await field.trigger("blur");
+    expect(strength()).toBe("");
+    expect(hintShown()).toBe(false);
+
+    await wrapper.find(".input-with-button button").trigger("click");
+    expect(strength()).toBe("Robustesse : bonne");
+  });
+
   it("genere le mot de passe du vecteur partage a partir des champs", async () => {
     // v2 par defaut desormais : c'est ce vecteur-la que l'ecran doit rendre.
     const canonical = vectors.v2.cases.find((c: any) => c.id === "v2-canonical");

@@ -155,6 +155,11 @@ export const translations = {
     gen_placeholder_key: "Enter your key",
     gen_show: "Show",
     gen_hide: "Hide",
+    gen_key_hint:
+      "Choose a long, unique key, such as a phrase of several words: it protects all your passwords and your vault.",
+    gen_key_strength_weak: "Strength: weak",
+    gen_key_strength_fair: "Strength: fair",
+    gen_key_strength_strong: "Strength: strong",
     gen_label_site: "Site",
     gen_placeholder_site: "site name",
     gen_label_login: "Login",
@@ -611,6 +616,11 @@ export const translations = {
     gen_placeholder_key: "Entrez votre clef",
     gen_show: "Afficher",
     gen_hide: "Masquer",
+    gen_key_hint:
+      "Choisissez une clef longue et unique, par exemple une phrase de plusieurs mots : elle protège tous vos mots de passe et votre carnet.",
+    gen_key_strength_weak: "Robustesse : faible",
+    gen_key_strength_fair: "Robustesse : moyenne",
+    gen_key_strength_strong: "Robustesse : bonne",
     gen_label_site: "Site",
     gen_placeholder_site: "nom du site",
     gen_label_login: "Identifiant",
