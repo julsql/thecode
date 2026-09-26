@@ -646,6 +646,7 @@ public class VaultActivity extends AppCompatActivity {
             try {
                 id = new Sync().googleClientId(endpoint);
             } catch (Sync.SyncException e) {
+                Log.w("TheCode", "Client Google introuvable sur " + endpoint, e);
                 id = null;
             }
             String found = id;
