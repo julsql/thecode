@@ -125,7 +125,7 @@ export default defineComponent({
   width: 72px;
   height: 72px;
   border-radius: 20px;
-  background: linear-gradient(135deg, rgba(166, 77, 121, 0.35), rgba(106, 17, 203, 0.35));
+  background: linear-gradient(135deg, rgb(var(--accent-rgb) / 0.35), rgb(var(--glow-rgb) / 0.35));
   border: 1px solid rgba(255, 255, 255, 0.15);
   margin-bottom: 18px;
 }
@@ -203,8 +203,8 @@ section:first-child {
   margin: 18px 0 22px;
   padding: 18px;
   border-radius: 14px;
-  background: linear-gradient(135deg, rgba(166, 77, 121, 0.14), rgba(106, 17, 203, 0.1));
-  border: 1px solid rgba(166, 77, 121, 0.3);
+  background: linear-gradient(135deg, rgb(var(--accent-rgb) / 0.14), rgb(var(--glow-rgb) / 0.1));
+  border: 1px solid rgb(var(--accent-rgb) / 0.3);
 }
 
 .formula-part {
@@ -223,10 +223,10 @@ section:first-child {
 }
 
 .formula-result {
-  background: linear-gradient(135deg, var(--c4), var(--c3));
+  background: var(--fill-gradient);
   border-color: transparent;
   color: #fff;
-  box-shadow: 0 4px 12px rgba(166, 77, 121, 0.4);
+  box-shadow: 0 4px 12px rgb(var(--accent-rgb) / 0.4);
 }
 
 .formula-op {
@@ -254,8 +254,8 @@ section:first-child {
 }
 
 .benefit:hover {
-  border-color: rgba(166, 77, 121, 0.45);
-  background: rgba(166, 77, 121, 0.07);
+  border-color: rgb(var(--accent-rgb) / 0.45);
+  background: rgb(var(--accent-rgb) / 0.07);
   transform: translateY(-2px);
 }
 
@@ -282,8 +282,8 @@ section:first-child {
   font-weight: 600;
   padding: 10px 18px;
   border-radius: 999px;
-  background: linear-gradient(135deg, rgba(166, 77, 121, 0.25), rgba(106, 30, 85, 0.25));
-  border: 1px solid rgba(166, 77, 121, 0.4);
+  background: linear-gradient(135deg, rgb(var(--accent-rgb) / 0.25), rgb(var(--deep-rgb) / 0.25));
+  border: 1px solid rgb(var(--accent-rgb) / 0.4);
   transition:
     transform 0.2s ease,
     background 0.2s ease;
@@ -291,7 +291,7 @@ section:first-child {
 
 .cta-link:hover {
   transform: translateY(-2px);
-  background: linear-gradient(135deg, rgba(166, 77, 121, 0.4), rgba(106, 30, 85, 0.4));
+  background: linear-gradient(135deg, rgb(var(--accent-rgb) / 0.4), rgb(var(--deep-rgb) / 0.4));
 }
 
 .cta-icon {

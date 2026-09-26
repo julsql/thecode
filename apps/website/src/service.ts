@@ -24,9 +24,9 @@ const FALLBACK: PlanInfo = {
   currency: "EUR",
   billingAvailable: false,
   freeMaxEntries: 20,
-  freeMaxDevices: 2,
+  freeMaxDevices: 3,
   proMaxEntries: 2000,
-  proMaxDevices: 20,
+  proMaxDevices: 10,
 };
 
 export const service = reactive({

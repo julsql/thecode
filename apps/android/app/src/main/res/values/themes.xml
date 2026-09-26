@@ -30,6 +30,13 @@
         <item name="android:windowLightStatusBar" tools:targetApi="23">true</item>
     </style>
 
+    <!-- Mode v1 : accent rose a la place du bleu. Applique par MainActivity
+         avant l'inflation ; le bleu reste celui de la v2. -->
+    <style name="ThemeOverlay.TheCode.V1" parent="">
+        <item name="colorPrimary">@color/brand_pink</item>
+        <item name="colorOnPrimary">@color/background_light</item>
+    </style>
+
     <style name="ThemeOverlay.TheCode.MaterialAlertDialog"
         parent="ThemeOverlay.Material3.MaterialAlertDialog">
         <item name="shapeAppearance">@style/ShapeAppearance.Material3.LargeComponent</item>

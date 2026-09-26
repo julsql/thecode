@@ -6,5 +6,674 @@
   "extension_description": {
     "message": "Générez des mots de passe sécurisés et uniques pour chaque site à partir d'une seule clé secrète. Aucun stockage, zéro risque.\n",
     "description": "Description of what the extension does."
+  },
+  "v2_notice_title": {
+    "message": "Nouvel algorithme",
+    "description": "Title of the v2 announcement."
+  },
+  "v2_notice_intro": {
+    "message": "Les mots de passe se calculent désormais avec un nouvel algorithme (v2). Veuillez migrer vos mots de passe dans ce nouvel algorithme.",
+    "description": "First paragraph of the v2 announcement."
+  },
+  "v2_notice_detail": {
+    "message": "Le remplissage automatique utilise le nouveau : pour un site que vous n'avez pas encore mis à jour, générez le mot de passe en v1 depuis l'extension avec l'ancien algorithme.",
+    "description": "Second paragraph of the v2 announcement."
+  },
+  "v2_notice_never_again": {
+    "message": "Ne plus afficher",
+    "description": "Checkbox hiding the v2 announcement for good."
+  },
+  "v2_notice_close": {
+    "message": "Fermer",
+    "description": "Button closing the v2 announcement."
+  },
+  "sync_need_credentials": {
+    "message": "Renseignez l'adresse et le mot de passe.",
+    "description": "Sync status in the popup."
+  },
+  "sync_connecting": {
+    "message": "Connexion…",
+    "description": "Sync status in the popup."
+  },
+  "sync_connected": {
+    "message": "Connecté.",
+    "description": "Sync status in the popup."
+  },
+  "sync_failed": {
+    "message": "Échec : $VALUE$",
+    "description": "Sync status in the popup.",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "sync_unknown_error": {
+    "message": "inconnu",
+    "description": "Sync status in the popup."
+  },
+  "sync_running": {
+    "message": "Synchronisation…",
+    "description": "Sync status in the popup."
+  },
+  "sync_done": {
+    "message": "$VALUE$ entrée(s) synchronisée(s)",
+    "description": "Sync status in the popup.",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "sync_local_only": {
+    "message": ", $VALUE$ restée(s) sur cet appareil (plafond de l'offre gratuite)",
+    "description": "Sync status in the popup.",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "sync_conflicts": {
+    "message": " ($VALUE$ conflit(s) signalé(s))",
+    "description": "Sync status in the popup.",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "sync_forgotten": {
+    "message": "Session oubliée sur cet appareil.",
+    "description": "Sync status in the popup."
+  },
+  "sync_google_unavailable": {
+    "message": "Connexion Google indisponible.",
+    "description": "Sync status in the popup."
+  },
+  "sync_google_failed": {
+    "message": "La connexion Google a échoué.",
+    "description": "Sync status in the popup."
+  },
+  "popup_title": {
+    "message": "TheCode - Clef",
+    "description": "Popup."
+  },
+  "popup_open_vault": {
+    "message": "Gérer le carnet (nouvel onglet)",
+    "description": "Popup."
+  },
+  "popup_vault": {
+    "message": "Carnet",
+    "description": "Popup."
+  },
+  "popup_settings": {
+    "message": "Paramètres",
+    "description": "Popup."
+  },
+  "popup_key": {
+    "message": "Clef",
+    "description": "Popup."
+  },
+  "popup_show": {
+    "message": "Voir",
+    "description": "Popup."
+  },
+  "popup_hide": {
+    "message": "Cacher",
+    "description": "Popup."
+  },
+  "popup_set_key": {
+    "message": "Définir",
+    "description": "Popup."
+  },
+  "popup_clear_key": {
+    "message": "Effacer",
+    "description": "Popup."
+  },
+  "popup_fingerprint": {
+    "message": "Empreinte",
+    "description": "Popup."
+  },
+  "popup_login": {
+    "message": "Identifiant",
+    "description": "Popup."
+  },
+  "popup_login_hint": {
+    "message": "Facultatif. En v1, l'identifiant n'entre pas dans le calcul.",
+    "description": "Popup."
+  },
+  "popup_algorithm": {
+    "message": "Algorithme",
+    "description": "Popup."
+  },
+  "popup_v1_legacy": {
+    "message": "v1 (ancien)",
+    "description": "Popup."
+  },
+  "popup_generate": {
+    "message": "Générer le mot de passe",
+    "description": "Popup."
+  },
+  "popup_error": {
+    "message": "Erreur :",
+    "description": "Popup."
+  },
+  "popup_site": {
+    "message": "Site",
+    "description": "Popup."
+  },
+  "popup_password": {
+    "message": "Mot de passe",
+    "description": "Popup."
+  },
+  "popup_copy_password": {
+    "message": "Copier le mot de passe",
+    "description": "Popup."
+  },
+  "popup_copy": {
+    "message": "Copier",
+    "description": "Popup."
+  },
+  "popup_security": {
+    "message": "Sécurité",
+    "description": "Popup."
+  },
+  "popup_save": {
+    "message": "Enregistrer",
+    "description": "Popup."
+  },
+  "popup_renew": {
+    "message": "Renouveler",
+    "description": "Popup."
+  },
+  "popup_renew_pitch": {
+    "message": "Renouveler sans changer de clef maîtresse fait partie de l'offre complète.",
+    "description": "Popup."
+  },
+  "popup_unlock": {
+    "message": "Débloquer",
+    "description": "Popup."
+  },
+  "popup_account_url": {
+    "message": "https://thecode.julsql.fr/fr/account",
+    "description": "Popup."
+  },
+  "popup_current": {
+    "message": "Actuel",
+    "description": "Popup."
+  },
+  "popup_new": {
+    "message": "Nouveau",
+    "description": "Popup."
+  },
+  "popup_change_hint": {
+    "message": "Changez-le sur le site, puis confirmez.",
+    "description": "Popup."
+  },
+  "popup_confirm": {
+    "message": "Confirmer",
+    "description": "Popup."
+  },
+  "popup_cancel": {
+    "message": "Annuler",
+    "description": "Popup."
+  },
+  "popup_back": {
+    "message": "Retour",
+    "description": "Popup."
+  },
+  "popup_params_hint": {
+    "message": "Ces réglages sont enregistrés et s'appliquent à tous les mots de passe générés, y compris depuis le menu affiché dans les pages.",
+    "description": "Popup."
+  },
+  "popup_length": {
+    "message": "Longueur",
+    "description": "Popup."
+  },
+  "popup_characters": {
+    "message": "Caractères",
+    "description": "Popup."
+  },
+  "popup_lowercase": {
+    "message": "Minuscules",
+    "description": "Popup."
+  },
+  "popup_uppercase": {
+    "message": "Majuscules",
+    "description": "Popup."
+  },
+  "popup_numbers": {
+    "message": "Chiffres",
+    "description": "Popup."
+  },
+  "popup_symbols": {
+    "message": "Symboles",
+    "description": "Popup."
+  },
+  "popup_sync": {
+    "message": "Synchronisation",
+    "description": "Popup."
+  },
+  "popup_email": {
+    "message": "Adresse e-mail",
+    "description": "Popup."
+  },
+  "popup_account_password": {
+    "message": "Mot de passe du compte",
+    "description": "Popup."
+  },
+  "popup_sync_login": {
+    "message": "Connecter la synchronisation",
+    "description": "Popup."
+  },
+  "popup_sync_google": {
+    "message": "Continuer avec Google",
+    "description": "Popup."
+  },
+  "popup_no_account": {
+    "message": "Pas encore de compte ?",
+    "description": "Popup."
+  },
+  "popup_create_account": {
+    "message": "Créez-le sur le site",
+    "description": "Popup."
+  },
+  "popup_sync_now": {
+    "message": "Synchroniser",
+    "description": "Popup."
+  },
+  "popup_sync_logout": {
+    "message": "Déconnecter",
+    "description": "Popup."
+  },
+  "popup_transfer": {
+    "message": "Transférer le carnet…",
+    "description": "Popup."
+  },
+  "popup_key_set": {
+    "message": "Clef définie.",
+    "description": "Popup."
+  },
+  "popup_error_detail": {
+    "message": "Erreur : $FIRST$",
+    "description": "Popup.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      }
+    }
+  },
+  "popup_deriving": {
+    "message": "Dérivation en cours…",
+    "description": "Popup."
+  },
+  "popup_key_cleared": {
+    "message": "Clef effacée.",
+    "description": "Popup."
+  },
+  "popup_copied": {
+    "message": "Copié.",
+    "description": "Popup."
+  },
+  "popup_copy_failed": {
+    "message": "Copie impossible.",
+    "description": "Popup."
+  },
+  "popup_no_response": {
+    "message": "Pas de réponse.",
+    "description": "Popup."
+  },
+  "popup_account_saved_for": {
+    "message": "Compte enregistré pour $FIRST$.",
+    "description": "Popup.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      }
+    }
+  },
+  "popup_accounts_known": {
+    "message": "$FIRST$ compte(s) connu(s) pour $SECOND$, pas celui-ci.",
+    "description": "Popup.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      },
+      "second": {
+        "content": "$2"
+      }
+    }
+  },
+  "popup_not_in_vault": {
+    "message": "$FIRST$ n'est pas encore dans le carnet.",
+    "description": "Popup.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      }
+    }
+  },
+  "popup_update_entry": {
+    "message": "Mettre à jour l'entrée",
+    "description": "Popup."
+  },
+  "popup_computing": {
+    "message": "Calcul en cours…",
+    "description": "Popup."
+  },
+  "popup_renewed": {
+    "message": "Entrée renouvelée, compteur $FIRST$.",
+    "description": "Popup.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      }
+    }
+  },
+  "popup_no_site": {
+    "message": "Aucun site détecté.",
+    "description": "Popup."
+  },
+  "popup_entry_updated": {
+    "message": "Entrée mise à jour.",
+    "description": "Popup."
+  },
+  "popup_account_saved": {
+    "message": "Compte enregistré.",
+    "description": "Popup."
+  },
+  "security_none": {
+    "message": "Aucune",
+    "description": "Popup."
+  },
+  "security_very_weak": {
+    "message": "Très Faible",
+    "description": "Popup."
+  },
+  "security_weak": {
+    "message": "Faible",
+    "description": "Popup."
+  },
+  "security_medium": {
+    "message": "Moyenne",
+    "description": "Popup."
+  },
+  "security_strong": {
+    "message": "Forte",
+    "description": "Popup."
+  },
+  "security_very_strong": {
+    "message": "Très Forte",
+    "description": "Popup."
+  },
+  "vault_page_title": {
+    "message": "TheCode — Carnet",
+    "description": "Vault page."
+  },
+  "vault_title": {
+    "message": "Carnet",
+    "description": "Vault page."
+  },
+  "vault_lock_now": {
+    "message": "Verrouiller",
+    "description": "Vault page."
+  },
+  "vault_create_title": {
+    "message": "Protéger le carnet",
+    "description": "Vault page."
+  },
+  "vault_create_hint": {
+    "message": "Choisissez un mot de passe de carnet (8 caractères minimum). Il reste sur cet appareil et n'est jamais synchronisé. Il protège cet écran, pas le remplissage automatique.",
+    "description": "Vault page."
+  },
+  "vault_password_label": {
+    "message": "Mot de passe de carnet",
+    "description": "Vault page."
+  },
+  "vault_confirm_label": {
+    "message": "Confirmer le mot de passe",
+    "description": "Vault page."
+  },
+  "vault_create_submit": {
+    "message": "Créer le mot de passe",
+    "description": "Vault page."
+  },
+  "vault_locked_title": {
+    "message": "Carnet verrouillé",
+    "description": "Vault page."
+  },
+  "vault_unlock_submit": {
+    "message": "Déverrouiller",
+    "description": "Vault page."
+  },
+  "vault_forgot": {
+    "message": "Mot de passe oublié ?",
+    "description": "Vault page."
+  },
+  "vault_forget_title": {
+    "message": "Effacer le carnet de cet appareil ?",
+    "description": "Vault page."
+  },
+  "vault_forget_hint": {
+    "message": "Toutes les entrées enregistrées sur cet appareil et le mot de passe de carnet seront effacés. Si la synchronisation est active, le carnet reviendra à la prochaine synchronisation. Cette action est irréversible.",
+    "description": "Vault page."
+  },
+  "vault_forget_confirm": {
+    "message": "Effacer le carnet",
+    "description": "Vault page."
+  },
+  "vault_cancel": {
+    "message": "Annuler",
+    "description": "Vault page."
+  },
+  "vault_entries_title": {
+    "message": "Entrées",
+    "description": "Vault page."
+  },
+  "vault_empty": {
+    "message": "Le carnet est vide.",
+    "description": "Vault page."
+  },
+  "vault_back": {
+    "message": "Retour à la liste",
+    "description": "Vault page."
+  },
+  "vault_detail_domains": {
+    "message": "Domaines",
+    "description": "Vault page."
+  },
+  "vault_detail_login": {
+    "message": "Identifiant",
+    "description": "Vault page."
+  },
+  "vault_detail_length": {
+    "message": "Longueur",
+    "description": "Vault page."
+  },
+  "vault_detail_charset": {
+    "message": "Caractères",
+    "description": "Vault page."
+  },
+  "vault_detail_counter": {
+    "message": "Compteur",
+    "description": "Vault page."
+  },
+  "vault_detail_updated": {
+    "message": "Mis à jour",
+    "description": "Vault page."
+  },
+  "vault_renew": {
+    "message": "Renouveler",
+    "description": "Vault page."
+  },
+  "vault_delete": {
+    "message": "Supprimer",
+    "description": "Vault page."
+  },
+  "vault_renew_before": {
+    "message": "Actuel",
+    "description": "Vault page."
+  },
+  "vault_renew_after": {
+    "message": "Nouveau",
+    "description": "Vault page."
+  },
+  "vault_renew_hint": {
+    "message": "Changez-le sur le site, puis confirmez.",
+    "description": "Vault page."
+  },
+  "vault_confirm": {
+    "message": "Confirmer",
+    "description": "Vault page."
+  },
+  "vault_delete_title": {
+    "message": "Supprimer cette entrée ?",
+    "description": "Vault page."
+  },
+  "vault_delete_hint": {
+    "message": "La suppression se propagera aux autres appareils à la prochaine synchronisation.",
+    "description": "Vault page."
+  },
+  "vault_change_current": {
+    "message": "Mot de passe actuel",
+    "description": "Vault page."
+  },
+  "vault_change_next": {
+    "message": "Nouveau mot de passe",
+    "description": "Vault page."
+  },
+  "vault_change_confirm": {
+    "message": "Confirmer le nouveau mot de passe",
+    "description": "Vault page."
+  },
+  "vault_change_submit": {
+    "message": "Changer le mot de passe",
+    "description": "Vault page."
+  },
+  "vault_error_too_short": {
+    "message": "Le mot de passe doit contenir au moins $FIRST$ caractères.",
+    "description": "Vault page.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      }
+    }
+  },
+  "vault_error_mismatch": {
+    "message": "Les deux mots de passe ne correspondent pas.",
+    "description": "Vault page."
+  },
+  "vault_charset_lower": {
+    "message": "minuscules",
+    "description": "Vault page."
+  },
+  "vault_charset_upper": {
+    "message": "majuscules",
+    "description": "Vault page."
+  },
+  "vault_charset_numbers": {
+    "message": "chiffres",
+    "description": "Vault page."
+  },
+  "vault_charset_symbols": {
+    "message": "symboles",
+    "description": "Vault page."
+  },
+  "vault_charset_none": {
+    "message": "aucun",
+    "description": "Vault page."
+  },
+  "vault_error_detail": {
+    "message": "Erreur : $FIRST$",
+    "description": "Vault page.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      }
+    }
+  },
+  "vault_error_unknown": {
+    "message": "Erreur inconnue.",
+    "description": "Vault page."
+  },
+  "vault_failure_detail": {
+    "message": "Échec : $FIRST$",
+    "description": "Vault page.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      }
+    }
+  },
+  "vault_failure": {
+    "message": "Échec.",
+    "description": "Vault page."
+  },
+  "vault_creating": {
+    "message": "Création en cours…",
+    "description": "Vault page."
+  },
+  "vault_created": {
+    "message": "Mot de passe de carnet créé.",
+    "description": "Vault page."
+  },
+  "vault_checking": {
+    "message": "Vérification…",
+    "description": "Vault page."
+  },
+  "vault_wrong_password": {
+    "message": "Mot de passe incorrect.",
+    "description": "Vault page."
+  },
+  "vault_unlocked": {
+    "message": "Carnet déverrouillé.",
+    "description": "Vault page."
+  },
+  "vault_locked": {
+    "message": "Carnet verrouillé.",
+    "description": "Vault page."
+  },
+  "vault_forgotten": {
+    "message": "Carnet effacé de cet appareil. Choisissez un nouveau mot de passe de carnet.",
+    "description": "Vault page."
+  },
+  "vault_enter_current": {
+    "message": "Saisissez le mot de passe actuel.",
+    "description": "Vault page."
+  },
+  "vault_changing": {
+    "message": "Changement en cours…",
+    "description": "Vault page."
+  },
+  "vault_changed": {
+    "message": "Mot de passe de carnet changé.",
+    "description": "Vault page."
+  },
+  "vault_no_login": {
+    "message": "sans identifiant",
+    "description": "Vault page."
+  },
+  "vault_entry_deleted": {
+    "message": "Entrée « $FIRST$ » supprimée.",
+    "description": "Vault page.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      }
+    }
+  },
+  "vault_computing": {
+    "message": "Calcul en cours…",
+    "description": "Vault page."
+  },
+  "vault_entry_renewed": {
+    "message": "Entrée renouvelée, compteur $FIRST$.",
+    "description": "Vault page.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      }
+    }
   }
 }

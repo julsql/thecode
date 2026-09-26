@@ -6,6 +6,7 @@
 3. un même compte sur plusieurs domaines donnait des mots de passe différents.
 """
 
+
 import pytest
 
 from thecode.cli import main
@@ -113,10 +114,10 @@ def test_list_reports_what_is_stored(capsys, vault):
 # ---------------------------------------------------------------- renouvellement
 
 
-def _v2_entry(tmp_path, counter=1):
-    """Carnet d'un seul site, en v2, prêt à être renouvelé."""
+def _saved_entry(tmp_path, counter=1):
+    """Carnet d'un seul site, prêt à être renouvelé."""
     vault_path = tmp_path / "vault.json"
-    entry = new_entry("google.com", domains=["google.com"], version=2)
+    entry = new_entry("google.com", domains=["google.com"])
     entry["counter"] = counter
     save({"schema": 1, "updatedAt": "2026-01-01T00:00:00Z", "entries": [entry]}, vault_path)
     return vault_path
@@ -137,7 +138,7 @@ def paid_account(tmp_path, monkeypatch):
 
 
 def test_renew_increments_the_counter_after_confirmation(tmp_path, monkeypatch, paid_account):
-    vault_path = _v2_entry(tmp_path)
+    vault_path = _saved_entry(tmp_path)
     monkeypatch.setattr("builtins.input", lambda _: "o")
 
     code = main(["-p", "clef", "google.com", "--renew", "--vault", str(vault_path)])
@@ -154,7 +155,7 @@ def test_renew_shows_both_passwords_before_confirming(
     Et l'ancien reste nécessaire pour s'y connecter : les deux doivent être
     affichés côte à côte.
     """
-    vault_path = _v2_entry(tmp_path)
+    vault_path = _saved_entry(tmp_path)
     monkeypatch.setattr("builtins.input", lambda _: "o")
 
     main(["-p", "clef", "google.com", "--renew", "--vault", str(vault_path)])
@@ -170,7 +171,7 @@ def test_renew_shows_both_passwords_before_confirming(
 
 
 def test_renew_leaves_the_counter_alone_when_refused(tmp_path, monkeypatch, paid_account):
-    vault_path = _v2_entry(tmp_path)
+    vault_path = _saved_entry(tmp_path)
     monkeypatch.setattr("builtins.input", lambda _: "n")
 
     main(["-p", "clef", "google.com", "--renew", "--vault", str(vault_path)])
@@ -180,24 +181,30 @@ def test_renew_leaves_the_counter_alone_when_refused(tmp_path, monkeypatch, paid
     assert load(vault_path)["entries"][0]["counter"] == 1
 
 
-def test_renew_refuses_a_v1_entry(tmp_path, capsys):
+def test_migrate_no_longer_exists(tmp_path):
+    with pytest.raises(SystemExit):
+        main(["-p", "clef", "google.com", "--migrate", "--vault", str(tmp_path / "v.json")])
+
+
+def test_save_refuses_algo_1(tmp_path, capsys):
     vault_path = tmp_path / "vault.json"
-    save(
-        {
-            "schema": 1,
-            "updatedAt": "2026-01-01T00:00:00Z",
-            # v1 explicite : les entrees naissent desormais en v2.
-            "entries": [new_entry("google.com", domains=["google.com"], version=1)],
-        },
-        vault_path,
+
+    code = main(
+        ["-p", "clef", "google.com", "--algo", "1", "--save", "--show", "--vault", str(vault_path)]
     )
 
-    code = main(["-p", "clef", "google.com", "--renew", "--vault", str(vault_path)])
-
-    # Le compteur n'entre pas dans la dérivation v1 : l'incrémenter ne
-    # changerait rien, et le dire vaut mieux que de le laisser croire.
     assert code == 1
-    assert "--migrate" in capsys.readouterr().err
+    assert "v2" in capsys.readouterr().err
+    assert not vault_path.exists()
+
+
+def test_algo_1_without_save_still_generates(tmp_path):
+    vault_path = tmp_path / "vault.json"
+
+    code = main(["-p", "clef", "google.com", "--algo", "1", "--show", "--vault", str(vault_path)])
+
+    assert code == 0
+    assert not vault_path.exists()
 
 
 def test_renew_refuses_an_unknown_site(tmp_path, capsys):
@@ -208,7 +215,7 @@ def test_renew_refuses_an_unknown_site(tmp_path, capsys):
 
 
 def test_renew_restamps_the_entry(tmp_path, monkeypatch):
-    vault_path = _v2_entry(tmp_path)
+    vault_path = _saved_entry(tmp_path)
     monkeypatch.setattr("builtins.input", lambda _: "o")
     before = load(vault_path)["entries"][0]["updatedAt"]
 
@@ -226,10 +233,30 @@ def test_renew_needs_the_complete_plan(tmp_path, monkeypatch, capsys):
     compteur voyage à l'intérieur du bloc chiffré, le serveur ne le voit pas.
     """
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
-    vault_path = _v2_entry(tmp_path)
+    vault_path = _saved_entry(tmp_path)
 
     code = main(["-p", "clef", "google.com", "--renew", "--vault", str(vault_path)])
 
     assert code == 1
     assert "offre complète" in capsys.readouterr().err
     assert load(vault_path)["entries"][0]["counter"] == 1
+
+
+@pytest.mark.parametrize(
+    ("env", "expected"),
+    [
+        ({"LANG": "en_US.UTF-8"}, "en"),
+        ({"LANG": "fr_FR.UTF-8"}, "fr"),
+        ({"LANG": "en_US.UTF-8", "LC_ALL": "fr_FR.UTF-8"}, "fr"),
+        ({"LANG": "C"}, "fr"),
+        ({}, "fr"),
+    ],
+)
+def test_messages_follow_the_terminal_language(monkeypatch, env, expected):
+    from thecode.cli import _t
+
+    for var in ("LC_ALL", "LC_MESSAGES", "LANG"):
+        monkeypatch.delenv(var, raising=False)
+    for var, value in env.items():
+        monkeypatch.setenv(var, value)
+    assert _t("fr", "en") == expected

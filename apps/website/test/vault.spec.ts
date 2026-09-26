@@ -12,11 +12,18 @@ import {
   findByDomain,
   findAllByDomain,
   mergeVaults,
+  selectForPush,
+  liveEntries,
+  tombstoneEntry,
   type Vault,
 } from "@/vault";
 
 const spec = JSON.parse(
   readFileSync(join(dirname(fileURLToPath(import.meta.url)), "merge-cases.json"), "utf8"),
+);
+
+const selection = JSON.parse(
+  readFileSync(join(dirname(fileURLToPath(import.meta.url)), "sync-selection.json"), "utf8"),
 );
 
 const normalise = (v: Vault) => [...v.entries].sort((a, b) => (a.id < b.id ? -1 : 1));
@@ -42,6 +49,21 @@ describe("fusion (cas partages)", () => {
   it.each(spec.cases.map((c: any) => [c.id, c]))("%s — idempotente", (_id: string, c: any) => {
     const once = mergeVaults(c.left, c.right).vault;
     expect(normalise(mergeVaults(once, c.right).vault)).toStrictEqual(normalise(once));
+  });
+});
+
+describe("synchronisation partielle (cas partages)", () => {
+  it.each(selection.cases.map((c: any) => [c.id, c]))("%s", (_id: string, c: any) => {
+    const { push, localOnly } = selectForPush(c.vault, c.remoteIds, c.maxEntries);
+    expect(push.map((e) => e.id)).toStrictEqual(c.push);
+    expect(localOnly.map((e) => e.id)).toStrictEqual(c.localOnly);
+  });
+});
+
+describe("date de creation", () => {
+  it("est posee a la creation", () => {
+    const entry = newEntry("google.com");
+    expect(entry.createdAt).toBe(entry.updatedAt);
   });
 });
 
@@ -75,5 +97,38 @@ describe("robustesse du stockage", () => {
     const e = newEntry("google.com", { login: "moi@example.com" });
     expect(Object.keys(e)).not.toContain("password");
     expect(JSON.stringify(e)).not.toMatch(/password|secret/i);
+  });
+});
+
+describe("suppression", () => {
+  it("pose une pierre tombale rehorodatée au lieu d'effacer", () => {
+    const vault = emptyVault();
+    const entry = newEntry("google.com");
+    vault.entries.push(entry, newEntry("github.com"));
+
+    expect(tombstoneEntry(vault, entry.id, "2030-01-01T00:00:00Z")).toBe(true);
+    expect(vault.entries).toHaveLength(2);
+    expect(entry.deleted).toBe(true);
+    expect(entry.updatedAt).toBe("2030-01-01T00:00:00Z");
+    expect(liveEntries(vault).map((e) => e.siteKey)).toEqual(["github.com"]);
+  });
+
+  it("se propage à la fusion", () => {
+    const local = emptyVault();
+    const entry = newEntry("google.com");
+    local.entries.push(entry);
+    const remote: Vault = { ...emptyVault(), entries: [{ ...entry }] };
+
+    tombstoneEntry(local, entry.id, "2030-01-01T00:00:00Z");
+    expect(mergeVaults(remote, local).vault.entries[0]?.deleted).toBe(true);
+  });
+
+  it("ignore une entrée absente ou déjà supprimée", () => {
+    const vault = emptyVault();
+    const entry = newEntry("google.com");
+    vault.entries.push(entry);
+    expect(tombstoneEntry(vault, "inconnue")).toBe(false);
+    tombstoneEntry(vault, entry.id);
+    expect(tombstoneEntry(vault, entry.id)).toBe(false);
   });
 });

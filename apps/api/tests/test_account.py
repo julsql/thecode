@@ -157,6 +157,22 @@ class TestDevices:
 
         assert login(client, label="téléphone").status_code == 200
 
+    def test_the_paid_cap_is_refused_without_asking_to_pay(
+        self, client, settings, db_session, sent_emails
+    ):
+        settings.pro_max_devices = 2
+        register(client)
+
+        account = db_session.query(Account).one()
+        account.plan = "pro"
+        account.subscription_status = "active"
+        db_session.commit()
+        login(client, label="téléphone")
+
+        refused = login(client, label="tablette")
+        assert refused.status_code == 403
+        assert "Offre" not in refused.json()["detail"]
+
 
 @pytest.fixture
 def lifetime_code(db_session):

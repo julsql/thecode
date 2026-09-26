@@ -10,8 +10,16 @@
 const { webcrypto } = require("node:crypto");
 if (!global.crypto) global.crypto = webcrypto;
 
-const { emptyVault, newEntry, findByDomain, findAllByDomain, mergeVaults } = require("../vault");
+const {
+  emptyVault,
+  newEntry,
+  findByDomain,
+  findAllByDomain,
+  mergeVaults,
+  selectForPush,
+} = require("../vault");
 const spec = require("./merge-cases.json");
+const selection = require("./sync-selection.json");
 
 const normalise = (v) => [...v.entries].sort((a, b) => (a.id < b.id ? -1 : 1));
 
@@ -39,6 +47,21 @@ describe("fusion (cas partages)", () => {
       const twice = mergeVaults(once, c.right).vault;
       expect(normalise(twice)).toStrictEqual(normalise(once));
     });
+  });
+});
+
+describe("synchronisation partielle (cas partages)", () => {
+  it.each(selection.cases.map((c) => [c.id, c]))("%s", (_id, c) => {
+    const { push, localOnly } = selectForPush(c.vault, c.remoteIds, c.maxEntries);
+    expect(push.map((e) => e.id)).toStrictEqual(c.push);
+    expect(localOnly.map((e) => e.id)).toStrictEqual(c.localOnly);
+  });
+});
+
+describe("date de creation", () => {
+  it("est posee a la creation", () => {
+    const entry = newEntry("google.com");
+    expect(entry.createdAt).toBe(entry.updatedAt);
   });
 });
 

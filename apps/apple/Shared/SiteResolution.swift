@@ -26,6 +26,8 @@ public struct SiteResolution: Equatable, Identifiable {
     public let siteKey: String
     public let login: String
     public let counter: Int
+    /// Version de dérivation. Toujours 2 pour une entrée du carnet : seule la
+    /// génération ponctuelle d'un site inconnu garde la v1.
     public let v: Int
 
     public let length: Int
@@ -44,7 +46,7 @@ public struct SiteResolution: Equatable, Identifiable {
         self.siteKey = entry.siteKey
         self.login = entry.login ?? ""
         self.counter = entry.counter
-        self.v = entry.v
+        self.v = 2
         self.length = entry.length
         self.charset = entry.charset
     }

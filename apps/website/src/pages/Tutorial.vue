@@ -188,7 +188,7 @@ export default defineComponent({
   width: 72px;
   height: 72px;
   border-radius: 20px;
-  background: linear-gradient(135deg, rgba(166, 77, 121, 0.35), rgba(106, 17, 203, 0.35));
+  background: linear-gradient(135deg, rgb(var(--accent-rgb) / 0.35), rgb(var(--glow-rgb) / 0.35));
   border: 1px solid rgba(255, 255, 255, 0.15);
   margin-bottom: 18px;
 }
@@ -269,15 +269,15 @@ export default defineComponent({
 
 .tab:hover {
   color: var(--text);
-  border-color: rgba(166, 77, 121, 0.45);
+  border-color: rgb(var(--accent-rgb) / 0.45);
   transform: translateY(-1px);
 }
 
 .tab.is-active {
   color: #fff;
-  background: linear-gradient(135deg, var(--c4), var(--c3));
+  background: var(--fill-gradient);
   border-color: transparent;
-  box-shadow: 0 6px 18px rgba(166, 77, 121, 0.35);
+  box-shadow: 0 6px 18px rgb(var(--accent-rgb) / 0.35);
 }
 
 .tab-icon {
@@ -305,7 +305,7 @@ h2 {
   padding: 14px 16px;
   border-left: 3px solid var(--c4);
   border-radius: 10px;
-  background: linear-gradient(135deg, rgba(166, 77, 121, 0.12), rgba(106, 17, 203, 0.08));
+  background: linear-gradient(135deg, rgb(var(--accent-rgb) / 0.12), rgb(var(--glow-rgb) / 0.08));
 }
 
 .steps {
@@ -340,8 +340,8 @@ h2 {
   font-weight: 700;
   font-size: 0.9rem;
   color: #fff;
-  background: linear-gradient(135deg, var(--c4), var(--c3));
-  box-shadow: 0 4px 10px rgba(166, 77, 121, 0.35);
+  background: var(--fill-gradient);
+  box-shadow: 0 4px 10px rgb(var(--accent-rgb) / 0.35);
 }
 
 .step-text {
@@ -358,8 +358,8 @@ h2 {
   font-weight: 600;
   padding: 10px 18px;
   border-radius: 999px;
-  background: linear-gradient(135deg, rgba(166, 77, 121, 0.25), rgba(106, 30, 85, 0.25));
-  border: 1px solid rgba(166, 77, 121, 0.4);
+  background: linear-gradient(135deg, rgb(var(--accent-rgb) / 0.25), rgb(var(--deep-rgb) / 0.25));
+  border: 1px solid rgb(var(--accent-rgb) / 0.4);
   transition:
     transform 0.2s ease,
     background 0.2s ease;
@@ -367,7 +367,7 @@ h2 {
 
 .cta-link:hover {
   transform: translateY(-2px);
-  background: linear-gradient(135deg, rgba(166, 77, 121, 0.4), rgba(106, 30, 85, 0.4));
+  background: linear-gradient(135deg, rgb(var(--accent-rgb) / 0.4), rgb(var(--deep-rgb) / 0.4));
 }
 
 .cta-link--alt {

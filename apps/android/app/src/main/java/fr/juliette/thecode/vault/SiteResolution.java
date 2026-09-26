@@ -28,6 +28,10 @@ public final class SiteResolution {
     public final String siteKey;
     public final String login;
     public final int counter;
+    /**
+     * Version de l'algorithme à appliquer. Toujours 2 pour une entrée du
+     * carnet ; seul le repli, génération ponctuelle hors carnet, reste en v1.
+     */
     public final int v;
 
     public final int length;
@@ -58,7 +62,7 @@ public final class SiteResolution {
             label = label + " · " + entry.login;
         }
         return new SiteResolution(entry.id, label, entry.siteKey,
-                entry.login == null ? "" : entry.login, entry.counter, entry.v,
+                entry.login == null ? "" : entry.login, entry.counter, 2,
                 entry.length, entry.lower, entry.upper, entry.symbols, entry.numbers);
     }
 

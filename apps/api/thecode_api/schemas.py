@@ -79,6 +79,26 @@ class EntryPayload(BaseModel):
         return value
 
 
+class DefaultSettingsPayload(BaseModel):
+    """Les réglages par défaut chiffrés, dans un sens comme dans l'autre.
+
+    Même contrôle que pour une entrée : le serveur n'en lit rien, il vérifie
+    seulement que ce sont bien des octets.
+    """
+
+    nonce: str
+    blob: str
+
+    @field_validator("nonce", "blob")
+    @classmethod
+    def must_be_base64url(cls, value: str) -> str:
+        try:
+            b64decode(value)
+        except Exception as exc:
+            raise ValueError("base64url attendu") from exc
+        return value
+
+
 class PushRequest(BaseModel):
     """Écriture par lot.
 
@@ -102,6 +122,9 @@ class EntryResponse(BaseModel):
 class PullResponse(BaseModel):
     revision: int
     entries: list[EntryResponse]
+    #: Entrées que le compte peut synchroniser. Le client s'en sert pour
+    #: choisir ce qu'il pousse : au-delà, les entrées restent sur l'appareil.
+    max_entries: int
 
 
 class PushResponse(BaseModel):
@@ -143,9 +166,13 @@ class VerifyRequest(BaseModel):
 
 
 class GoogleRequest(BaseModel):
-    """Le jeton d'identité rendu par Google au navigateur."""
+    """Le jeton d'identité rendu par Google au site, à l'extension ou à une
+    application."""
 
     id_token: Annotated[str, Field(min_length=1, max_length=4096)]
+    #: Le nonce passé à Google pour obtenir ce jeton. Facultatif ; s'il est
+    #: fourni, le jeton doit porter le même.
+    nonce: Annotated[str, Field(max_length=256)] = ""
     device_label: Annotated[str, Field(max_length=120)] = ""
     invite_code: Annotated[str, Field(max_length=128)] = ""
     lang: Annotated[str, Field(max_length=5)] = "en"

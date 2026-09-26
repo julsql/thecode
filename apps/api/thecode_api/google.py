@@ -15,10 +15,18 @@ Trois contrôles comptent autant l'un que l'autre :
 - l'**audience**, sinon un jeton émis pour une autre application ouvrirait nos
   comptes ;
 - l'**émetteur**, pour la même raison.
+
+L'audience n'est pas unique : le client web sert au site, à l'extension et à
+Android, mais iOS et macOS passent par un client de type « iOS » dont les
+jetons portent un autre identifiant (voir `google_extra_client_ids`).
+
+Le **nonce**, quand le client en fournit un, lie le jeton à la demande qui l'a
+obtenu : un jeton intercepté ailleurs ne se rejoue pas sur cette demande-là.
 """
 
 from __future__ import annotations
 
+import secrets
 from dataclasses import dataclass
 from functools import lru_cache
 
@@ -52,7 +60,7 @@ def _keys() -> PyJWKClient:
     return PyJWKClient(JWKS_URL, cache_keys=True)
 
 
-def verify_id_token(raw: str, settings: Settings) -> GoogleIdentity:
+def verify_id_token(raw: str, settings: Settings, nonce: str = "") -> GoogleIdentity:
     if not settings.google_enabled:
         raise GoogleError("La connexion Google n'est pas configurée.")
 
@@ -62,7 +70,8 @@ def verify_id_token(raw: str, settings: Settings) -> GoogleIdentity:
             raw,
             signing_key.key,
             algorithms=["RS256"],
-            audience=settings.google_client_id,
+            # PyJWT accepte le jeton si son `aud` figure dans la liste.
+            audience=settings.google_audiences,
             options={"require": ["exp", "iss", "aud", "sub"]},
         )
     except Exception as exc:
@@ -70,6 +79,12 @@ def verify_id_token(raw: str, settings: Settings) -> GoogleIdentity:
 
     if claims.get("iss") not in ISSUERS:
         raise GoogleError("Émetteur inattendu.")
+
+    # Seulement quand le client en a envoyé un : Android et les applications
+    # Apple n'en passent pas forcément. Mais s'il en a envoyé un, le jeton doit
+    # porter exactement celui-là — un jeton sans nonce ne passe pas non plus.
+    if nonce and not secrets.compare_digest(str(claims.get("nonce", "")), nonce):
+        raise GoogleError("Nonce inattendu.")
 
     email = str(claims.get("email", "")).lower()
     if not email:

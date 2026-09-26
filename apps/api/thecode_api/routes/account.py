@@ -25,6 +25,7 @@ from ..models import (
     Account,
     Code,
     CodeRedemption,
+    DefaultSettings,
     EmailVerification,
     Session,
     VaultEntry,
@@ -205,6 +206,7 @@ def export_account(
         .join(Code, Code.id == CodeRedemption.code_id)
         .where(CodeRedemption.account_id == account.id)
     ).all()
+    default_settings = db.get(DefaultSettings, account.id)
     pending = db.scalars(
         select(EmailVerification).where(
             EmailVerification.account_id == account.id, EmailVerification.used_at.is_(None)
@@ -259,6 +261,16 @@ def export_account(
             }
             for row in entries
         ],
+        # Chiffrés comme le carnet, et pour la même raison rendus tels quels.
+        "default_settings": (
+            {
+                "nonce": b64encode(default_settings.nonce),
+                "blob": b64encode(default_settings.blob),
+                "updated_at": default_settings.updated_at,
+            }
+            if default_settings is not None
+            else None
+        ),
     }
 
 
@@ -268,7 +280,7 @@ def delete_account(
     account: Account = Depends(current_account),
     db: DbSession = Depends(get_db),
 ) -> None:
-    """Efface le compte, le carnet et les sessions.
+    """Efface le compte, le carnet, ses réglages et les sessions.
 
     Vraiment effacé, pas marqué comme tel : c'est ce qu'on attend d'une
     suppression, et garder « au cas où » des adresses et des carnets de gens
@@ -299,8 +311,9 @@ def delete_account(
                 "Réessayez dans un moment.",
             ) from None
 
-    # Les entrées, les sessions, les liens et les codes consommés partent avec
-    # le compte : les clefs étrangères sont en ON DELETE CASCADE.
+    # Les entrées, les réglages par défaut, les sessions, les liens et les
+    # codes consommés partent avec le compte : les clefs étrangères sont en
+    # ON DELETE CASCADE.
     db.delete(account)
     db.commit()
 

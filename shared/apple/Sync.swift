@@ -111,6 +111,8 @@ public struct Sync {
     public struct Result {
         public let vault: Vault
         public let conflicts: [VaultConflict]
+        /// Entrées restées sur l'appareil, faute de place sous le plafond.
+        public let localOnly: Int
         /// Éventuellement renouvelés : l'appelant doit les réenregistrer.
         public let credentials: SyncCredentials
     }
@@ -137,7 +139,10 @@ public struct Sync {
         } catch let error as SyncError {
             throw error
         } catch {
-            throw SyncError(message: "Service injoignable : \(error.localizedDescription)")
+            throw SyncError(
+                message: L10nSync.t(
+                    "Service injoignable : \(error.localizedDescription)",
+                    "Service unreachable: \(error.localizedDescription)"))
         }
 
         let parsed =
@@ -149,7 +154,9 @@ public struct Sync {
             let detail = parsed["detail"] as? String ?? ""
             throw SyncError(
                 status: response.status,
-                message: "\(response.status) : \(detail.isEmpty ? "échec" : detail)")
+                message: L10nSync.t(
+                    "\(response.status) : \(detail.isEmpty ? "échec" : detail)",
+                    "\(response.status): \(detail.isEmpty ? "failed" : detail)"))
         }
         return parsed
     }
@@ -158,7 +165,10 @@ public struct Sync {
         guard let access = body["access_token"] as? String,
             let refresh = body["refresh_token"] as? String
         else {
-            throw SyncError(message: "Réponse inattendue du service d'authentification")
+            throw SyncError(
+                message: L10nSync.t(
+                    "Réponse inattendue du service d'authentification",
+                    "Unexpected response from the authentication service"))
         }
         return SyncCredentials(endpoint: endpoint, accessToken: access, refreshToken: refresh)
     }
@@ -178,6 +188,19 @@ public struct Sync {
         let body = try await call(
             "\(endpoint)/v1/auth/login", method: "POST",
             payload: ["email": email, "password": password, "device_label": deviceLabel])
+        return try credentials(from: body, endpoint: endpoint)
+    }
+
+    /// Connexion (ou création du compte) à partir d'un jeton d'identité Google.
+    /// Mêmes jetons en retour que `login`, à enregistrer de la même façon.
+    public func googleSignIn(
+        endpoint: String, idToken: String, lang: String, deviceLabel: String = "",
+        inviteCode: String = ""
+    ) async throws -> SyncCredentials {
+        let body = try await call(
+            "\(endpoint)/v1/auth/google", method: "POST",
+            payload: GoogleAuth.apiBody(
+                idToken: idToken, lang: lang, deviceLabel: deviceLabel, inviteCode: inviteCode))
         return try credentials(from: body, endpoint: endpoint)
     }
 
@@ -224,11 +247,25 @@ public struct Sync {
 
         let (merged, conflicts) = Vault.merge(local, remote)
 
+        // Au-delà du plafond, le reste du carnet ne part pas : il reste propre
+        // à l'appareil. Un serveur qui ne dit pas son plafond reçoit tout.
+        let push: [VaultEntry]
+        let localOnly: [VaultEntry]
+        if let maxEntries = pulled["max_entries"] as? Int {
+            let remoteIds = (pulled["entries"] as? [[String: Any]] ?? [])
+                .compactMap { $0["entry_id"] as? String }
+            (push, localOnly) = Vault.selectForPush(
+                merged, remoteIds: remoteIds, maxEntries: maxEntries)
+        } else {
+            (push, localOnly) = (merged.entries, [])
+        }
+
         let payload = try encodePush(
-            baseRevision: pulled["revision"] as? Int ?? 0, merged: merged, key: key)
+            baseRevision: pulled["revision"] as? Int ?? 0, entries: push, key: key)
         _ = try await call(url, method: "POST", payload: payload, bearer: creds.accessToken)
 
-        return Result(vault: merged, conflicts: conflicts, credentials: creds)
+        return Result(
+            vault: merged, conflicts: conflicts, localOnly: localOnly.count, credentials: creds)
     }
 
     /// Comme `sync`, en renouvelant le jeton d'accès s'il a expiré.
@@ -246,8 +283,83 @@ public struct Sync {
             let renewed = try await refresh(creds)
             let result = try await sync(local, masterKey: masterKey, credentials: renewed)
             return Result(
-                vault: result.vault, conflicts: result.conflicts, credentials: renewed)
+                vault: result.vault, conflicts: result.conflicts, localOnly: result.localOnly,
+                credentials: renewed)
         }
+    }
+
+    // MARK: - Réglages par défaut
+
+    /// Ce que la synchronisation des réglages a décidé.
+    public enum SettingsOutcome: Equatable {
+        /// La valeur distante est plus récente (ou à égalité) : à appliquer.
+        case applyRemote(SharedSettings)
+        /// La locale était plus récente, ou le compte n'en avait pas : poussée.
+        case pushedLocal
+        /// Blob distant indéchiffrable ou invalide : rien n'est touché, ni
+        /// localement ni sur le serveur.
+        case ignoredRemote
+        /// Réglages locaux jamais modifiés, compte vide : rien n'est poussé.
+        case keptLocal
+    }
+
+    /// Synchronise les réglages par défaut. Voir shared/spec/default-settings.md.
+    ///
+    /// À appeler après la synchronisation du carnet. Tirer, garder le plus
+    /// récent (à égalité, le distant), pousser si le local l'emporte.
+    public func syncSettings(
+        _ local: SharedSettings, masterKey: String, credentials creds: SyncCredentials
+    ) async throws -> SettingsOutcome {
+        let key = try Transfer.deriveKey(masterKey)
+        let url = "\(creds.endpoint)/v1/settings"
+
+        // 204 : corps vide, donc ni nonce ni blob.
+        let pulled = try await call(url, method: "GET", bearer: creds.accessToken)
+        if let nonce = pulled["nonce"] as? String, let blob = pulled["blob"] as? String {
+            guard let remote = openSettings(nonce: nonce, blob: blob, key: key) else {
+                return .ignoredRemote
+            }
+            if remote.updatedAt >= local.updatedAt { return .applyRemote(remote) }
+        }
+
+        // Jamais modifiés ici : ce sont les valeurs d'usine, pas un choix. Les
+        // pousser les imposerait aux autres appareils du compte.
+        if local.updatedAt == SharedSettings.neverUpdated { return .keptLocal }
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let sealed = try Transfer.seal(try encoder.encode(local), with: key)
+        _ = try await call(
+            url, method: "PUT",
+            payload: [
+                "nonce": Base64URL.encode(sealed.nonce), "blob": Base64URL.encode(sealed.blob),
+            ],
+            bearer: creds.accessToken)
+        return .pushedLocal
+    }
+
+    /// Comme `syncSettings`, en renouvelant le jeton d'accès s'il a expiré.
+    /// Rend aussi les identifiants, éventuellement renouvelés.
+    public func syncSettingsRenewing(
+        _ local: SharedSettings, masterKey: String, credentials creds: SyncCredentials
+    ) async throws -> (SettingsOutcome, SyncCredentials) {
+        do {
+            return (try await syncSettings(local, masterKey: masterKey, credentials: creds), creds)
+        } catch let error as SyncError where error.status == 401 {
+            let renewed = try await refresh(creds).withPlan(creds.plan)
+            return (
+                try await syncSettings(local, masterKey: masterKey, credentials: renewed), renewed
+            )
+        }
+    }
+
+    /// Déchiffre et valide un blob de réglages ; `nil` s'il est inutilisable.
+    private func openSettings(nonce: String, blob: String, key: SymmetricKey) -> SharedSettings? {
+        guard let nonce = Base64URL.decode(nonce), let blob = Base64URL.decode(blob),
+            let plain = try? Transfer.open(nonce: nonce, blob: blob, with: key),
+            let settings = try? JSONDecoder().decode(SharedSettings.self, from: plain)
+        else { return nil }
+        return settings.validated()
     }
 
     private func decodeRemote(
@@ -260,7 +372,10 @@ public struct Sync {
             guard let nonce = (row["nonce"] as? String).flatMap(Base64URL.decode),
                 let blob = (row["blob"] as? String).flatMap(Base64URL.decode)
             else {
-                throw SyncError(message: "Carnet distant illisible : encodage invalide")
+                throw SyncError(
+                    message: L10nSync.t(
+                        "Carnet distant illisible : encodage invalide",
+                        "Remote vault unreadable: invalid encoding"))
             }
 
             let plain: Data
@@ -268,12 +383,18 @@ public struct Sync {
                 plain = try Transfer.open(nonce: nonce, blob: blob, with: key)
             } catch {
                 throw SyncError(
-                    message: "Déchiffrement impossible : la clef maîtresse n'est pas celle "
-                        + "qui a servi à synchroniser ce carnet.")
+                    message: L10nSync.t(
+                        "Déchiffrement impossible : la clef maîtresse n'est pas celle "
+                            + "qui a servi à synchroniser ce carnet.",
+                        "Cannot decrypt: this is not the master key that was used to sync "
+                            + "this vault."))
             }
 
+            // Une entrée illisible est écartée, pas le carnet entier : elle
+            // reste telle quelle sur le serveur, qui ne retire rien de ce
+            // qu'on ne lui repousse pas.
             guard var entry = try? JSONDecoder().decode(VaultEntry.self, from: plain) else {
-                throw SyncError(message: "Carnet distant illisible : entrée invalide")
+                continue
             }
             // La pierre tombale du serveur fait foi même si l'entrée chiffrée
             // est antérieure à la suppression.
@@ -284,13 +405,13 @@ public struct Sync {
     }
 
     private func encodePush(
-        baseRevision: Int, merged: Vault, key: SymmetricKey
+        baseRevision: Int, entries: [VaultEntry], key: SymmetricKey
     ) throws -> [String: Any] {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
 
         var rows: [[String: Any]] = []
-        for entry in merged.entries {
+        for entry in entries {
             let sealed = try Transfer.seal(try encoder.encode(entry), with: key)
             rows.append([
                 "entry_id": entry.id,
@@ -300,6 +421,37 @@ public struct Sync {
             ])
         }
         return ["base_revision": baseRevision, "entries": rows]
+    }
+}
+
+/// Réglages par défaut partagés par le compte : ceux d'un site absent du
+/// carnet. Voir shared/spec/default-settings.md.
+public struct SharedSettings: Codable, Equatable {
+    public static let minLength = 4
+    public static let maxLength = 40
+
+    public var length: Int
+    public var charset: Charset
+    public var updatedAt: String
+
+    /// Date des réglages jamais modifiés sur l'appareil : ils perdent contre
+    /// ceux du compte et ne sont jamais poussés.
+    public static let neverUpdated = "1970-01-01T00:00:00Z"
+
+    public init(length: Int, charset: Charset, updatedAt: String) {
+        self.length = length
+        self.charset = charset
+        self.updatedAt = updatedAt
+    }
+
+    /// Longueur ramenée dans les bornes ; `nil` sans aucun jeu coché, qui ne
+    /// permettrait pas de générer.
+    func validated() -> SharedSettings? {
+        let c = charset
+        guard c.lower || c.upper || c.symbols || c.numbers else { return nil }
+        var copy = self
+        copy.length = min(Self.maxLength, max(Self.minLength, length))
+        return copy
     }
 }
 
@@ -336,7 +488,9 @@ public struct URLSessionTransport: SyncTransport {
         url: String, method: String, body: Data?, bearer: String?
     ) async throws -> SyncResponse {
         guard let target = URL(string: url) else {
-            throw SyncError(message: "Adresse de service invalide : \(url)")
+            throw SyncError(
+                message: L10nSync.t(
+                    "Adresse de service invalide : \(url)", "Invalid service address: \(url)"))
         }
 
         var request = URLRequest(url: target)
@@ -352,5 +506,14 @@ public struct URLSessionTransport: SyncTransport {
         let (data, response) = try await session.data(for: request)
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
         return SyncResponse(status: status, body: data)
+    }
+}
+
+/// Localisation minimale des messages d'erreur affichés, dupliquée ici parce
+/// que ce fichier est partagé par des cibles qui ne voient pas toutes le même
+/// L10n (même raison que `L10nQr`).
+enum L10nSync {
+    static func t(_ fr: String, _ en: String) -> String {
+        (Locale.preferredLanguages.first?.lowercased().hasPrefix("fr") ?? false) ? fr : en
     }
 }

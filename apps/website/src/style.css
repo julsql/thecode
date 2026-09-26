@@ -1,21 +1,58 @@
 :root {
+  /* Couleur principale = algorithme en cours. Bleu pour la v2, par défaut
+     partout ; rose quand le générateur passe en v1 (data-algo="v1" sur
+     <html>) : une exception qui doit se voir sans lire le badge.
+
+     Deux familles, parce qu'aucune teinte ne tient 4.5:1 à la fois contre le
+     blanc et contre le fond sombre :
+     - --c4 / --accent-rgb : accents posés sur le fond (texte, bordures,
+       focus), clairs, >= 5:1 sur --c1, --surface et --c2 ;
+     - --fill-* : aplats portant du texte blanc, foncés, >= 4.6:1 avec le
+       blanc sur chaque arrêt. */
   --c1: #1a1d1c;
-  --c2: #3b1c32;
-  --c3: #6a1e55;
-  --c4: #a64d79;
+  --c2: #13233f;
+  --c3: #1d4ed8;
+  --c4: #60a5fa;
+  --accent-rgb: 96 165 250;
+  --deep-rgb: 29 78 216;
+  --glow-rgb: 37 99 235;
+  --fill-a: #2563eb;
+  --fill-b: #1d4ed8;
+  --fill-c: #1e3a8a;
+  --hero-base: #0f1a2e;
   --text: #f8f8f8;
   --text-muted: rgba(248, 248, 248, 0.72);
   --surface: #14181d;
   --surface-elevated: rgba(255, 255, 255, 0.04);
   --border-soft: rgba(255, 255, 255, 0.08);
   --border-strong: rgba(255, 255, 255, 0.16);
-  --accent-gradient: linear-gradient(135deg, #6a11cb 0%, #6a1e55 50%, #3b1c32 100%);
+  --fill-gradient: linear-gradient(135deg, var(--fill-a), var(--fill-b));
+  --accent-gradient: linear-gradient(
+    135deg,
+    var(--fill-a) 0%,
+    var(--fill-b) 50%,
+    var(--fill-c) 100%
+  );
   --hero-gradient:
-    radial-gradient(1200px 600px at 80% -10%, rgba(166, 77, 121, 0.35), transparent 60%),
-    radial-gradient(900px 500px at -10% 110%, rgba(106, 17, 203, 0.35), transparent 60%),
-    linear-gradient(160deg, #2a0f24 0%, #1a1d1c 60%);
+    radial-gradient(1200px 600px at 80% -10%, rgb(var(--accent-rgb) / 0.35), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgb(var(--glow-rgb) / 0.35), transparent 60%),
+    linear-gradient(160deg, var(--hero-base) 0%, #1a1d1c 60%);
   --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.35);
   --shadow-strong: 0 20px 50px rgba(0, 0, 0, 0.45);
+}
+
+/* v1 : rose. Mêmes contraintes de contraste que le bleu. */
+:root[data-algo="v1"] {
+  --c2: #3b1426;
+  --c3: #c2255c;
+  --c4: #f06595;
+  --accent-rgb: 240 101 149;
+  --deep-rgb: 194 37 92;
+  --glow-rgb: 214 51 108;
+  --fill-a: #d6336c;
+  --fill-b: #c2255c;
+  --fill-c: #a61e4d;
+  --hero-base: #2a0f1c;
 }
 
 * {
@@ -37,8 +74,14 @@ a {
   color: inherit;
 }
 
+/* Anneau de focus commun, à la couleur de l'algorithme en cours. */
+:focus-visible {
+  outline: 2px solid var(--c4);
+  outline-offset: 2px;
+}
+
 ::selection {
-  background: var(--c4);
+  background: var(--c3);
   color: #fff;
 }
 

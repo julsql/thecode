@@ -5,9 +5,8 @@
  * seul mot de passe qui fuite permet de retrouver la clef maîtresse hors ligne,
  * et cette clef ouvre tous les comptes.
  *
- * La v2 ne remplace pas la v1 : elles coexistent, entrée par entrée, via le
- * champ `v` du carnet. Une entrée existante reste en v1 et son mot de passe ne
- * change pas.
+ * Le carnet n'accepte que des entrées v2 ; la v1 ne subsiste qu'en génération
+ * ponctuelle, hors carnet (shared/spec/vault-merge.md).
  *
  * Spécification : shared/spec/algo-v2.md
  */

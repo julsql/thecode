@@ -95,6 +95,34 @@ describe("cloisonnement vis-a-vis des content scripts", () => {
     expect(res.error).toBeDefined();
   });
 
+  it("refuse de livrer le carnet a un content script", async () => {
+    const vault = {
+      schema: 1,
+      updatedAt: "2026-01-01T00:00:00Z",
+      entries: [
+        {
+          id: "a",
+          label: "bank.example",
+          siteKey: "bank.example",
+          domains: ["bank.example"],
+          login: "moi@example.com",
+          counter: 1,
+          length: 20,
+          charset: { lower: true, upper: true, symbols: true, numbers: true },
+          updatedAt: "2026-01-01T00:00:00Z",
+        },
+      ],
+    };
+    const { send } = loadWorker({ storage: { vault } });
+
+    const denied = await send({ action: "getVault" }, FROM_CONTENT_SCRIPT);
+    expect(denied.vault).toBeUndefined();
+    expect(denied.error).toBeDefined();
+
+    const allowed = await send({ action: "getVault" }, FROM_POPUP);
+    expect(allowed.vault.entries.map((e) => e.login)).toStrictEqual(["moi@example.com"]);
+  });
+
   it("la livre a la popup", async () => {
     const { send } = loadWorker();
     await send({ action: "setEncodingKey", encodingKey: "secret" }, FROM_POPUP);
@@ -166,11 +194,15 @@ describe("renouvellement reserve a l'offre complete", () => {
     length: 20,
     charset: "luds",
     counter: 1,
-    v: 2,
     updatedAt: "2026-09-01T10:00:00Z",
   };
 
-  const vaultWith = (entry) => ({ schema: 1, updatedAt: "2026-09-01T10:00:00Z", entries: [entry] });
+  // Copie : un test qui renouvelle ne doit pas modifier ENTRY pour les suivants.
+  const vaultWith = (entry) => ({
+    schema: 1,
+    updatedAt: "2026-09-01T10:00:00Z",
+    entries: [{ ...entry }],
+  });
 
   const session = (plan) => ({
     endpoint: "https://exemple.test",
@@ -204,18 +236,17 @@ describe("renouvellement reserve a l'offre complete", () => {
     expect(store.vault.entries[0].counter).toBe(2);
   });
 
-  it("laisse migrer une entree v1 sans compte", async () => {
+  it("ne fait que renouveler, meme sans drapeau renew", async () => {
     const { send, store } = loadWorker({
-      storage: { vault: vaultWith({ ...ENTRY, v: 1 }) },
+      storage: { vault: vaultWith(ENTRY), syncSession: session("free") },
     });
     await send({ action: "setEncodingKey", encodingKey: "clef" }, FROM_POPUP);
 
-    // Passer en v2 est une mise a niveau, pas un service : la brider
-    // laisserait des comptes sur l'ancien algorithme par question de prix.
-    const response = await send({ action: "applyChange", id: "e1", renew: false }, FROM_POPUP);
+    // L'ancien chemin de migration ne doit pas contourner l'offre.
+    const response = await send({ action: "applyChange", id: "e1" }, FROM_POPUP);
 
-    expect(response.ok).toBe(true);
-    expect(store.vault.entries[0].v).toBe(2);
+    expect(response.ok).toBe(false);
+    expect(store.vault.entries[0]).toMatchObject({ counter: 1 });
   });
 
   it("ne calcule meme pas l'apercu d'un renouvellement interdit", async () => {

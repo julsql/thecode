@@ -87,3 +87,9 @@ def test_an_unknown_mail_transport_is_refused(monkeypatch):
 
     with pytest.raises(RuntimeError, match="MAIL_TRANSPORT"):
         get_settings()
+
+
+def test_device_caps_separate_the_two_plans():
+    settings = get_settings()
+    assert settings.free_max_devices == 3
+    assert settings.pro_max_devices == 10

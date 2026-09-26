@@ -33,15 +33,30 @@ describe("cloisonnement des actions sensibles", () => {
       // Chiffrent ou fusionnent le carnet entier.
       "exportVault",
       "getEncodingKey",
+      // Liste les sites et identifiants : reserve aux pages de l'extension.
+      "getVault",
       "importVault",
       "previewChange",
-      "saveEntry",
+      "saveSite",
       "setEncodingKey",
       "setParams",
+      // Ouvre une fenetre Google et ecrit la session de synchronisation.
+      "syncGoogleAvailable",
+      "syncGoogleLogin",
       "syncLogin",
       "syncLogout",
       "syncNow",
       "syncStatus",
+      // Verrou de l'ecran carnet : l'oubli efface le carnet.
+      "vaultLockChange",
+      "vaultLockCreate",
+      "vaultLockForget",
+      "vaultLockStatus",
+      "vaultLockVerify",
+      // Grace de 3 minutes : rouvrirait l'ecran carnet sans mot de passe.
+      "vaultSessionClear",
+      "vaultSessionLeave",
+      "vaultSessionResume",
     ]);
   });
 
@@ -66,13 +81,13 @@ describe("cloisonnement des actions sensibles", () => {
     expect(isFromExtensionPage({ tab: { id: 1 }, url: "https://bank.example/login" })).toBe(false);
   });
 
-  it("protege l'ecriture du carnet, pas sa lecture", () => {
-    // Un content script peut avoir besoin de savoir quelle entree s'applique
-    // pour proposer le bon compte ; il ne doit jamais pouvoir en creer ni en
-    // supprimer, sinon une page pourrait detourner un mot de passe en
-    // reecrivant le siteKey.
-    expect(PRIVILEGED_ACTIONS.has("saveEntry")).toBe(true);
+  it("protege l'ecriture du carnet et sa lecture", () => {
+    // Une page ne doit jamais pouvoir creer ni supprimer une entree, sinon
+    // elle pourrait detourner un mot de passe en reecrivant le siteKey. Ni lire
+    // le carnet : il revele tous les sites et identifiants de l'utilisateur.
+    expect(PRIVILEGED_ACTIONS.has("saveSite")).toBe(true);
     expect(PRIVILEGED_ACTIONS.has("deleteEntry")).toBe(true);
+    expect(PRIVILEGED_ACTIONS.has("getVault")).toBe(true);
   });
 
   it("protege la synchronisation", () => {

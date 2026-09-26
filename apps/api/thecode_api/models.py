@@ -89,6 +89,9 @@ class Account(Base):
 
     entries: Mapped[list[VaultEntry]] = relationship(back_populates="account", cascade="all, delete-orphan")
     sessions: Mapped[list[Session]] = relationship(back_populates="account", cascade="all, delete-orphan")
+    default_settings: Mapped[DefaultSettings | None] = relationship(
+        back_populates="account", cascade="all, delete-orphan"
+    )
 
 
 class VaultEntry(Base):
@@ -123,6 +126,30 @@ class VaultEntry(Base):
     deleted: Mapped[bool] = mapped_column(Boolean, default=False)
 
     account: Mapped[Account] = relationship(back_populates="entries")
+
+
+class DefaultSettings(Base):
+    """Les réglages par défaut du compte, chiffrés comme une entrée.
+
+    Une ligne par compte au plus, d'où la clef primaire sur `account_id`. Table
+    à part plutôt que colonnes sur `accounts` : le compte est lu à chaque
+    requête authentifiée, et n'a pas à traîner un blob que presque aucune ne
+    demande.
+
+    Hors du carnet et donc hors du plafond d'entrées de l'offre : ce n'est pas
+    un mot de passe de plus. Voir shared/spec/default-settings.md.
+    """
+
+    __tablename__ = "default_settings"
+
+    account_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("accounts.id", ondelete="CASCADE"), primary_key=True
+    )
+    nonce: Mapped[bytes] = mapped_column(LargeBinary(32))
+    blob: Mapped[bytes] = mapped_column(LargeBinary)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+
+    account: Mapped[Account] = relationship(back_populates="default_settings")
 
 
 class Session(Base):

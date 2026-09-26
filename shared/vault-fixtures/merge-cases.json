@@ -25,7 +25,6 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
             "updatedAt": "2026-01-01T00:00:00Z"
           }
         ]
@@ -49,7 +48,6 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
             "updatedAt": "2026-01-01T00:00:00Z"
           }
         ]
@@ -74,7 +72,6 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
             "updatedAt": "2026-01-01T00:00:00Z"
           }
         ]
@@ -94,7 +91,6 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
             "updatedAt": "2026-01-01T00:00:00Z"
           }
         ]
@@ -114,7 +110,6 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
             "updatedAt": "2026-01-01T00:00:00Z"
           }
         ]
@@ -139,7 +134,6 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
             "updatedAt": "2026-01-01T00:00:00Z"
           }
         ]
@@ -159,7 +153,6 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
             "updatedAt": "2026-06-01T00:00:00Z"
           }
         ]
@@ -179,7 +172,6 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
             "updatedAt": "2026-06-01T00:00:00Z"
           }
         ]
@@ -204,7 +196,6 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
             "updatedAt": "2026-01-01T00:00:00Z",
             "label": "Google"
           }
@@ -225,7 +216,6 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
             "updatedAt": "2026-06-01T00:00:00Z",
             "label": "Google perso"
           }
@@ -246,7 +236,6 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
             "updatedAt": "2026-06-01T00:00:00Z",
             "label": "Google perso"
           }
@@ -272,7 +261,6 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
             "updatedAt": "2026-01-01T00:00:00Z"
           }
         ]
@@ -292,7 +280,6 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
             "updatedAt": "2026-06-01T00:00:00Z",
             "deleted": true
           }
@@ -313,7 +300,6 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
             "updatedAt": "2026-06-01T00:00:00Z",
             "deleted": true
           }
@@ -339,7 +325,6 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
             "updatedAt": "2026-01-01T00:00:00Z"
           }
         ]
@@ -359,7 +344,6 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
             "updatedAt": "2026-06-01T00:00:00Z"
           }
         ]
@@ -379,7 +363,6 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
             "updatedAt": "2026-06-01T00:00:00Z"
           }
         ]
@@ -404,7 +387,6 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
             "updatedAt": "2026-01-01T00:00:00Z",
             "label": "A"
           },
@@ -420,7 +402,6 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
             "updatedAt": "2026-01-01T00:00:00Z",
             "label": "B"
           }
@@ -441,7 +422,6 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
             "updatedAt": "2026-01-01T00:00:00Z",
             "label": "C"
           },
@@ -457,7 +437,6 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
             "updatedAt": "2026-01-01T00:00:00Z",
             "label": "D"
           }
@@ -478,7 +457,6 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
             "updatedAt": "2026-01-01T00:00:00Z",
             "label": "A"
           },
@@ -494,7 +472,6 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
             "updatedAt": "2026-01-01T00:00:00Z",
             "label": "B"
           }
@@ -520,7 +497,6 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
             "updatedAt": "2026-01-01T00:00:00Z"
           }
         ]
@@ -540,7 +516,6 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
             "updatedAt": "2026-01-01T00:00:00Z"
           }
         ]
@@ -560,7 +535,6 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
             "updatedAt": "2026-01-01T00:00:00Z"
           },
           {
@@ -575,7 +549,418 @@
               "symbols": true,
               "numbers": true
             },
-            "v": 1,
+            "updatedAt": "2026-01-01T00:00:00Z"
+          }
+        ]
+      },
+      "conflicts": []
+    },
+    {
+      "id": "createdAt-garde-le-plus-ancien",
+      "why": "Une entree n'est creee qu'une fois : la date la plus ancienne est la vraie, quel que soit le cote qui a ecrit en dernier.",
+      "left": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "google.com",
+            "domains": ["google.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "updatedAt": "2026-01-02T00:00:00Z",
+            "createdAt": "2026-01-01T00:00:00Z"
+          }
+        ]
+      },
+      "right": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "google.com",
+            "domains": ["google.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "updatedAt": "2026-01-03T00:00:00Z",
+            "createdAt": "2026-01-02T00:00:00Z"
+          }
+        ]
+      },
+      "expected": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "google.com",
+            "domains": ["google.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "updatedAt": "2026-01-03T00:00:00Z",
+            "createdAt": "2026-01-01T00:00:00Z"
+          }
+        ]
+      },
+      "conflicts": []
+    },
+    {
+      "id": "createdAt-absent-d-un-cote",
+      "why": "Un carnet ecrit avant l'introduction du champ ne doit pas l'effacer.",
+      "left": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "google.com",
+            "domains": ["google.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "updatedAt": "2026-01-03T00:00:00Z"
+          }
+        ]
+      },
+      "right": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "google.com",
+            "domains": ["google.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "updatedAt": "2026-01-02T00:00:00Z",
+            "createdAt": "2026-01-01T00:00:00Z"
+          }
+        ]
+      },
+      "expected": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "google.com",
+            "domains": ["google.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "updatedAt": "2026-01-03T00:00:00Z",
+            "createdAt": "2026-01-01T00:00:00Z"
+          }
+        ]
+      },
+      "conflicts": []
+    },
+    {
+      "id": "doublon-signale",
+      "why": "Le meme compte cree separement sur deux appareils : deux id, un meme site et un meme identifiant. Les deux sont gardes, rien n'est fusionne en silence, et le doublon est signale.",
+      "left": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "google.com",
+            "domains": ["google.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "login": "julie@exemple.fr"
+          }
+        ]
+      },
+      "right": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "22222222-2222-4222-8222-222222222222",
+            "siteKey": "google.com",
+            "domains": ["google.com", "youtube.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "login": "julie@exemple.fr"
+          }
+        ]
+      },
+      "expected": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "google.com",
+            "domains": ["google.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "login": "julie@exemple.fr"
+          },
+          {
+            "id": "22222222-2222-4222-8222-222222222222",
+            "siteKey": "google.com",
+            "domains": ["google.com", "youtube.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "login": "julie@exemple.fr"
+          }
+        ]
+      },
+      "conflicts": ["doublon"]
+    },
+    {
+      "id": "meme-site-identifiants-differents",
+      "why": "Deux comptes sur un meme site sont legitimes : pas de doublon.",
+      "left": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "google.com",
+            "domains": ["google.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "login": "julie@exemple.fr"
+          }
+        ]
+      },
+      "right": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "22222222-2222-4222-8222-222222222222",
+            "siteKey": "google.com",
+            "domains": ["google.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "login": "pro@exemple.fr"
+          }
+        ]
+      },
+      "expected": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "google.com",
+            "domains": ["google.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "login": "julie@exemple.fr"
+          },
+          {
+            "id": "22222222-2222-4222-8222-222222222222",
+            "siteKey": "google.com",
+            "domains": ["google.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "login": "pro@exemple.fr"
+          }
+        ]
+      },
+      "conflicts": []
+    },
+    {
+      "id": "doublon-deja-connu-non-resignale",
+      "why": "Seul un doublon que la fusion rapproche est signale : celui qu'un carnet contient deja l'a ete quand il y est entre.",
+      "left": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "google.com",
+            "domains": ["google.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "login": "julie@exemple.fr"
+          },
+          {
+            "id": "22222222-2222-4222-8222-222222222222",
+            "siteKey": "google.com",
+            "domains": ["google.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "login": "julie@exemple.fr"
+          }
+        ]
+      },
+      "right": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "22222222-2222-4222-8222-222222222222",
+            "siteKey": "google.com",
+            "domains": ["google.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "login": "julie@exemple.fr"
+          },
+          {
+            "id": "33333333-3333-4333-8333-333333333333",
+            "siteKey": "github.com",
+            "domains": ["github.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "updatedAt": "2026-01-01T00:00:00Z"
+          }
+        ]
+      },
+      "expected": {
+        "schema": 1,
+        "entries": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "siteKey": "google.com",
+            "domains": ["google.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "login": "julie@exemple.fr"
+          },
+          {
+            "id": "22222222-2222-4222-8222-222222222222",
+            "siteKey": "google.com",
+            "domains": ["google.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "login": "julie@exemple.fr"
+          },
+          {
+            "id": "33333333-3333-4333-8333-333333333333",
+            "siteKey": "github.com",
+            "domains": ["github.com"],
+            "counter": 1,
+            "length": 20,
+            "charset": {
+              "lower": true,
+              "upper": true,
+              "symbols": true,
+              "numbers": true
+            },
             "updatedAt": "2026-01-01T00:00:00Z"
           }
         ]

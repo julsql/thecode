@@ -22,7 +22,7 @@ public struct VaultView: View {
 
     /// Action proposée sur une entrée, ou `nil` quand la vue n'en offre pas.
     ///
-    /// Renouveler et migrer touchent au stockage et à la dérivation : la vue
+    /// Renouveler touche au stockage et à la dérivation : la vue
     /// partagée reste vérifiable sans conteneur de groupe d'app ni clef
     /// maîtresse, et l'app décide quoi en faire.
     private let onSelect: ((VaultEntry) -> Void)?
@@ -49,12 +49,15 @@ public struct VaultView: View {
                         .font(.largeTitle)
                         .foregroundStyle(.secondary)
 
-                    Text("Carnet vide")
+                    Text(L10nVault.t("Carnet vide", "Empty vault"))
                         .font(.headline)
 
                     Text(
-                        "Aucun site enregistré. Enregistrez-en un depuis l'écran principal "
-                            + "pour ne plus avoir à retenir ses réglages."
+                        L10nVault.t(
+                            "Aucun site enregistré. Enregistrez-en un depuis l'écran principal "
+                                + "pour ne plus avoir à retenir ses réglages.",
+                            "No site saved yet. Save one from the main screen so you no longer "
+                                + "have to remember its settings.")
                     )
                     .font(.callout)
                     .foregroundStyle(.secondary)
@@ -66,6 +69,11 @@ public struct VaultView: View {
                     let row = VStack(alignment: .leading, spacing: 4) {
                         Text(Self.label(of: entry))
                             .font(.headline)
+
+                        if let login = entry.login, !login.isEmpty {
+                            Text(login)
+                                .font(.subheadline)
+                        }
 
                         Text(entry.domains.joined(separator: ", "))
                             .font(.caption)
@@ -88,7 +96,7 @@ public struct VaultView: View {
                 }
             }
         }
-        .navigationTitle("Carnet")
+        .navigationTitle(L10nVault.t("Carnet", "Vault"))
     }
 
     // Statique : le tri s'en sert dans l'init, avant que l'instance existe.
@@ -104,6 +112,7 @@ public struct VaultView: View {
         if entry.charset.upper { charset += "A" }
         if entry.charset.symbols { charset += "#" }
         if entry.charset.numbers { charset += "1" }
-        return "\(entry.length) caractères, \(charset) — v\(entry.v)"
+        return L10nVault.t(
+            "\(entry.length) caractères, \(charset)", "\(entry.length) characters, \(charset)")
     }
 }

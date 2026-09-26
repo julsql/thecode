@@ -71,14 +71,16 @@ def new_entry(
     login: str = "",
     length: int = DEFAULT_LENGTH,
     charset: dict[str, bool] | None = None,
-    version: int = 2,
 ) -> dict[str, Any]:
     """Crée une entrée.
 
     ``site_key`` est figé ici pour toujours : il ne suit pas les évolutions de
     la canonicalisation, sinon une mise à jour de la PSL changerait des mots de
     passe existants.
+
+    Une entrée ne porte pas de version : elle dérive toujours en v2.
     """
+    now = now_iso()
     return {
         "id": str(uuid.uuid4()),
         "label": label or site_key,
@@ -88,8 +90,8 @@ def new_entry(
         "counter": 1,
         "length": length,
         "charset": dict(charset or DEFAULT_CHARSET),
-        "v": version,
-        "updatedAt": now_iso(),
+        "createdAt": now,
+        "updatedAt": now,
     }
 
 
@@ -182,9 +184,51 @@ def _merge_entry(
     if left.get("deleted") or right.get("deleted"):
         merged["deleted"] = True
 
+    # Une entrée n'est créée qu'une fois : la date la plus ancienne est la
+    # vraie. Un carnet antérieur au champ ne doit pas l'effacer.
+    created = [d for d in (left.get("createdAt"), right.get("createdAt")) if d]
+    if created:
+        merged["createdAt"] = min(created)
+    else:
+        merged.pop("createdAt", None)
+
     merged["updatedAt"] = max(left["updatedAt"], right["updatedAt"])
     _ = loser
     return merged
+
+
+def _find_duplicates(
+    entries: list[dict[str, Any]],
+    left_ids: set[str],
+    right_ids: set[str],
+    conflicts: list[Conflict],
+) -> None:
+    """Signale les doublons que la fusion rapproche.
+
+    Le même compte créé à part sur deux appareils porte deux id. Un doublon
+    déjà présent d'un côté l'a été quand il y est entré — le resignaler à
+    chaque fusion serait du bruit.
+    """
+    live = [e for e in entries if not e.get("deleted")]
+    for i, a in enumerate(live):
+        for b in live[i + 1 :]:
+            apart = (
+                a["id"] in left_ids
+                and a["id"] not in right_ids
+                and b["id"] in right_ids
+                and b["id"] not in left_ids
+            ) or (
+                a["id"] in right_ids
+                and a["id"] not in left_ids
+                and b["id"] in left_ids
+                and b["id"] not in right_ids
+            )
+            if not apart or (a.get("login") or "") != (b.get("login") or ""):
+                continue
+            domains = {d.lower() for d in a.get("domains", [])}
+            if not any(d.lower() in domains for d in b.get("domains", [])):
+                continue
+            conflicts.append(Conflict("doublon", a["id"], b["id"]))
 
 
 def merge(
@@ -205,12 +249,43 @@ def merge(
         )
 
     entries = sorted(by_id.values(), key=lambda e: e["id"])
+    _find_duplicates(
+        entries,
+        {e["id"] for e in left.get("entries", [])},
+        {e["id"] for e in right.get("entries", [])},
+        conflicts,
+    )
     updated = max(
         [left.get("updatedAt", ""), right.get("updatedAt", "")]
         + [e["updatedAt"] for e in entries],
         default=now_iso(),
     )
     return {"schema": SCHEMA_VERSION, "updatedAt": updated, "entries": entries}, conflicts
+
+
+def select_for_push(
+    vault: dict[str, Any], remote_ids: Iterable[str], max_entries: int
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Ce qui part au serveur quand le compte a un plafond, et ce qui reste.
+
+    Voir shared/spec/vault-sync.md, « Synchronisation partielle ». Ce qui est
+    déjà sur le serveur part toujours, pierres tombales comprises : une
+    modification doit pouvoir partir. Les places libres vont aux autres
+    entrées, les plus anciennes d'abord. Une entrée jamais synchronisée puis
+    supprimée n'a rien à propager.
+    """
+    remote = set(remote_ids)
+    entries = vault.get("entries", [])
+    on_server = [e for e in entries if e["id"] in remote]
+    others = sorted(
+        (e for e in entries if e["id"] not in remote and not e.get("deleted")),
+        key=lambda e: (e.get("createdAt") or e["updatedAt"], e["id"]),
+    )
+
+    free = max(0, max_entries - len([e for e in on_server if not e.get("deleted")]))
+    push = sorted(on_server + others[:free], key=lambda e: e["id"])
+    local_only = sorted(others[free:], key=lambda e: e["id"])
+    return push, local_only
 
 
 def load(path: Path) -> dict[str, Any]:

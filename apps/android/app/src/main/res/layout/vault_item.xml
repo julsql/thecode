@@ -26,6 +26,14 @@
             tools:text="google.com" />
 
         <TextView
+            android:id="@+id/entryLogin"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textAppearance="?attr/textAppearanceBodyMedium"
+            tools:text="juliette@example.com" />
+
+        <TextView
             android:id="@+id/entryDomains"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

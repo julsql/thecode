@@ -78,6 +78,25 @@ https://apps.apple.com/app/thecode-password-manager/id6753169043
 ## 🛠 Development
 Coming soon… (or add your build instructions here)
 
+### "Continue with Google" (sync account)
+Both apps offer Google sign-in for the sync account, next to email/password. No SDK:
+`ASWebAuthenticationSession` + OAuth 2.0 authorization code with PKCE, no client secret.
+The Google id_token is sent to `POST {endpoint}/v1/auth/google`.
+
+The button is hidden until a client id is configured:
+
+1. Google Cloud Console → APIs & Services → Credentials → *Create OAuth client ID* →
+   type **iOS**, bundle id `fr.julsql.thecode` (the same client serves the Mac app, which
+   shares that bundle id).
+2. In the Xcode project (project-level build settings, both configurations), set
+   `GOOGLE_IOS_CLIENT_ID` to the client id, e.g. `123-abc.apps.googleusercontent.com`.
+   - `Info.plist` key `GoogleIOSClientID` of both apps reads `$(GOOGLE_IOS_CLIENT_ID)`.
+   - The redirect URL scheme (`com.googleusercontent.apps.123-abc`) is derived from it by
+     `GOOGLE_IOS_REVERSED_CLIENT_ID` and registered in both `Info.plist`s: nothing else to edit.
+3. Add the same client id to the API's accepted Google audiences.
+
+Redirect URI used: `com.googleusercontent.apps.<id>:/oauth2redirect`.
+
 ## 🤝 Contributing
 Contributions are welcome!
 You can help improve UI, security handling, or Safari extension behavior.

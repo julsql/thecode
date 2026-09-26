@@ -17,6 +17,8 @@ from thecode import vault
 SPEC = json.loads((Path(__file__).parent / "merge-cases.json").read_text())
 CASES = SPEC["cases"]
 
+SELECTION = json.loads((Path(__file__).parent / "sync-selection.json").read_text())["cases"]
+
 
 def _normalise(v):
     """Compare les carnets sans dépendre de updatedAt du conteneur."""
@@ -57,6 +59,35 @@ def test_merging_a_vault_with_itself_changes_nothing():
     merged, conflicts = vault.merge(v, v)
     assert _normalise(merged) == _normalise(v)
     assert conflicts == []
+
+
+@pytest.mark.parametrize("case", SELECTION, ids=[c["id"] for c in SELECTION])
+def test_select_for_push_matches_shared_reference(case):
+    push, local_only = vault.select_for_push(
+        case["vault"], case["remoteIds"], case["maxEntries"]
+    )
+    assert [e["id"] for e in push] == case["push"], case["why"]
+    assert [e["id"] for e in local_only] == case["localOnly"], case["why"]
+
+
+def test_created_at_is_set_on_creation():
+    entry = vault.new_entry("google.com")
+    assert entry["createdAt"] == entry["updatedAt"]
+
+
+def test_duplicate_keeps_both_entries_and_names_them():
+    """Le doublon est signalé, pas résolu : les deux entrées restent."""
+    left, right = vault.empty_vault(), vault.empty_vault()
+    a = vault.new_entry("google.com", login="moi")
+    b = vault.new_entry("google.com", domains=["GOOGLE.com"], login="moi")
+    left["entries"].append(a)
+    right["entries"].append(b)
+
+    merged, conflicts = vault.merge(left, right)
+
+    assert len(merged["entries"]) == 2
+    low, high = sorted([a["id"], b["id"]])
+    assert [(c.kind, c.entry_id, c.detail) for c in conflicts] == [("doublon", low, high)]
 
 
 class TestLookup:

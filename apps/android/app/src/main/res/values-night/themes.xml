@@ -24,6 +24,11 @@
         <item name="materialAlertDialogTheme">@style/ThemeOverlay.TheCode.MaterialAlertDialog</item>
     </style>
 
+    <style name="ThemeOverlay.TheCode.V1" parent="">
+        <item name="colorPrimary">@color/brand_pink_dark</item>
+        <item name="colorOnPrimary">@color/background_dark</item>
+    </style>
+
     <style name="Theme.TheCode.Splash" parent="Theme.TheCode">
         <item name="android:windowBackground">@color/background_dark</item>
         <!-- API 23+ : un attribut de theme inconnu est ignore silencieusement

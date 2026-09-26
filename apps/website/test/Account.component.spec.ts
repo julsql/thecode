@@ -267,6 +267,22 @@ describe("page du compte", () => {
       expect(localStorage.getItem("thecode.session")).toContain("jeton");
     });
 
+    it("redessine le bouton quand on se déconnecte", async () => {
+      // Arrivé connecté, le formulaire n'existait pas au montage : le bouton
+      // Google manquait ensuite pour se reconnecter.
+      fakeService();
+      const wrapper = await mountAccount();
+      await returnFromGoogle("jeton-google");
+      await flush();
+      vi.mocked(renderGoogleButton).mockClear();
+
+      await button(wrapper, "Se déconnecter")!.trigger("click");
+      await flush();
+
+      expect(renderGoogleButton).toHaveBeenCalled();
+      expect(wrapper.find(".google-zone").isVisible()).toBe(true);
+    });
+
     it("transmet le code de parrainage saisi", async () => {
       const service = fakeService();
       const wrapper = await mountAccount();
@@ -279,6 +295,54 @@ describe("page du compte", () => {
       expect(service.calls.find((c) => c.url.endsWith("/v1/auth/google"))?.body).toMatchObject({
         invite_code: "PARRAIN",
       });
+    });
+  });
+
+  describe("limite d'appareils", () => {
+    /** Le service refuse la connexion avec ce statut, le reste répond normalement. */
+    function refuseLogin(status: number) {
+      const service = fakeService();
+      const answer = vi.mocked(fetch).getMockImplementation()!;
+      vi.stubGlobal(
+        "fetch",
+        vi.fn((url: string, init?: RequestInit) =>
+          url.endsWith("/v1/auth/login")
+            ? Promise.resolve({
+                ok: false,
+                status,
+                statusText: "",
+                json: () => Promise.resolve({ detail: "refusé" }),
+              } as Response)
+            : answer(url, init),
+        ),
+      );
+      return service;
+    }
+
+    async function signIn() {
+      const wrapper = await mountAccount();
+      await wrapper.find("#acc_email").setValue("julie@exemple.fr");
+      await wrapper.find("#acc_password").setValue("mot-de-passe-de-test");
+      const submit = wrapper.findAll("button").filter((b) => b.text() === "Se connecter");
+      await submit[submit.length - 1].trigger("click");
+      await flush();
+      return wrapper;
+    }
+
+    it("propose de débloquer l'offre complète au plafond de l'offre gratuite", async () => {
+      refuseLogin(402);
+      const text = (await signIn()).text();
+
+      expect(text).toContain("L'offre gratuite permet 2 appareils connectés");
+      expect(text).toContain("débloquez l'offre complète");
+    });
+
+    it("ne propose rien à acheter au plafond de l'offre complète", async () => {
+      refuseLogin(403);
+      const text = (await signIn()).text();
+
+      expect(text).toContain("20 appareils connectés au maximum");
+      expect(text).not.toContain("débloquez");
     });
   });
 

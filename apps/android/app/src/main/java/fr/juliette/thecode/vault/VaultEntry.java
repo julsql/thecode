@@ -18,6 +18,9 @@ import java.util.UUID;
  * rejouer une dérivation. Une fuite révèle les sites et les identifiants, pas
  * les mots de passe.
  *
+ * Aucune version d'algorithme : toute entrée du carnet dérive en v2. La v1
+ * ne subsiste qu'en génération ponctuelle, hors carnet.
+ *
  * Schéma : shared/vault.schema.json
  */
 public final class VaultEntry {
@@ -38,8 +41,9 @@ public final class VaultEntry {
     public boolean upper = true;
     public boolean symbols = true;
     public boolean numbers = true;
-    /** Les entrées naissent en v2 ; la v1 reste lisible pour les anciennes. */
-    public int v = 2;
+    /** Absent des entrées antérieures au champ : {@code updatedAt} en tient lieu. */
+    @Nullable
+    public String createdAt = null;
     public String updatedAt;
     public boolean deleted = false;
 
@@ -52,6 +56,7 @@ public final class VaultEntry {
                 ? List.of(siteKey) : domains);
         java.util.Collections.sort(e.domains);
         e.updatedAt = Vault.nowIso();
+        e.createdAt = e.updatedAt;
         return e;
     }
 
@@ -74,7 +79,7 @@ public final class VaultEntry {
         e.upper = other.upper;
         e.symbols = other.symbols;
         e.numbers = other.numbers;
-        e.v = other.v;
+        e.createdAt = other.createdAt;
         e.updatedAt = other.updatedAt;
         e.deleted = other.deleted;
         return e;
@@ -99,7 +104,8 @@ public final class VaultEntry {
         e.upper = charset.getBoolean("upper");
         e.symbols = charset.getBoolean("symbols");
         e.numbers = charset.getBoolean("numbers");
-        e.v = o.getInt("v");
+        e.createdAt = o.has("createdAt") && !o.isNull("createdAt")
+                ? o.getString("createdAt") : null;
         e.updatedAt = o.getString("updatedAt");
         e.deleted = o.optBoolean("deleted", false);
         return e;
@@ -120,7 +126,8 @@ public final class VaultEntry {
         charset.put("symbols", symbols);
         charset.put("numbers", numbers);
         o.put("charset", charset);
-        o.put("v", v);
+        // Absent quand inconnu, comme dans la forme canonique des autres clients.
+        if (createdAt != null) o.put("createdAt", createdAt);
         o.put("updatedAt", updatedAt);
         if (deleted) o.put("deleted", true);
         return o;

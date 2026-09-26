@@ -42,6 +42,9 @@ apple/Transfer.swift|apps/apple/Shared
 vault-fixtures/transfer-vector.json|apps/apple/thecodeTests/Resources
 apple/VaultStore.swift|apps/apple/Shared
 apple/Sync.swift|apps/apple/Shared
+apple/GoogleAuth.swift|apps/apple/Shared
+apple/GoogleSignIn.swift|apps/apple/thecode
+apple/GoogleSignIn.swift|apps/apple/thecode-macos
 apple/SyncCredentialsStore.swift|apps/apple/Shared
 vault-fixtures/sync-row.json|apps/android/app/src/test/resources
 vault-fixtures/sync-row.json|apps/apple/thecodeTests/Resources
@@ -62,3 +65,8 @@ js/qr.js|apps/website/src
 vault-fixtures/qr-vectors.json|apps/extension/js-test
 vault-fixtures/qr-vectors.json|apps/website/test
 apple/QrCode.swift|apps/apple/Shared
+vault-fixtures/sync-selection.json|apps/cli/tests
+vault-fixtures/sync-selection.json|apps/extension/js-test
+vault-fixtures/sync-selection.json|apps/website/test
+vault-fixtures/sync-selection.json|apps/android/app/src/test/resources
+vault-fixtures/sync-selection.json|apps/apple/thecodeTests/Resources

@@ -104,12 +104,16 @@ public final class Sync {
     public static final class Result {
         public final Vault vault;
         public final List<Vault.Conflict> conflicts;
+        /** Entrées restées sur l'appareil, faute de place sous le plafond du compte. */
+        public final int localOnly;
         /** Éventuellement renouvelés : l'appelant doit les réenregistrer. */
         public final Credentials credentials;
 
-        Result(Vault vault, List<Vault.Conflict> conflicts, Credentials credentials) {
+        Result(Vault vault, List<Vault.Conflict> conflicts, int localOnly,
+               Credentials credentials) {
             this.vault = vault;
             this.conflicts = conflicts;
+            this.localOnly = localOnly;
             this.credentials = credentials;
         }
     }
@@ -206,6 +210,55 @@ public final class Sync {
     }
 
     /**
+     * Connexion par Google : le jeton d'identité rendu par Credential Manager
+     * contre les jetons du compte. La même route crée le compte s'il n'existe
+     * pas encore ; les identifiants rendus sont ceux d'une connexion par mot
+     * de passe, la suite (synchronisation, renouvellement) ne change pas.
+     *
+     * @param inviteCode vide sauf si les inscriptions demandent un code
+     */
+    public Credentials googleSignIn(@NonNull String endpoint, @NonNull String idToken,
+                                    @NonNull String deviceLabel, @NonNull String lang,
+                                    @NonNull String inviteCode) throws SyncException {
+        try {
+            JSONObject payload = new JSONObject()
+                    .put("id_token", idToken)
+                    .put("device_label", deviceLabel)
+                    .put("lang", lang);
+            if (!inviteCode.isEmpty()) payload.put("invite_code", inviteCode);
+            return Credentials.from(endpoint,
+                    call(endpoint + "/v1/auth/google", "POST", payload, null));
+        } catch (JSONException e) {
+            throw new SyncException("Réponse inattendue à la connexion Google");
+        }
+    }
+
+    /**
+     * L'identifiant client Google (web) que le service accepte, ou null s'il
+     * n'en a pas. Public par construction : il voyage dans chaque page de
+     * connexion. Le lire au service plutôt que l'embarquer suit un changement
+     * de projet Google sans nouvelle version de l'app.
+     */
+    @Nullable
+    public String googleClientId(@NonNull String endpoint) throws SyncException {
+        return parseGoogleClientId(call(endpoint + "/v1/auth/registration", "GET", null, null));
+    }
+
+    @Nullable
+    static String parseGoogleClientId(@NonNull JSONObject registration) {
+        // optString rendrait « null » pour une valeur JSON nulle.
+        if (registration.isNull("googleClientId")) return null;
+        String id = registration.optString("googleClientId", "").trim();
+        return id.isEmpty() ? null : id;
+    }
+
+    /** La langue des courriers envoyés par le service : fr ou en, rien d'autre. */
+    @NonNull
+    public static String serviceLang(@Nullable String language) {
+        return "fr".equalsIgnoreCase(language) ? "fr" : "en";
+    }
+
+    /**
      * Relit l'offre du compte, en renouvelant le jeton s'il a expiré.
      *
      * Rend les identifiants mis à jour : l'appelant doit les réenregistrer,
@@ -260,10 +313,21 @@ public final class Sync {
         List<Vault.Conflict> conflicts = new ArrayList<>();
         Vault merged = Vault.merge(local, remote, conflicts);
 
-        JSONObject payload = encodePush(pulled.optInt("revision", 0), merged, key);
+        // Au-delà du plafond, le reste du carnet ne part pas : il reste propre
+        // à l'appareil. Un serveur qui ne dit pas son plafond reçoit tout.
+        List<VaultEntry> push = merged.entries;
+        int localOnly = 0;
+        if (pulled.opt("max_entries") instanceof Number) {
+            Vault.PushSelection selection = Vault.selectForPush(merged,
+                    remoteIds(pulled), pulled.optInt("max_entries"));
+            push = selection.push;
+            localOnly = selection.localOnly.size();
+        }
+
+        JSONObject payload = encodePush(pulled.optInt("revision", 0), push, key);
         call(url, "POST", payload, creds.accessToken);
 
-        return new Result(merged, conflicts, creds);
+        return new Result(merged, conflicts, localOnly, creds);
     }
 
     /**
@@ -282,8 +346,62 @@ public final class Sync {
             if (e.status != 401) throw e;
             Credentials renewed = refresh(creds);
             Result result = sync(local, masterKey, renewed);
-            return new Result(result.vault, result.conflicts, renewed);
+            return new Result(result.vault, result.conflicts, result.localOnly, renewed);
         }
+    }
+
+    // ------------------------------------------------------- réglages
+
+    /**
+     * Synchronise les réglages par défaut, après le carnet.
+     *
+     * Tire, garde le plus récent (à égalité, le distant), puis pousse si le
+     * local l'emportait. Un blob indéchiffrable (autre clef maîtresse) ou
+     * illisible est ignoré : ni le local ni le distant ne sont écrasés.
+     *
+     * @return les réglages à appliquer localement (le local s'il gagne)
+     */
+    @NonNull
+    public DefaultSettings syncSettings(@NonNull DefaultSettings local, @NonNull String masterKey,
+                                        @NonNull Credentials creds) throws SyncException {
+        SecretKey key;
+        try {
+            key = Transfer.deriveKey(masterKey);
+        } catch (GeneralSecurityException e) {
+            throw new SyncException("Clef de transfert indérivable : " + e.getMessage());
+        }
+
+        String url = creds.endpoint + "/v1/settings";
+        // 204 : corps vide, donc objet vide, donc aucun réglage distant.
+        JSONObject pulled = call(url, "GET", null, creds.accessToken);
+
+        DefaultSettings remote = null;
+        if (pulled.has("blob")) {
+            try {
+                byte[] plain = Transfer.openBytes(key,
+                        Base64Url.decode(pulled.getString("nonce")),
+                        Base64Url.decode(pulled.getString("blob")));
+                remote = DefaultSettings.fromJson(
+                        new JSONObject(new String(plain, StandardCharsets.UTF_8)));
+            } catch (GeneralSecurityException | JSONException | IllegalArgumentException e) {
+                return local;
+            }
+        }
+
+        DefaultSettings winner = remote == null ? local : DefaultSettings.newest(local, remote);
+        // Jamais modifiés ici : ce sont les valeurs d'usine, pas un choix. Les
+        // pousser les imposerait aux autres appareils du compte.
+        if (winner == local && !DefaultSettings.NEVER.equals(local.updatedAt)) {
+            try {
+                Transfer.Sealed sealed = Transfer.seal(key, local.toJson().toString());
+                call(url, "PUT", new JSONObject()
+                        .put("nonce", Base64Url.encode(sealed.nonce))
+                        .put("blob", Base64Url.encode(sealed.blob)), creds.accessToken);
+            } catch (GeneralSecurityException | JSONException e) {
+                throw new SyncException("Chiffrement des réglages impossible : " + e.getMessage());
+            }
+        }
+        return winner;
     }
 
     private Vault decodeRemote(JSONObject pulled, String fallbackUpdatedAt, SecretKey key)
@@ -313,11 +431,23 @@ public final class Sync {
         return remote;
     }
 
-    private JSONObject encodePush(int baseRevision, Vault merged, SecretKey key)
+    /** Les id déjà présents sur le serveur : ceux des lignes du pull. */
+    private static List<String> remoteIds(JSONObject pulled) {
+        List<String> ids = new ArrayList<>();
+        JSONArray rows = pulled.optJSONArray("entries");
+        if (rows == null) return ids;
+        for (int i = 0; i < rows.length(); i++) {
+            JSONObject row = rows.optJSONObject(i);
+            if (row != null && row.has("entry_id")) ids.add(row.optString("entry_id"));
+        }
+        return ids;
+    }
+
+    private JSONObject encodePush(int baseRevision, List<VaultEntry> entries, SecretKey key)
             throws SyncException {
         try {
             JSONArray rows = new JSONArray();
-            for (VaultEntry entry : merged.entries) {
+            for (VaultEntry entry : entries) {
                 Transfer.Sealed sealed = Transfer.seal(key, entry.toJson().toString());
                 rows.put(new JSONObject()
                         .put("entry_id", entry.id)

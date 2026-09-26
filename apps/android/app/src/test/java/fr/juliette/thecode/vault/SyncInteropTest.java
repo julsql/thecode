@@ -56,7 +56,7 @@ public class SyncInteropTest {
         assertEquals(Arrays.asList("google.com", "google.fr"), entry.domains);
         assertEquals(expected.getInt("counter"), entry.counter);
         assertEquals(expected.getInt("length"), entry.length);
-        assertEquals(expected.getInt("v"), entry.v);
+        assertFalse(entry.toJson().has("v"));
         assertEquals(expected.getString("updatedAt"), entry.updatedAt);
         assertFalse(entry.symbols);
         assertTrue(entry.numbers);

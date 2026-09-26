@@ -6,5 +6,674 @@
   "extension_description": {
     "message": "Generate secure, unique passwords for every site from a single secret key. No storage, no risk.",
     "description": "Description of what the extension does."
+  },
+  "v2_notice_title": {
+    "message": "New algorithm",
+    "description": "Title of the v2 announcement."
+  },
+  "v2_notice_intro": {
+    "message": "Passwords are now computed with a new algorithm (v2). Please migrate your passwords to this new algorithm.",
+    "description": "First paragraph of the v2 announcement."
+  },
+  "v2_notice_detail": {
+    "message": "Autofill uses the new one: for a site you have not updated yet, generate the password in v1 from the extension with the old algorithm.",
+    "description": "Second paragraph of the v2 announcement."
+  },
+  "v2_notice_never_again": {
+    "message": "Don't show again",
+    "description": "Checkbox hiding the v2 announcement for good."
+  },
+  "v2_notice_close": {
+    "message": "Close",
+    "description": "Button closing the v2 announcement."
+  },
+  "sync_need_credentials": {
+    "message": "Enter the address and the password.",
+    "description": "Sync status in the popup."
+  },
+  "sync_connecting": {
+    "message": "Signing in…",
+    "description": "Sync status in the popup."
+  },
+  "sync_connected": {
+    "message": "Signed in.",
+    "description": "Sync status in the popup."
+  },
+  "sync_failed": {
+    "message": "Failed: $VALUE$",
+    "description": "Sync status in the popup.",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "sync_unknown_error": {
+    "message": "unknown",
+    "description": "Sync status in the popup."
+  },
+  "sync_running": {
+    "message": "Syncing…",
+    "description": "Sync status in the popup."
+  },
+  "sync_done": {
+    "message": "$VALUE$ entries synced",
+    "description": "Sync status in the popup.",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "sync_local_only": {
+    "message": ", $VALUE$ kept on this device (free plan limit)",
+    "description": "Sync status in the popup.",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "sync_conflicts": {
+    "message": " ($VALUE$ conflict(s) reported)",
+    "description": "Sync status in the popup.",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "sync_forgotten": {
+    "message": "Session forgotten on this device.",
+    "description": "Sync status in the popup."
+  },
+  "sync_google_unavailable": {
+    "message": "Google sign-in is unavailable.",
+    "description": "Sync status in the popup."
+  },
+  "sync_google_failed": {
+    "message": "Google sign-in failed.",
+    "description": "Sync status in the popup."
+  },
+  "popup_title": {
+    "message": "TheCode - Key",
+    "description": "Popup."
+  },
+  "popup_open_vault": {
+    "message": "Manage the vault (new tab)",
+    "description": "Popup."
+  },
+  "popup_vault": {
+    "message": "Vault",
+    "description": "Popup."
+  },
+  "popup_settings": {
+    "message": "Settings",
+    "description": "Popup."
+  },
+  "popup_key": {
+    "message": "Key",
+    "description": "Popup."
+  },
+  "popup_show": {
+    "message": "Show",
+    "description": "Popup."
+  },
+  "popup_hide": {
+    "message": "Hide",
+    "description": "Popup."
+  },
+  "popup_set_key": {
+    "message": "Set",
+    "description": "Popup."
+  },
+  "popup_clear_key": {
+    "message": "Clear",
+    "description": "Popup."
+  },
+  "popup_fingerprint": {
+    "message": "Fingerprint",
+    "description": "Popup."
+  },
+  "popup_login": {
+    "message": "Login",
+    "description": "Popup."
+  },
+  "popup_login_hint": {
+    "message": "Optional. In v1, the login is not part of the computation.",
+    "description": "Popup."
+  },
+  "popup_algorithm": {
+    "message": "Algorithm",
+    "description": "Popup."
+  },
+  "popup_v1_legacy": {
+    "message": "v1 (legacy)",
+    "description": "Popup."
+  },
+  "popup_generate": {
+    "message": "Generate the password",
+    "description": "Popup."
+  },
+  "popup_error": {
+    "message": "Error:",
+    "description": "Popup."
+  },
+  "popup_site": {
+    "message": "Site",
+    "description": "Popup."
+  },
+  "popup_password": {
+    "message": "Password",
+    "description": "Popup."
+  },
+  "popup_copy_password": {
+    "message": "Copy the password",
+    "description": "Popup."
+  },
+  "popup_copy": {
+    "message": "Copy",
+    "description": "Popup."
+  },
+  "popup_security": {
+    "message": "Security",
+    "description": "Popup."
+  },
+  "popup_save": {
+    "message": "Save",
+    "description": "Popup."
+  },
+  "popup_renew": {
+    "message": "Renew",
+    "description": "Popup."
+  },
+  "popup_renew_pitch": {
+    "message": "Renewing without changing your master key is part of the full plan.",
+    "description": "Popup."
+  },
+  "popup_unlock": {
+    "message": "Unlock",
+    "description": "Popup."
+  },
+  "popup_account_url": {
+    "message": "https://thecode.julsql.fr/en/account",
+    "description": "Popup."
+  },
+  "popup_current": {
+    "message": "Current",
+    "description": "Popup."
+  },
+  "popup_new": {
+    "message": "New",
+    "description": "Popup."
+  },
+  "popup_change_hint": {
+    "message": "Change it on the site, then confirm.",
+    "description": "Popup."
+  },
+  "popup_confirm": {
+    "message": "Confirm",
+    "description": "Popup."
+  },
+  "popup_cancel": {
+    "message": "Cancel",
+    "description": "Popup."
+  },
+  "popup_back": {
+    "message": "Back",
+    "description": "Popup."
+  },
+  "popup_params_hint": {
+    "message": "These settings are saved and apply to every generated password, including from the menu shown in pages.",
+    "description": "Popup."
+  },
+  "popup_length": {
+    "message": "Length",
+    "description": "Popup."
+  },
+  "popup_characters": {
+    "message": "Characters",
+    "description": "Popup."
+  },
+  "popup_lowercase": {
+    "message": "Lowercase",
+    "description": "Popup."
+  },
+  "popup_uppercase": {
+    "message": "Uppercase",
+    "description": "Popup."
+  },
+  "popup_numbers": {
+    "message": "Numbers",
+    "description": "Popup."
+  },
+  "popup_symbols": {
+    "message": "Symbols",
+    "description": "Popup."
+  },
+  "popup_sync": {
+    "message": "Sync",
+    "description": "Popup."
+  },
+  "popup_email": {
+    "message": "Email address",
+    "description": "Popup."
+  },
+  "popup_account_password": {
+    "message": "Account password",
+    "description": "Popup."
+  },
+  "popup_sync_login": {
+    "message": "Connect sync",
+    "description": "Popup."
+  },
+  "popup_sync_google": {
+    "message": "Continue with Google",
+    "description": "Popup."
+  },
+  "popup_no_account": {
+    "message": "No account yet?",
+    "description": "Popup."
+  },
+  "popup_create_account": {
+    "message": "Create one on the website",
+    "description": "Popup."
+  },
+  "popup_sync_now": {
+    "message": "Sync",
+    "description": "Popup."
+  },
+  "popup_sync_logout": {
+    "message": "Disconnect",
+    "description": "Popup."
+  },
+  "popup_transfer": {
+    "message": "Transfer the vault…",
+    "description": "Popup."
+  },
+  "popup_key_set": {
+    "message": "Key set.",
+    "description": "Popup."
+  },
+  "popup_error_detail": {
+    "message": "Error: $FIRST$",
+    "description": "Popup.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      }
+    }
+  },
+  "popup_deriving": {
+    "message": "Deriving…",
+    "description": "Popup."
+  },
+  "popup_key_cleared": {
+    "message": "Key cleared.",
+    "description": "Popup."
+  },
+  "popup_copied": {
+    "message": "Copied.",
+    "description": "Popup."
+  },
+  "popup_copy_failed": {
+    "message": "Could not copy.",
+    "description": "Popup."
+  },
+  "popup_no_response": {
+    "message": "No response.",
+    "description": "Popup."
+  },
+  "popup_account_saved_for": {
+    "message": "Account saved for $FIRST$.",
+    "description": "Popup.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      }
+    }
+  },
+  "popup_accounts_known": {
+    "message": "$FIRST$ known account(s) for $SECOND$, not this one.",
+    "description": "Popup.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      },
+      "second": {
+        "content": "$2"
+      }
+    }
+  },
+  "popup_not_in_vault": {
+    "message": "$FIRST$ is not in the vault yet.",
+    "description": "Popup.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      }
+    }
+  },
+  "popup_update_entry": {
+    "message": "Update the entry",
+    "description": "Popup."
+  },
+  "popup_computing": {
+    "message": "Computing…",
+    "description": "Popup."
+  },
+  "popup_renewed": {
+    "message": "Entry renewed, counter $FIRST$.",
+    "description": "Popup.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      }
+    }
+  },
+  "popup_no_site": {
+    "message": "No site detected.",
+    "description": "Popup."
+  },
+  "popup_entry_updated": {
+    "message": "Entry updated.",
+    "description": "Popup."
+  },
+  "popup_account_saved": {
+    "message": "Account saved.",
+    "description": "Popup."
+  },
+  "security_none": {
+    "message": "None",
+    "description": "Popup."
+  },
+  "security_very_weak": {
+    "message": "Very weak",
+    "description": "Popup."
+  },
+  "security_weak": {
+    "message": "Weak",
+    "description": "Popup."
+  },
+  "security_medium": {
+    "message": "Medium",
+    "description": "Popup."
+  },
+  "security_strong": {
+    "message": "Strong",
+    "description": "Popup."
+  },
+  "security_very_strong": {
+    "message": "Very strong",
+    "description": "Popup."
+  },
+  "vault_page_title": {
+    "message": "TheCode — Vault",
+    "description": "Vault page."
+  },
+  "vault_title": {
+    "message": "Vault",
+    "description": "Vault page."
+  },
+  "vault_lock_now": {
+    "message": "Lock",
+    "description": "Vault page."
+  },
+  "vault_create_title": {
+    "message": "Protect the vault",
+    "description": "Vault page."
+  },
+  "vault_create_hint": {
+    "message": "Choose a vault password (at least 8 characters). It stays on this device and is never synced. It protects this screen, not autofill.",
+    "description": "Vault page."
+  },
+  "vault_password_label": {
+    "message": "Vault password",
+    "description": "Vault page."
+  },
+  "vault_confirm_label": {
+    "message": "Confirm the password",
+    "description": "Vault page."
+  },
+  "vault_create_submit": {
+    "message": "Create the password",
+    "description": "Vault page."
+  },
+  "vault_locked_title": {
+    "message": "Vault locked",
+    "description": "Vault page."
+  },
+  "vault_unlock_submit": {
+    "message": "Unlock",
+    "description": "Vault page."
+  },
+  "vault_forgot": {
+    "message": "Forgot the password?",
+    "description": "Vault page."
+  },
+  "vault_forget_title": {
+    "message": "Erase the vault from this device?",
+    "description": "Vault page."
+  },
+  "vault_forget_hint": {
+    "message": "Every entry saved on this device and the vault password will be erased. If sync is on, the vault will come back at the next sync. This cannot be undone.",
+    "description": "Vault page."
+  },
+  "vault_forget_confirm": {
+    "message": "Erase the vault",
+    "description": "Vault page."
+  },
+  "vault_cancel": {
+    "message": "Cancel",
+    "description": "Vault page."
+  },
+  "vault_entries_title": {
+    "message": "Entries",
+    "description": "Vault page."
+  },
+  "vault_empty": {
+    "message": "The vault is empty.",
+    "description": "Vault page."
+  },
+  "vault_back": {
+    "message": "Back to the list",
+    "description": "Vault page."
+  },
+  "vault_detail_domains": {
+    "message": "Domains",
+    "description": "Vault page."
+  },
+  "vault_detail_login": {
+    "message": "Username",
+    "description": "Vault page."
+  },
+  "vault_detail_length": {
+    "message": "Length",
+    "description": "Vault page."
+  },
+  "vault_detail_charset": {
+    "message": "Characters",
+    "description": "Vault page."
+  },
+  "vault_detail_counter": {
+    "message": "Counter",
+    "description": "Vault page."
+  },
+  "vault_detail_updated": {
+    "message": "Updated",
+    "description": "Vault page."
+  },
+  "vault_renew": {
+    "message": "Renew",
+    "description": "Vault page."
+  },
+  "vault_delete": {
+    "message": "Delete",
+    "description": "Vault page."
+  },
+  "vault_renew_before": {
+    "message": "Current",
+    "description": "Vault page."
+  },
+  "vault_renew_after": {
+    "message": "New",
+    "description": "Vault page."
+  },
+  "vault_renew_hint": {
+    "message": "Change it on the site, then confirm.",
+    "description": "Vault page."
+  },
+  "vault_confirm": {
+    "message": "Confirm",
+    "description": "Vault page."
+  },
+  "vault_delete_title": {
+    "message": "Delete this entry?",
+    "description": "Vault page."
+  },
+  "vault_delete_hint": {
+    "message": "The deletion will reach your other devices at the next sync.",
+    "description": "Vault page."
+  },
+  "vault_change_current": {
+    "message": "Current password",
+    "description": "Vault page."
+  },
+  "vault_change_next": {
+    "message": "New password",
+    "description": "Vault page."
+  },
+  "vault_change_confirm": {
+    "message": "Confirm the new password",
+    "description": "Vault page."
+  },
+  "vault_change_submit": {
+    "message": "Change the password",
+    "description": "Vault page."
+  },
+  "vault_error_too_short": {
+    "message": "The password must be at least $FIRST$ characters long.",
+    "description": "Vault page.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      }
+    }
+  },
+  "vault_error_mismatch": {
+    "message": "The two passwords do not match.",
+    "description": "Vault page."
+  },
+  "vault_charset_lower": {
+    "message": "lowercase",
+    "description": "Vault page."
+  },
+  "vault_charset_upper": {
+    "message": "uppercase",
+    "description": "Vault page."
+  },
+  "vault_charset_numbers": {
+    "message": "digits",
+    "description": "Vault page."
+  },
+  "vault_charset_symbols": {
+    "message": "symbols",
+    "description": "Vault page."
+  },
+  "vault_charset_none": {
+    "message": "none",
+    "description": "Vault page."
+  },
+  "vault_error_detail": {
+    "message": "Error: $FIRST$",
+    "description": "Vault page.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      }
+    }
+  },
+  "vault_error_unknown": {
+    "message": "Unknown error.",
+    "description": "Vault page."
+  },
+  "vault_failure_detail": {
+    "message": "Failed: $FIRST$",
+    "description": "Vault page.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      }
+    }
+  },
+  "vault_failure": {
+    "message": "Failed.",
+    "description": "Vault page."
+  },
+  "vault_creating": {
+    "message": "Creating…",
+    "description": "Vault page."
+  },
+  "vault_created": {
+    "message": "Vault password created.",
+    "description": "Vault page."
+  },
+  "vault_checking": {
+    "message": "Checking…",
+    "description": "Vault page."
+  },
+  "vault_wrong_password": {
+    "message": "Wrong password.",
+    "description": "Vault page."
+  },
+  "vault_unlocked": {
+    "message": "Vault unlocked.",
+    "description": "Vault page."
+  },
+  "vault_locked": {
+    "message": "Vault locked.",
+    "description": "Vault page."
+  },
+  "vault_forgotten": {
+    "message": "Vault erased from this device. Choose a new vault password.",
+    "description": "Vault page."
+  },
+  "vault_enter_current": {
+    "message": "Enter the current password.",
+    "description": "Vault page."
+  },
+  "vault_changing": {
+    "message": "Changing…",
+    "description": "Vault page."
+  },
+  "vault_changed": {
+    "message": "Vault password changed.",
+    "description": "Vault page."
+  },
+  "vault_no_login": {
+    "message": "no username",
+    "description": "Vault page."
+  },
+  "vault_entry_deleted": {
+    "message": "Entry “$FIRST$” deleted.",
+    "description": "Vault page.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      }
+    }
+  },
+  "vault_computing": {
+    "message": "Computing…",
+    "description": "Vault page."
+  },
+  "vault_entry_renewed": {
+    "message": "Entry renewed, counter $FIRST$.",
+    "description": "Vault page.",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      }
+    }
   }
 }

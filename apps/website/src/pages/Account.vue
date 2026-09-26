@@ -386,7 +386,7 @@
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, onMounted, ref } from "vue";
+import { computed, defineComponent, onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { useI18n } from "@/i18n";
 import {
@@ -450,6 +450,23 @@ export default defineComponent({
     const deletePassword = ref("");
     const googleButton = ref<HTMLElement | null>(null);
     const googleReady = ref(false);
+    const googleClientId = ref("");
+
+    // Le formulaire de connexion, et donc la place du bouton, n'existe que
+    // déconnecté. Dessiner le bouton au seul montage le perdait dès qu'on
+    // arrivait connecté puis se déconnectait : on le redessine à chaque fois
+    // que sa place réapparaît.
+    watch(
+      [googleButton, googleClientId],
+      async ([el, clientId]) => {
+        if (!el || !clientId) {
+          googleReady.value = false;
+          return;
+        }
+        googleReady.value = await renderGoogleButton(el, clientId, continueWithGoogle, lang.value);
+      },
+      { flush: "post" },
+    );
     const priceCents = ref(200);
     const currency = ref("EUR");
 
@@ -542,14 +559,7 @@ export default defineComponent({
       try {
         const state = await registrationState(DEFAULT_ENDPOINT);
         freeSlots.value = state.freeSlots;
-        if (state.googleClientId && googleButton.value) {
-          googleReady.value = await renderGoogleButton(
-            googleButton.value,
-            state.googleClientId,
-            continueWithGoogle,
-            lang.value,
-          );
-        }
+        googleClientId.value = state.googleClientId ?? "";
       } catch {
         freeSlots.value = null;
       }
@@ -573,6 +583,22 @@ export default defineComponent({
       return true;
     }
 
+    /**
+     * Traduit un refus de connexion dû à la limite d'appareils. 402 : l'offre
+     * gratuite, que débloquer lève ; 403 : le plafond de l'offre complète.
+     * `closed403` dit si un 403 peut venir d'autre chose — les inscriptions
+     * fermées, pour une connexion Google qui crée le compte.
+     */
+    function signInError(e: unknown, closed403 = false): string {
+      if (e instanceof SyncError && e.status === 402) {
+        return t("acc_device_limit_free").replace("{n}", String(service.plans.freeMaxDevices));
+      }
+      if (e instanceof SyncError && e.status === 403 && !closed403) {
+        return t("acc_device_limit_pro").replace("{n}", String(service.plans.proMaxDevices));
+      }
+      return (e as Error).message;
+    }
+
     async function signIn() {
       if (!checkCredentials(false)) return;
       message.value = t("acc_connecting");
@@ -582,7 +608,7 @@ export default defineComponent({
         message.value = t("acc_connected");
         await refresh();
       } catch (e) {
-        message.value = (e as Error).message;
+        message.value = signInError(e);
       }
     }
 
@@ -618,7 +644,7 @@ export default defineComponent({
         message.value = t("acc_connected");
         await refresh();
       } catch (e) {
-        message.value = (e as Error).message;
+        message.value = signInError(e, true);
       }
     }
 
@@ -969,7 +995,7 @@ export default defineComponent({
    laisseraient douter de ce qu'on est en train de prendre. */
 .plan-option.active {
   border-color: var(--c4);
-  background: rgba(166, 77, 121, 0.18);
+  background: rgb(var(--accent-rgb) / 0.18);
 }
 
 .plan-option--featured {

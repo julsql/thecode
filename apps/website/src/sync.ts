@@ -10,13 +10,22 @@
  * exposerait les mots de passe eux-mêmes.
  */
 
+import { normalizeSettings, type DefaultSettings } from "@/settings";
 import { deriveTransferKey } from "@/transfer";
-import { mergeVaults, type Conflict, type Vault, type VaultEntry } from "@/vault";
+import { mergeVaults, selectForPush, type Conflict, type Vault, type VaultEntry } from "@/vault";
 
 export const DEFAULT_ENDPOINT = "https://thecode-api.julsql.fr";
 const SESSION_KEY = "thecode.session";
 
-export class SyncError extends Error {}
+export class SyncError extends Error {
+  /** Statut HTTP de la réponse, 0 quand le service n'a pas répondu. */
+  readonly status: number;
+
+  constructor(message: string, status = 0) {
+    super(message);
+    this.status = status;
+  }
+}
 
 export interface Session {
   endpoint: string;
@@ -69,7 +78,7 @@ export async function request(
     } catch {
       detail = "";
     }
-    throw new SyncError(`${response.status} : ${detail || response.statusText}`);
+    throw new SyncError(`${response.status} : ${detail || response.statusText}`, response.status);
   }
 
   return response.status === 204 ? null : response.json();
@@ -239,22 +248,30 @@ export async function authorized<T>(
   return result;
 }
 
-async function encryptEntry(entry: VaultEntry, key: CryptoKey) {
+/** Chiffre une valeur JSON avec la clef de transfert : `{ nonce, blob }`. */
+async function encryptBlob(value: unknown, key: CryptoKey) {
   const nonce = crypto.getRandomValues(new Uint8Array(12));
-  const plain = new TextEncoder().encode(JSON.stringify(entry));
+  const plain = new TextEncoder().encode(JSON.stringify(value));
   const cipher = await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce }, key, plain);
+  return { nonce: b64e(nonce), blob: b64e(cipher) };
+}
+
+async function encryptEntry(entry: VaultEntry, key: CryptoKey) {
   return {
     entry_id: entry.id,
-    nonce: b64e(nonce),
-    blob: b64e(cipher),
+    ...(await encryptBlob(entry, key)),
     deleted: Boolean(entry.deleted),
   };
 }
 
-async function decryptEntry(
+function decryptEntry(
   row: { nonce: string; blob: string; deleted: boolean },
   key: CryptoKey,
 ): Promise<VaultEntry> {
+  return decryptBlob(row, key) as Promise<VaultEntry>;
+}
+
+async function decryptBlob(row: { nonce: string; blob: string }, key: CryptoKey): Promise<unknown> {
   let plain: ArrayBuffer;
   try {
     plain = await crypto.subtle.decrypt(
@@ -267,7 +284,7 @@ async function decryptEntry(
       "Déchiffrement impossible : la clef maîtresse n'est pas celle qui a servi à synchroniser ce carnet.",
     );
   }
-  return JSON.parse(new TextDecoder().decode(plain)) as VaultEntry;
+  return JSON.parse(new TextDecoder().decode(plain));
 }
 
 /**
@@ -281,7 +298,7 @@ export async function syncVault(
   vault: Vault,
   masterKey: string,
   session: Session,
-): Promise<{ vault: Vault; conflicts: Conflict[]; session: Session }> {
+): Promise<{ vault: Vault; conflicts: Conflict[]; localOnly: number; session: Session }> {
   const key = await deriveTransferKey(masterKey);
 
   const pulled = await withFreshToken(session, (token) =>
@@ -302,13 +319,73 @@ export async function syncVault(
 
   const { vault: merged, conflicts } = mergeVaults(vault, remote);
 
+  // Au-delà du plafond, le reste du carnet ne part pas : il reste propre à
+  // l'appareil. Un serveur qui ne dit pas son plafond reçoit tout.
+  const { push, localOnly } =
+    typeof pulled.result.max_entries === "number"
+      ? selectForPush(
+          merged,
+          pulled.result.entries.map((row: { entry_id: string }) => row.entry_id),
+          pulled.result.max_entries,
+        )
+      : { push: merged.entries, localOnly: [] };
+
   const payload = {
     base_revision: pulled.result.revision,
-    entries: await Promise.all(merged.entries.map((e) => encryptEntry(e, key))),
+    entries: await Promise.all(push.map((e) => encryptEntry(e, key))),
   };
   const pushed = await withFreshToken(pulled.session, (token) =>
     request(`${session.endpoint}/v1/vault`, { payload, token }),
   );
 
-  return { vault: merged, conflicts, session: pushed.session };
+  return { vault: merged, conflicts, localOnly: localOnly.length, session: pushed.session };
+}
+
+function settingsTime(updatedAt: string): number {
+  const t = Date.parse(updatedAt);
+  return Number.isNaN(t) ? -Infinity : t;
+}
+
+/**
+ * Synchronise les réglages par défaut, après le carnet.
+ *
+ * Tirer, garder la valeur la plus récente (à égalité, la distante), puis
+ * pousser si la locale l'était. Un blob indéchiffrable (autre clef maîtresse)
+ * est ignoré : ni les réglages locaux ni le distant ne sont écrasés. Des
+ * réglages jamais modifiés (sans `updatedAt`) ne sont pas poussés.
+ * Voir shared/spec/default-settings.md.
+ *
+ * `applied` dit s'il faut appliquer `settings` localement.
+ */
+export async function syncSettings(
+  local: DefaultSettings,
+  masterKey: string,
+  session: Session,
+): Promise<{ settings: DefaultSettings; applied: boolean; session: Session }> {
+  const key = await deriveTransferKey(masterKey);
+  const url = `${session.endpoint}/v1/settings`;
+
+  const pulled = await withFreshToken(session, (token) => request(url, { token }));
+  session = pulled.session;
+
+  if (pulled.result) {
+    let remote: DefaultSettings | null;
+    try {
+      remote = normalizeSettings(await decryptBlob(pulled.result, key));
+    } catch {
+      remote = null;
+    }
+    if (!remote) return { settings: local, applied: false, session };
+    if (settingsTime(remote.updatedAt) >= settingsTime(local.updatedAt)) {
+      return { settings: remote, applied: true, session };
+    }
+  }
+
+  if (!local.updatedAt) return { settings: local, applied: false, session };
+
+  const payload = await encryptBlob(local, key);
+  const pushed = await withFreshToken(session, (token) =>
+    request(url, { payload, token, method: "PUT" }),
+  );
+  return { settings: local, applied: false, session: pushed.session };
 }

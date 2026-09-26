@@ -37,7 +37,7 @@ const SESSION = {
  * Ce qui compte est ce que le navigateur envoie, et le fait que deux appareils
  * convergent. Un vrai serveur ne dirait rien de plus.
  */
-function fakeServer() {
+function fakeServer(maxEntries?: number) {
   const rows = new Map<string, Record<string, unknown>>();
   const sent: string[] = [];
   let revision = 0;
@@ -50,7 +50,13 @@ function fakeServer() {
     } as Response);
 
   const fetchImpl = (url: string, init?: RequestInit) => {
-    if (!init?.body) return json(200, { revision, entries: [...rows.values()] });
+    if (!init?.body) {
+      return json(200, {
+        revision,
+        entries: [...rows.values()],
+        ...(maxEntries === undefined ? {} : { max_entries: maxEntries }),
+      });
+    }
 
     sent.push(init.body as string);
     const payload = JSON.parse(init.body as string);
@@ -179,6 +185,30 @@ describe("synchronisation", () => {
     const merged = await syncVault(emptyVault(), "clef", SESSION);
 
     expect(merged.vault.entries[0]).not.toHaveProperty("deleted");
+  });
+
+  it("au-delà du plafond, ne pousse que les plus anciennes", async () => {
+    server = fakeServer(2);
+    vi.stubGlobal("fetch", server.fetchImpl);
+    const vault = emptyVault();
+    for (const [site, created] of [
+      ["recent.fr", "2026-03-01T00:00:00Z"],
+      ["ancien.fr", "2026-01-01T00:00:00Z"],
+      ["moyen.fr", "2026-02-01T00:00:00Z"],
+    ]) {
+      vault.entries.push({ ...newEntry(site), createdAt: created });
+    }
+
+    const result = await syncVault(vault, "clef", SESSION);
+
+    const pushed = JSON.parse(server.sent[0]).entries.map(
+      (row: { entry_id: string }) => row.entry_id,
+    );
+    const bySite = (site: string) => vault.entries.find((e) => e.siteKey === site)!.id;
+    expect(pushed.sort()).toStrictEqual([bySite("ancien.fr"), bySite("moyen.fr")].sort());
+    // L'entrée en trop reste dans le carnet local.
+    expect(result.localOnly).toBe(1);
+    expect(result.vault.entries).toHaveLength(3);
   });
 
   it("propage une suppression", async () => {

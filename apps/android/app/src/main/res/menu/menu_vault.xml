@@ -18,4 +18,14 @@
         android:id="@+id/action_sync_unlink"
         android:title="@string/sync_unlink"
         app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_vault_security"
+        android:title="@string/vault_lock_settings"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_vault_lock"
+        android:title="@string/vault_lock_now"
+        app:showAsAction="never" />
 </menu>

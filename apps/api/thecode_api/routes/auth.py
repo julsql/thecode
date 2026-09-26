@@ -27,7 +27,7 @@ from ..google import GoogleError, verify_id_token
 from ..links import consume_link, new_link
 from ..mailer import MailError, send_password_reset_email, send_verification_email
 from ..models import Account, EmailVerification, Session
-from ..plans import active_device_count, limits_for, live_entry_count
+from ..plans import PRO, active_device_count, limits_for, live_entry_count
 from ..schemas import (
     AccountResponse,
     ForgotPasswordRequest,
@@ -108,10 +108,18 @@ def _enforce_device_limit(db: DbSession, account: Account) -> None:
         return
 
     site = settings.site_url.rstrip("/")
+    disconnect = f"Déconnectez un appareil depuis votre compte sur {site}."
+    # 402 seulement quand s'abonner lève la limite. Au plafond de l'offre
+    # complète, il n'y a rien au-dessus : un 402 ferait proposer un abonnement
+    # que le compte a déjà.
+    if limits.plan == PRO:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            f"{limits.max_devices} appareils connectés au maximum. {disconnect}",
+        )
     raise HTTPException(
         status.HTTP_402_PAYMENT_REQUIRED,
-        f"Offre {limits.plan} : {limits.max_devices} appareils connectés au maximum. "
-        f"Déconnectez un appareil depuis votre compte sur {site}.",
+        f"Offre {limits.plan} : {limits.max_devices} appareils connectés au maximum. {disconnect}",
     )
 
 
@@ -386,7 +394,7 @@ def google_sign_in(payload: GoogleRequest, db: DbSession = Depends(get_db)) -> T
     """
     settings = get_settings()
     try:
-        identity = verify_id_token(payload.id_token, settings)
+        identity = verify_id_token(payload.id_token, settings, payload.nonce)
     except GoogleError as exc:
         # Le détail part dans les journaux, pas au client : il ne l'aiderait
         # pas, et il renseignerait qui cherche à forger un jeton.

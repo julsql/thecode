@@ -1,3 +1,6 @@
+// msg() et translatePage() viennent de i18n.js, charge avant ce fichier.
+translatePage();
+
 // Références aux éléments de la popup
 const passInput = document.getElementById("passphrase");
 const setBtn = document.getElementById("setKey");
@@ -9,14 +12,13 @@ const site = document.getElementById("site");
 const passwordResult = document.getElementById("passwordResult");
 const passwordSecurity = document.getElementById("passwordSecurity");
 const error = document.getElementById("error");
-const siteContainer = document.getElementById("siteContainer");
-const passwordResultContainer = document.getElementById("passwordResultContainer");
-const passwordSecurityContainer = document.getElementById("passwordSecurityContainer");
+const resultBox = document.getElementById("result");
+const copyStatus = document.getElementById("copyStatus");
 const errorContainer = document.getElementById("errorContainer");
 const fingerprintRow = document.getElementById("fingerprintRow");
 const fingerprintChip = document.getElementById("fingerprint");
-const accountRow = document.getElementById("accountRow");
-const accountSelect = document.getElementById("accountSelect");
+const loginInput = document.getElementById("login");
+const loginOptions = document.getElementById("loginOptions");
 const saveEntryBtn = document.getElementById("saveEntry");
 const vaultStatus = document.getElementById("vaultStatus");
 const changeEntryBtn = document.getElementById("changeEntry");
@@ -33,6 +35,7 @@ const syncLoggedIn = document.getElementById("syncLoggedIn");
 const syncEmail = document.getElementById("syncEmail");
 const syncPassword = document.getElementById("syncPassword");
 const syncLoginBtn = document.getElementById("syncLoginBtn");
+const syncGoogleBtn = document.getElementById("syncGoogleBtn");
 const syncNowBtn = document.getElementById("syncNowBtn");
 const syncLogoutBtn = document.getElementById("syncLogoutBtn");
 const syncStatus = document.getElementById("syncStatus");
@@ -47,6 +50,39 @@ const minInput = document.getElementById("lowercase");
 const majInput = document.getElementById("uppercase");
 const symInput = document.getElementById("symbols");
 const chiInput = document.getElementById("numbers");
+const versionGroup = document.getElementById("versionGroup");
+
+/** Niveaux de securite rendus par le background, en francais. */
+const SECURITY_KEYS = {
+  Aucune: "security_none",
+  "Très Faible": "security_very_weak",
+  Faible: "security_weak",
+  Moyenne: "security_medium",
+  Forte: "security_strong",
+  "Très Forte": "security_very_strong",
+};
+
+function securityLabel(level) {
+  return SECURITY_KEYS[level] ? msg(SECURITY_KEYS[level], level) : level;
+}
+
+/** Statut de la clef. `tone` colore sans dependre du theme : ok, error. */
+function setStatus(text, tone = "") {
+  statusDiv.textContent = text;
+  statusDiv.dataset.tone = tone;
+}
+
+/** Version choisie pour la generation depuis la popup : v2 sauf demande. */
+function selectedVersion() {
+  return versionGroup.querySelector("input:checked")?.value === "1" ? 1 : 2;
+}
+
+versionGroup.addEventListener("change", () => {
+  if (passInput.value) generatePassword();
+});
+
+// Rose en v1, bleu en v2 : voir algo-theme.js.
+bindAlgoTheme(versionGroup, document.documentElement);
 
 if (typeof browser === "undefined") {
   var browser = chrome;
@@ -59,10 +95,10 @@ window.addEventListener("DOMContentLoaded", () => {
   hideError();
   browser.runtime.sendMessage({ action: "checkEncodingKey" }, (resp) => {
     if (resp && resp.hasEncodingKey) {
-      statusDiv.style.color = "green";
-      statusDiv.textContent = "Clef définie.";
+      setStatus(msg("popup_key_set", "Clef définie."), "ok");
       browser.runtime.sendMessage({ action: "getEncodingKey" }, (resp) => {
         passInput.value = resp.encodingKey;
+        refreshFingerprint(passInput.value.trim());
       });
     }
   });
@@ -88,8 +124,7 @@ function applyParams(params) {
 function updateParams(options) {
   browser.runtime.sendMessage({ action: "setParams", data: options }, (resp) => {
     if (!resp || !resp.ok) {
-      statusDiv.style.color = "red";
-      statusDiv.textContent = "Erreur: " + ((resp && resp.error) || "n/a");
+      setStatus(msg("popup_error_detail", "Erreur : $1", (resp && resp.error) || "n/a"), "error");
       return;
     }
     // Reflète la valeur réellement retenue (ex. 99 saisi → borné à 40).
@@ -133,7 +168,7 @@ lengthInput.addEventListener("blur", () => updateParams(getParams()));
 toggleBtn.addEventListener("click", () => {
   const isHidden = passInput.type === "password";
   passInput.type = isHidden ? "text" : "password";
-  toggleBtn.textContent = isHidden ? "Cacher" : "Voir";
+  toggleBtn.textContent = isHidden ? msg("popup_hide", "Cacher") : msg("popup_show", "Voir");
   toggleBtn.setAttribute("aria-pressed", String(isHidden));
 });
 
@@ -159,17 +194,14 @@ function setPassword() {
     return;
   }
 
-  statusDiv.style.color = "black";
-  statusDiv.textContent = "Dérivation en cours...";
+  setStatus(msg("popup_deriving", "Dérivation en cours…"));
 
   browser.runtime.sendMessage({ action: "setEncodingKey", encodingKey: pass }, (resp) => {
     if (resp && resp.ok) {
-      statusDiv.style.color = "green";
-      statusDiv.textContent = "Clef définie.";
+      setStatus(msg("popup_key_set", "Clef définie."), "ok");
       generatePassword();
     } else {
-      statusDiv.style.color = "red";
-      statusDiv.textContent = "Erreur: " + ((resp && resp.error) || "n/a");
+      setStatus(msg("popup_error_detail", "Erreur : $1", (resp && resp.error) || "n/a"), "error");
     }
   });
 }
@@ -178,9 +210,9 @@ function setPassword() {
 clearBtn.addEventListener("click", () => {
   browser.runtime.sendMessage({ action: "clearEncodingKey" }, (resp) => {
     if (resp && resp.ok) {
-      statusDiv.style.color = "black";
-      statusDiv.textContent = "Clef effacée.";
+      setStatus(msg("popup_key_cleared", "Clef effacée."));
       passInput.value = "";
+      refreshFingerprint("");
       hideResult();
       hideError();
     }
@@ -189,18 +221,51 @@ clearBtn.addEventListener("click", () => {
 
 // Copier le mot de passe
 document.getElementById("copyPasswordBtn").addEventListener("click", () => {
-  const pwd = document.getElementById("passwordResult").textContent;
-  if (pwd) {
-    navigator.clipboard.writeText(pwd).then(() => {});
-  }
+  const pwd = passwordResult.textContent;
+  if (!pwd) return;
+  navigator.clipboard.writeText(pwd).then(
+    () => (copyStatus.textContent = msg("popup_copied", "Copié.")),
+    () => (copyStatus.textContent = msg("popup_copy_failed", "Copie impossible.")),
+  );
 });
 
-// Générer un mot de passe pour l'onglet actif avec les paramètres avancés
+// Générer un mot de passe pour l'onglet actif
 generateBtn.addEventListener("click", () => {
   generatePassword();
 });
 
-function generatePassword() {
+/**
+ * Identifiant du compte.
+ *
+ * Tant que l'utilisateur n'y a pas touche et qu'aucune generation n'a
+ * repondu, on n'en envoie pas : le service worker retient alors la premiere
+ * entree du domaine et rend son identifiant, qui pre-remplit le champ. Ensuite
+ * c'est le champ qui fait foi, vide compris.
+ */
+let loginResolved = false;
+
+loginInput.addEventListener("input", () => {
+  loginResolved = true;
+});
+
+// `change` couvre la saisie validee et le choix dans la liste des comptes.
+loginInput.addEventListener("change", () => {
+  if (passInput.value) generatePassword();
+});
+
+loginInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    generatePassword();
+  }
+});
+
+function requestedLogin() {
+  return loginResolved ? loginInput.value.trim() : undefined;
+}
+
+/** `vaultMessage` remplace le statut du carnet une fois celui-ci relu. */
+function generatePassword(vaultMessage) {
   // Aucune option n'est transmise : le background relit les paramètres
   // persistés, exactement comme pour le menu injecté dans la page. C'est ce
   // qui garantit un mot de passe identique des deux côtés.
@@ -213,35 +278,40 @@ function generatePassword() {
       {
         action: "generatePassword",
         url: tab.url,
+        version: selectedVersion(),
+        login: requestedLogin(),
       },
       (response) => {
-        if (response.error) {
+        if (!response || response.error) {
           hideResult();
-          showError();
-          error.style.display = "block";
-          error.textContent = response.error;
+          showError(response?.error || msg("popup_no_response", "Pas de réponse."));
         } else if (response.password) {
           hideError();
           showResult();
+          if (!loginResolved) {
+            loginInput.value = response.login || "";
+            loginResolved = true;
+          }
+          currentEntryId = response.entryId || null;
           site.textContent = response.site;
-          refreshVault(response.site);
+          refreshVault(response.site, vaultMessage);
           passwordResult.textContent = response.password;
-          passwordSecurity.style.color = response.color;
-          passwordSecurity.textContent = `${response.security} (${response.bits} bits)`;
+          // La couleur du niveau va sur une pastille : en texte, le vert vif
+          // ne se lirait pas sur fond clair.
+          passwordSecurity.style.setProperty("--level", response.color);
+          passwordSecurity.textContent = `${securityLabel(response.security)} (${response.bits} bits)`;
         } else {
           hideResult();
-          showError();
-          error.style.display = "block";
-          error.textContent = "Pas de réponse.";
+          showError(msg("popup_no_response", "Pas de réponse."));
         }
       },
     );
   });
 }
 
-/** Entrees du carnet couvrant le domaine affiche, et celle retenue. */
+/** Domaine affiche, et l'entree du compte affiche s'il est dans le carnet. */
 let currentDomain = "";
-let currentMatches = [];
+let currentEntryId = null;
 
 /**
  * Affiche l'empreinte de la clef.
@@ -264,40 +334,49 @@ async function refreshFingerprint(key) {
   }
 }
 
-/** Charge les entrees du carnet pour le domaine courant. */
-function refreshVault(domain) {
+/**
+ * Charge les comptes du carnet pour le domaine courant.
+ *
+ * Plusieurs comptes sur un meme site : leurs identifiants sont proposes dans
+ * le champ, il faut choisir, pas deviner. Un mauvais choix donne un mot de
+ * passe qui ne marche pas, sans rien expliquer.
+ */
+function refreshVault(domain, message) {
   currentDomain = domain || "";
-  if (!currentDomain) {
-    accountRow.hidden = true;
-    return;
-  }
+  loginOptions.innerHTML = "";
+  if (!currentDomain) return;
 
   browser.runtime.sendMessage({ action: "getVault" }, (resp) => {
     const vault = resp?.vault || { entries: [] };
-    currentMatches = (vault.entries || []).filter(
+    const matches = (vault.entries || []).filter(
       (e) => !e.deleted && e.domains.some((d) => d.toLowerCase() === currentDomain.toLowerCase()),
     );
 
-    // Un seul compte : rien a choisir, on n'encombre pas l'interface.
-    accountRow.hidden = currentMatches.length < 2;
-    if (currentMatches.length >= 2) {
-      accountSelect.innerHTML = "";
-      currentMatches.forEach((entry, index) => {
-        const option = document.createElement("option");
-        option.value = String(index);
-        option.textContent = entry.login || entry.label || entry.siteKey;
-        accountSelect.appendChild(option);
-      });
+    loginOptions.innerHTML = "";
+    for (const login of new Set(matches.map((e) => e.login || ""))) {
+      if (!login) continue;
+      const option = document.createElement("option");
+      option.value = login;
+      loginOptions.appendChild(option);
     }
 
-    vaultStatus.textContent = currentMatches.length
-      ? `${currentMatches.length} entrée(s) connue(s) pour ${currentDomain}`
-      : `${currentDomain} n'est pas encore dans le carnet`;
-    saveEntryBtn.textContent = currentMatches.length
-      ? "Mettre à jour l'entrée"
-      : "Enregistrer ce site";
+    const known = Boolean(currentEntryId);
+    vaultStatus.textContent = known
+      ? msg("popup_account_saved_for", "Compte enregistré pour $1.", currentDomain)
+      : matches.length
+        ? msg(
+            "popup_accounts_known",
+            "$1 compte(s) connu(s) pour $2, pas celui-ci.",
+            matches.length,
+            currentDomain,
+          )
+        : msg("popup_not_in_vault", "$1 n'est pas encore dans le carnet.", currentDomain);
+    if (message) vaultStatus.textContent = message;
+    saveEntryBtn.textContent = known
+      ? msg("popup_update_entry", "Mettre à jour l'entrée")
+      : msg("popup_save", "Enregistrer");
 
-    // Rien a renouveler ni a migrer tant que le site n'est pas dans le carnet.
+    // Rien a renouveler tant que le compte n'est pas dans le carnet.
     refreshChangeButton();
     changePreview.hidden = true;
     pendingChange = null;
@@ -306,8 +385,7 @@ function refreshVault(domain) {
 
 /**
  * Le compteur — renouveler sans changer de clef — fait partie de l'offre
- * complete. La migration v1 vers v2 reste ouverte a tous : c'est une mise a
- * niveau, pas un service.
+ * complete.
  *
  * L'etat sert a annoncer l'offre avant le clic ; c'est le service worker qui
  * refuse, puisque c'est lui qui ecrit le compteur.
@@ -315,37 +393,30 @@ function refreshVault(domain) {
 let canRenew = false;
 
 function refreshChangeButton() {
-  const target = currentMatches[0];
-  changeEntryBtn.hidden = !target;
-  if (!target) return;
-
-  const renew = target.v >= 2;
-  changeEntryBtn.textContent = renew ? "Renouveler" : "Passer en v2";
+  const known = Boolean(currentEntryId);
+  changeEntryBtn.hidden = !known;
   // Jamais desactive : un bouton eteint n'explique rien et ne propose rien.
   // Le service worker refuse et rend le message, qui dit ce que l'offre
   // complete apporte et ou l'obtenir.
-  renewPitch.hidden = !(renew && !canRenew);
-}
-
-/** L'entree visee : celle choisie quand il y en a plusieurs. */
-function selectedEntry() {
-  if (currentMatches.length < 2) return currentMatches[0];
-  return currentMatches[Number(accountSelect.value) || 0];
+  renewPitch.hidden = !known || canRenew;
 }
 
 changeEntryBtn.addEventListener("click", () => {
-  const entry = selectedEntry();
-  if (!entry) return;
+  const id = currentEntryId;
+  if (!id) return;
 
-  const renew = entry.v >= 2;
-  vaultStatus.textContent = "Calcul en cours…";
+  vaultStatus.textContent = msg("popup_computing", "Calcul en cours…");
 
-  browser.runtime.sendMessage({ action: "previewChange", id: entry.id, renew }, (resp) => {
+  browser.runtime.sendMessage({ action: "previewChange", id }, (resp) => {
     if (!resp?.ok) {
-      vaultStatus.textContent = `Échec : ${resp?.error || "inconnu"}`;
+      vaultStatus.textContent = msg(
+        "sync_failed",
+        "Échec : $1",
+        resp?.error || msg("sync_unknown_error", "inconnu"),
+      );
       return;
     }
-    pendingChange = { id: entry.id, renew };
+    pendingChange = { id };
     changeBefore.textContent = resp.before;
     changeAfter.textContent = resp.after;
     changePreview.hidden = false;
@@ -362,62 +433,45 @@ changeCancelBtn.addEventListener("click", () => {
 changeConfirmBtn.addEventListener("click", () => {
   if (!pendingChange) return;
 
-  browser.runtime.sendMessage(
-    { action: "applyChange", id: pendingChange.id, renew: pendingChange.renew },
-    (resp) => {
-      if (!resp?.ok) {
-        vaultStatus.textContent = `Échec : ${resp?.error || "inconnu"}`;
-        return;
-      }
-      const renewed = pendingChange.renew;
-      pendingChange = null;
-      changePreview.hidden = true;
-      vaultStatus.textContent = renewed
-        ? `Entrée renouvelée, compteur ${resp.counter}.`
-        : "Entrée passée en v2.";
-      refreshVault(currentDomain);
-    },
-  );
+  browser.runtime.sendMessage({ action: "applyChange", id: pendingChange.id }, (resp) => {
+    if (!resp?.ok) {
+      vaultStatus.textContent = msg(
+        "sync_failed",
+        "Échec : $1",
+        resp?.error || msg("sync_unknown_error", "inconnu"),
+      );
+      return;
+    }
+    pendingChange = null;
+    changePreview.hidden = true;
+    generatePassword(msg("popup_renewed", "Entrée renouvelée, compteur $1.", resp.counter));
+  });
 });
 
 saveEntryBtn.addEventListener("click", () => {
   if (!currentDomain) {
-    vaultStatus.textContent = "Aucun site détecté.";
+    vaultStatus.textContent = msg("popup_no_site", "Aucun site détecté.");
     return;
   }
 
-  const params = getParams();
-  const charset = {
-    lower: params.minState,
-    upper: params.majState,
-    symbols: params.symState,
-    numbers: params.chiState,
-  };
-  const existing = currentMatches[0];
-
-  // siteKey n'est jamais reecrit : il produit le mot de passe, le modifier
-  // en changerait un deja en service.
-  const entry = existing
-    ? { ...existing, length: Number(params.length), charset }
-    : {
-        id: crypto.randomUUID(),
-        label: currentDomain,
-        siteKey: currentDomain,
-        domains: [currentDomain],
-        login: "",
-        counter: 1,
-        length: Number(params.length),
-        charset,
-        v: 1,
-        updatedAt: new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
-      };
-
-  browser.runtime.sendMessage({ action: "saveEntry", entry }, (resp) => {
+  // Le compte est designe par domaine + identifiant. Le service worker relit
+  // longueur et caracteres des parametres, ne reecrit jamais le siteKey, et
+  // cree une entree v2 meme quand l'ecran est regle en v1.
+  const login = loginInput.value.trim();
+  browser.runtime.sendMessage({ action: "saveSite", domain: currentDomain, login }, (resp) => {
     if (resp && resp.ok) {
-      vaultStatus.textContent = existing ? "Entrée mise à jour." : "Site enregistré.";
-      refreshVault(currentDomain);
+      loginResolved = true;
+      generatePassword(
+        resp.updated
+          ? msg("popup_entry_updated", "Entrée mise à jour.")
+          : msg("popup_account_saved", "Compte enregistré."),
+      );
     } else {
-      vaultStatus.textContent = `Échec : ${resp?.error || "inconnu"}`;
+      vaultStatus.textContent = msg(
+        "sync_failed",
+        "Échec : $1",
+        resp?.error || msg("sync_unknown_error", "inconnu"),
+      );
     }
   });
 });
@@ -431,75 +485,166 @@ function refreshSyncState() {
     if (!connected) syncStatus.textContent = "";
     canRenew = Boolean(resp?.canRenew);
     refreshChangeButton();
+    if (!connected) refreshGoogleButton();
   });
 }
+
+/** Montre « Continuer avec Google » seulement si le navigateur et le service le permettent. */
+function refreshGoogleButton() {
+  browser.runtime.sendMessage({ action: "syncGoogleAvailable" }, (resp) => {
+    syncGoogleBtn.hidden = !resp?.available;
+  });
+}
+
+/** Message d'echec de la connexion Google ; "" pour une annulation. */
+function googleFailure(resp) {
+  if (resp?.cancelled) return "";
+  if (resp?.code === "unavailable") {
+    return msg("sync_google_unavailable", "Connexion Google indisponible.");
+  }
+  if (resp?.code) return msg("sync_google_failed", "La connexion Google a échoué.");
+  return msg("sync_failed", "Échec : $1", resp?.error || msg("sync_unknown_error", "inconnu"));
+}
+
+syncGoogleBtn.addEventListener("click", () => {
+  syncStatus.textContent = msg("sync_connecting", "Connexion…");
+  // Le flux tourne dans le service worker : la popup peut se fermer quand la
+  // fenetre Google prend le focus, la session sera la a la reouverture.
+  const lang = uiLocale().split("-")[0];
+  browser.runtime.sendMessage({ action: "syncGoogleLogin", lang }, (resp) => {
+    if (resp?.ok) {
+      syncStatus.textContent = msg("sync_connected", "Connecté.");
+      refreshSyncState();
+    } else {
+      syncStatus.textContent = googleFailure(resp);
+    }
+  });
+});
 
 syncLoginBtn.addEventListener("click", () => {
   const email = syncEmail.value.trim();
   const password = syncPassword.value;
   if (!email || !password) {
-    syncStatus.textContent = "Renseignez l'adresse et le mot de passe.";
+    syncStatus.textContent = msg(
+      "sync_need_credentials",
+      "Renseignez l'adresse et le mot de passe.",
+    );
     return;
   }
 
-  syncStatus.textContent = "Connexion…";
+  syncStatus.textContent = msg("sync_connecting", "Connexion…");
   browser.runtime.sendMessage({ action: "syncLogin", email, password }, (resp) => {
     if (resp && resp.ok) {
       // Le mot de passe du compte ne reste pas dans le DOM une fois utilise.
       syncPassword.value = "";
-      syncStatus.textContent = "Connecté.";
+      syncStatus.textContent = msg("sync_connected", "Connecté.");
       refreshSyncState();
     } else {
-      syncStatus.textContent = `Échec : ${resp?.error || "inconnu"}`;
+      syncStatus.textContent = msg(
+        "sync_failed",
+        "Échec : $1",
+        resp?.error || msg("sync_unknown_error", "inconnu"),
+      );
     }
   });
 });
 
 syncNowBtn.addEventListener("click", () => {
-  syncStatus.textContent = "Synchronisation…";
+  syncStatus.textContent = msg("sync_running", "Synchronisation…");
   browser.runtime.sendMessage({ action: "syncNow" }, (resp) => {
     if (resp && resp.ok) {
       const conflicts = resp.conflicts?.length
-        ? ` (${resp.conflicts.length} conflit(s) signalé(s))`
+        ? msg("sync_conflicts", " ($1 conflit(s) signalé(s))", resp.conflicts.length)
         : "";
-      syncStatus.textContent = `${resp.entries} entrée(s) synchronisée(s)${conflicts}`;
+      // Au-dela du plafond, le reste ne part pas : le dire, sinon on croit
+      // retrouver sur l'autre appareil ce qui n'y est jamais alle.
+      const local = resp.localOnly
+        ? msg(
+            "sync_local_only",
+            ", $1 restée(s) sur cet appareil (plafond de l'offre gratuite)",
+            resp.localOnly,
+          )
+        : "";
+      const done = msg("sync_done", "$1 entrée(s) synchronisée(s)", resp.entries);
+      syncStatus.textContent = `${done}${local}${conflicts}`;
       refreshVault(currentDomain);
+      // Les reglages par defaut ont pu venir d'un autre appareil.
+      browser.runtime.sendMessage({ action: "getParams" }, (r) => {
+        applyParams((r && r.params) || {});
+      });
     } else {
-      syncStatus.textContent = `Échec : ${resp?.error || "inconnu"}`;
+      syncStatus.textContent = msg(
+        "sync_failed",
+        "Échec : $1",
+        resp?.error || msg("sync_unknown_error", "inconnu"),
+      );
     }
   });
 });
 
 syncLogoutBtn.addEventListener("click", () => {
   browser.runtime.sendMessage({ action: "syncLogout" }, () => {
-    syncStatus.textContent = "Session oubliée sur cet appareil.";
+    syncStatus.textContent = msg("sync_forgotten", "Session oubliée sur cet appareil.");
     refreshSyncState();
   });
 });
 
 function hideError() {
-  errorContainer.style.display = "none";
+  errorContainer.hidden = true;
   error.textContent = "";
 }
 
-function showError() {
-  errorContainer.style.display = "block";
+function showError(message) {
+  error.textContent = message;
+  errorContainer.hidden = false;
 }
 
 function hideResult() {
-  siteContainer.style.display = "none";
+  resultBox.hidden = true;
   site.textContent = "";
-  passwordResultContainer.style.display = "none";
   passwordResult.textContent = "";
-  passwordSecurityContainer.style.display = "none";
   passwordSecurity.textContent = "";
+  copyStatus.textContent = "";
 }
 
 function showResult() {
-  siteContainer.style.display = "block";
-  passwordResultContainer.style.display = "block";
-  passwordSecurityContainer.style.display = "block";
+  resultBox.hidden = false;
+  copyStatus.textContent = "";
 }
+
+/**
+ * Parametres : une seconde vue, derriere la roue dentee.
+ *
+ * Le focus suit la navigation, sinon un utilisateur au clavier ou au lecteur
+ * d'ecran resterait sur un bouton devenu invisible.
+ */
+const mainView = document.getElementById("mainView");
+const settingsView = document.getElementById("settingsView");
+const openSettingsBtn = document.getElementById("openSettings");
+
+function showSettings(open) {
+  mainView.hidden = open;
+  settingsView.hidden = !open;
+  openSettingsBtn.setAttribute("aria-expanded", String(open));
+  if (open) {
+    document.getElementById("settingsTitle").focus();
+  } else {
+    openSettingsBtn.focus();
+  }
+}
+
+openSettingsBtn.addEventListener("click", () => showSettings(true));
+document.getElementById("closeSettings").addEventListener("click", () => showSettings(false));
+settingsView.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    e.preventDefault();
+    showSettings(false);
+  }
+});
+
+document.getElementById("openVault").addEventListener("click", () => {
+  browser.tabs.create({ url: browser.runtime.getURL("vault-page.html") });
+});
 
 document.getElementById("openTransfer").addEventListener("click", () => {
   browser.tabs.create({ url: browser.runtime.getURL("transfer-page.html") });
@@ -517,7 +662,9 @@ const v2Notice = document.getElementById("v2Notice");
 const v2NeverAgain = document.getElementById("v2NoticeNeverAgain");
 
 browser.storage?.local?.get([V2_NOTICE_KEY], (stored) => {
-  if (!stored?.[V2_NOTICE_KEY]) v2Notice.hidden = false;
+  if (stored?.[V2_NOTICE_KEY]) return;
+  v2Notice.hidden = false;
+  document.getElementById("v2NoticeClose").focus();
 });
 
 document.getElementById("v2NoticeClose").addEventListener("click", () => {

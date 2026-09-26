@@ -93,19 +93,41 @@ describe("generation pour une page", () => {
     expect(viaAlias.password).toBe(direct.password);
   });
 
-  it("derive en v2 meme quand l'entree est notee v1", async () => {
-    // Le remplissage automatique ne propose pas de choix : il doit etre
-    // previsible. Un site encore en v1 se genere depuis la popup.
+  it("derive en v1 quand la popup le demande, pour une entree connue", async () => {
+    // Secours pour un site dont le mot de passe n'a pas encore ete change.
     const { worker, storage } = loadWorker();
     const { emptyVault, newEntry, saveVault } = require("../vault");
-    const { generatePasswordV2 } = require("../core-v2");
 
     const vault = emptyVault();
-    vault.entries.push(newEntry("vieux.fr", { domains: ["vieux.fr"], v: 1 }));
+    vault.entries.push(newEntry("vieux.fr", { domains: ["vieux.fr"] }));
     await saveVault(storage, vault);
 
-    const res = await worker.generatePasswordForUrl("https://vieux.fr/login");
-    expect(res.password).toBe(await generatePasswordV2("vieux.fr", "clef", 20));
+    const res = await worker.generatePasswordForUrl("https://vieux.fr/login", 1);
+    const { mdp } = await worker.generatePassword("vieux.fr", "clef", 20, true, true, true, true);
+
+    expect(res.password).toBe(mdp);
+    expect(res.version).toBe(1);
+  });
+
+  it("derive en v1 quand la popup le demande, pour un site inconnu", async () => {
+    const { worker } = loadWorker();
+
+    const res = await worker.generatePasswordForUrl("https://inconnu.fr/login", 1);
+    const { mdp } = await worker.generatePassword("inconnu.fr", "clef", 20, true, true, true, true);
+
+    expect(res.password).toBe(mdp);
+  });
+
+  it("retombe sur la v2 pour une version inattendue", async () => {
+    // Un message mal forme ne doit pas faire basculer en v1 sans le dire.
+    const { worker } = loadWorker();
+    const { generatePasswordV2 } = require("../core-v2");
+
+    for (const version of [undefined, 0, 3, "1", null]) {
+      const res = await worker.generatePasswordForUrl("https://inconnu.fr/login", version);
+      expect(res.password).toBe(await generatePasswordV2("inconnu.fr", "clef", 20));
+      expect(res.version).toBe(2);
+    }
   });
 
   it("derive en v2 quand l'entree est en v2", async () => {
@@ -114,7 +136,7 @@ describe("generation pour une page", () => {
     const { generatePasswordV2 } = require("../core-v2");
 
     const vault = emptyVault();
-    vault.entries.push(newEntry("google.com", { domains: ["google.com"], v: 2 }));
+    vault.entries.push(newEntry("google.com", { domains: ["google.com"] }));
     await saveVault(storage, vault);
 
     const res = await worker.generatePasswordForUrl("https://google.com/login");
@@ -142,18 +164,18 @@ describe("generation pour une page", () => {
   });
 });
 
-describe("renouvellement et migration", () => {
+describe("renouvellement", () => {
   it("prepare le changement sans rien ecrire", async () => {
     const { worker, storage } = loadWorker();
     const { emptyVault, newEntry, saveVault, loadVault } = require("../vault");
 
     const vault = emptyVault();
-    const entry = newEntry("google.com", { domains: ["google.com"], v: 2 });
+    const entry = newEntry("google.com", { domains: ["google.com"] });
     vault.entries.push(entry);
     await saveVault(storage, vault);
 
     const before = await worker.passwordForEntry(entry);
-    const after = await worker.passwordForEntry(entry, entry.counter + 1, entry.v);
+    const after = await worker.passwordForEntry(entry, entry.counter + 1);
 
     // Le nouveau ne sert a rien tant qu'il n'a pas ete pose sur le site, et
     // l'ancien reste celui qui connecte : les deux doivent etre calculables
@@ -162,17 +184,17 @@ describe("renouvellement et migration", () => {
     expect((await loadVault(storage)).entries[0].counter).toBe(1);
   });
 
-  it("migrer change le mot de passe", async () => {
+  it("la v1 demandee par la popup differe de la v2 de l'entree", async () => {
     const { worker } = loadWorker();
     const { newEntry } = require("../vault");
 
     const entry = newEntry("google.com", { domains: ["google.com"] });
 
-    // C'est pourquoi la migration s'affiche avec les deux mots de passe : il
-    // faudra aller changer celui du site.
+    // La v1 ne sert qu'en secours, hors carnet : l'entree reste en v2.
     expect(await worker.passwordForEntry(entry)).not.toBe(
-      await worker.passwordForEntry(entry, entry.counter, 2),
+      await worker.passwordForEntry(entry, entry.counter, 1),
     );
+    expect(entry).not.toHaveProperty("v");
   });
 
   it("le compteur n'a aucun effet en v1", async () => {
@@ -181,8 +203,10 @@ describe("renouvellement et migration", () => {
 
     const entry = newEntry("google.com", { domains: ["google.com"] });
 
-    // D'ou le fait de ne proposer que la migration sur une entree v1.
-    expect(await worker.passwordForEntry(entry)).toBe(await worker.passwordForEntry(entry, 5, 1));
+    // Renouveler n'a de sens qu'en v2.
+    expect(await worker.passwordForEntry(entry, 1, 1)).toBe(
+      await worker.passwordForEntry(entry, 5, 1),
+    );
   });
 });
 

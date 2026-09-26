@@ -31,6 +31,15 @@ struct SiteResolutionTests {
         #expect(out[0].v == 1)
     }
 
+    @Test("Une entrée du carnet se résout toujours en v2")
+    func vaultEntryAlwaysResolvesToV2() {
+        let out = SiteResolution.forDomain(
+            "banque.fr", in: Vault(entries: [VaultEntry(siteKey: "banque.fr")]), length: 20,
+            charset: general)
+
+        #expect(out[0].v == 2)
+    }
+
     @Test("Les réglages enregistrés pour le site sont repris")
     func usesTheRecordedSettings() {
         // Le deuxième problème : ne plus avoir à se souvenir qu'un site
@@ -133,8 +142,7 @@ struct ResolvedGenerationTests {
 
     @Test("Une entrée v2 ne rend pas le mot de passe v1")
     func v2DiffersFromV1() {
-        var entry = VaultEntry(siteKey: "google.com")
-        entry.v = 2
+        let entry = VaultEntry(siteKey: "google.com")
 
         let v1 = PasswordUtils().generatePassword(
             for: SiteResolution(fallbackFor: "google.com", length: 20, charset: general),
@@ -165,8 +173,8 @@ struct ResolvedGenerationTests {
     }
 }
 
-@Suite("Renouvellement et migration")
-struct RenewAndMigrateTests {
+@Suite("Renouvellement")
+struct RenewTests {
 
     private func password(for entry: VaultEntry) -> String {
         PasswordUtils().generatePassword(for: SiteResolution(entry: entry), masterKey: "clef").code
@@ -174,8 +182,7 @@ struct RenewAndMigrateTests {
 
     @Test("Renouveler change le mot de passe d'une entrée v2")
     func renewingChangesAV2Password() {
-        var entry = VaultEntry(siteKey: "google.com")
-        entry.v = 2
+        let entry = VaultEntry(siteKey: "google.com")
 
         var preview = entry
         preview.counter += 1
@@ -188,40 +195,11 @@ struct RenewAndMigrateTests {
         // Modifier l'entrée puis renoncer laisserait la porte ouverte à un
         // carnet enregistré à mi-chemin. Les structures Swift copient, encore
         // faut-il ne pas écrire dans le carnet avant confirmation.
-        var entry = VaultEntry(siteKey: "google.com")
-        entry.v = 2
+        let entry = VaultEntry(siteKey: "google.com")
 
         var preview = entry
         preview.counter = 99
-        preview.v = 1
 
         #expect(entry.counter == 1)
-        #expect(entry.v == 2)
-    }
-
-    @Test("Migrer change le mot de passe")
-    func migratingChangesThePassword() {
-        // C'est pourquoi la migration s'affiche avec les deux mots de passe :
-        // il faudra aller changer celui du site.
-        // v1 explicite : les entrées naissent désormais en v2, seules les
-        // anciennes sont concernées par la migration.
-        let entry = VaultEntry(siteKey: "google.com", v: 1)
-
-        var migrated = entry
-        migrated.v = 2
-
-        #expect(password(for: entry) != password(for: migrated))
-    }
-
-    @Test("Le compteur n'a aucun effet en v1")
-    func theCounterDoesNothingInV1() {
-        // D'où le fait de ne proposer que la migration sur une entrée v1 :
-        // incrémenter ne changerait rien, et le laisser croire serait pire.
-        let entry = VaultEntry(siteKey: "google.com", v: 1)
-
-        var bumped = entry
-        bumped.counter = 5
-
-        #expect(password(for: entry) == password(for: bumped))
     }
 }

@@ -13,10 +13,7 @@
       "strict_min_version": "120.0"
     }
   },
-  "permissions": [
-    "storage",
-    "activeTab"
-  ],
+  "permissions": ["storage", "activeTab", "identity"],
   "icons": {
     "48": "images/48.png",
     "96": "images/96.png",
@@ -24,37 +21,29 @@
     "256": "images/256.png",
     "512": "images/512.png"
   },
-  "host_permissions": [
-    "<all_urls>",
-    "https://*/*",
-    "http://*/*"
-  ],
+  "host_permissions": ["<all_urls>", "https://*/*", "http://*/*"],
   "web_accessible_resources": [
     {
-      "resources": [
-        "images/128.png",
-        "images/copy.svg",
-        "data/public_suffix_list.dat"
-      ],
-      "matches": [
-        "<all_urls>"
-      ]
+      "resources": ["images/128.png", "images/copy.svg", "data/public_suffix_list.dat"],
+      "matches": ["<all_urls>"]
     }
   ],
   "background": {
     "scripts": [
+      "vault.js",
+      "transfer.js",
+      "sync.js",
+      "core-v2.js",
+      "vault-lock.js",
+      "vault-session.js",
+      "google-auth.js",
       "background.js"
-    ],
-    "type": "module"
+    ]
   },
   "content_scripts": [
     {
-      "matches": [
-        "<all_urls>"
-      ],
-      "js": [
-        "content.js"
-      ],
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
       "run_at": "document_idle",
       "all_frames": true
     }

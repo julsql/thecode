@@ -38,6 +38,11 @@ struct MainView: View {
     @AppStorage("darkMode", store: UserDefaults(suiteName: appGroupID)) var darkMode: String = "SYSTEM"
 
     @State private var siteName: String = ""
+    /// Identifiant du compte : il entre dans la dérivation v2, vide = sans.
+    @State private var loginName: String = ""
+    /// Dernier identifiant prérempli depuis le carnet, pour ne jamais écraser
+    /// ce que l'utilisatrice a tapé elle-même.
+    @State private var suggestedLogin: String = ""
     @State private var generatedValue: String = ""
     @State private var securityLabel: String = ""
     @State private var securityColor: Color = .primary
@@ -59,6 +64,14 @@ struct MainView: View {
     @State private var showNoPasswordAlert: Bool = false
     @State private var showVault: Bool = false
     @State private var vaultSaveMessage: String?
+    /// Entrée du carnet pour le compte affiché (domaine + identifiant) : le
+    /// bouton dit s'il crée une entrée ou met à jour celle qui existe.
+    @State private var vaultEntry: VaultEntry?
+    /// Proposition d'enregistrer au carnet un site qu'il ne connaît pas.
+    @State private var showSaveProposal = false
+    /// Comptes pour lesquels la proposition a été refusée, le temps de la
+    /// session : la reposer à chaque copie la rendrait pénible.
+    @State private var declinedProposals: Set<String> = []
 
     /// Clef maîtresse déjà dérivée, et la clef dont elle vient.
     ///
@@ -153,18 +166,16 @@ struct MainView: View {
 
     private var v2NoticeSheet: some View {
         let intro = L10n.t(
-            "Les mots de passe se calculent désormais avec un nouvel algorithme (v2). Ceux "
-                + "déjà posés sur vos sites viennent de l'ancien et n'ont pas changé.",
-            "Passwords are now computed with a new algorithm (v2). The ones already set on "
-                + "your sites came from the old one and have not changed.")
+            "Les mots de passe se calculent désormais avec un nouvel algorithme "
+                + "(v2). Veuillez migrer vos mots de passe dans ce nouvel algorithme.",
+            "Passwords are now computed with a new algorithm (v2). Please migrate "
+                + "your passwords to this new algorithm.")
         let detail = L10n.t(
-            "Le remplissage automatique utilise le nouveau. Pour un site que vous n'avez pas "
-                + "encore mis à jour, générez avec l'ancien (v1) depuis la barre d'outils, ou "
-                + "passez l'entrée en v2 depuis le carnet après avoir changé le mot de passe "
-                + "sur le site.",
-            "Autofill uses the new one. For a site you have not updated yet, generate with "
-                + "the old algorithm (v1) from the toolbar, or move the entry to v2 from the "
-                + "vault once you have changed the password on the site.")
+            "Le remplissage automatique utilise le nouveau : pour un site que vous "
+                + "n'avez pas encore mis à jour, générez le mot de passe en v1 depuis "
+                + "l'application avec l'ancien algorithme.",
+            "Autofill uses the new one: for a site you have not updated yet, "
+                + "generate the password in v1 from the app with the old algorithm.")
 
         // Pas de ScrollView : elle n'a pas de hauteur propre, ce qui obligeait à
         // fixer celle de la fenêtre — d'où un grand vide sous un texte court.
@@ -246,15 +257,14 @@ struct MainView: View {
                 .buttonStyle(.borderless)
                 .help(L10n.t("Partager", "Share"))
 
-                // Le carnet dit sur quels sites on a un compte et sous quel
-                // identifiant : aussi sensible qu'un coffre de mots de passe,
-                // donc jamais accessible sans authentification.
-                Button(action: { if unlocked { showVault = true } }) {
+                // Le carnet a son propre verrou et partage la session de la
+                // clef (voir vault-lock.md) : c'est lui qui demande le
+                // déverrouillage, clef verrouillée ou non.
+                Button(action: { showVault = true }) {
                     Image(systemName: "list.bullet.rectangle")
                 }
                 .buttonStyle(.borderless)
                 .help(L10n.t("Carnet", "Vault"))
-                .disabled(!unlocked)
 
                 // Le mode en cours se lit dans la barre, comme le thème :
                 // c'est lui qui décide quel mot de passe sort.
@@ -263,10 +273,10 @@ struct MainView: View {
                         .font(.footnote.weight(.bold))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
-                        .background(useV1 ? Color.orange.opacity(0.25) : Color.clear)
+                        .background(useV1 ? AlgoTheme.v1Pink.opacity(0.25) : Color.clear)
                         .overlay(
                             RoundedRectangle(cornerRadius: 6)
-                                .stroke(Color.accentColor.opacity(0.6), lineWidth: 1))
+                                .stroke(AlgoTheme.tint(usesV1: useV1).opacity(0.6), lineWidth: 1))
                         .cornerRadius(6)
                 }
                 .buttonStyle(.borderless)
@@ -347,6 +357,20 @@ struct MainView: View {
                         TextField(L10n.t("Nom du site", "Website name"), text: $siteName)
                             .textFieldStyle(RoundedBorderTextFieldStyle())
 
+                        TextField(L10n.t("Identifiant (facultatif)", "Login (optional)"),
+                                  text: $loginName)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .disableAutocorrection(true)
+
+                        // La v1 ne connaît que le site et la clef : le dire
+                        // plutôt que de laisser croire que l'identifiant compte.
+                        if useV1 && !loginName.isEmpty {
+                            Text(L10n.t("L'identifiant n'est pas utilisé en v1.",
+                                        "The login is not used in v1."))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+
                         if !generatedValue.isEmpty {
                             VStack(alignment: .leading, spacing: 4) {
                                 HStack {
@@ -370,12 +394,17 @@ struct MainView: View {
                                     .foregroundColor(securityColor)
 
                                 Button(action: saveToVault) {
-                                    HStack {
-                                        Image(systemName: "square.and.arrow.down")
-                                        Text(L10n.t("Enregistrer les réglages au carnet",
-                                                    "Save settings to vault"))
-                                    }
+                                    Label(
+                                        vaultEntry == nil
+                                            ? L10n.t("Enregistrer les réglages au carnet",
+                                                     "Save settings to vault")
+                                            : L10n.t("Mettre à jour l'entrée du carnet",
+                                                     "Update the vault entry"),
+                                        systemImage: vaultEntry == nil
+                                            ? "square.and.arrow.down"
+                                            : "arrow.triangle.2.circlepath")
                                 }
+                                .buttonStyle(.bordered)
                                 .padding(.top, 4)
 
                                 if let vaultSaveMessage {
@@ -398,8 +427,24 @@ struct MainView: View {
                 }
             }
             .formStyle(.grouped)
+            // Sur le Form : deux .alert sur une même vue ne s'affichent pas
+            // toujours tous les deux.
+            .alert(
+                L10n.t("Enregistrer ce site dans le carnet ?", "Save this site to the vault?"),
+                isPresented: $showSaveProposal
+            ) {
+                Button(L10n.t("Enregistrer", "Save")) { saveToVault() }
+                Button(L10n.t("Pas maintenant", "Not now"), role: .cancel) {
+                    declinedProposals.insert(
+                        SaveProposal.key(site: siteName, login: trimmedLogin))
+                }
+            } message: {
+                Text(saveProposalMessage)
+            }
         }
         .frame(minWidth: 520, minHeight: 600)
+        // Toute l'interface passe en rose en v1 : l'exception doit se voir.
+        .tint(AlgoTheme.tint(usesV1: useV1))
         .preferredColorScheme(preferredScheme)
         .onAppear {
             if !v2NoticeSeen { showV2Notice = true }
@@ -407,6 +452,7 @@ struct MainView: View {
             restoreSession()
             lengthDraft = String(lengthNumber)
             refreshFingerprint(encodingKey)
+            refreshVaultEntry()
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didResignActiveNotification)) { _ in
             // Dès qu'on bascule sur une autre app : re-masquage de la clé
@@ -431,6 +477,7 @@ struct MainView: View {
         .onChange(of: lengthNumber) { newVal in
             // Le slider (ou un clamp) a bougé la valeur : on réaligne le champ.
             if lengthDraft != String(newVal) { lengthDraft = String(newVal) }
+            PasswordSettings.touch(UserDefaults(suiteName: appGroupID))
             generatePassword()
         }
         .onChange(of: lengthDraft) { newVal in
@@ -443,19 +490,44 @@ struct MainView: View {
         .onChange(of: lengthFieldFocused) { focused in
             if !focused { commitLengthDraft() }
         }
-        .onChange(of: minState) { _ in generatePassword() }
-        .onChange(of: majState) { _ in generatePassword() }
-        .onChange(of: symState) { _ in generatePassword() }
-        .onChange(of: chiState) { _ in generatePassword() }
-        .onChange(of: siteName) { _ in
+        .onChange(of: minState) { _ in
+            PasswordSettings.touch(UserDefaults(suiteName: appGroupID))
+            generatePassword()
+        }
+        .onChange(of: majState) { _ in
+            PasswordSettings.touch(UserDefaults(suiteName: appGroupID))
+            generatePassword()
+        }
+        .onChange(of: symState) { _ in
+            PasswordSettings.touch(UserDefaults(suiteName: appGroupID))
+            generatePassword()
+        }
+        .onChange(of: chiState) { _ in
+            PasswordSettings.touch(UserDefaults(suiteName: appGroupID))
+            generatePassword()
+        }
+        .onChange(of: siteName) { newSite in
             vaultSaveMessage = nil
+            prefillLogin(for: newSite)
+            refreshVaultEntry()
+            generatePassword()
+        }
+        .onChange(of: loginName) { _ in
+            vaultSaveMessage = nil
+            refreshVaultEntry()
             generatePassword()
         }
         .sheet(isPresented: $showInfoSheet) {
             InfoSheet(isPresented: $showInfoSheet)
         }
         .sheet(isPresented: $showV2Notice) { v2NoticeSheet }
-        .sheet(isPresented: $showVault) {
+        // Au retour du carnet : la session est commune (vault-lock.md), le
+        // déverrouiller a pu ouvrir la clef ou le verrouiller la refermer ; et
+        // il a pu gagner ou perdre l'entrée affichée.
+        .sheet(isPresented: $showVault, onDismiss: {
+            restoreSession()
+            refreshVaultEntry()
+        }) {
             VaultScreen(masterKey: encodingKey, isPresented: $showVault)
         }
         .alert(L10n.t("Aucun mot de passe à partager", "No password to share"), isPresented: $showNoPasswordAlert) {
@@ -550,18 +622,15 @@ struct MainView: View {
         let site = siteName.trimmingCharacters(in: .whitespaces)
         guard !site.isEmpty else { return }
 
+        // Le carnet n'admet que la v2 : enregistrer depuis l'écran réglé en v1
+        // crée ou garde une entrée v2, jamais l'inverse.
+        // Apparié sur domaine + identifiant : un autre compte du même site est
+        // une autre entrée, puisque l'identifiant change le mot de passe.
         var vault = VaultStore.load()
-        var entry = vault.upsert(
-            site: site, length: lengthNumber,
+        let entry = vault.upsert(
+            site: site, login: trimmedLogin, length: lengthNumber,
             charset: Charset(
                 lower: minState, upper: majState, symbols: symState, numbers: chiState))
-
-        // Enregistrer un mot de passe généré en v1 sous une entrée v2 donnerait
-        // un autre mot de passe à la relecture.
-        if let index = vault.entries.firstIndex(where: { $0.id == entry.id }) {
-            vault.entries[index].v = useV1 ? 1 : 2
-            entry = vault.entries[index]
-        }
 
         do {
             try VaultStore.save(vault)
@@ -570,21 +639,51 @@ struct MainView: View {
                 "Le carnet n'a pas pu être enregistré.", "The vault could not be saved.")
             return
         }
+        let updated = vaultEntry != nil
+        vaultEntry = entry
 
         // Une entrée existante garde son siteKey : le réécrire changerait un
         // mot de passe déjà en service. On le dit plutôt que de laisser croire
         // que le mot de passe affiché est celui de l'entrée.
-        vaultSaveMessage =
-            entry.siteKey == site
-            ? L10n.t("« \(site) » enregistré au carnet.", "\"\(site)\" saved to the vault.")
-            : L10n.t(
+        if entry.siteKey != site {
+            vaultSaveMessage = L10n.t(
                 "« \(site) » enregistré. Attention : cette entrée génère son mot de passe "
                     + "depuis « \(entry.siteKey) », pas depuis ce que vous avez saisi.",
                 "\"\(site)\" saved. Careful: this entry generates its password from "
                     + "\"\(entry.siteKey)\", not from what you typed.")
+        } else if updated {
+            vaultSaveMessage = L10n.t(
+                "Entrée « \(site) » mise à jour.", "\"\(site)\" entry updated.")
+        } else {
+            vaultSaveMessage = L10n.t(
+                "« \(site) » enregistré au carnet.", "\"\(site)\" saved to the vault.")
+        }
+    }
+
+    /// Relit l'entrée du compte affiché, appariée comme `Vault.upsert` : même
+    /// domaine, même identifiant.
+    private func refreshVaultEntry() {
+        let site = siteName.trimmingCharacters(in: .whitespaces)
+        let login = trimmedLogin
+        vaultEntry = site.isEmpty
+            ? nil
+            : VaultStore.load().findAll(domain: site).first { ($0.login ?? "") == login }
     }
 
     // MARK: - Sécurité
+
+    /// L'identifiant tel qu'il entre dans la dérivation et au carnet.
+    private var trimmedLogin: String {
+        loginName.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Reprend l'identifiant que le carnet connaît pour ce site.
+    private func prefillLogin(for site: String) {
+        let suggestion = VaultStore.load().suggestedLogin(for: site)
+        loginName = Vault.prefilledLogin(
+            typed: loginName, previousSuggestion: suggestedLogin, suggestion: suggestion)
+        suggestedLogin = suggestion ?? ""
+    }
 
     private func localizedSecurityLabel(_ frenchLabel: String) -> String {
         guard !L10n.isFrench else { return frenchLabel }
@@ -606,6 +705,28 @@ struct MainView: View {
         let pb = NSPasteboard.general
         pb.clearContents()
         pb.setString(generatedValue, forType: .string)
+        proposeSaveIfNeeded()
+    }
+
+    /// Propose d'enregistrer le site quand le mot de passe vient d'être copié.
+    ///
+    /// La copie est le moment où le mot de passe sert : proposer à chaque
+    /// frappe interromprait la saisie du nom du site.
+    private func proposeSaveIfNeeded() {
+        showSaveProposal = SaveProposal.shouldPropose(
+            site: siteName, login: trimmedLogin, in: VaultStore.load(),
+            isLinked: SyncCredentialsStore.load() != nil, usesV1: useV1,
+            declined: declinedProposals)
+    }
+
+    private var saveProposalMessage: String {
+        let site = siteName.trimmingCharacters(in: .whitespaces)
+        let shown = trimmedLogin.isEmpty ? site : "\(site) · \(trimmedLogin)"
+        return L10n.t(
+            "« \(shown) » n'est pas dans votre carnet. Ses réglages seront synchronisés "
+                + "avec vos autres appareils, jamais le mot de passe.",
+            "\"\(shown)\" is not in your vault. Its settings will sync to your other "
+                + "devices, never the password.")
     }
 
     // MARK: - Génération
@@ -613,13 +734,13 @@ struct MainView: View {
     private func authenticateForGeneration() {
         let context = LAContext()
         var error: NSError?
-        guard context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics,
+        guard context.canEvaluatePolicy(.deviceOwnerAuthentication,
                                         error: &error) else {
             return
         }
         let reason = L10n.t("Authentifiez-vous pour générer un mot de passe",
                             "Authenticate to generate a password")
-        context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics,
+        context.evaluatePolicy(.deviceOwnerAuthentication,
                                localizedReason: reason) { success, _ in
             DispatchQueue.main.async {
                 if success {
@@ -687,13 +808,14 @@ struct MainView: View {
         generationTicket += 1
         let ticket = generationTicket
         let site = siteName
+        let login = trimmedLogin
         let key = encodingKey
         let reuse = masterV2For == key ? masterV2 : nil
 
         Task.detached {
             let derived = reuse ?? (try? CoreV2.deriveMasterKey(key))
             let result = utils.generatePasswordV2(
-                masterKey: key, siteKey: site, master: derived)
+                masterKey: key, siteKey: site, login: login, master: derived)
 
             await MainActor.run {
                 // Une réponse arrivée après une frappe plus récente

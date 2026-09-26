@@ -82,6 +82,41 @@ async function syncLogin(endpoint, email, password, deviceLabel = "extension") {
   };
 }
 
+/** Corps de POST /v1/auth/google : le nonce lie l'id_token a cette demande. */
+function googleSignInBody(idToken, nonce, lang, deviceLabel = "extension") {
+  return {
+    id_token: idToken,
+    nonce,
+    lang: String(lang || "en").slice(0, 5),
+    device_label: deviceLabel,
+  };
+}
+
+/** Echange un id_token Google contre une session, comme syncLogin. */
+async function syncGoogleLogin(endpoint, idToken, nonce, lang, deviceLabel = "extension") {
+  const body = await syncRequest(`${endpoint}/v1/auth/google`, {
+    payload: googleSignInBody(idToken, nonce, lang, deviceLabel),
+  });
+  return {
+    endpoint,
+    accessToken: body.access_token,
+    refreshToken: body.refresh_token,
+  };
+}
+
+/**
+ * Client Google (web) publie par le service, ou "" s'il n'en a pas ou ne
+ * repond pas : le bouton Google reste alors cache.
+ */
+async function syncGoogleClientId(endpoint) {
+  try {
+    const body = await syncRequest(`${endpoint}/v1/auth/registration`);
+    return typeof body?.googleClientId === "string" ? body.googleClientId : "";
+  } catch {
+    return "";
+  }
+}
+
 async function syncRegister(endpoint, email, password, inviteCode = "") {
   const body = await syncRequest(`${endpoint}/v1/auth/register`, {
     payload: { email, password, invite_code: inviteCode },
@@ -141,19 +176,15 @@ async function withFreshToken(session, call) {
   }
 }
 
-async function encryptEntry(entry, key) {
+/** Chiffre une valeur JSON avec la clef de transfert : `{ nonce, blob }`. */
+async function encryptBlob(value, key) {
   const nonce = crypto.getRandomValues(new Uint8Array(12));
-  const plain = new TextEncoder().encode(JSON.stringify(entry));
+  const plain = new TextEncoder().encode(JSON.stringify(value));
   const cipher = await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce }, key, plain);
-  return {
-    entry_id: entry.id,
-    nonce: b64e(nonce),
-    blob: b64e(cipher),
-    deleted: Boolean(entry.deleted),
-  };
+  return { nonce: b64e(nonce), blob: b64e(cipher) };
 }
 
-async function decryptEntry(row, key) {
+async function decryptBlob(row, key) {
   let plain;
   try {
     plain = await crypto.subtle.decrypt(
@@ -167,6 +198,18 @@ async function decryptEntry(row, key) {
     );
   }
   return JSON.parse(new TextDecoder().decode(plain));
+}
+
+async function encryptEntry(entry, key) {
+  return {
+    entry_id: entry.id,
+    ...(await encryptBlob(entry, key)),
+    deleted: Boolean(entry.deleted),
+  };
+}
+
+function decryptEntry(row, key) {
+  return decryptBlob(row, key);
 }
 
 /**
@@ -198,15 +241,98 @@ async function syncVault(vault, masterKey, session) {
 
   const { vault: merged, conflicts } = mergeVaults(vault, remote);
 
+  // Au-dela du plafond, le reste du carnet ne part pas : il reste propre a
+  // l'appareil. Un serveur qui ne dit pas son plafond recoit tout.
+  const { push, localOnly } =
+    typeof pulled.result.max_entries === "number"
+      ? selectForPush(
+          merged,
+          pulled.result.entries.map((row) => row.entry_id),
+          pulled.result.max_entries,
+        )
+      : { push: merged.entries, localOnly: [] };
+
   const payload = {
     base_revision: pulled.result.revision,
-    entries: await Promise.all(merged.entries.map((e) => encryptEntry(e, key))),
+    entries: await Promise.all(push.map((e) => encryptEntry(e, key))),
   };
   const pushed = await withFreshToken(session, (token) =>
     syncRequest(`${session.endpoint}/v1/vault`, { payload, token }),
   );
 
-  return { vault: merged, conflicts, session: pushed.session };
+  return { vault: merged, conflicts, localOnly: localOnly.length, session: pushed.session };
+}
+
+const SETTINGS_MIN_LENGTH = 4;
+const SETTINGS_MAX_LENGTH = 40;
+
+/**
+ * Valide des reglages par defaut venus d'ailleurs (shared/spec/default-settings.md).
+ * Rend null pour une valeur inutilisable : longueur absente, aucun jeu coche.
+ */
+function normalizeSettings(raw) {
+  if (!raw || typeof raw !== "object" || !raw.charset || typeof raw.charset !== "object") {
+    return null;
+  }
+  const length = Number.parseInt(raw.length, 10);
+  if (Number.isNaN(length)) return null;
+  const charset = {
+    lower: raw.charset.lower === true,
+    upper: raw.charset.upper === true,
+    symbols: raw.charset.symbols === true,
+    numbers: raw.charset.numbers === true,
+  };
+  if (!Object.values(charset).some(Boolean)) return null;
+  return {
+    length: Math.min(SETTINGS_MAX_LENGTH, Math.max(SETTINGS_MIN_LENGTH, length)),
+    charset,
+    updatedAt: typeof raw.updatedAt === "string" ? raw.updatedAt : "",
+  };
+}
+
+function settingsTime(updatedAt) {
+  const t = Date.parse(updatedAt || "");
+  return Number.isNaN(t) ? -Infinity : t;
+}
+
+/**
+ * Synchronise les reglages par defaut, apres le carnet.
+ *
+ * Tirer, garder la valeur la plus recente (a egalite, la distante), puis
+ * pousser si la locale l'etait. Un blob indechiffrable (autre clef maitresse)
+ * est ignore : ni les reglages locaux ni le distant ne sont ecrases.
+ * Des reglages locaux jamais modifies (sans `updatedAt`) ne sont pas pousses.
+ *
+ * Rend `{ settings, applied, session }` : `applied` dit s'il faut appliquer
+ * `settings` localement.
+ */
+async function syncSettings(local, masterKey, session) {
+  const key = await deriveTransferKey(masterKey);
+  const url = `${session.endpoint}/v1/settings`;
+
+  const pulled = await withFreshToken(session, (token) => syncRequest(url, { token }));
+  session = pulled.session;
+
+  if (pulled.result) {
+    let remote;
+    try {
+      remote = normalizeSettings(await decryptBlob(pulled.result, key));
+    } catch {
+      remote = null;
+    }
+    if (!remote) return { settings: local, applied: false, session };
+    if (settingsTime(remote.updatedAt) >= settingsTime(local.updatedAt)) {
+      return { settings: remote, applied: true, session };
+    }
+  }
+
+  if (!local.updatedAt) return { settings: local, applied: false, session };
+
+  const payload = await encryptBlob(local, key);
+  const pushed = await withFreshToken(session, (token) =>
+    syncRequest(url, { payload, token, method: "PUT" }),
+  );
+  return { settings: local, applied: false, session: pushed.session };
 }
 
 if (typeof module !== "undefined") {
@@ -219,7 +345,12 @@ if (typeof module !== "undefined") {
     clearSession,
     syncLogin,
     syncRegister,
+    googleSignInBody,
+    syncGoogleLogin,
+    syncGoogleClientId,
     syncVault,
+    syncSettings,
+    normalizeSettings,
     syncAccountPlan,
     isPaidPlan,
   };

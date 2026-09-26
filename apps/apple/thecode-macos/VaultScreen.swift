@@ -11,6 +11,7 @@
 //  n'a pas de barre de navigation, les actions vont dans une barre à elle.
 //
 
+import AppKit
 import SwiftUI
 
 struct VaultScreen: View {
@@ -32,6 +33,23 @@ struct VaultScreen: View {
     @State private var endpoint = Sync.defaultEndpoint
     @State private var email = ""
     @State private var password = ""
+    @State private var isGoogleWorking = false
+
+    /// `nil` tant que l'identifiant client n'est pas renseigné : pas de bouton.
+    private let google = GoogleAuth.configured()
+
+    /// Neuf à chaque présentation ; repart déverrouillé tant que la session
+    /// commune avec la clef tient (voir `VaultLockController`).
+    @StateObject private var lock = VaultLockController()
+    @State private var showLockSettings = false
+
+    /// Entrée ouverte en détail. Relue dans le carnet à chaque rendu : un
+    /// renouvellement doit s'y voir sans rouvrir l'écran.
+    @State private var selectedID: String?
+
+    private var selectedEntry: VaultEntry? {
+        vault.entries.first { $0.id == selectedID && $0.deleted != true }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -41,21 +59,33 @@ struct VaultScreen: View {
 
                 Spacer()
 
-                if isWorking {
-                    ProgressView().controlSize(.small)
-                }
+                if lock.isUnlocked {
+                    if isWorking {
+                        ProgressView().controlSize(.small)
+                    }
 
-                if isLinked {
-                    Button(L10n.t("Délier", "Unlink"), action: unlink)
-                        .buttonStyle(.borderless)
-                }
+                    if isLinked {
+                        Button(L10n.t("Délier", "Unlink"), action: unlink)
+                            .buttonStyle(.borderless)
+                    } else {
+                        // Seule l'icône de synchronisation menait à la
+                        // connexion, sans que rien ne le dise.
+                        Button(L10n.t("Se connecter", "Sign in")) { showSignIn = true }
+                    }
 
-                Button(action: startSync) {
-                    Image(systemName: "arrow.triangle.2.circlepath")
+                    Button { showLockSettings = true } label: {
+                        Image(systemName: "lock")
+                    }
+                    .buttonStyle(.borderless)
+                    .help(L10n.t("Verrou du carnet", "Vault lock"))
+
+                    Button(action: startSync) {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                    }
+                    .buttonStyle(.borderless)
+                    .disabled(isWorking)
+                    .help(L10n.t("Synchroniser", "Sync"))
                 }
-                .buttonStyle(.borderless)
-                .disabled(isWorking)
-                .help(L10n.t("Synchroniser", "Sync"))
 
                 Button(L10n.t("Fermer", "Close")) { isPresented = false }
                     .keyboardShortcut(.cancelAction)
@@ -66,48 +96,13 @@ struct VaultScreen: View {
 
             Divider()
 
-            if let status {
-                Text(status)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
-                    .padding(.horizontal)
-                    .padding(.vertical, 8)
+            // Le verrou protège l'écran de gestion, pas les données : le
+            // remplissage et la génération lisent le carnet sans lui.
+            if lock.isUnlocked {
+                unlockedContent
+            } else {
+                VaultLockView(lock: lock)
             }
-
-            // La synchronisation est la principale raison de créer un compte,
-            // et rien ne le disait tant qu'aucun n'était lié. Aucune mention
-            // d'offre ni de prix : les règles des magasins d'applications
-            // interdisent d'orienter vers un paiement.
-            if !isLinked {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(L10n.t("Synchronisez votre carnet", "Sync your vault"))
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-
-                    Text(
-                        L10n.t(
-                            "Gardez votre carnet à jour entre vos appareils. Il est chiffré "
-                                + "sur cet appareil avant d'être envoyé : le serveur ne peut "
-                                + "lire ni vos sites, ni vos identifiants.",
-                            "Keep your vault up to date across your devices. It is encrypted "
-                                + "on this device before it is sent: the server can read "
-                                + "neither your sites nor your logins.")
-                    )
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                    Link(L10n.t("Créer un compte", "Create an account"), destination: accountURL)
-                        .font(.footnote)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 20)
-                .padding(.bottom, 12)
-            }
-
-            VaultView(vault: vault, onSelect: propose)
         }
         .frame(minWidth: 420, minHeight: 440)
         .alert(pending?.title ?? "", isPresented: Binding(
@@ -143,13 +138,119 @@ struct VaultScreen: View {
                     Change it on the site, then confirm.
                     """))
         }
-        .onAppear { vault = VaultStore.load() }
+        .onAppear {
+            lock.resume()
+            vault = VaultStore.load()
+        }
         .sheet(isPresented: $showSignIn) { signInSheet }
         .sheet(isPresented: $showTransfer) {
             // Le QR transporte le carnet sans serveur : c'est l'option qui
             // rend la synchronisation facultative.
             TransferView(masterKey: masterKey, isPresented: $showTransfer)
                 .onDisappear { vault = VaultStore.load() }
+        }
+        .sheet(isPresented: $showLockSettings) {
+            VaultLockSettingsView(lock: lock) { showLockSettings = false }
+        }
+        // Session : fermer la feuille ou passer à une autre app fait courir
+        // les 3 minutes de grâce de la clef, sans verrouiller.
+        .onReceive(
+            NotificationCenter.default.publisher(for: NSApplication.didResignActiveNotification)
+        ) { _ in
+            lock.leave()
+        }
+        .onReceive(
+            NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)
+        ) { _ in
+            lock.resume()
+        }
+        .onDisappear { lock.leave() }
+        .onChange(of: lock.isUnlocked) { _, unlocked in
+            if unlocked {
+                // Un oubli a pu effacer le carnet entre-temps.
+                vault = VaultStore.load()
+            } else {
+                // Rien de ce qui était ouvert ne doit rester par-dessus le verrou.
+                showSignIn = false
+                showTransfer = false
+                showLockSettings = false
+                selectedID = nil
+                pending = nil
+                status = nil
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var unlockedContent: some View {
+        if let status {
+            Text(status)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+        }
+
+        // La synchronisation est la principale raison de créer un compte,
+        // et rien ne le disait tant qu'aucun n'était lié. Aucune mention
+        // d'offre ni de prix : les règles des magasins d'applications
+        // interdisent d'orienter vers un paiement.
+        if !isLinked {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(L10n.t("Synchronisez votre carnet", "Sync your vault"))
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+
+                Text(
+                    L10n.t(
+                        "Gardez votre carnet à jour entre vos appareils. Il est chiffré "
+                            + "sur cet appareil avant d'être envoyé : le serveur ne peut "
+                            + "lire ni vos sites, ni vos identifiants.",
+                        "Keep your vault up to date across your devices. It is encrypted "
+                            + "on this device before it is sent: the server can read "
+                            + "neither your sites nor your logins.")
+                )
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 12) {
+                    Button(L10n.t("Se connecter", "Sign in")) { showSignIn = true }
+                        .controlSize(.small)
+                    Link(L10n.t("Créer un compte", "Create an account"), destination: accountURL)
+                        .font(.footnote)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 12)
+        }
+
+        if let entry = selectedEntry {
+            // Sur place plutôt qu'en feuille par-dessus la feuille.
+            HStack {
+                Button {
+                    selectedID = nil
+                } label: {
+                    Label(L10n.t("Carnet", "Vault"), systemImage: "chevron.left")
+                }
+                .buttonStyle(.borderless)
+
+                Spacer()
+
+                Text(VaultEntryDetailView.label(of: entry))
+                    .font(.headline)
+
+                Spacer()
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+
+            VaultEntryDetailView(entry: entry, onRenew: propose, onDelete: delete)
+        } else {
+            VaultView(vault: vault, onSelect: { selectedID = $0.id })
         }
     }
 
@@ -198,6 +299,16 @@ struct VaultScreen: View {
                 .font(.callout)
 
             HStack {
+                if google != nil {
+                    Button(
+                        L10n.t("Continuer avec Google", "Continue with Google"),
+                        action: signInWithGoogle
+                    )
+                    .disabled(endpoint.isEmpty || isGoogleWorking)
+                    if isGoogleWorking {
+                        ProgressView().controlSize(.small)
+                    }
+                }
                 Spacer()
                 Button(L10n.t("Annuler", "Cancel")) { showSignIn = false }
                     .keyboardShortcut(.cancelAction)
@@ -211,15 +322,14 @@ struct VaultScreen: View {
     }
 
 
-    // MARK: - Renouvellement et migration
+    // MARK: - Renouvellement
 
-    /// Ce qui est proposé sur une entrée, et ce qu'elle deviendrait.
+    /// Le renouvellement proposé sur une entrée, et ce qu'elle deviendrait.
     ///
-    /// Les deux actions ne sont jamais offertes ensemble : le compteur n'entre
-    /// pas dans la dérivation v1, et une entrée v2 n'a plus rien à migrer.
+    /// Le carnet n'admet que la v2 : il n'y a plus rien à migrer, seul le
+    /// compteur peut avancer.
     private struct PendingChange: Identifiable {
         let entry: VaultEntry
-        let isRenewal: Bool
         let before: String
         let after: String
 
@@ -227,9 +337,7 @@ struct VaultScreen: View {
 
         var title: String {
             let label = entry.label.flatMap { $0.isEmpty ? nil : $0 } ?? entry.siteKey
-            return isRenewal
-                ? L10n.t("Renouveler « \(label) »", "Renew \"\(label)\"")
-                : L10n.t("Passer « \(label) » en v2", "Move \"\(label)\" to v2")
+            return L10n.t("Renouveler « \(label) »", "Renew \"\(label)\"")
         }
     }
 
@@ -256,14 +364,13 @@ struct VaultScreen: View {
         // il ne renvoie nulle part : les règles de l'App Store interdisent
         // d'orienter vers un paiement hors de leur système, et une app qui
         // vend depuis un écran de carnet se ferait refuser.
-        if entry.v >= 2 && !renewAllowed {
+        if !renewAllowed {
             status = L10n.t(
                 "Le renouvellement n'est pas activé sur ce compte.",
                 "Renewal is not enabled on this account.")
             return
         }
 
-        let isRenewal = entry.v >= 2
         isWorking = true
         status = L10n.t("Calcul en cours…", "Computing…")
 
@@ -278,14 +385,13 @@ struct VaultScreen: View {
             // Sur une copie : modifier l'entrée puis renoncer laisserait la
             // porte ouverte à un carnet enregistré à mi-chemin.
             var preview = entry
-            if isRenewal { preview.counter += 1 } else { preview.v = 2 }
+            preview.counter += 1
             let after = PasswordUtils().generatePassword(
                 for: SiteResolution(entry: preview), masterKey: masterKey
             ).code
 
             await MainActor.run {
-                pending = PendingChange(
-                    entry: entry, isRenewal: isRenewal, before: before, after: after)
+                pending = PendingChange(entry: entry, before: before, after: after)
                 isWorking = false
                 status = nil
             }
@@ -297,11 +403,7 @@ struct VaultScreen: View {
             return
         }
 
-        if change.isRenewal {
-            vault.entries[index].counter += 1
-        } else {
-            vault.entries[index].v = 2
-        }
+        vault.entries[index].counter += 1
         // Sans réhorodatage, la fusion ferait gagner l'autre appareil et le
         // changement serait perdu à la synchronisation suivante.
         vault.entries[index].updatedAt = Vault.nowIso()
@@ -315,12 +417,31 @@ struct VaultScreen: View {
         }
 
         let label = change.entry.label.flatMap { $0.isEmpty ? nil : $0 } ?? change.entry.siteKey
-        status =
-            change.isRenewal
-            ? L10n.t(
-                "« \(label) » renouvelée, compteur \(vault.entries[index].counter).",
-                "\"\(label)\" renewed, counter \(vault.entries[index].counter).")
-            : L10n.t("« \(label) » est en v2.", "\"\(label)\" is now in v2.")
+        status = L10n.t(
+            "« \(label) » renouvelée, compteur \(vault.entries[index].counter).",
+            "\"\(label)\" renewed, counter \(vault.entries[index].counter).")
+    }
+
+    // MARK: - Suppression
+
+    private func delete(_ entry: VaultEntry) {
+        var updated = vault
+        // Pierre tombale réhorodatée : la suppression se propage à la
+        // synchronisation au lieu d'être annulée par l'autre carnet.
+        guard updated.delete(id: entry.id) else { return }
+
+        do {
+            try VaultStore.save(updated)
+        } catch {
+            status = L10n.t(
+                "Le carnet n'a pas pu être enregistré.", "The vault could not be saved.")
+            return
+        }
+
+        vault = updated
+        selectedID = nil
+        let label = VaultEntryDetailView.label(of: entry)
+        status = L10n.t("« \(label) » supprimée.", "\"\(label)\" deleted.")
     }
 
     // MARK: - Actions
@@ -363,6 +484,41 @@ struct VaultScreen: View {
         }
     }
 
+    /// Même suite que `signIn`, avec un jeton Google au lieu du mot de passe.
+    /// La feuille reste ouverte pendant la fenêtre de Google : fermée sans
+    /// rien choisir, on revient au formulaire, sans message.
+    private func signInWithGoogle() {
+        guard let google else { return }
+        let endpoint = self.endpoint.trimmingCharacters(in: .whitespaces)
+        isGoogleWorking = true
+
+        Task {
+            let idToken: String
+            do {
+                idToken = try await GoogleSignIn.idToken(using: google)
+            } catch {
+                isGoogleWorking = false
+                if let message = GoogleSignIn.message(for: error) {
+                    showSignIn = false
+                    status = message
+                }
+                return
+            }
+            isGoogleWorking = false
+            showSignIn = false
+
+            run {
+                let sync = Sync()
+                let credentials = try await sync.googleSignIn(
+                    endpoint: endpoint, idToken: idToken, lang: L10n.t("fr", "en"),
+                    deviceLabel: Host.current().localizedName ?? "Mac")
+                SyncCredentialsStore.save(credentials)
+                return try await sync.syncRenewing(
+                    VaultStore.load(), masterKey: masterKey, credentials: credentials)
+            }
+        }
+    }
+
     private func unlink() {
         // Le carnet local reste : délier coupe la synchronisation, cela
         // n'efface rien.
@@ -391,19 +547,39 @@ struct VaultScreen: View {
                 SyncCredentialsStore.save(refreshed)
                 try VaultStore.save(result.vault, to: VaultStore.url())
 
+                // Réglages par défaut, après le carnet. Un échec ici ne remet
+                // pas en cause le carnet, déjà synchronisé et enregistré.
+                if let renewed = try? await PasswordSettings.syncShared(
+                    masterKey: masterKey, credentials: refreshed), renewed != refreshed
+                {
+                    SyncCredentialsStore.save(renewed)
+                }
+
                 await MainActor.run {
                     vault = result.vault
                     isLinked = true
-                    let kept = result.vault.entries.filter { $0.deleted != true }.count
+                    let kept =
+                        result.vault.entries.filter { $0.deleted != true }.count
+                        - result.localOnly
+                    // Au-delà du plafond, le reste ne part pas : le dire, sinon
+                    // on croit retrouver sur l'autre appareil ce qui n'y est
+                    // jamais allé.
+                    let local =
+                        result.localOnly == 0
+                        ? ""
+                        : L10n.t(
+                            ", \(result.localOnly) restées sur cet appareil "
+                                + "(plafond de l'offre gratuite)",
+                            ", \(result.localOnly) kept on this device (free plan limit)")
                     status =
                         result.conflicts.isEmpty
                         ? L10n.t(
-                            "Carnet synchronisé : \(kept) entrées.",
-                            "Vault synced: \(kept) entries.")
+                            "Carnet synchronisé : \(kept) entrées\(local).",
+                            "Vault synced: \(kept) entries\(local).")
                         : L10n.t(
-                            "Carnet synchronisé : \(kept) entrées, "
+                            "Carnet synchronisé : \(kept) entrées\(local), "
                                 + "\(result.conflicts.count) demandent votre attention.",
-                            "Vault synced: \(kept) entries, \(result.conflicts.count) need "
+                            "Vault synced: \(kept) entries\(local), \(result.conflicts.count) need "
                                 + "your attention.")
                     isWorking = false
                 }

@@ -27,6 +27,9 @@ public struct Charset: Codable, Equatable {
     }
 }
 
+/// Une entrée ne porte pas de version : toute entrée du carnet dérive en v2.
+/// La v1 ne subsiste qu'en génération ponctuelle, hors carnet : voir
+/// shared/spec/vault-merge.md, « Pas de version par entrée ».
 public struct VaultEntry: Codable, Equatable {
     public var id: String
     public var label: String?
@@ -39,14 +42,15 @@ public struct VaultEntry: Codable, Equatable {
     public var counter: Int
     public var length: Int
     public var charset: Charset
-    public var v: Int
     public var notes: String?
+    /// Absent des entrées antérieures au champ : `updatedAt` en tient lieu.
+    public var createdAt: String?
     public var updatedAt: String
     public var deleted: Bool?
 
     public init(siteKey: String, domains: [String]? = nil, label: String? = nil,
                 login: String? = nil, length: Int = 20,
-                charset: Charset = Charset(), v: Int = 2) {
+                charset: Charset = Charset()) {
         self.id = UUID().uuidString.lowercased()
         self.label = label
         self.siteKey = siteKey
@@ -55,8 +59,9 @@ public struct VaultEntry: Codable, Equatable {
         self.counter = 1
         self.length = length
         self.charset = charset
-        self.v = v
-        self.updatedAt = Vault.nowIso()
+        let now = Vault.nowIso()
+        self.createdAt = now
+        self.updatedAt = now
     }
 
     func covers(domain: String) -> Bool {
@@ -95,11 +100,45 @@ public struct Vault: Codable {
     public var schema: Int
     public var updatedAt: String?
     public var entries: [VaultEntry]
+    /// Entrées écartées au décodage parce qu'illisibles. Jamais écrit.
+    public private(set) var skippedEntries = 0
+
+    private enum CodingKeys: String, CodingKey {
+        case schema, updatedAt, entries
+    }
 
     public init(entries: [VaultEntry] = []) {
         self.schema = Vault.schemaVersion
         self.updatedAt = Vault.nowIso()
         self.entries = entries
+    }
+
+    /// Décodage tolérant entrée par entrée : une entrée illisible est écartée
+    /// et comptée, les autres sont gardées. Échouer sur tout le carnet pour une
+    /// seule entrée ferait repartir d'un carnet vide, que la sauvegarde
+    /// suivante écrirait par-dessus le fichier entier.
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        schema = try container.decode(Int.self, forKey: .schema)
+        updatedAt = try container.decodeIfPresent(String.self, forKey: .updatedAt)
+        entries = []
+
+        var list = try container.nestedUnkeyedContainer(forKey: .entries)
+        while !list.isAtEnd {
+            if let entry = try? list.decode(VaultEntry.self) {
+                entries.append(entry)
+            } else {
+                // Un échec ne fait pas avancer le curseur : on consomme
+                // l'élément sans le lire.
+                _ = try list.decode(Skipped.self)
+                skippedEntries += 1
+            }
+        }
+    }
+
+    /// Consomme n'importe quelle valeur JSON sans la lire.
+    private struct Skipped: Decodable {
+        init(from decoder: Decoder) throws {}
     }
 
     static func nowIso() -> String {
@@ -132,7 +171,9 @@ public struct Vault: Codable {
     /// au site saisi pour prévenir quand les deux diffèrent.
     @discardableResult
     public mutating func upsert(site: String, length: Int, charset: Charset) -> VaultEntry {
-        if let index = entries.firstIndex(where: { $0.deleted != true && $0.covers(domain: site) }) {
+        if let index = entries.firstIndex(where: {
+            $0.deleted != true && $0.covers(domain: site)
+        }) {
             entries[index].length = length
             entries[index].charset = charset
             entries[index].updatedAt = Vault.nowIso()
@@ -146,12 +187,77 @@ public struct Vault: Codable {
         return created
     }
 
+    /// Enregistre les réglages d'un compte, apparié sur domaine + identifiant.
+    ///
+    /// L'identifiant entre dans la dérivation v2 : deux comptes d'un même site
+    /// sont deux entrées, et enregistrer l'un ne doit jamais toucher l'autre.
+    /// Un identifiant vide désigne l'entrée sans identifiant.
+    ///
+    /// Comme `upsert(site:length:charset:)`, `siteKey` n'est jamais réécrit.
+    @discardableResult
+    public mutating func upsert(
+        site: String, login: String, length: Int, charset: Charset
+    ) -> VaultEntry {
+        if let index = entries.firstIndex(where: {
+            $0.deleted != true && $0.covers(domain: site)
+                && ($0.login ?? "") == login
+        }) {
+            entries[index].length = length
+            entries[index].charset = charset
+            entries[index].updatedAt = Vault.nowIso()
+            return entries[index]
+        }
+
+        var created = VaultEntry(
+            siteKey: site, domains: [site], login: login.isEmpty ? nil : login)
+        created.length = length
+        created.charset = charset
+        entries.append(created)
+        return created
+    }
+
+    /// Supprime une entrée en y posant une pierre tombale.
+    ///
+    /// Pas de retrait du tableau : la fusion reprendrait l'entrée de l'autre
+    /// carnet et la suppression serait annulée à la synchronisation suivante.
+    /// Le réhorodatage fait gagner cette écriture sur les autres champs.
+    @discardableResult
+    public mutating func delete(id: String, at now: String? = nil) -> Bool {
+        guard let index = entries.firstIndex(where: { $0.id == id && $0.deleted != true })
+        else { return false }
+        entries[index].deleted = true
+        entries[index].updatedAt = now ?? Vault.nowIso()
+        return true
+    }
+
+    /// L'identifiant que le carnet connaît pour ce site, s'il en connaît un.
+    ///
+    /// Plusieurs comptes : le premier, comme `find(domain:)`. L'écran de
+    /// génération ne fait que préremplir, l'utilisatrice peut le changer.
+    public func suggestedLogin(for site: String) -> String? {
+        let domain = site.trimmingCharacters(in: .whitespaces)
+        guard !domain.isEmpty else { return nil }
+        return find(domain: domain)?.login
+    }
+
+    /// Nouvelle valeur du champ identifiant quand le site change.
+    ///
+    /// Ce qui a été tapé à la main l'emporte : on ne remplace que ce que le
+    /// carnet avait lui-même prérempli, ou un champ vide.
+    public static func prefilledLogin(
+        typed: String, previousSuggestion: String, suggestion: String?
+    ) -> String {
+        typed.isEmpty || typed == previousSuggestion ? (suggestion ?? "") : typed
+    }
+
     public static func merge(_ left: Vault, _ right: Vault) -> (Vault, [VaultConflict]) {
         var conflicts: [VaultConflict] = []
         var byId: [String: VaultEntry] = [:]
-        for entry in left.entries { byId[entry.id] = entry }
+        let leftEntries = left.entries
+        let rightEntries = right.entries
+        for entry in leftEntries { byId[entry.id] = entry }
 
-        for incoming in right.entries {
+        for incoming in rightEntries {
             if let existing = byId[incoming.id] {
                 byId[incoming.id] = mergeEntry(existing, incoming, &conflicts)
             } else {
@@ -160,6 +266,9 @@ public struct Vault: Codable {
         }
 
         let entries = byId.values.sorted { $0.id < $1.id }
+        findDuplicates(
+            entries, leftIds: Set(leftEntries.map(\.id)), rightIds: Set(rightEntries.map(\.id)),
+            &conflicts)
         var merged = Vault(entries: entries)
         merged.updatedAt = ([left.updatedAt ?? "", right.updatedAt ?? ""]
             + entries.map(\.updatedAt)).filter { !$0.isEmpty }.max() ?? nowIso()
@@ -205,7 +314,96 @@ public struct Vault: Codable {
         // l'entrée.
         if left.deleted == true || right.deleted == true { merged.deleted = true }
 
+        // Une entrée n'est créée qu'une fois : la date la plus ancienne est la
+        // vraie. Un carnet antérieur au champ ne doit pas l'effacer.
+        merged.createdAt = [left.createdAt, right.createdAt]
+            .compactMap { $0 }.filter { !$0.isEmpty }.min()
+
         merged.updatedAt = max(left.updatedAt, right.updatedAt)
         return merged
+    }
+
+    /// Signale les doublons que la fusion rapproche : le même compte créé à
+    /// part sur deux appareils, donc sous deux id. Un doublon déjà présent d'un
+    /// côté l'a été quand il y est entré — le resignaler à chaque fusion serait
+    /// du bruit.
+    private static func findDuplicates(
+        _ entries: [VaultEntry], leftIds: Set<String>, rightIds: Set<String>,
+        _ conflicts: inout [VaultConflict]
+    ) {
+        let live = entries.filter { $0.deleted != true }
+        for i in live.indices {
+            for j in live.indices where j > i {
+                let a = live[i]
+                let b = live[j]
+                let apart =
+                    (leftIds.contains(a.id) && !rightIds.contains(a.id)
+                        && rightIds.contains(b.id) && !leftIds.contains(b.id))
+                    || (rightIds.contains(a.id) && !leftIds.contains(a.id)
+                        && leftIds.contains(b.id) && !rightIds.contains(b.id))
+                guard apart, (a.login ?? "") == (b.login ?? "") else { continue }
+                let domains = Set(a.domains.map { $0.lowercased() })
+                guard b.domains.contains(where: { domains.contains($0.lowercased()) }) else {
+                    continue
+                }
+                // `live` est trié par id : `a` porte le plus petit.
+                conflicts.append(VaultConflict(kind: "doublon", entryId: a.id, detail: b.id))
+            }
+        }
+    }
+
+    /// Ce qui part au serveur quand le compte a un plafond, et ce qui reste sur
+    /// l'appareil. Voir shared/spec/vault-sync.md, « Synchronisation partielle ».
+    ///
+    /// Ce qui est déjà sur le serveur part toujours, pierres tombales comprises :
+    /// une modification doit pouvoir partir. Les places libres vont aux autres
+    /// entrées, les plus anciennes d'abord. Une entrée jamais synchronisée puis
+    /// supprimée n'a rien à propager.
+    public static func selectForPush<S: Sequence>(
+        _ vault: Vault, remoteIds: S, maxEntries: Int
+    ) -> (push: [VaultEntry], localOnly: [VaultEntry]) where S.Element == String {
+        let remote = Set(remoteIds)
+        let onServer = vault.entries.filter { remote.contains($0.id) }
+        let others = vault.entries
+            .filter { !remote.contains($0.id) && $0.deleted != true }
+            .sorted {
+                let da = $0.createdAt ?? $0.updatedAt
+                let db = $1.createdAt ?? $1.updatedAt
+                return da != db ? da < db : $0.id < $1.id
+            }
+
+        let free = max(0, maxEntries - onServer.filter { $0.deleted != true }.count)
+        let byId: (VaultEntry, VaultEntry) -> Bool = { $0.id < $1.id }
+        return (
+            push: (onServer + others.prefix(free)).sorted(by: byId),
+            localOnly: others.dropFirst(free).sorted(by: byId)
+        )
+    }
+}
+
+/// Proposer d'enregistrer au carnet un compte généré depuis l'app.
+///
+/// Réservé à qui est connecté à la synchronisation : le carnet sert d'abord à
+/// retrouver ses réglages sur un autre appareil. Sans compte, la proposition
+/// reviendrait à chaque site sans rien apporter de plus que le bouton.
+public enum SaveProposal {
+
+    /// Ce qui identifie un refus : le même compte n'est pas reproposé.
+    public static func key(site: String, login: String) -> String {
+        site.trimmingCharacters(in: .whitespaces).lowercased() + "\n" + login
+    }
+
+    /// Vrai quand le compte (site + identifiant) est absent du carnet.
+    ///
+    /// Jamais en v1 : l'entrée créée serait en v2, et donnerait un autre mot
+    /// de passe que celui qui vient d'être copié.
+    public static func shouldPropose(
+        site: String, login: String, in vault: Vault, isLinked: Bool, usesV1: Bool,
+        declined: Set<String> = []
+    ) -> Bool {
+        let domain = site.trimmingCharacters(in: .whitespaces)
+        guard isLinked, !usesV1, !domain.isEmpty else { return false }
+        guard !declined.contains(key(site: domain, login: login)) else { return false }
+        return !vault.findAll(domain: domain).contains { ($0.login ?? "") == login }
     }
 }

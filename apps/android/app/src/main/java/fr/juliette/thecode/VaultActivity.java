@@ -1,8 +1,12 @@
 package fr.juliette.thecode;
 
+import android.app.KeyguardManager;
+import android.content.Intent;
 import android.os.Bundle;
+import android.os.CancellationSignal;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -14,19 +18,39 @@ import android.widget.Toast;
 
 import android.os.Build;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.biometric.BiometricManager;
 import androidx.biometric.BiometricPrompt;
 import androidx.core.content.ContextCompat;
+import androidx.credentials.Credential;
+import androidx.credentials.CredentialManager;
+import androidx.credentials.CredentialManagerCallback;
+import androidx.credentials.CustomCredential;
+import androidx.credentials.GetCredentialRequest;
+import androidx.credentials.GetCredentialResponse;
+import androidx.credentials.exceptions.GetCredentialCancellationException;
+import androidx.credentials.exceptions.GetCredentialException;
+import androidx.credentials.exceptions.NoCredentialException;
+
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption;
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.textfield.TextInputLayout;
 
+import fr.juliette.thecode.vault.DefaultSettings;
 import fr.juliette.thecode.vault.SiteResolution;
 import fr.juliette.thecode.vault.Sync;
 import fr.juliette.thecode.vault.Vault;
 import fr.juliette.thecode.vault.VaultEntry;
+import fr.juliette.thecode.vault.VaultLock;
+import fr.juliette.thecode.vault.VaultPassword;
 
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -51,10 +75,20 @@ public class VaultActivity extends AppCompatActivity {
     private final Handler main = new Handler(Looper.getMainLooper());
 
     private Preferences preferences;
-    private SessionLock sessionLock;
-    /** Vrai une fois la session authentifiée : rien n'est rendu avant. */
-    private boolean unlocked = false;
-    private boolean authInFlight = false;
+    /**
+     * Verrou de l'écran (shared/spec/vault-lock.md) : partage la session de la
+     * clef, ouverte 3 minutes après la sortie, même si l'activité est recréée
+     * entre-temps.
+     */
+    private VaultLock lock;
+    /**
+     * Incrémenté à chaque reverrouillage : un calcul PBKDF2 lancé avant que
+     * l'écran soit quitté ne doit pas le rouvrir en revenant.
+     */
+    private int lockEpoch = 0;
+    /** Dialogue en cours, fermé au reverrouillage pour ne rien laisser voir. */
+    @Nullable
+    private AlertDialog openDialog;
     /** Le carnet affiché : les actions le modifient et le réenregistrent. */
     private Vault vault = new Vault();
 
@@ -64,105 +98,36 @@ public class VaultActivity extends AppCompatActivity {
         setContentView(R.layout.activity_vault);
 
         preferences = new Preferences(this);
-        sessionLock = new SessionLock(preferences);
+        lock = new VaultLock(preferences.vaultLockStore(), new SessionLock(preferences));
 
         MaterialToolbar toolbar = findViewById(R.id.vaultToolbar);
         toolbar.setNavigationOnClickListener(v -> finish());
         toolbar.inflateMenu(R.menu.menu_vault);
         toolbar.setOnMenuItemClickListener(this::onMenuItem);
 
-        // Rien n'est affiché avant l'authentification : le carnet dit sur
-        // quels sites on a un compte et sous quel identifiant. C'est aussi
-        // sensible qu'un coffre de mots de passe.
+        findViewById(R.id.vaultUnlockAction).setOnClickListener(v -> promptUnlock());
+        findViewById(R.id.vaultForgotAction).setOnClickListener(v -> confirmForget());
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        // Au-delà de la fenêtre de grâce, l'écran se referme et redemande l'auth.
+        lock.onReturn();
         applyLockState();
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
-        applyLockState();
-    }
-
-    @Override
-    protected void onPause() {
-        // La fenêtre de grâce court à partir de la mise en arrière-plan, comme
-        // pour la clef : revenir tout de suite ne redemande pas l'auth.
-        if (unlocked) sessionLock.stamp();
-        super.onPause();
-    }
-
-    /**
-     * Affiche le carnet si la session est valide, demande l'auth sinon.
-     *
-     * Le contenu n'est jamais rendu avant : une capture d'écran du sélecteur
-     * d'applications suffirait à le révéler.
-     */
-    private void applyLockState() {
-        if (sessionLock.isValid()) {
-            unlocked = true;
-            findViewById(R.id.vaultLocked).setVisibility(View.GONE);
-            render(Vault.load(this));
-            return;
-        }
-
-        unlocked = false;
-        ((LinearLayout) findViewById(R.id.vaultList)).removeAllViews();
-        findViewById(R.id.vaultEmpty).setVisibility(View.GONE);
-        findViewById(R.id.vaultLocked).setVisibility(View.VISIBLE);
-        promptUnlock();
-    }
-
-    /**
-     * Demande l'authentification de l'appareil.
-     *
-     * Sans matériel d'auth disponible — rare — on considère le terminal déjà
-     * déverrouillé : refuser l'accès rendrait le carnet inutilisable sur un
-     * appareil sans code.
-     */
-    private void promptUnlock() {
-        if (authInFlight) return;
-
-        int authenticators = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
-                ? (BiometricManager.Authenticators.BIOMETRIC_WEAK
-                    | BiometricManager.Authenticators.DEVICE_CREDENTIAL)
-                : BiometricManager.Authenticators.BIOMETRIC_WEAK;
-
-        BiometricManager manager = BiometricManager.from(this);
-        if (manager.canAuthenticate(authenticators) != BiometricManager.BIOMETRIC_SUCCESS) {
-            sessionLock.stamp();
-            applyLockState();
-            return;
-        }
-
-        authInFlight = true;
-        BiometricPrompt prompt = new BiometricPrompt(this,
-                ContextCompat.getMainExecutor(this),
-                new BiometricPrompt.AuthenticationCallback() {
-                    @Override
-                    public void onAuthenticationSucceeded(
-                            @NonNull BiometricPrompt.AuthenticationResult result) {
-                        authInFlight = false;
-                        sessionLock.stamp();
-                        applyLockState();
-                    }
-
-                    @Override
-                    public void onAuthenticationError(int code, @NonNull CharSequence message) {
-                        authInFlight = false;
-                        // Refuser l'auth ferme l'écran : rester dessus laisserait
-                        // croire que le carnet est vide.
-                        finish();
-                    }
-                });
-
-        BiometricPrompt.PromptInfo.Builder info = new BiometricPrompt.PromptInfo.Builder()
-                .setTitle(getString(R.string.vault_locked_title))
-                .setSubtitle(getString(R.string.vault_locked_subtitle))
-                .setAllowedAuthenticators(authenticators);
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-            info.setNegativeButtonText(getString(android.R.string.cancel));
-        }
-        prompt.authenticate(info.build());
+    protected void onStop() {
+        // Quitter l'écran fait courir la fenêtre de grâce (seul l'instant de
+        // sortie est retenu). Le contenu est masqué quand même : la capture du
+        // sélecteur d'applications ne doit rien montrer. onStart le réaffiche
+        // si l'on revient à temps.
+        lock.onLeave();
+        lockEpoch++;
+        dismissOpenDialog();
+        hideContent();
+        super.onStop();
     }
 
     @Override
@@ -171,12 +136,407 @@ public class VaultActivity extends AppCompatActivity {
         super.onDestroy();
     }
 
+    // ---------------------------------------------------------------- verrou
+
+    /**
+     * Affiche le carnet si l'écran est déverrouillé, demande l'auth sinon.
+     *
+     * Le contenu n'est jamais rendu avant : une capture d'écran du sélecteur
+     * d'applications suffirait à le révéler.
+     */
+    private void applyLockState() {
+        switch (lock.state()) {
+            case UNLOCKED:
+                findViewById(R.id.vaultLocked).setVisibility(View.GONE);
+                render(Vault.load(this));
+                return;
+            case LOCKED:
+                hideContent();
+                findViewById(R.id.vaultForgotAction).setVisibility(View.VISIBLE);
+                if (!lock.isSystemAuthInProgress() && openDialog == null) promptUnlock();
+                return;
+            case SETUP:
+            default:
+                hideContent();
+                findViewById(R.id.vaultForgotAction).setVisibility(View.GONE);
+                if (!lock.isSystemAuthInProgress() && openDialog == null) startSetup();
+        }
+    }
+
+    private void hideContent() {
+        ((LinearLayout) findViewById(R.id.vaultList)).removeAllViews();
+        findViewById(R.id.vaultEmpty).setVisibility(View.GONE);
+        findViewById(R.id.vaultSyncPitch).setVisibility(View.GONE);
+        findViewById(R.id.vaultLocked).setVisibility(View.VISIBLE);
+    }
+
+    private void promptUnlock() {
+        switch (lock.state()) {
+            case SETUP:
+                startSetup();
+                return;
+            case UNLOCKED:
+                applyLockState();
+                return;
+            default:
+        }
+        if (lock.method() == VaultLock.Method.BIOMETRIC) {
+            if (!biometricAvailable()) {
+                toast(getString(R.string.vault_lock_biometric_unavailable));
+                return;
+            }
+            runBiometric(() -> {
+                lock.unlock(VaultLock.Method.BIOMETRIC);
+                applyLockState();
+            });
+        } else {
+            showPasswordDialog(PasswordMode.UNLOCK, false);
+        }
+    }
+
+    /**
+     * Première ouverture : biométrie ou mot de passe si l'OS en propose une,
+     * mot de passe obligatoire sinon.
+     */
+    private void startSetup() {
+        if (!biometricAvailable()) {
+            withDeviceAuthForSetup(() -> showPasswordDialog(PasswordMode.CREATE, true));
+            return;
+        }
+        AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.vault_lock_setup_title)
+                .setMessage(R.string.vault_lock_setup_body)
+                .setPositiveButton(R.string.vault_lock_use_biometric,
+                        (d, w) -> runBiometric(() -> {
+                            // L'invite biométrique est l'auth de l'appareil.
+                            lock.authorizeSetup();
+                            if (lock.state() == VaultLock.State.SETUP) lock.chooseBiometric();
+                            applyLockState();
+                        }))
+                .setNegativeButton(R.string.vault_lock_use_password,
+                        (d, w) -> withDeviceAuthForSetup(
+                                () -> showPasswordDialog(PasswordMode.CREATE, true)))
+                .setOnCancelListener(d -> finish())
+                .create();
+        track(dialog);
+        dialog.show();
+    }
+
+    /**
+     * Biométrie forte, avec le code de l'appareil en repli comme le fait
+     * l'OS. Le repli n'est combinable qu'à partir d'Android 11.
+     */
+    private static int biometricAuthenticators() {
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+                ? BiometricManager.Authenticators.BIOMETRIC_STRONG
+                        | BiometricManager.Authenticators.DEVICE_CREDENTIAL
+                : BiometricManager.Authenticators.BIOMETRIC_STRONG;
+    }
+
+    /**
+     * Garde de la mise en place (shared/spec/vault-lock.md, « Apps : une
+     * seule session avec la clef ») : choisir une méthode ouvre la session
+     * commune, donc la clef. Sans session valide, l'appareil doit d'abord
+     * confirmer l'identité — sinon « Mot de passe oublié » puis un nouveau mot
+     * de passe de carnet déverrouilleraient la clef sans biométrie.
+     */
+    private void withDeviceAuthForSetup(Runnable then) {
+        if (!lock.setupNeedsDeviceAuth()) {
+            // Session valide maintenant : elle peut expirer pendant la saisie.
+            lock.authorizeSetup();
+            then.run();
+            return;
+        }
+        Runnable authorized = () -> {
+            lock.authorizeSetup();
+            then.run();
+        };
+        if (biometricAvailable()) {
+            runBiometric(biometricAuthenticators(), R.string.vault_lock_setup_auth_title,
+                    R.string.vault_lock_setup_auth_subtitle, authorized);
+            return;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+                && BiometricManager.from(this).canAuthenticate(
+                        BiometricManager.Authenticators.DEVICE_CREDENTIAL)
+                        == BiometricManager.BIOMETRIC_SUCCESS) {
+            runBiometric(BiometricManager.Authenticators.DEVICE_CREDENTIAL,
+                    R.string.vault_lock_setup_auth_title,
+                    R.string.vault_lock_setup_auth_subtitle, authorized);
+            return;
+        }
+        // Avant Android 11, BiometricPrompt n'accepte pas le code seul.
+        KeyguardManager keyguard = (KeyguardManager) getSystemService(KEYGUARD_SERVICE);
+        boolean secure = keyguard != null && (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+                ? keyguard.isDeviceSecure() : keyguard.isKeyguardSecure());
+        if (secure) {
+            @SuppressWarnings("deprecation")
+            Intent confirm = keyguard.createConfirmDeviceCredentialIntent(
+                    getString(R.string.vault_lock_setup_auth_title),
+                    getString(R.string.vault_lock_setup_auth_subtitle));
+            if (confirm != null && !lock.isSystemAuthInProgress()) {
+                pendingSetup = then;
+                lock.beginSystemAuth();
+                confirmDeviceCredential.launch(confirm);
+                return;
+            }
+        }
+        // Aucun écran de verrouillage sécurisé : l'appareil ne protège rien
+        // au-delà de l'app elle-même, il n'y a rien à exiger de plus.
+        authorized.run();
+    }
+
+    /** Suite de la mise en place, en attente du code de l'appareil (avant Android 11). */
+    @Nullable
+    private Runnable pendingSetup;
+
+    private final ActivityResultLauncher<Intent> confirmDeviceCredential =
+            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
+                    result -> {
+                        boolean ok = result.getResultCode() == RESULT_OK;
+                        lock.endSystemAuth(ok);
+                        Runnable then = pendingSetup;
+                        pendingSetup = null;
+                        if (ok && then != null) {
+                            lock.authorizeSetup();
+                            then.run();
+                        }
+                    });
+
+    private boolean biometricAvailable() {
+        return BiometricManager.from(this).canAuthenticate(biometricAuthenticators())
+                == BiometricManager.BIOMETRIC_SUCCESS;
+    }
+
+    private void runBiometric(Runnable onSuccess) {
+        runBiometric(biometricAuthenticators(), R.string.vault_locked_title,
+                R.string.vault_locked_subtitle, onSuccess);
+    }
+
+    private void runBiometric(int authenticators, int titleRes, int subtitleRes,
+                              Runnable onSuccess) {
+        if (lock.isSystemAuthInProgress()) return;
+        // Posé avant authenticate() : le repli sur le code de l'appareil
+        // peut déclencher onStop avant tout rappel.
+        lock.beginSystemAuth();
+        BiometricPrompt prompt = new BiometricPrompt(this,
+                ContextCompat.getMainExecutor(this),
+                new BiometricPrompt.AuthenticationCallback() {
+                    @Override
+                    public void onAuthenticationSucceeded(
+                            @NonNull BiometricPrompt.AuthenticationResult result) {
+                        lock.endSystemAuth(true);
+                        onSuccess.run();
+                    }
+
+                    @Override
+                    public void onAuthenticationError(int code, @NonNull CharSequence message) {
+                        // L'écran reste verrouillé, avec de quoi réessayer ou
+                        // effacer le carnet. Si on l'a quitté pendant l'invite,
+                        // la fenêtre de grâce tranche maintenant.
+                        if (lock.endSystemAuth(false)) {
+                            dismissOpenDialog();
+                            // Écran encore en arrière-plan : onStart s'en chargera.
+                            if (!isFinishing() && getLifecycle().getCurrentState()
+                                    .isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) {
+                                applyLockState();
+                            } else {
+                                hideContent();
+                            }
+                        }
+                    }
+                });
+
+        BiometricPrompt.PromptInfo.Builder info = new BiometricPrompt.PromptInfo.Builder()
+                .setTitle(getString(titleRes))
+                .setSubtitle(getString(subtitleRes))
+                .setAllowedAuthenticators(authenticators);
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            info.setNegativeButtonText(getString(android.R.string.cancel));
+        }
+        prompt.authenticate(info.build());
+    }
+
+    private enum PasswordMode { UNLOCK, CREATE, CHANGE }
+
+    /**
+     * Saisie du mot de passe de carnet. Le bouton valide sans fermer : une
+     * erreur s'affiche sous le champ, le dialogue ne se ferme qu'au succès.
+     */
+    private void showPasswordDialog(PasswordMode mode, boolean finishOnCancel) {
+        View form = LayoutInflater.from(this).inflate(R.layout.dialog_vault_password, null);
+        TextInputLayout currentLayout = form.findViewById(R.id.vaultPasswordCurrentLayout);
+        TextInputLayout newLayout = form.findViewById(R.id.vaultPasswordNewLayout);
+        TextInputLayout confirmLayout = form.findViewById(R.id.vaultPasswordConfirmLayout);
+        EditText current = form.findViewById(R.id.vaultPasswordCurrent);
+        EditText next = form.findViewById(R.id.vaultPasswordNew);
+        EditText confirm = form.findViewById(R.id.vaultPasswordConfirm);
+
+        boolean askCurrent = mode != PasswordMode.CREATE;
+        boolean askNew = mode != PasswordMode.UNLOCK;
+        currentLayout.setVisibility(askCurrent ? View.VISIBLE : View.GONE);
+        newLayout.setVisibility(askNew ? View.VISIBLE : View.GONE);
+        confirmLayout.setVisibility(askNew ? View.VISIBLE : View.GONE);
+        if (mode == PasswordMode.UNLOCK) currentLayout.setHint(R.string.vault_lock_password);
+
+        int title = mode == PasswordMode.UNLOCK ? R.string.vault_lock_enter_title
+                : mode == PasswordMode.CREATE ? R.string.vault_lock_create_title
+                : R.string.vault_lock_change_password;
+
+        AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+                .setTitle(title)
+                .setView(form)
+                .setNegativeButton(android.R.string.cancel, (d, w) -> {
+                    if (finishOnCancel) finish();
+                })
+                .setPositiveButton(android.R.string.ok, null)
+                .setOnCancelListener(d -> {
+                    if (finishOnCancel) finish();
+                })
+                .create();
+        dialog.setOnShowListener(d -> {
+            View ok = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            ok.setOnClickListener(v -> {
+                currentLayout.setError(null);
+                newLayout.setError(null);
+                confirmLayout.setError(null);
+
+                if (askNew) {
+                    VaultPassword.Check check = VaultPassword.checkNew(
+                            next.getText().toString(), confirm.getText().toString());
+                    if (check == VaultPassword.Check.TOO_SHORT) {
+                        newLayout.setError(getString(R.string.vault_lock_password_rule));
+                        return;
+                    }
+                    if (check == VaultPassword.Check.MISMATCH) {
+                        confirmLayout.setError(getString(R.string.vault_lock_mismatch));
+                        return;
+                    }
+                }
+                ok.setEnabled(false);
+                char[] currentChars = current.getText().toString().toCharArray();
+                char[] newChars = next.getText().toString().toCharArray();
+                submitPassword(mode, dialog, ok, currentLayout, currentChars, newChars);
+            });
+        });
+        track(dialog);
+        dialog.show();
+    }
+
+    /** PBKDF2 sur le fil de travail, application du résultat sur le fil principal. */
+    private void submitPassword(PasswordMode mode, AlertDialog dialog, View ok,
+                                TextInputLayout currentLayout,
+                                char[] currentChars, char[] newChars) {
+        int epoch = lockEpoch;
+        toast(getString(R.string.vault_lock_checking));
+        worker.execute(() -> {
+            boolean verified = mode == PasswordMode.CREATE || lock.verifyPassword(currentChars);
+            String record = verified && mode != PasswordMode.UNLOCK
+                    ? VaultPassword.hash(newChars) : null;
+            VaultPassword.wipe(currentChars);
+            VaultPassword.wipe(newChars);
+
+            main.post(() -> {
+                // L'écran a été quitté pendant le calcul : il reste fermé.
+                if (epoch != lockEpoch || isFinishing()) return;
+                if (!verified) {
+                    ok.setEnabled(true);
+                    currentLayout.setError(getString(R.string.vault_lock_wrong));
+                    return;
+                }
+                switch (mode) {
+                    case UNLOCK:
+                        lock.unlock(VaultLock.Method.PASSWORD);
+                        break;
+                    case CREATE:
+                        boolean switching = lock.isUnlocked();
+                        lock.choosePassword(record);
+                        if (switching) toast(getString(R.string.vault_lock_method_changed));
+                        break;
+                    case CHANGE:
+                        lock.changePassword(record);
+                        toast(getString(R.string.vault_lock_password_changed));
+                        break;
+                }
+                dialog.dismiss();
+                applyLockState();
+            });
+        });
+    }
+
+    /** Changer le mot de passe, ou basculer biométrie ↔ mot de passe. */
+    private void showLockSettings() {
+        List<String> labels = new java.util.ArrayList<>();
+        List<Runnable> actions = new java.util.ArrayList<>();
+        if (lock.method() == VaultLock.Method.PASSWORD) {
+            labels.add(getString(R.string.vault_lock_change_password));
+            actions.add(() -> showPasswordDialog(PasswordMode.CHANGE, false));
+            if (biometricAvailable()) {
+                labels.add(getString(R.string.vault_lock_switch_biometric));
+                actions.add(() -> runBiometric(() -> {
+                    // Le verrou est différé pendant l'invite : l'écran est
+                    // encore ouvert même si le code de l'appareil l'a quitté.
+                    if (!lock.isUnlocked()) return;
+                    lock.chooseBiometric();
+                    toast(getString(R.string.vault_lock_method_changed));
+                }));
+            }
+        } else {
+            labels.add(getString(R.string.vault_lock_switch_password));
+            actions.add(() -> showPasswordDialog(PasswordMode.CREATE, false));
+        }
+
+        AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.vault_lock_settings)
+                .setItems(labels.toArray(new CharSequence[0]),
+                        (d, which) -> actions.get(which).run())
+                .setNegativeButton(android.R.string.cancel, null)
+                .create();
+        track(dialog);
+        dialog.show();
+    }
+
+    /** « Mot de passe oublié » : seule issue, efface le carnet local et le verrou. */
+    private void confirmForget() {
+        AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.vault_lock_forgot_title)
+                .setMessage(R.string.vault_lock_forgot_body)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.vault_lock_forgot_confirm, (d, w) -> {
+                    Vault.wipe(this);
+                    vault = new Vault();
+                    lock.forget();
+                    toast(getString(R.string.vault_lock_forgot_done));
+                    main.post(this::applyLockState);
+                })
+                .create();
+        track(dialog);
+        dialog.show();
+    }
+
+    private void track(AlertDialog dialog) {
+        openDialog = dialog;
+        dialog.setOnDismissListener(d -> {
+            if (openDialog == dialog) openDialog = null;
+        });
+    }
+
+    private void dismissOpenDialog() {
+        if (openDialog != null) {
+            AlertDialog dialog = openDialog;
+            openDialog = null;
+            // Fermer sans déclencher « annuler », qui quitterait l'écran.
+            dialog.setOnCancelListener(null);
+            dialog.dismiss();
+        }
+    }
+
     // ------------------------------------------------------- synchronisation
 
     private boolean onMenuItem(MenuItem item) {
         // Synchroniser ou transférer depuis un écran verrouillé contournerait
         // l'authentification.
-        if (!unlocked) return true;
+        if (!lock.isUnlocked()) return true;
 
         int id = item.getItemId();
         if (id == R.id.action_transfer) {
@@ -188,6 +548,20 @@ public class VaultActivity extends AppCompatActivity {
         }
         if (id == R.id.action_sync) {
             startSync();
+            return true;
+        }
+        if (id == R.id.action_vault_lock) {
+            // Verrou explicite : efface la fenêtre de grâce. Pas d'invite
+            // automatique, le bouton « Déverrouiller » reste à portée.
+            lock.lock();
+            lockEpoch++;
+            dismissOpenDialog();
+            hideContent();
+            findViewById(R.id.vaultForgotAction).setVisibility(View.VISIBLE);
+            return true;
+        }
+        if (id == R.id.action_vault_security) {
+            showLockSettings();
             return true;
         }
         if (id == R.id.action_sync_unlink) {
@@ -225,16 +599,138 @@ public class VaultActivity extends AppCompatActivity {
         EditText password = form.findViewById(R.id.syncPassword);
         endpoint.setText(Sync.DEFAULT_ENDPOINT);
 
-        new MaterialAlertDialogBuilder(this)
+        AlertDialog dialog = new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.sync_title)
                 .setView(form)
                 .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton(R.string.sync_connect, (dialog, which) -> signInThenSync(
+                .setPositiveButton(R.string.sync_connect, (d, which) -> signInThenSync(
                         masterKey,
                         endpoint.getText().toString().trim(),
                         email.getText().toString().trim(),
                         password.getText().toString()))
-                .show();
+                .create();
+        dialog.setOnDismissListener(d -> {
+            if (openDialog == dialog) openDialog = null;
+        });
+        openDialog = dialog;
+        dialog.show();
+
+        View google = form.findViewById(R.id.syncGoogle);
+        // Le client Google dépend du service : relu quand l'adresse change.
+        String[] clientId = {null};
+        Runnable refresh = () -> fetchGoogleClientId(
+                endpoint.getText().toString().trim(), dialog, google, clientId);
+        refresh.run();
+        endpoint.setOnFocusChangeListener((v, hasFocus) -> {
+            if (!hasFocus) refresh.run();
+        });
+        google.setOnClickListener(v -> {
+            String id = clientId[0];
+            if (id == null) return;
+            String service = endpoint.getText().toString().trim();
+            dialog.dismiss();
+            googleSignInThenSync(masterKey, service, id);
+        });
+    }
+
+    /**
+     * Montre « Continuer avec Google » seulement si le service dit quel client
+     * il accepte. Un échec le cache : la connexion par mot de passe reste.
+     */
+    private void fetchGoogleClientId(String endpoint, AlertDialog dialog, View button,
+                                     String[] clientId) {
+        clientId[0] = null;
+        button.setVisibility(View.GONE);
+        worker.execute(() -> {
+            String id;
+            try {
+                id = new Sync().googleClientId(endpoint);
+            } catch (Sync.SyncException e) {
+                id = null;
+            }
+            String found = id;
+            main.post(() -> {
+                if (!dialog.isShowing()) return;
+                clientId[0] = found;
+                button.setVisibility(found == null ? View.GONE : View.VISIBLE);
+            });
+        });
+    }
+
+    /**
+     * Credential Manager rend un jeton d'identité Google, que le service
+     * échange contre les jetons du compte. La suite est celle du mot de passe.
+     */
+    private void googleSignInThenSync(String masterKey, String endpoint, String clientId) {
+        GetCredentialRequest request = new GetCredentialRequest.Builder()
+                .addCredentialOption(new GetSignInWithGoogleOption.Builder(clientId).build())
+                .build();
+        CredentialManager.create(this).getCredentialAsync(this, request,
+                new CancellationSignal(), ContextCompat.getMainExecutor(this),
+                new CredentialManagerCallback<GetCredentialResponse, GetCredentialException>() {
+                    @Override
+                    public void onResult(GetCredentialResponse response) {
+                        String idToken = googleIdToken(response.getCredential());
+                        if (idToken == null) {
+                            toast(getString(R.string.sync_google_failed,
+                                    getString(R.string.sync_google_unexpected)));
+                            return;
+                        }
+                        exchangeGoogleToken(masterKey, endpoint, idToken);
+                    }
+
+                    @Override
+                    public void onError(@NonNull GetCredentialException e) {
+                        // Fermer la fenêtre de Google est un choix, pas une erreur.
+                        if (e instanceof GetCredentialCancellationException) return;
+                        if (e instanceof NoCredentialException) {
+                            toast(getString(R.string.sync_google_no_account));
+                            return;
+                        }
+                        Log.w("TheCode", "Connexion Google impossible", e);
+                        // getErrorMessage() et getType() sont réservées à la
+                        // bibliothèque : getMessage() rend le même texte.
+                        String detail = e.getMessage();
+                        toast(getString(R.string.sync_google_failed, detail != null
+                                ? detail : e.getClass().getSimpleName()));
+                    }
+                });
+    }
+
+    @Nullable
+    private static String googleIdToken(Credential credential) {
+        if (!(credential instanceof CustomCredential)
+                || !GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+                        .equals(credential.getType())) {
+            return null;
+        }
+        try {
+            return GoogleIdTokenCredential.createFrom(credential.getData()).getIdToken();
+        } catch (Exception e) {
+            // Kotlin ne déclare pas GoogleIdTokenParsingException : javac
+            // refuse de l'attraper nommément.
+            return null;
+        }
+    }
+
+    private void exchangeGoogleToken(String masterKey, String endpoint, String idToken) {
+        toast(getString(R.string.sync_running));
+        String lang = Sync.serviceLang(java.util.Locale.getDefault().getLanguage());
+        worker.execute(() -> {
+            try {
+                Sync.Credentials credentials = new Sync().googleSignIn(
+                        endpoint, idToken, android.os.Build.MODEL, lang, "");
+                main.post(() -> {
+                    preferences.setSyncCredentials(credentials);
+                    runSync(masterKey, credentials);
+                });
+            } catch (Sync.SyncException e) {
+                String message = e.status == 402
+                        ? getString(R.string.sync_limit_reached)
+                        : getString(R.string.sync_google_failed, e.getMessage());
+                main.post(() -> toast(message));
+            }
+        });
     }
 
     private void signInThenSync(String masterKey, String endpoint, String email, String password) {
@@ -263,6 +759,7 @@ public class VaultActivity extends AppCompatActivity {
                 // Un abonnement pris entre-temps doit se voir sans se
                 // reconnecter ; un abonnement arrêté aussi.
                 Sync.Credentials withPlan = sync.accountPlan(result.credentials);
+                syncDefaultSettings(sync, masterKey, withPlan);
                 // Écriture disque ici et non sur le fil principal : la
                 // synchronisation peut rapporter des centaines d'entrées.
                 result.vault.save(this);
@@ -273,14 +770,20 @@ public class VaultActivity extends AppCompatActivity {
                     preferences.setSyncCredentials(withPlan);
                     render(result.vault);
 
-                    int kept = 0;
+                    int kept = -result.localOnly;
                     for (VaultEntry entry : result.vault.entries) {
                         if (!entry.deleted) kept++;
                     }
-                    toast(result.conflicts.isEmpty()
+                    String done = result.conflicts.isEmpty()
                             ? getString(R.string.sync_done, kept)
                             : getString(R.string.sync_done_conflicts, kept,
-                                    result.conflicts.size()));
+                                    result.conflicts.size());
+                    // Au-delà du plafond, le reste ne part pas : le dire, sinon
+                    // on croit retrouver sur l'autre appareil ce qui n'y est
+                    // jamais allé.
+                    toast(result.localOnly == 0 ? done
+                            : done + " " + getString(R.string.sync_local_only,
+                                    result.localOnly));
                 });
             } catch (Sync.SyncException e) {
                 // 402 : le serveur explique comment lever la limite, ce qu'une
@@ -292,6 +795,21 @@ public class VaultActivity extends AppCompatActivity {
                 main.post(() -> toast(message));
             }
         });
+    }
+
+    /**
+     * Réglages par défaut, après le carnet. Un échec ici n'annule pas la
+     * synchronisation du carnet, déjà faite : on retentera la prochaine fois.
+     * L'écran de génération les relit à son retour au premier plan.
+     */
+    private void syncDefaultSettings(Sync sync, String masterKey, Sync.Credentials credentials) {
+        DefaultSettings local = preferences.getDefaultSettings();
+        try {
+            DefaultSettings kept = sync.syncSettings(local, masterKey, credentials);
+            if (kept != local) preferences.applyDefaultSettings(kept);
+        } catch (Sync.SyncException e) {
+            Log.w("TheCode", "Réglages non synchronisés : " + e.getMessage());
+        }
     }
 
     private void unlink() {
@@ -311,6 +829,9 @@ public class VaultActivity extends AppCompatActivity {
 
     private void render(Vault vault) {
         this.vault = vault;
+        // Une synchronisation qui se termine après le reverrouillage ne doit
+        // rien afficher.
+        if (!lock.isUnlocked()) return;
         LinearLayout list = findViewById(R.id.vaultList);
         View empty = findViewById(R.id.vaultEmpty);
         list.removeAllViews();
@@ -344,34 +865,26 @@ public class VaultActivity extends AppCompatActivity {
             View card = inflater.inflate(R.layout.vault_item, list, false);
 
             ((TextView) card.findViewById(R.id.entryLabel)).setText(label(entry));
-            // String.join demande l'API 26 : on assemble a la main.
-            StringBuilder domains = new StringBuilder();
-            for (String domain : entry.domains) {
-                if (domains.length() > 0) domains.append(", ");
-                domains.append(domain);
-            }
-            ((TextView) card.findViewById(R.id.entryDomains)).setText(domains.toString());
+            ((TextView) card.findViewById(R.id.entryLogin)).setText(loginOf(entry));
+            ((TextView) card.findViewById(R.id.entryDomains)).setText(domainsOf(entry));
             ((TextView) card.findViewById(R.id.entrySettings)).setText(
                     getString(R.string.vault_entry_settings,
-                            entry.length, charsetSummary(entry), entry.v, entry.counter));
+                            entry.length, charsetSummary(entry), entry.counter));
 
-            // Le libelle dit l'action : une entree v1 n'a que la migration, le
-            // compteur n'entrant pas dans sa derivation.
-            boolean isV2 = entry.v >= 2;
             com.google.android.material.button.MaterialButton action =
                     card.findViewById(R.id.entryAction);
-            action.setText(isV2 ? R.string.vault_renew : R.string.vault_migrate);
+            action.setText(R.string.vault_renew);
             // Jamais désactivé : un bouton éteint n'explique rien et ne
             // propose rien. C'est le clic qui dit ce que l'offre complète
-            // apporte — la migration v1 vers v2, elle, reste ouverte à tous.
-            action.setOnClickListener(v -> proposeChange(entry, isV2));
+            // apporte.
+            action.setOnClickListener(v -> proposeRenew(entry));
 
-            card.setOnClickListener(v -> proposeChange(entry, isV2));
+            card.setOnClickListener(v -> showDetail(entry));
             list.addView(card);
         }
     }
 
-    // --------------------------------------------- renouvellement et migration
+    // ------------------------------------------------------ renouvellement
 
     /**
      * Le renouvellement demande l'offre complète.
@@ -393,13 +906,13 @@ public class VaultActivity extends AppCompatActivity {
      * Écrire d'abord rendrait le compte inaccessible : l'ancien mot de passe
      * est encore celui du site tant qu'il n'y a pas été changé.
      */
-    private void proposeChange(VaultEntry entry, boolean renew) {
+    private void proposeRenew(VaultEntry entry) {
         String masterKey = preferences.getEncodingKey();
         if (masterKey.isEmpty()) {
             toast(getString(R.string.vault_needs_key));
             return;
         }
-        if (renew && !renewAllowed()) {
+        if (!renewAllowed()) {
             toast(getString(R.string.vault_renew_paid));
             return;
         }
@@ -415,39 +928,86 @@ public class VaultActivity extends AppCompatActivity {
             String before = Generator.generate(current, masterKey, null);
 
             VaultEntry preview = VaultEntry.copyOf(entry);
-            if (renew) {
-                preview.counter = entry.counter + 1;
-            } else {
-                preview.v = 2;
-            }
+            preview.counter = entry.counter + 1;
             String after = Generator.generate(SiteResolution.of(preview), masterKey, null);
 
-            main.post(() -> new MaterialAlertDialogBuilder(this)
-                    .setTitle(getString(renew ? R.string.vault_renew_title
-                            : R.string.vault_migrate_title, label))
-                    .setMessage(getString(R.string.vault_password_pair, before, after))
-                    .setNegativeButton(android.R.string.cancel, null)
-                    .setPositiveButton(android.R.string.ok,
-                            (dialog, which) -> applyChange(entry, renew, label))
-                    .show());
+            main.post(() -> {
+                // Écran reverrouillé pendant le calcul : ne rien montrer.
+                if (!lock.isUnlocked() || isFinishing()) return;
+                AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+                        .setTitle(getString(R.string.vault_renew_title, label))
+                        .setMessage(getString(R.string.vault_password_pair, before, after))
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .setPositiveButton(android.R.string.ok,
+                                (d, which) -> applyRenew(entry, label))
+                        .create();
+                track(dialog);
+                dialog.show();
+            });
         });
     }
 
-    private void applyChange(VaultEntry entry, boolean renew, String label) {
-        if (renew) {
-            entry.counter += 1;
-        } else {
-            entry.v = 2;
-        }
+    private void applyRenew(VaultEntry entry, String label) {
+        entry.counter += 1;
         // Sans réhorodatage, la fusion ferait gagner l'autre appareil et le
         // changement serait perdu à la synchronisation suivante.
         entry.updatedAt = Vault.nowIso();
         vault.save(this);
 
         render(vault);
-        toast(renew
-                ? getString(R.string.vault_renew_done, label, entry.counter)
-                : getString(R.string.vault_migrate_done, label));
+        toast(getString(R.string.vault_renew_done, label, entry.counter));
+    }
+
+    // ------------------------------------------------------------- gestion
+
+    /** Détail d'une entrée : tout ce qui rejoue la dérivation, plus les actions. */
+    private void showDetail(VaultEntry entry) {
+        String label = label(entry);
+        AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+                .setTitle(label)
+                .setMessage(getString(R.string.vault_detail,
+                        entry.siteKey, domainsOf(entry), loginOf(entry), entry.length,
+                        charsetSummary(entry), entry.counter,
+                        entry.updatedAt == null ? "" : entry.updatedAt))
+                .setPositiveButton(R.string.vault_renew, (d, w) -> proposeRenew(entry))
+                .setNegativeButton(R.string.vault_delete, (d, w) -> confirmDelete(entry, label))
+                .setNeutralButton(R.string.vault_close, null)
+                .create();
+        track(dialog);
+        dialog.show();
+    }
+
+    private void confirmDelete(VaultEntry entry, String label) {
+        AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+                .setTitle(getString(R.string.vault_delete_title, label))
+                .setMessage(R.string.vault_delete_body)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.vault_delete, (d, w) -> {
+                    if (!lock.isUnlocked()) return;
+                    // Pierre tombale et non retrait : la suppression doit se
+                    // propager à la synchronisation.
+                    if (vault.delete(entry.id)) vault.save(this);
+                    render(vault);
+                    toast(getString(R.string.vault_delete_done, label));
+                })
+                .create();
+        track(dialog);
+        dialog.show();
+    }
+
+    private String loginOf(VaultEntry entry) {
+        return entry.login == null || entry.login.isEmpty()
+                ? getString(R.string.vault_entry_login_none) : entry.login;
+    }
+
+    /** String.join demande l'API 26 : on assemble à la main. */
+    private static String domainsOf(VaultEntry entry) {
+        StringBuilder domains = new StringBuilder();
+        for (String domain : entry.domains) {
+            if (domains.length() > 0) domains.append(", ");
+            domains.append(domain);
+        }
+        return domains.toString();
     }
 
     private static String label(VaultEntry entry) {

@@ -12,6 +12,7 @@ import android.os.Bundle;
 import android.provider.Settings;
 
 import fr.juliette.thecode.autofill.TheCodeAutofillService;
+import fr.juliette.thecode.vault.SaveProposal;
 import fr.juliette.thecode.vault.Vault;
 import fr.juliette.thecode.vault.VaultEntry;
 import android.text.Editable;
@@ -56,6 +57,8 @@ public class MainActivity extends AppCompatActivity {
     private android.view.View fingerprintRow;
     private android.widget.TextView fingerprintChip;
     private TextInputEditText siteEditText;
+    private TextInputLayout loginInputLayout;
+    private TextInputEditText loginEditText;
     private TextInputLayout passwordInputLayout;
     private TextInputEditText passwordEditText;
     private EditText lengthEditText;
@@ -97,6 +100,13 @@ public class MainActivity extends AppCompatActivity {
      */
     private boolean useV1 = false;
     private MenuItem algoItem;
+    /**
+     * Basculer d'algorithme recrée l'écran pour changer de couleur : le mode
+     * et l'annonce traversent la recréation par l'état sauvegardé.
+     */
+    private static final String STATE_USE_V1 = "useV1";
+    private static final String STATE_ANNOUNCE_ALGO = "announceAlgo";
+    private boolean announceAlgo = false;
 
     /**
      * Clef maîtresse déjà dérivée, et la clef dont elle vient.
@@ -123,9 +133,30 @@ public class MainActivity extends AppCompatActivity {
     private boolean authInFlight = false;
     /** Évite la boucle slider → champ → slider lors de la synchronisation. */
     private boolean syncingLength = false;
+    /** Date des réglages affichés : s'ils ont changé ailleurs, on les relit. */
+    private String loadedSettingsAt;
+
+    /** Carnet relu au retour sur l'écran : sert à préremplir l'identifiant. */
+    private Vault vault = new Vault();
+    /**
+     * Vrai quand l'identifiant affiché vient du carnet et non d'une frappe :
+     * il suit alors le site saisi, alors qu'une saisie de l'utilisateur reste.
+     */
+    private boolean loginPrefilled = false;
+    /** Évite que le préremplissage passe pour une frappe de l'utilisateur. */
+    private boolean settingLogin = false;
+    /** Dernier site pour lequel l'enregistrement a été proposé : une fois suffit. */
+    private String proposedFor;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        if (savedInstanceState != null) {
+            useV1 = savedInstanceState.getBoolean(STATE_USE_V1, false);
+            announceAlgo = savedInstanceState.getBoolean(STATE_ANNOUNCE_ALGO, false);
+        }
+        // Avant l'inflation : chaque vue lit colorPrimary à sa création.
+        int overlay = AlgoTheme.overlayFor(useV1);
+        if (overlay != 0) getTheme().applyStyle(overlay, true);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         setSupportActionBar(findViewById(R.id.topAppBar));
@@ -141,6 +172,13 @@ public class MainActivity extends AppCompatActivity {
         updateFingerprint(preferences.getEncodingKey());
 
         showV2NoticeIfNeeded();
+        applyLoginMode();
+        if (announceAlgo) {
+            announceAlgo = false;
+            Snackbar.make(findViewById(android.R.id.content),
+                    useV1 ? R.string.algo_now_v1 : R.string.algo_now_v2,
+                    Snackbar.LENGTH_LONG).show();
+        }
 
         regenerate();
     }
@@ -149,6 +187,16 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         refreshAutofillStatus();
+        // Le carnet a pu changer ailleurs (écran du carnet, synchronisation).
+        vault = Vault.load(this);
+        // Les réglages ont pu arriver d'un autre appareil pendant une
+        // synchronisation : les relire, sans toucher à ce qui n'a pas bougé.
+        if (loadedSettingsAt != null
+                && !loadedSettingsAt.equals(preferences.getSettingsUpdatedAt())) {
+            loadDefaultSettings();
+            regenerate();
+        }
+        prefillLogin();
         // Le pendant de onPause() est onResume(), pas onStart() : une activité
         // qui ne fait que recouvrir la nôtre (le code PIN du déverrouillage,
         // par exemple) provoque onPause() sans onStop(), donc sans onStart()
@@ -189,6 +237,8 @@ public class MainActivity extends AppCompatActivity {
         fingerprintRow = findViewById(R.id.fingerprintRow);
         fingerprintChip = findViewById(R.id.fingerprintChip);
         siteEditText = findViewById(R.id.siteEditText);
+        loginInputLayout = findViewById(R.id.loginInputLayout);
+        loginEditText = findViewById(R.id.loginEditText);
         passwordInputLayout = findViewById(R.id.passwordInputLayout);
         passwordEditText = findViewById(R.id.passwordEditText);
         lengthEditText = findViewById(R.id.lengthEditText);
@@ -208,6 +258,12 @@ public class MainActivity extends AppCompatActivity {
 
     private void loadFromPreferences() {
         keyEditText.setText(preferences.getEncodingKey());
+        loadDefaultSettings();
+    }
+
+    /** Longueur et jeux de caractères, tels que retenus (ou reçus du compte). */
+    private void loadDefaultSettings() {
+        loadedSettingsAt = preferences.getSettingsUpdatedAt();
         int length = clamp(preferences.getLength(), Code.MIN_LENGTH, Code.MAX_LENGTH);
         lengthSlider.setValueFrom(Code.MIN_LENGTH);
         lengthSlider.setValueTo(Code.MAX_LENGTH);
@@ -236,6 +292,15 @@ public class MainActivity extends AppCompatActivity {
         siteEditText.addTextChangedListener(new SimpleTextWatcher() {
             @Override
             public void afterTextChanged(Editable s) {
+                prefillLogin();
+                regenerate();
+            }
+        });
+
+        loginEditText.addTextChangedListener(new SimpleTextWatcher() {
+            @Override
+            public void afterTextChanged(Editable s) {
+                if (!settingLogin) loginPrefilled = false;
                 regenerate();
             }
         });
@@ -645,6 +710,8 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
+        // Vide = le comportement d'avant le champ, au caractère près.
+        final String login = textOf(loginEditText).trim();
         final int ticket = ++generation;
         worker.execute(() -> {
             try {
@@ -652,7 +719,7 @@ public class MainActivity extends AppCompatActivity {
                     masterV2 = CodeV2.deriveMasterKey(key);
                     masterV2For = key;
                 }
-                String result = CodeV2.getCode(code, key, site, "", 1, masterV2);
+                String result = CodeV2.getCode(code, key, site, login, 1, masterV2);
                 // Une réponse arrivée après une frappe plus récente
                 // afficherait le mot de passe d'un autre site.
                 main.post(() -> {
@@ -693,7 +760,33 @@ public class MainActivity extends AppCompatActivity {
         }
         ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
         cm.setPrimaryClip(ClipData.newPlainText(getString(R.string.clipboard_label), password));
-        Snackbar.make(resultCard, R.string.password_copied, Snackbar.LENGTH_SHORT).show();
+        if (!proposeSaveIfNeeded(R.string.vault_propose_save_copied)) {
+            Snackbar.make(resultCard, R.string.password_copied, Snackbar.LENGTH_SHORT).show();
+        }
+    }
+
+    /**
+     * Propose d'enregistrer au carnet le site dont on vient d'utiliser le mot
+     * de passe, quand un compte de synchronisation est lié et que le carnet ne
+     * le connaît pas (règle partagée avec le remplissage automatique).
+     *
+     * Pas en v1 : le carnet n'admet que la v2, l'entrée créée donnerait un
+     * autre mot de passe que celui affiché.
+     *
+     * @return vrai si la proposition a été affichée.
+     */
+    private boolean proposeSaveIfNeeded(int messageRes) {
+        if (useV1) return false;
+        String site = textOf(siteEditText).trim();
+        if (site.equals(proposedFor)) return false;
+        boolean linked = preferences.getSyncCredentials() != null;
+        if (!SaveProposal.shouldPropose(linked, vault, site)) return false;
+
+        proposedFor = site;
+        Snackbar.make(resultCard, messageRes, Snackbar.LENGTH_LONG)
+                .setAction(R.string.vault_propose_save_action, v -> saveToVault())
+                .show();
+        return true;
     }
 
     private void share() {
@@ -709,6 +802,7 @@ public class MainActivity extends AppCompatActivity {
         share.putExtra(Intent.EXTRA_TEXT,
                 getString(R.string.share_text, site, password));
         startActivity(Intent.createChooser(share, getString(R.string.share_title)));
+        proposeSaveIfNeeded(R.string.vault_propose_save);
     }
 
     private void showHelp() {
@@ -760,11 +854,48 @@ public class MainActivity extends AppCompatActivity {
     /** Bascule entre les deux algorithmes et le fait savoir. */
     private void toggleAlgo() {
         useV1 = !useV1;
-        applyAlgoLabel();
-        Snackbar.make(findViewById(android.R.id.content),
-                useV1 ? R.string.algo_now_v1 : R.string.algo_now_v2,
-                Snackbar.LENGTH_LONG).show();
-        regenerate();
+        // Recréer plutôt que reteindre vue par vue : boutons, interrupteurs,
+        // champs et barre reprennent tous la couleur du thème, en clair comme
+        // en sombre. onCreate régénère et annonce le nouveau mode.
+        announceAlgo = true;
+        recreate();
+    }
+
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putBoolean(STATE_USE_V1, useV1);
+        outState.putBoolean(STATE_ANNOUNCE_ALGO, announceAlgo);
+    }
+
+    /**
+     * La v1 ignore l'identifiant : le champ reste lisible mais éteint, avec la
+     * raison, plutôt que de laisser croire qu'il change le mot de passe.
+     */
+    private void applyLoginMode() {
+        loginInputLayout.setEnabled(!useV1);
+        loginInputLayout.setHelperText(useV1 ? getString(R.string.login_helper_v1) : null);
+    }
+
+    /**
+     * Préremplit l'identifiant depuis l'entrée du carnet qui couvre le site.
+     *
+     * Un identifiant tapé par l'utilisateur n'est jamais écrasé ; un
+     * identifiant prérempli suit le site, et disparaît s'il n'est plus couvert.
+     */
+    private void prefillLogin() {
+        String current = textOf(loginEditText);
+        if (!current.isEmpty() && !loginPrefilled) return;
+
+        String site = textOf(siteEditText).trim();
+        VaultEntry match = site.isEmpty() ? null : vault.findByDomain(site);
+        String next = match == null ? "" : Vault.loginOf(match.login);
+        if (!next.equals(current)) {
+            settingLogin = true;
+            loginEditText.setText(next);
+            settingLogin = false;
+        }
+        loginPrefilled = !next.isEmpty();
     }
 
     private void applyAlgoLabel() {
@@ -817,21 +948,25 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        Vault vault = Vault.load(this);
-        VaultEntry entry = vault.upsert(site, (int) lengthSlider.getValue(),
+        String login = textOf(loginEditText).trim();
+        // Relu juste avant d'écrire : la copie de l'écran peut dater.
+        vault = Vault.load(this);
+        // Domaine et identifiant désignent le compte : un autre identifiant
+        // sur le même site est une autre entrée.
+        VaultEntry entry = vault.upsertAccount(site, login, (int) lengthSlider.getValue(),
                 minSwitch.isChecked(), majSwitch.isChecked(),
                 symSwitch.isChecked(), chiSwitch.isChecked());
-        // Enregistrer un mot de passe genere en v1 sous une entree v2
-        // donnerait un autre mot de passe a la relecture.
-        entry.v = useV1 ? 1 : 2;
+        // Une entrée du carnet dérive toujours en v2, même enregistrée depuis
+        // l'écran réglé en v1 : elle ne porte aucune version.
         vault.save(this);
 
         // Une entrée existante garde son siteKey : le réécrire changerait un
         // mot de passe déjà en service. On le dit plutôt que de laisser croire
         // que le mot de passe affiché est celui de l'entrée.
+        String shown = login.isEmpty() ? site : site + " · " + login;
         String message = entry.siteKey.equals(site)
-                ? getString(R.string.vault_saved, site)
-                : getString(R.string.vault_saved_other_key, site, entry.siteKey);
+                ? getString(R.string.vault_saved, shown)
+                : getString(R.string.vault_saved_other_key, shown, entry.siteKey);
         Snackbar.make(findViewById(android.R.id.content), message, Snackbar.LENGTH_LONG).show();
     }
 

@@ -145,12 +145,38 @@ Le tableau ci-dessous décrit l'état où elles s'appliquent.
 
 Un dépassement dû à l'offre répond **402**, jamais 403 : le client doit pouvoir
 distinguer « vous n'avez pas le droit » de « il faut s'abonner », et ne proposer
-l'abonnement que dans le second cas. Le carnet local, lui, n'est jamais bridé :
-les entrées au-delà du plafond restent sur l'appareil.
+l'abonnement que dans le second cas. Au plafond d'appareils de l'offre complète,
+rien ne se débloque au-dessus : la connexion répond **403**. Le carnet local,
+lui, n'est jamais bridé : les entrées au-delà du plafond restent sur l'appareil.
+
+### Synchronisation partielle
+
+`GET /v1/vault` rend `max_entries`, le plafond du compte. Le client ne pousse
+que ce qui y tient, et garde le reste sur l'appareil :
+
+1. Tout ce qui est déjà sur le serveur (les `id` du pull), pierres tombales
+   comprises : une modification ou une suppression doit toujours pouvoir
+   partir.
+2. Les places libres — `max_entries` moins les entrées du point 1 non
+   supprimées — vont aux autres entrées non supprimées, **les plus anciennes
+   d'abord** : `createdAt`, `updatedAt` à défaut, puis `id` pour départager.
+3. Une entrée jamais synchronisée puis supprimée ne part pas : elle n'a rien à
+   propager.
+
+Le reste est propre à l'appareil : il est dans le carnet, se calcule et se
+fusionne comme le reste, mais le serveur ne le voit pas. Supprimer une entrée
+synchronisée libère sa place à la synchronisation suivante. Le client dit
+combien d'entrées sont restées sur l'appareil.
+
+Le serveur compte après l'écriture, et ne refuse qu'une **croissance** au-delà
+du plafond : une suppression poussée avec un ajout libère sa place, et un
+compte déjà au-delà — après une fin d'abonnement — continue de modifier et de
+supprimer ce qu'il a.
+
+Vecteurs : `vault-fixtures/sync-selection.json`.
 
 Le **compteur** — renouveler un mot de passe sans changer de clef maîtresse —
-fait partie de l'offre complète. La migration v1 vers v2 reste ouverte à tous :
-c'est une mise à niveau, pas un service.
+fait partie de l'offre complète.
 
 Ce contrôle-là vit sur l'appareil, et ne peut pas vivre ailleurs : le compteur
 voyage à l'intérieur du bloc chiffré, le serveur ne le voit pas et ne peut donc
@@ -164,8 +190,9 @@ divergence se découvre en s'y cognant.
 
 ## Compte, codes et abonnement
 
-Le **site est le seul endroit** où l'on crée un compte, choisit son offre, paie
-et déconnecte un appareil. Les clients se connectent et synchronisent : un
+Le **site est le seul endroit** où l'on choisit son offre, paie et déconnecte
+un appareil. Les clients se connectent et synchronisent — et, avec Google,
+peuvent créer un compte **gratuit**, sans offre à choisir : un
 écran de facturation par plateforme multiplierait les endroits où une erreur de
 droits peut se glisser, pour un geste qu'on fait deux fois par an.
 
@@ -181,7 +208,8 @@ droits peut se glisser, pour un geste qu'on fait deux fois par an.
   l'adresse : Google permet d'en changer, et une adresse réattribuée à
   quelqu'un d'autre lui ouvrirait le compte. Un compte existant avec la même
   adresse vérifiée est **relié**, pas dupliqué — deux comptes pour la même
-  personne couperaient son carnet en deux.
+  personne couperaient son carnet en deux. Voir « Se connecter avec Google »
+  plus bas pour le contrat et la façon dont chaque client obtient son jeton.
 - `POST /v1/account/password` — change le mot de passe. L'actuel est exigé, et
   les **autres** appareils sont déconnectés : pas celui qui vient de le
   changer. Un compte créé par Google n'a pas de mot de passe et en pose un ici,
@@ -205,6 +233,54 @@ La source de vérité de l'abonnement est le **webhook**, jamais le retour de
 navigateur : fermer l'onglet juste après avoir payé doit quand même abonner, et
 recopier l'URL de succès ne doit rien donner. Un compte à vie ne se rétrograde
 jamais sur un événement Stripe : il n'a pas d'abonnement.
+
+### Se connecter avec Google
+
+Une seule route pour tous les clients, qui crée le compte ou ouvre la session :
+
+```
+POST /v1/auth/google
+{ "id_token": "<jeton d'identité Google>",
+  "nonce": "<facultatif>",
+  "device_label": "iPhone de Julie",
+  "invite_code": "",
+  "lang": "fr" }
+
+200 → { "access_token", "refresh_token", "token_type", "expires_in" }
+401 → jeton refusé (« Connexion Google refusée. », sans détail)
+402 / 403 → plafond d'appareils atteint ; 403 aussi pour une inscription fermée
+            ou un code exigé et absent
+```
+
+Le serveur vérifie la signature (clefs publiques de Google), l'émetteur,
+l'expiration, l'adresse vérifiée, et l'**audience**, qui doit être l'une de :
+
+- `THECODE_GOOGLE_CLIENT_ID` — le client **web**. C'est le seul publié par
+  `GET /v1/auth/registration` (`googleClientId`) ; vide, Google est désactivé ;
+- `THECODE_GOOGLE_EXTRA_CLIENT_IDS` — d'autres clients, séparés par des
+  virgules, vide par défaut. Aujourd'hui le client **iOS** des applications
+  Apple, qui l'embarquent elles-mêmes.
+
+| Client      | Obtention du jeton                                                                              | Audience   | Nonce       |
+| ----------- | ----------------------------------------------------------------------------------------------- | ---------- | ----------- |
+| Site        | Google Identity Services, client web                                                            | web        | —           |
+| Extension   | `chrome.identity.launchWebAuthFlow`, flux implicite `response_type=id_token`, client web        | web        | obligatoire |
+| Android     | Credential Manager, `serverClientId` = client web                                               | web        | facultatif  |
+| iOS / macOS | `ASWebAuthenticationSession` + PKCE avec un client de type iOS, échange du code contre le jeton | client iOS | facultatif  |
+
+Le **nonce** : quand la requête en porte un, le jeton doit porter exactement le
+même (`nonce` du jeton), sinon 401 — un jeton sans nonce est refusé lui aussi.
+Le flux implicite de l'extension en exige un de Google : l'extension le tire au
+hasard, le passe à Google puis le renvoie ici tel quel.
+
+Pas de « Se connecter avec Apple ».
+
+Un premier passage par Google **crée un compte gratuit** : aucune offre à
+choisir, aucun paiement, aucun écran de facturation dans l'application. Le
+compte est ouvert (adresse vérifiée par Google, pas de mot de passe) et suit les
+plafonds de l'offre gratuite ; passer à l'offre complète se fait sur le site,
+comme pour tout compte. Seule la configuration d'inscription s'applique :
+`invite_code` sert quand le service demande un code.
 
 ## Implémentations
 

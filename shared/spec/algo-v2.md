@@ -28,6 +28,11 @@ en v1 par des `siteKey` distincts ; la v2 le traite directement.
 
 ## Dérivation
 
+`login` est pris **sans les espaces qui l'entourent** : chaque client retire les
+espaces de début et de fin à la saisie, avant la dérivation et avant
+l'enregistrement dans le carnet. Un espace collé en trop ne doit pas donner un
+autre mot de passe.
+
 ```
 mk   = PBKDF2-SHA256(clef, salt = "thecode-master/v2", iterations = 600000, dkLen = 32)
 seed = HMAC-SHA256(mk, "thecode/v2" ‖ 0x00 ‖ siteKey ‖ 0x00 ‖ login ‖ 0x00 ‖ counter)
@@ -52,27 +57,13 @@ dizaines. C'est le premier saut qui compte.
 Le sel diffère de ceux du transfert et de l'empreinte : une même valeur dérivée
 ne doit jamais servir à deux usages.
 
-## Migration
+## Carnet et v1
 
-La v2 ne remplace pas la v1 : elles coexistent, entrée par entrée, via le champ
-`v` du carnet.
+Toute entrée du carnet dérive en v2 : une entrée ne porte pas de champ de
+version (voir vault-merge.md). La v1 ne subsiste qu'en génération ponctuelle,
+hors carnet, pour retrouver un mot de passe posé sur un site avant la v2.
 
-- une entrée existante reste en `v: 1` et **son mot de passe ne change pas** ;
-- une entrée créée après cette version naît en `v: 2` ;
-- migrer une entrée est une action explicite, qui affiche l'ancien et le nouveau
-  mot de passe côte à côte, puisqu'il faudra aller le changer sur le site.
-
-Même règle pour le **renouvellement**, qui incrémente `counter` : les deux mots
-de passe s'affichent, et rien n'est écrit tant que ce n'est pas confirmé —
-incrémenter d'abord rendrait le compte inaccessible, l'ancien mot de passe étant
-encore celui du site.
-
-Le compteur n'entre pas dans la dérivation v1. Renouveler une entrée v1 est donc
-refusé plutôt que sans effet : il faut d'abord la migrer.
-
-Les deux actions existent dans les cinq implémentations. Jamais ensemble sur une
-même entrée : une entrée v1 n'a que la migration, une entrée v2 n'a plus rien à
-migrer.
-
-Sans le carnet, cette coexistence serait impossible : rien ne dirait quelle
-version appliquer à quel site.
+Le **renouvellement** incrémente `counter` : l'ancien et le nouveau mot de passe
+s'affichent, et rien n'est écrit tant que ce n'est pas confirmé — incrémenter
+d'abord rendrait le compte inaccessible, l'ancien mot de passe étant encore
+celui du site.

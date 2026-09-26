@@ -31,9 +31,9 @@ function makeRouter(): Router {
   });
 }
 
-async function mountGenerate() {
+async function mountGenerate(path = "/fr") {
   const router = makeRouter();
-  router.push("/fr");
+  router.push(path);
   await router.isReady();
   const wrapper = mount(Generate, { global: { plugins: [router] } });
   await wrapper.vm.$nextTick();
@@ -109,6 +109,27 @@ describe("page de generation", () => {
     expect(generated(wrapper)).toBe(canonical.expected);
   }, 25000);
 
+  it("teinte la page en rose en v1, en bleu en v2", async () => {
+    const root = document.documentElement;
+    expect(root.dataset.algo).toBe("v2");
+
+    await wrapper
+      .findAll("button")
+      .find((b) => b.text() === "v1")!
+      .trigger("click");
+    expect(root.dataset.algo).toBe("v1");
+
+    await wrapper
+      .findAll("button")
+      .find((b) => b.text() === "v2")!
+      .trigger("click");
+    expect(root.dataset.algo).toBe("v2");
+
+    // Le reste du site reprend le thème par défaut.
+    wrapper.unmount();
+    expect(root.dataset.algo).toBeUndefined();
+  });
+
   it("regenere quand la longueur change", async () => {
     const short = vectors.v2.cases.find((c: any) => c.id === "v2-len-min");
 
@@ -153,115 +174,40 @@ describe("carnet et empreinte", () => {
     expect(wrapper.text()).toContain("Enregistrer ce site");
   });
 
-  it("propose de migrer une entree v1 et de renouveler une v2", async () => {
+  it("renvoie vers l'écran carnet pour gérer les entrées", async () => {
     const { saveVault, emptyVault, newEntry } = await import("@/vault");
 
     const vault = emptyVault();
-    // v1 explicite : les entrees naissent desormais en v2.
-    vault.entries.push(newEntry("google.com", { domains: ["google.com"], v: 1 }));
+    vault.entries.push(newEntry("google.com", { domains: ["google.com"] }));
     saveVault(vault);
 
     const wrapper = await mountGenerate();
     await wrapper.find("#id_site").setValue("google.com");
     await wrapper.vm.$nextTick();
 
-    // Une entree v1 n'a rien a renouveler : le compteur n'entre pas dans sa
-    // derivation. On ne propose donc que la migration.
-    expect(wrapper.text()).toContain("Passer en v2");
+    // La gestion vit derrière le verrou : plus de liste ni de renouvellement ici.
     expect(wrapper.text()).not.toContain("Renouveler");
+    expect(wrapper.find('a[href="/fr/vault"]').exists()).toBe(true);
   });
 
-  /**
-   * Le renouvellement passe par le compteur, qui fait partie de l'offre
-   * complète. L'offre connue vit avec la session : la génération se fait hors
-   * ligne, il n'y a personne à interroger au moment du clic.
-   */
-  function signInAs(plan: string) {
-    localStorage.setItem(
-      "thecode.session",
-      JSON.stringify({
-        endpoint: "https://thecode-api.julsql.fr",
-        accessToken: "jeton",
-        refreshToken: "renouvellement",
-        plan,
-      }),
-    );
-  }
-
-  it("montre les deux mots de passe avant d'ecrire quoi que ce soit", async () => {
-    const { saveVault, emptyVault, newEntry, loadVault, findAllByDomain } = await import("@/vault");
-
-    const vault = emptyVault();
-    vault.entries.push(newEntry("google.com", { domains: ["google.com"], v: 2 }));
-    saveVault(vault);
-    signInAs("pro");
-
+  it("enregistre une entree sans version meme depuis l'ecran regle en v1", async () => {
     const wrapper = await mountGenerate();
-    await wrapper.find("#id_clef").setValue("clef");
+
     await wrapper.find("#id_site").setValue("google.com");
+    const v1Button = wrapper.findAll("button").find((b) => b.text() === "v1");
+    await v1Button!.trigger("click");
+
+    const button = wrapper.findAll("button").find((b) => b.text().includes("Enregistrer"));
+    await button!.trigger("click");
     await wrapper.vm.$nextTick();
 
-    const renew = wrapper.findAll("button").find((b) => b.text() === "Renouveler");
-    await renew!.trigger("click");
-
-    await vi.waitFor(() => expect(wrapper.text()).toContain("Nouveau"), { timeout: 10000 });
-    expect(wrapper.text()).toContain("Mot de passe actuel");
-
-    // Rien n'est ecrit tant que ce n'est pas confirme : l'ancien mot de passe
-    // est encore celui du site.
-    expect(findAllByDomain(loadVault(), "google.com")[0].counter).toBe(1);
-
-    const confirm = wrapper.findAll("button").find((b) => b.text() === "Confirmer");
-    await confirm!.trigger("click");
-    await wrapper.vm.$nextTick();
-
-    expect(findAllByDomain(loadVault(), "google.com")[0].counter).toBe(2);
+    // La v1 ne vit qu'en generation ponctuelle, hors carnet : l'entree n'a
+    // pas de version et derive en v2.
+    const { loadVault, findAllByDomain } = await import("@/vault");
+    const [entry] = findAllByDomain(loadVault(), "google.com");
+    expect(entry).toBeDefined();
+    expect(entry).not.toHaveProperty("v");
   });
-
-  it("refuse le renouvellement a l'offre gratuite", async () => {
-    const { saveVault, emptyVault, newEntry } = await import("@/vault");
-
-    const vault = emptyVault();
-    vault.entries.push(newEntry("google.com", { domains: ["google.com"], v: 2 }));
-    saveVault(vault);
-    // Sans compte, donc offre gratuite : le compteur est ce qui permet de
-    // changer un mot de passe sans changer sa clef, et c'est ce qui se paie.
-    const wrapper = await mountGenerate();
-
-    await wrapper.find("#id_clef").setValue("clef");
-    await wrapper.find("#id_site").setValue("google.com");
-    await wrapper.vm.$nextTick();
-
-    // Le bouton reste cliquable : un bouton éteint n'explique rien et ne
-    // propose rien. C'est le refus qui dit ce que l'offre complète apporte.
-    const renew = wrapper.findAll("button").find((b) => b.text() === "Renouveler");
-    expect(renew!.attributes("disabled")).toBeUndefined();
-
-    await renew!.trigger("click");
-    await wrapper.vm.$nextTick();
-
-    expect(wrapper.text()).toContain("offre complète");
-    // Et rien n'a été calculé ni écrit.
-    expect(wrapper.text()).not.toContain("Nouveau mot de passe");
-  }, 20000);
-
-  it("laisse migrer une entree v1 sans compte", async () => {
-    const { saveVault, emptyVault, newEntry } = await import("@/vault");
-
-    const vault = emptyVault();
-    vault.entries.push(newEntry("google.com", { domains: ["google.com"], v: 1 }));
-    saveVault(vault);
-
-    const wrapper = await mountGenerate();
-    await wrapper.find("#id_clef").setValue("clef");
-    await wrapper.find("#id_site").setValue("google.com");
-    await wrapper.vm.$nextTick();
-
-    // Passer en v2 est une mise a niveau, pas un service : la brider
-    // laisserait des comptes sur l'ancien algorithme pour une question de prix.
-    const migrate = wrapper.findAll("button").find((b) => b.text() === "Passer en v2");
-    expect(migrate!.attributes("disabled")).toBeUndefined();
-  }, 20000);
 
   it("enregistre les reglages et les retrouve", async () => {
     const wrapper = await mountGenerate();
@@ -279,6 +225,132 @@ describe("carnet et empreinte", () => {
     const { loadVault, findAllByDomain } = await import("@/vault");
     const entry = findAllByDomain(loadVault(), "google.com")[0];
     expect(entry?.length).toBe(16);
+  });
+});
+
+describe("identifiant", () => {
+  beforeEach(() => localStorage.clear());
+
+  const loginValue = (w: { find: (s: string) => any }) =>
+    (w.find("#id_login").element as HTMLInputElement).value;
+
+  it("fait entrer l'identifiant dans la derivation v2", async () => {
+    const withLogin = vectors.v2.cases.find((c: any) => c.id === "v2-with-login");
+    const wrapper = await mountGenerate();
+
+    await wrapper.find("#id_site").setValue(withLogin.site);
+    await wrapper.find("#id_login").setValue(withLogin.login);
+    await wrapper.find("#id_clef").setValue(withLogin.master);
+
+    await vi.waitFor(() => expect(generated(wrapper)).toBe(withLogin.expected), {
+      timeout: 15000,
+    });
+  }, 20000);
+
+  it("ignore les espaces autour de l'identifiant", async () => {
+    const withLogin = vectors.v2.cases.find((c: any) => c.id === "v2-with-login");
+    const wrapper = await mountGenerate();
+
+    await wrapper.find("#id_site").setValue(withLogin.site);
+    await wrapper.find("#id_login").setValue(`  ${withLogin.login} `);
+    await wrapper.find("#id_clef").setValue(withLogin.master);
+
+    await vi.waitFor(() => expect(generated(wrapper)).toBe(withLogin.expected), {
+      timeout: 15000,
+    });
+  }, 20000);
+
+  it("est ignore en v1, et le dit", async () => {
+    const canonical = vectors.v1.cases.find((c: any) => c.id === "canonical");
+    const wrapper = await mountGenerate();
+    expect(wrapper.text()).not.toContain("ignore l'identifiant");
+
+    await wrapper.find("#id_site").setValue(canonical.site);
+    await wrapper.find("#id_login").setValue("moi");
+    await wrapper.find("#id_clef").setValue(canonical.master);
+    const v1Button = wrapper.findAll("button").find((b) => b.text() === "v1");
+    await v1Button!.trigger("click");
+
+    expect(wrapper.text()).toContain("L'algorithme v1 ignore l'identifiant.");
+    await vi.waitFor(() => expect(generated(wrapper)).toBe(canonical.expected), {
+      timeout: 15000,
+    });
+  }, 20000);
+
+  it("se traduit en anglais", async () => {
+    const router = makeRouter();
+    router.push("/en");
+    await router.isReady();
+    const wrapper = mount(Generate, { global: { plugins: [router] } });
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.find("label[for='id_login']").text()).toBe("Login");
+  });
+
+  it("reprend l'identifiant connu du carnet, puis l'oublie en changeant de site", async () => {
+    const { saveVault, emptyVault, newEntry } = await import("@/vault");
+    const vault = emptyVault();
+    vault.entries.push(newEntry("google.com", { login: "moi" }));
+    saveVault(vault);
+
+    const wrapper = await mountGenerate();
+    await wrapper.find("#id_site").setValue("google.com");
+    expect(loginValue(wrapper)).toBe("moi");
+    expect(wrapper.text()).toContain("Mettre à jour l'entrée");
+
+    await wrapper.find("#id_site").setValue("github.com");
+    expect(loginValue(wrapper)).toBe("");
+  });
+
+  it("garde l'identifiant saisi par l'utilisateur", async () => {
+    const { saveVault, emptyVault, newEntry } = await import("@/vault");
+    const vault = emptyVault();
+    vault.entries.push(newEntry("google.com", { login: "moi" }));
+    saveVault(vault);
+
+    const wrapper = await mountGenerate();
+    await wrapper.find("#id_login").setValue("pro");
+    await wrapper.find("#id_site").setValue("google.com");
+
+    expect(loginValue(wrapper)).toBe("pro");
+    expect(wrapper.text()).toContain("Enregistrer ce site");
+  });
+
+  it("met a jour l'entree du meme identifiant sans toucher a siteKey", async () => {
+    const { saveVault, emptyVault, newEntry, loadVault } = await import("@/vault");
+    const vault = emptyVault();
+    const entry = newEntry("google.com", { domains: ["google.com"], login: "moi" });
+    entry.siteKey = "accounts.google.com";
+    vault.entries.push(entry);
+    saveVault(vault);
+
+    const wrapper = await mountGenerate();
+    await wrapper.find("#id_site").setValue("google.com");
+    await wrapper.find("#id_longueur").setValue("16");
+    const button = wrapper.findAll("button").find((b) => b.text().includes("Mettre à jour"));
+    await button!.trigger("click");
+
+    const entries = loadVault().entries;
+    expect(entries).toHaveLength(1);
+    expect(entries[0].length).toBe(16);
+    expect(entries[0].siteKey).toBe("accounts.google.com");
+  });
+
+  it("cree une nouvelle entree v2 pour un autre identifiant", async () => {
+    const { saveVault, emptyVault, newEntry, loadVault, findAllByDomain } = await import("@/vault");
+    const vault = emptyVault();
+    vault.entries.push(newEntry("google.com", { login: "moi" }));
+    saveVault(vault);
+
+    const wrapper = await mountGenerate();
+    await wrapper.find("#id_site").setValue("google.com");
+    await wrapper.find("#id_login").setValue("pro");
+    const button = wrapper.findAll("button").find((b) => b.text().includes("Enregistrer"));
+    await button!.trigger("click");
+
+    const entries = findAllByDomain(loadVault(), "google.com");
+    expect(entries.map((e) => e.login).sort()).toStrictEqual(["moi", "pro"]);
+    expect(entries.every((e) => !("v" in e))).toBe(true);
   });
 });
 
@@ -304,6 +376,22 @@ describe("synchronisation", () => {
     // Le carnet est chiffré avec une clef dérivée de la clef maîtresse :
     // sans elle, il n'y a rien à chiffrer ni à relire.
     expect(wrapper.text()).toContain("clef maîtresse");
+
+    clearSession();
+  });
+});
+
+describe("messages de synchronisation", () => {
+  it("parlent la langue de la page", async () => {
+    const { saveSession, clearSession } = await import("@/sync");
+    saveSession({ endpoint: "https://x", accessToken: "a", refreshToken: "r" });
+
+    const wrapper = await mountGenerate("/en");
+    const button = wrapper.findAll("button").find((b) => b.text().startsWith("Sync now"));
+    await button!.trigger("click");
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.text()).toContain("Enter your master key.");
 
     clearSession();
   });
@@ -370,6 +458,17 @@ describe("annonce du passage à la v2", () => {
 
     expect(wrapper.find(".modal-backdrop").exists()).toBe(true);
     expect(wrapper.text()).toContain("Nouvel algorithme");
+  });
+
+  it("se traduit en anglais et renvoie vers le site pour la v1", async () => {
+    const router = makeRouter();
+    router.push("/en");
+    await router.isReady();
+    const wrapper = mount(Generate, { global: { plugins: [router] } });
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.text()).toContain("New algorithm");
+    expect(wrapper.text()).toContain("generate the password in v1 from the website");
   });
 
   it("revient la prochaine fois si on ferme sans cocher", async () => {

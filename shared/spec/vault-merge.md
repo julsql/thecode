@@ -8,6 +8,15 @@ La règle doit être **identique sur les cinq implémentations** : deux appareil
 qui fusionnent les mêmes carnets doivent aboutir au même résultat, sinon ils
 repartent en divergence à la synchronisation suivante.
 
+## Pas de version par entrée
+
+Une entrée ne porte **aucun** champ de version d'algorithme : toute entrée du
+carnet dérive en v2. La v1 ne subsiste qu'en génération ponctuelle, hors carnet
+— enregistrer depuis un écran réglé en v1 crée ou garde une entrée v2.
+
+Aucun carnet n'a jamais contenu d'entrée v1 : les clients n'ont connu le carnet
+qu'avec la v2. Il n'y a donc rien à filtrer ni à migrer à la lecture.
+
 ## Principe
 
 Fusion par entrée, appariée sur `id` (UUID). Une entrée présente d'un seul côté
@@ -15,13 +24,14 @@ est reprise telle quelle.
 
 Quand la même `id` existe des deux côtés :
 
-| Champ         | Règle                                                          | Pourquoi                                                                                                                      |
-| ------------- | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `domains`     | **union**                                                      | Ajouter `google.fr` sur le téléphone ne doit pas effacer `youtube.com` ajouté sur l'ordinateur                                |
-| `counter`     | **max**                                                        | Un compteur ne recule pas tout seul : une valeur plus haute signifie que le mot de passe a déjà été renouvelé quelque part    |
-| `deleted`     | **vrai l'emporte**                                             | Une suppression doit se propager, pas être annulée par l'autre carnet                                                         |
-| `siteKey`     | **jamais fusionné**                                            | C'est ce qui produit le mot de passe. Deux valeurs différentes pour une même `id` = conflit signalé, jamais résolu en silence |
-| tout le reste | **dernier écrivain gagne**, champ par champ, selon `updatedAt` |                                                                                                                               |
+| Champ         | Règle                                                          | Pourquoi                                                                                                                          |
+| ------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `domains`     | **union**                                                      | Ajouter `google.fr` sur le téléphone ne doit pas effacer `youtube.com` ajouté sur l'ordinateur                                    |
+| `counter`     | **max**                                                        | Un compteur ne recule pas tout seul : une valeur plus haute signifie que le mot de passe a déjà été renouvelé quelque part        |
+| `deleted`     | **vrai l'emporte**                                             | Une suppression doit se propager, pas être annulée par l'autre carnet                                                             |
+| `createdAt`   | **min**, l'absent ne compte pas                                | Une entrée n'est créée qu'une fois : la date la plus ancienne est la vraie, et un carnet antérieur au champ ne doit pas l'effacer |
+| `siteKey`     | **jamais fusionné**                                            | C'est ce qui produit le mot de passe. Deux valeurs différentes pour une même `id` = conflit signalé, jamais résolu en silence     |
+| tout le reste | **dernier écrivain gagne**, champ par champ, selon `updatedAt` |                                                                                                                                   |
 
 `updatedAt` de l'entrée fusionnée = le plus récent des deux.
 
@@ -35,6 +45,19 @@ la signale, et laisse l'utilisateur trancher.
 porte un counter plus bas _et_ un `updatedAt` plus récent, c'est le signe que
 l'autre appareil est en retard. On garde le max et on le signale : l'utilisateur
 doit savoir que son mot de passe a été renouvelé ailleurs.
+
+**Doublon.** Le même compte créé séparément sur deux appareils porte deux `id`
+différents : la fusion ne les apparie pas. Deux entrées non supprimées forment
+un doublon quand elles partagent un domaine (sans tenir compte de la casse) et
+le même `login` (absent = chaîne vide). Les deux sont gardées — leurs réglages
+peuvent différer, et en choisir une changerait peut-être un mot de passe — et
+le doublon est signalé (`doublon`), pour que l'utilisateur supprime celle qu'il
+ne veut pas.
+
+Seul un doublon que la fusion **rapproche** est signalé : une entrée présente
+d'un seul côté, l'autre d'un seul côté aussi, mais pas du même. Un doublon
+qu'un carnet contient déjà l'a été quand il y est entré ; le resignaler à
+chaque synchronisation serait du bruit.
 
 ## Égalité de `updatedAt`
 

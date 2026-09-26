@@ -70,14 +70,18 @@ test("l'empreinte apparait a la saisie de la clef", async () => {
   await page.close();
 });
 
-test("le carnet propose d'enregistrer le site", async () => {
+test("l'ecran principal ne garde que la generation", async () => {
   const page = await context.newPage();
   await page.goto(`chrome-extension://${extensionId}/popup.html`);
 
-  await expect(page.locator("#saveEntry")).toBeVisible();
-  // Le selecteur de compte reste masque tant qu'il n'y a pas d'ambiguite :
-  // on n'encombre pas l'interface pour un cas qui n'existe pas.
-  await expect(page.locator("#accountRow")).toBeHidden();
+  // Clef, identifiant, algorithme : ce qui sert a generer, rien d'autre.
+  await expect(page.locator("#passphrase")).toBeVisible();
+  await expect(page.locator("#login")).toBeVisible();
+  // Enregistrer vit dans le resultat : sans mot de passe genere, rien a
+  // enregistrer.
+  await expect(page.locator("#saveEntry")).toBeHidden();
+  // La synchronisation et les parametres sont passes derriere le rouage.
+  await expect(page.locator("#settingsView")).toBeHidden();
 
   await page.close();
 });
@@ -85,6 +89,16 @@ test("le carnet propose d'enregistrer le site", async () => {
 test("la synchronisation propose de se connecter, pas de synchroniser", async () => {
   const page = await context.newPage();
   await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+  // L'annonce de la v2 s'ouvre par-dessus au premier affichage : on la ferme
+  // comme le ferait l'utilisatrice.
+  // Elle apparait apres une lecture asynchrone du stockage : on l'attend un peu.
+  await page
+    .locator("#v2NoticeClose")
+    .click({ timeout: 3_000 })
+    .catch(() => {});
+  await page.locator("#openSettings").click();
+  await expect(page.locator("#settingsView")).toBeVisible();
 
   // Sans session, proposer « Synchroniser » donnerait un bouton qui echoue.
   await expect(page.locator("#syncLoginBtn")).toBeVisible();

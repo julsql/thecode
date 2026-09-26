@@ -24,7 +24,9 @@ function emptyVault() {
 }
 
 function newEntry(siteKey, options = {}) {
-  const { label, domains, login = "", length = VAULT_DEFAULT_LENGTH, charset, v = 1 } = options;
+  // Pas de version : une entree derive toujours en v2.
+  const { label, domains, login = "", length = VAULT_DEFAULT_LENGTH, charset } = options;
+  const now = nowIso();
   return {
     id: crypto.randomUUID(),
     label: label || siteKey,
@@ -34,8 +36,8 @@ function newEntry(siteKey, options = {}) {
     counter: 1,
     length,
     charset: { ...VAULT_DEFAULT_CHARSET, ...(charset || {}) },
-    v,
-    updatedAt: nowIso(),
+    createdAt: now,
+    updatedAt: now,
   };
 }
 
@@ -49,6 +51,35 @@ function findAllByDomain(vault, domain) {
 
 function findByDomain(vault, domain) {
   return findAllByDomain(vault, domain)[0] || null;
+}
+
+/** Longueur maximale d'un identifiant : il entre dans la derivation v2. */
+const VAULT_LOGIN_MAX = 120;
+
+/** L'entree d'un compte precis : meme domaine et meme identifiant. */
+function findByDomainAndLogin(vault, domain, login = "") {
+  return findAllByDomain(vault, domain).find((e) => (e.login || "") === login) || null;
+}
+
+/**
+ * Enregistre un compte depuis la popup.
+ *
+ * Le compte est designe par domaine + identifiant : deux identifiants sur un
+ * meme site sont deux entrees. Une entree existante ne voit changer que sa
+ * longueur et son jeu de caracteres — jamais son siteKey, qui produit le mot
+ * de passe. Sinon, une entree nait avec cet identifiant.
+ */
+function upsertSiteEntry(vault, { domain, login = "", length, charset }) {
+  const existing = findByDomainAndLogin(vault, domain, login);
+  if (existing) {
+    existing.length = length;
+    existing.charset = { ...VAULT_DEFAULT_CHARSET, ...(charset || {}) };
+    existing.updatedAt = nowIso();
+    return { entry: existing, updated: true };
+  }
+  const entry = newEntry(domain, { domains: [domain], login, length, charset });
+  vault.entries.push(entry);
+  return { entry, updated: false };
 }
 
 /** Representation stable, pour departager sans dependre de l'ordre. */
@@ -123,8 +154,36 @@ function mergeEntry(left, right, conflicts) {
   // Une suppression se propage, sinon l'autre carnet ressusciterait l'entree.
   if (left.deleted || right.deleted) merged.deleted = true;
 
+  // Une entree n'est creee qu'une fois : la date la plus ancienne est la
+  // vraie. Un carnet anterieur au champ ne doit pas l'effacer.
+  const created = [left.createdAt, right.createdAt].filter(Boolean).sort();
+  if (created.length) merged.createdAt = created[0];
+  else delete merged.createdAt;
+
   merged.updatedAt = left.updatedAt > right.updatedAt ? left.updatedAt : right.updatedAt;
   return merged;
+}
+
+/**
+ * Signale les doublons que la fusion rapproche : le meme compte cree a part
+ * sur deux appareils, donc sous deux id. Un doublon deja present d'un cote
+ * l'a ete quand il y est entre — le resignaler a chaque fusion serait du bruit.
+ */
+function findDuplicates(entries, leftIds, rightIds, conflicts) {
+  const live = entries.filter((e) => !e.deleted);
+  for (let i = 0; i < live.length; i += 1) {
+    for (let j = i + 1; j < live.length; j += 1) {
+      const a = live[i];
+      const b = live[j];
+      const apart =
+        (leftIds.has(a.id) && !rightIds.has(a.id) && rightIds.has(b.id) && !leftIds.has(b.id)) ||
+        (rightIds.has(a.id) && !leftIds.has(a.id) && leftIds.has(b.id) && !rightIds.has(b.id));
+      if (!apart || (a.login || "") !== (b.login || "")) continue;
+      const domains = new Set((a.domains || []).map((d) => d.toLowerCase()));
+      if (!(b.domains || []).some((d) => domains.has(d.toLowerCase()))) continue;
+      conflicts.push({ kind: "doublon", entryId: a.id, detail: b.id });
+    }
+  }
 }
 
 /**
@@ -133,14 +192,22 @@ function mergeEntry(left, right, conflicts) {
  */
 function mergeVaults(left, right) {
   const conflicts = [];
-  const byId = new Map((left.entries || []).map((e) => [e.id, e]));
+  const leftEntries = left.entries || [];
+  const rightEntries = right.entries || [];
+  const byId = new Map(leftEntries.map((e) => [e.id, e]));
 
-  for (const entry of right.entries || []) {
+  for (const entry of rightEntries) {
     const existing = byId.get(entry.id);
     byId.set(entry.id, existing ? mergeEntry(existing, entry, conflicts) : { ...entry });
   }
 
   const entries = [...byId.values()].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  findDuplicates(
+    entries,
+    new Set(leftEntries.map((e) => e.id)),
+    new Set(rightEntries.map((e) => e.id)),
+    conflicts,
+  );
   const updatedAt = [
     left.updatedAt || "",
     right.updatedAt || "",
@@ -151,6 +218,36 @@ function mergeVaults(left, right) {
     .pop();
 
   return { vault: { schema: VAULT_SCHEMA, updatedAt: updatedAt || nowIso(), entries }, conflicts };
+}
+
+/**
+ * Ce qui part au serveur quand le compte a un plafond, et ce qui reste sur
+ * l'appareil. Voir shared/spec/vault-sync.md, « Synchronisation partielle ».
+ *
+ * Ce qui est deja sur le serveur part toujours, pierres tombales comprises :
+ * une modification doit pouvoir partir. Les places libres vont aux autres
+ * entrees, les plus anciennes d'abord. Une entree jamais synchronisee puis
+ * supprimee n'a rien a propager.
+ */
+function selectForPush(vault, remoteIds, maxEntries) {
+  const remote = new Set(remoteIds);
+  const entries = vault.entries || [];
+  const byId = (a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+  const onServer = entries.filter((e) => remote.has(e.id));
+  const others = entries
+    .filter((e) => !remote.has(e.id) && !e.deleted)
+    .sort((a, b) => {
+      const da = a.createdAt || a.updatedAt;
+      const db = b.createdAt || b.updatedAt;
+      if (da !== db) return da < db ? -1 : 1;
+      return byId(a, b);
+    });
+
+  const free = Math.max(0, maxEntries - onServer.filter((e) => !e.deleted).length);
+  return {
+    push: [...onServer, ...others.slice(0, free)].sort(byId),
+    localOnly: others.slice(free).sort(byId),
+  };
 }
 
 async function loadVault(storage) {
@@ -191,7 +288,11 @@ if (typeof module !== "undefined") {
     newEntry,
     findByDomain,
     findAllByDomain,
+    findByDomainAndLogin,
+    upsertSiteEntry,
+    VAULT_LOGIN_MAX,
     mergeVaults,
+    selectForPush,
     loadVault,
     saveVault,
     // Interne, expose pour le test contre la fixture partagee : la forme

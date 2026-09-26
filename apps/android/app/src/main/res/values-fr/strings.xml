@@ -16,6 +16,8 @@
     <string name="symbols">Symboles</string>
     <string name="digits">Chiffres</string>
     <string name="site_hint">Nom du site</string>
+    <string name="login_hint">Identifiant (facultatif)</string>
+    <string name="login_helper_v1">Ignoré en v1 : l\'ancien algorithme n\'utilise pas l\'identifiant.</string>
     <string name="generated_password_hint">Mot de passe généré</string>
     <string name="copy">Copier</string>
     <string name="clipboard_label">Mot de passe</string>
@@ -51,6 +53,7 @@
     <string name="autofill_open_settings">Ouvrir les paramètres</string>
     <string name="autofill_for_domain">Pour %1$s</string>
     <string name="autofill_auth_title">Authentification requise</string>
+    <string name="autofill_save_foreign">Ce mot de passe ne vient pas de TheCode : il n\'est pas enregistré dans le carnet.</string>
     <string name="autofill_no_key_warning">Définissez d\'abord une clé pour utiliser le remplissage automatique.</string>
 
     <!-- Affichage de la clé -->
@@ -70,7 +73,7 @@
     <string name="fingerprint_label">Empreinte</string>
     <string name="vault_title">Carnet</string>
     <string name="vault_empty">Aucun site enregistré. Enregistrez-en un depuis l\'écran principal pour ne plus avoir à retenir ses réglages.</string>
-    <string name="vault_entry_settings">%1$d caractères, %2$s — v%3$d, compteur %4$d</string>
+    <string name="vault_entry_settings">%1$d caractères, %2$s — compteur %3$d</string>
 
     <!-- Synchronisation chiffrée (facultative). -->
     <string name="sync_action">Synchroniser</string>
@@ -81,6 +84,10 @@
     <string name="sync_email">Adresse e-mail</string>
     <string name="sync_password">Mot de passe du compte</string>
     <string name="sync_connect">Se connecter</string>
+    <string name="sync_google">Continuer avec Google</string>
+    <string name="sync_google_failed">Échec de la connexion Google : %1$s</string>
+    <string name="sync_google_no_account">Aucun compte Google sur cet appareil. Ajoutez-en un dans les réglages du système, puis réessayez.</string>
+    <string name="sync_google_unexpected">réponse inattendue de Google</string>
     <string name="sync_no_account">Pas encore de compte ? Créez-le sur https://thecode.julsql.fr/fr/account?from=app</string>
     <string name="sync_pitch_title">Synchronisez votre carnet</string>
     <string name="sync_pitch_body">Gardez votre carnet à jour entre vos appareils. Il est chiffré sur cet appareil avant d\'être envoyé : le serveur ne peut lire ni vos sites, ni vos identifiants.</string>
@@ -89,6 +96,7 @@
     <string name="sync_running">Synchronisation…</string>
     <string name="sync_done">Carnet synchronisé : %1$d entrées.</string>
     <string name="sync_done_conflicts">Carnet synchronisé : %1$d entrées, %2$d demandent votre attention.</string>
+    <string name="sync_local_only">%1$d entrées restées sur cet appareil (plafond de l\'offre gratuite).</string>
     <string name="sync_failed">Échec de la synchronisation : %1$s</string>
     <string name="sync_needs_key">Définissez d\'abord votre clef maîtresse : le carnet est chiffré avec elle avant de quitter cet appareil.</string>
     <string name="sync_no_secure_storage">Le stockage chiffré est indisponible sur cet appareil : les identifiants ne peuvent pas être conservés.</string>
@@ -97,19 +105,17 @@
     <string name="vault_save">Enregistrer les réglages au carnet</string>
     <string name="vault_saved">« %1$s » enregistré au carnet.</string>
     <string name="vault_saved_other_key">« %1$s » enregistré. Attention : cette entrée génère son mot de passe depuis « %2$s », pas depuis ce que vous avez saisi.</string>
+    <string name="vault_propose_save">Enregistrer ce site dans le carnet ?</string>
+    <string name="vault_propose_save_copied">Mot de passe copié. Enregistrer ce site dans le carnet ?</string>
+    <string name="vault_propose_save_action">Enregistrer</string>
     <string name="vault_save_needs_site">Saisissez d\'abord un site.</string>
     <string name="vault_entry_actions">Que faire de « %1$s » ?</string>
     <string name="vault_renew">Renouveler ce mot de passe</string>
     <string name="vault_renew_paid">Le renouvellement n\'est pas activé sur ce compte.</string>
     <string name="sync_limit_reached">Limite de synchronisation atteinte : les entrées en trop restent sur cet appareil.</string>
-    <string name="vault_migrate">Passer cette entrée en v2</string>
     <string name="vault_renew_title">Renouveler « %1$s »</string>
-    <string name="vault_migrate_title">Passer « %1$s » en v2</string>
     <string name="vault_password_pair">Actuel\n%1$s\n\nNouveau\n%2$s\n\nChangez-le sur le site, puis confirmez. Le nouveau ne sert à rien tant que ce n\'est pas fait, et l\'ancien reste celui qui vous connecte.</string>
     <string name="vault_renew_done">« %1$s » renouvelée, compteur %2$d.</string>
-    <string name="vault_migrate_done">« %1$s » est en v2.</string>
-    <string name="vault_renew_needs_v2">« %1$s » est en v1, où le compteur n\'a aucun effet. Passez-la d\'abord en v2.</string>
-    <string name="vault_already_v2">« %1$s » est déjà en v2.</string>
     <string name="vault_needs_key">Définissez d\'abord votre clef maîtresse : c\'est elle qui calcule les mots de passe.</string>
     <string name="vault_working">Calcul en cours…</string>
     <!-- Transfert du carnet par QR code. -->
@@ -133,7 +139,7 @@
     <string name="algo_now_v1">Ancien algorithme. Pour un site dont le mot de passe n\'a pas encore été changé.</string>
     <string name="algo_now_v2">Algorithme actuel.</string>
     <!-- Annonce du passage a la v2. -->
-    <string name="v2_notice">Les mots de passe se calculent désormais avec un nouvel algorithme (v2). Ceux déjà posés sur vos sites viennent de l\'ancien et n\'ont pas changé. Le remplissage automatique utilise le nouveau : pour un site que vous n\'avez pas encore mis à jour, générez avec l\'ancien (v1) depuis le menu, ou passez l\'entrée en v2 depuis le carnet après avoir changé le mot de passe sur le site.</string>
+    <string name="v2_notice">Les mots de passe se calculent désormais avec un nouvel algorithme (v2). Veuillez migrer vos mots de passe dans ce nouvel algorithme. Le remplissage automatique utilise le nouveau : pour un site que vous n\'avez pas encore mis à jour, générez le mot de passe en v1 depuis l\'application avec l\'ancien algorithme.</string>
     <string name="v2_notice_title">Nouvel algorithme</string>
     <string name="v2_notice_never_again">Ne plus afficher</string>
     <string name="v2_notice_close">Fermer</string>
@@ -145,4 +151,43 @@
     <!-- Mode de generation, affiche dans la barre. -->
     <string name="algo_mode_v1">v1</string>
     <string name="algo_mode_v2">v2</string>
+    <!-- Verrou de l'ecran carnet (shared/spec/vault-lock.md). -->
+    <string name="vault_unlock">Déverrouiller</string>
+    <string name="vault_lock_forgot">Mot de passe oublié</string>
+    <string name="vault_lock_forgot_title">Effacer le carnet local ?</string>
+    <string name="vault_lock_forgot_body">Rien d\'autre ne permet d\'ouvrir le verrou. Le carnet enregistré sur cet appareil et son verrou seront effacés. Si la synchronisation est active, le carnet reviendra à la prochaine synchronisation.</string>
+    <string name="vault_lock_forgot_confirm">Effacer</string>
+    <string name="vault_lock_forgot_done">Carnet local effacé.</string>
+    <string name="vault_lock_setup_title">Protéger le carnet</string>
+    <string name="vault_lock_setup_body">Choisissez comment déverrouiller le carnet sur cet appareil. Ce choix reste sur l\'appareil et n\'est jamais synchronisé.</string>
+    <string name="vault_lock_setup_auth_title">Confirmez votre identité</string>
+    <string name="vault_lock_setup_auth_subtitle">Avant de protéger le carnet, confirmez votre identité avec le verrouillage de l\'appareil.</string>
+    <string name="vault_lock_use_biometric">Biométrie</string>
+    <string name="vault_lock_use_password">Mot de passe de carnet</string>
+    <string name="vault_lock_create_title">Créer un mot de passe de carnet</string>
+    <string name="vault_lock_enter_title">Mot de passe de carnet</string>
+    <string name="vault_lock_password">Mot de passe</string>
+    <string name="vault_lock_password_current">Mot de passe actuel</string>
+    <string name="vault_lock_password_new">Nouveau mot de passe</string>
+    <string name="vault_lock_password_confirm">Saisissez-le à nouveau</string>
+    <string name="vault_lock_password_rule">8 caractères minimum.</string>
+    <string name="vault_lock_mismatch">Les deux mots de passe diffèrent.</string>
+    <string name="vault_lock_wrong">Mot de passe incorrect.</string>
+    <string name="vault_lock_checking">Vérification…</string>
+    <string name="vault_lock_settings">Verrou du carnet</string>
+    <string name="vault_lock_now">Verrouiller</string>
+    <string name="vault_lock_change_password">Changer le mot de passe de carnet</string>
+    <string name="vault_lock_switch_biometric">Utiliser plutôt la biométrie</string>
+    <string name="vault_lock_switch_password">Utiliser plutôt un mot de passe de carnet</string>
+    <string name="vault_lock_password_changed">Mot de passe de carnet modifié.</string>
+    <string name="vault_lock_method_changed">Méthode de déverrouillage modifiée.</string>
+    <string name="vault_lock_biometric_unavailable">Ni la biométrie ni le verrouillage de l\'écran ne sont disponibles. Configurez un verrouillage de l\'écran, ou effacez le carnet local.</string>
+    <!-- Gestion du carnet : detail et suppression d'une entree. -->
+    <string name="vault_entry_login_none">Sans identifiant</string>
+    <string name="vault_detail">Clé du site : %1$s\nDomaines : %2$s\nIdentifiant : %3$s\nLongueur : %4$d\nCaractères : %5$s\nCompteur : %6$d\nMise à jour : %7$s</string>
+    <string name="vault_delete">Supprimer</string>
+    <string name="vault_close">Fermer</string>
+    <string name="vault_delete_title">Supprimer « %1$s » ?</string>
+    <string name="vault_delete_body">L\'entrée quitte ce carnet et, à la prochaine synchronisation, vos autres appareils. Le mot de passe lui-même ne change pas sur le site.</string>
+    <string name="vault_delete_done">« %1$s » supprimé.</string>
 </resources>

@@ -116,9 +116,9 @@ public class AutofillAuthActivity extends FragmentActivity {
                 prefs.getLength(), prefs.getMinState(), prefs.getMajState(),
                 prefs.getSymState(), prefs.getChiState());
 
-        // Toujours en v2, quelle que soit la version notée dans le carnet : le
-        // remplissage ne propose pas de choix, il doit être prévisible. Un
-        // site encore en v1 se génère depuis l'écran principal.
+        // Toujours en v2, repli compris : le remplissage ne propose pas de
+        // choix, il doit être prévisible. Un site encore en v1 se génère
+        // depuis l'écran principal.
         String password = Generator.generate(resolution, key, null, 2);
         if (password.isEmpty()) {
             cancelAndFinish();

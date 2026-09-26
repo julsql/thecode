@@ -3,6 +3,7 @@ import type { RouteRecordRaw } from "vue-router";
 import Home from "./pages/Home.vue";
 import Legacy from "@/pages/Legacy.vue";
 import Generate from "./pages/Generate.vue";
+import Vault from "./pages/Vault.vue";
 import Privacy from "./pages/Privacy.vue";
 import About from "./pages/About.vue";
 import Tutorial from "./pages/Tutorial.vue";
@@ -19,6 +20,7 @@ import { DEFAULT_LANG } from "./i18n/translations";
 const routes: Array<RouteRecordRaw> = [
   { path: "/", redirect: `/${DEFAULT_LANG}` },
   { path: "/generate", redirect: `/${DEFAULT_LANG}/generate` },
+  { path: "/vault", redirect: `/${DEFAULT_LANG}/vault` },
   { path: "/privacy", redirect: `/${DEFAULT_LANG}/privacy` },
   { path: "/about", redirect: `/${DEFAULT_LANG}/about` },
   { path: "/tutorial", redirect: `/${DEFAULT_LANG}/tutorial` },
@@ -37,6 +39,8 @@ const routes: Array<RouteRecordRaw> = [
       { path: "", component: Home },
       { path: "legacy", component: Legacy },
       { path: "generate", component: Generate },
+      // Gestion du carnet, derrière un verrou local : voir shared/spec/vault-lock.md.
+      { path: "vault", component: Vault },
       { path: "privacy", component: Privacy },
       { path: "about", component: About },
       { path: "tutorial", component: Tutorial },

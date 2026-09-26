@@ -563,6 +563,7 @@
 			knownRegions = (
 				en,
 				Base,
+				fr,
 			);
 			mainGroup = 6D0D49372E8AC379003ABC8F;
 			minimizedProjectReferenceProxies = 1;
@@ -794,7 +795,7 @@
 				INFOPLIST_FILE = thecode/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = TheCode;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-				INFOPLIST_KEY_NSFaceIDUsageDescription = "Authentification pour afficher la clé du mot de passe";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Face ID protects your master key and your vault.";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -830,7 +831,7 @@
 				INFOPLIST_FILE = thecode/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = TheCode;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-				INFOPLIST_KEY_NSFaceIDUsageDescription = "Authentification pour afficher la clé du mot de passe";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Face ID protects your master key and your vault.";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -857,6 +858,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				GOOGLE_IOS_CLIENT_ID = "";
+				GOOGLE_IOS_REVERSED_CLIENT_ID = "com.googleusercontent.apps.$(GOOGLE_IOS_CLIENT_ID:base:base:base:default=unset)";
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
@@ -922,6 +925,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				GOOGLE_IOS_CLIENT_ID = "";
+				GOOGLE_IOS_REVERSED_CLIENT_ID = "com.googleusercontent.apps.$(GOOGLE_IOS_CLIENT_ID:base:base:base:default=unset)";
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;

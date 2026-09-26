@@ -2,18 +2,35 @@ if (typeof browser === "undefined" && typeof chrome !== "undefined") {
   var browser = chrome;
 }
 
-// Le carnet vit dans un fichier a part. importScripts fonctionne dans un
-// service worker classique, donc sur Chrome, Firefox et Safari ; les modules
-// ES ne sont pas supportes partout de la meme facon.
+// Le carnet vit dans un fichier a part. Chrome charge le fond en service
+// worker : importScripts y tire les dependances. Firefox et Safari le chargent
+// en page de fond, sans importScripts : c'est leur manifeste qui liste ces
+// fichiers avant celui-ci (voir manifest.spec.js).
 if (typeof importScripts === "function") {
-  importScripts("vault.js", "transfer.js", "sync.js", "core-v2.js");
+  importScripts(
+    "vault.js",
+    "transfer.js",
+    "sync.js",
+    "core-v2.js",
+    "vault-lock.js",
+    "vault-session.js",
+    "google-auth.js",
+  );
 }
 // En test, core-v2.js est charge en fin de fichier : il require background.js,
 // et le faire ici rendrait des exports encore vides.
 else if (typeof require === "function") {
   // Environnement de test : pas de service worker, donc pas d'importScripts.
   // On expose les memes symboles pour tester le cablage reellement livre.
-  Object.assign(globalThis, require("./vault.js"), require("./transfer.js"), require("./sync.js"));
+  Object.assign(
+    globalThis,
+    require("./vault.js"),
+    require("./transfer.js"),
+    require("./sync.js"),
+    require("./vault-lock.js"),
+    require("./vault-session.js"),
+    require("./google-auth.js"),
+  );
 }
 
 let psl = [];
@@ -105,23 +122,75 @@ async function loadParams() {
   return params;
 }
 
-async function saveParams(next) {
+// Date de la derniere modification des reglages, gardee a part pour que
+// `params` reste le jeu de reglages seul. Departage la synchronisation
+// (shared/spec/default-settings.md).
+const PARAMS_UPDATED_AT_KEY = "paramsUpdatedAt";
+
+function sameParams(a, b) {
+  return Object.keys(DEFAULT_PARAMS).every((k) => a[k] === b[k]);
+}
+
+async function saveParams(next, updatedAt) {
   // La rehydratation lancee au demarrage du worker n'est pas attendue : sans
   // ce point de rendez-vous, un reglage enregistre juste apres le demarrage
   // etait ecrase par loadParams() qui se terminait ensuite, et la valeur
   // retombait silencieusement sur celle du stockage.
   await paramsReady;
-  params = normalizeParams(next);
+  const normalized = normalizeParams(next);
+  // La popup renvoie ses reglages meme inchanges (sortie du champ) : seule
+  // une vraie modification date les reglages, sinon un appareil qui n'a rien
+  // change l'emporterait a la synchronisation.
+  const stamp =
+    updatedAt ??
+    (sameParams(normalized, params) ? null : new Date().toISOString().replace(/\.\d{3}Z$/, "Z"));
+  params = normalized;
   const store = browser?.storage?.local;
   if (!store) return params;
   try {
-    await store.set(params);
+    await store.set(stamp ? { ...params, [PARAMS_UPDATED_AT_KEY]: stamp } : params);
     // Nettoie les clés héritées pour ne plus jamais les relire.
     await store.remove(["lenghtNumber", "length"]);
   } catch (e) {
     console.error("TheCode: échec de l'écriture des paramètres", e);
   }
   return params;
+}
+
+/** Les reglages au format partage (shared/spec/default-settings.md). */
+async function loadSettings() {
+  const current = await loadParams();
+  let updatedAt = "";
+  try {
+    const stored = await browser?.storage?.local?.get([PARAMS_UPDATED_AT_KEY]);
+    updatedAt = stored?.[PARAMS_UPDATED_AT_KEY] || "";
+  } catch (e) {
+    console.error("TheCode: échec de la lecture des paramètres", e);
+  }
+  return {
+    length: current.lengthNumber,
+    charset: {
+      lower: current.minState,
+      upper: current.majState,
+      symbols: current.symState,
+      numbers: current.chiState,
+    },
+    updatedAt,
+  };
+}
+
+/** Applique des reglages venus du compte, en gardant leur date. */
+function applySettings(settings) {
+  return saveParams(
+    {
+      lengthNumber: settings.length,
+      minState: settings.charset.lower,
+      majState: settings.charset.upper,
+      symState: settings.charset.symbols,
+      chiState: settings.charset.numbers,
+    },
+    settings.updatedAt,
+  );
 }
 
 // Réhydratation au (re)démarrage du worker + suivi des changements, pour que
@@ -144,8 +213,9 @@ browser?.storage?.onChanged?.addListener((changes, area) => {
  * getEncodingKey. Les pages de l'extension envoient leurs messages sans onglet
  * associe (sender.tab est undefined), un content script en a toujours un.
  *
- * content.js n'utilise que generatePassword et openPopup, donc rien de
- * legitime n'est bloque ici.
+ * content.js n'utilise que generatePassword, saveCurrentSite et openPopup,
+ * donc rien de legitime n'est bloque ici. getVault en fait partie : le carnet
+ * liste les sites et identifiants de l'utilisateur, une page n'a pas a le lire.
  */
 const PRIVILEGED_ACTIONS = new Set([
   "getEncodingKey",
@@ -153,16 +223,27 @@ const PRIVILEGED_ACTIONS = new Set([
   "clearEncodingKey",
   "checkEncodingKey",
   "setParams",
-  "saveEntry",
+  "getVault",
+  "saveSite",
   "deleteEntry",
   "previewChange",
   "applyChange",
   "exportVault",
   "importVault",
   "syncLogin",
+  "syncGoogleAvailable",
+  "syncGoogleLogin",
   "syncLogout",
   "syncNow",
   "syncStatus",
+  "vaultLockStatus",
+  "vaultLockCreate",
+  "vaultLockVerify",
+  "vaultLockChange",
+  "vaultLockForget",
+  "vaultSessionLeave",
+  "vaultSessionResume",
+  "vaultSessionClear",
 ]);
 
 function isFromExtensionPage(sender) {
@@ -199,6 +280,41 @@ const RENEW_IS_PAID =
   "Renouveler un mot de passe sans changer de clef maitresse fait partie de " +
   "l'offre complete : https://thecode.julsql.fr/fr/account";
 
+/** Enregistre une session neuve avec son offre, quelle que soit la connexion. */
+async function storeSyncSession(session) {
+  const withPlan = await syncAccountPlan(session);
+  await saveSession(browser?.storage?.local, {
+    ...withPlan.session,
+    plan: withPlan.plan,
+  });
+}
+
+/**
+ * Connexion avec Google, menee ici et pas dans la popup : celle-ci se ferme
+ * des que la fenetre Google prend le focus, le service worker va au bout.
+ *
+ * L'annulation rend `cancelled` (la popup se tait) ; les erreurs du flux
+ * rendent un `code` que la popup traduit ; celles du service, leur detail.
+ */
+async function googleSyncLogin(request) {
+  const endpoint = request.endpoint || SYNC_DEFAULT_ENDPOINT;
+  const lang = request.lang || browser?.i18n?.getUILanguage?.()?.split("-")[0] || "en";
+  try {
+    const identity = identityApi(browser);
+    const clientId = identity ? await syncGoogleClientId(endpoint) : "";
+    const { idToken, nonce } = await googleSignIn({ identity, clientId });
+    await storeSyncSession(await syncGoogleLogin(endpoint, idToken, nonce, lang));
+    return { ok: true };
+  } catch (e) {
+    if (e instanceof GoogleAuthError) {
+      return e.code === "cancelled"
+        ? { ok: false, cancelled: true }
+        : { ok: false, code: e.code, error: e.message };
+    }
+    return { ok: false, error: e.message };
+  }
+}
+
 browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
   (async () => {
     if (PRIVILEGED_ACTIONS.has(request.action) && !isFromExtensionPage(sender)) {
@@ -228,25 +344,15 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
       encodingKey = null;
       sendResponse({ ok: true });
     } else if (request.action === "generatePassword") {
-      const res = await generatePasswordForUrl(request.url || "");
+      // Seule la popup demande la v1 ou un identifiant : content.js n'envoie
+      // ni l'un ni l'autre et garde le comportement d'origine.
+      const res = await generatePasswordForUrl(request.url || "", request.version, request.login);
       sendResponse(res);
     } else if (request.action === "getVault") {
       sendResponse({ ok: true, vault: await loadVault(browser?.storage?.local) });
-    } else if (request.action === "saveEntry") {
+    } else if (request.action === "saveSite") {
       try {
-        const vault = await loadVault(browser?.storage?.local);
-        const incoming = request.entry;
-        const existing = vault.entries.find((e) => e.id === incoming.id);
-        if (existing) {
-          // siteKey n'est jamais reecrit : il produit le mot de passe, le
-          // modifier en changerait un deja en service.
-          Object.assign(existing, incoming, { siteKey: existing.siteKey });
-          existing.updatedAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
-        } else {
-          vault.entries.push(incoming);
-        }
-        await saveVault(browser?.storage?.local, vault);
-        sendResponse({ ok: true, vault });
+        sendResponse(await saveSite(request.domain, request.login));
       } catch (e) {
         sendResponse({ ok: false, error: e.message });
       }
@@ -271,6 +377,7 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
         sendResponse({ ok: false, error: e.message });
       }
     } else if (request.action === "previewChange") {
+      // Renouvellement seulement : il n'y a plus d'entree v1 a migrer.
       // Calcule sans rien ecrire : l'ancien mot de passe est encore celui du
       // site tant qu'il n'y a pas ete change.
       try {
@@ -280,17 +387,13 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
           sendResponse({ ok: false, error: "entree introuvable" });
         } else if (!encodingKey) {
           sendResponse({ ok: false, error: "aucune clef definie" });
-        } else if (request.renew && !(await renewAllowed())) {
+        } else if (!(await renewAllowed())) {
           sendResponse({ ok: false, error: RENEW_IS_PAID });
         } else {
           sendResponse({
             ok: true,
             before: await passwordForEntry(entry),
-            after: await passwordForEntry(
-              entry,
-              request.renew ? entry.counter + 1 : entry.counter,
-              request.renew ? entry.v : 2,
-            ),
+            after: await passwordForEntry(entry, entry.counter + 1),
           });
         }
       } catch (e) {
@@ -302,16 +405,15 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
         const entry = vault.entries.find((e) => e.id === request.id && !e.deleted);
         if (!entry) {
           sendResponse({ ok: false, error: "entree introuvable" });
-        } else if (request.renew && !(await renewAllowed())) {
+        } else if (!(await renewAllowed())) {
           sendResponse({ ok: false, error: RENEW_IS_PAID });
         } else {
-          if (request.renew) entry.counter += 1;
-          else entry.v = 2;
+          entry.counter += 1;
           // Sans rehorodatage, la fusion ferait gagner l'autre appareil et le
           // changement serait perdu a la synchronisation suivante.
           entry.updatedAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
           await saveVault(browser?.storage?.local, vault);
-          sendResponse({ ok: true, counter: entry.counter, v: entry.v });
+          sendResponse({ ok: true, counter: entry.counter });
         }
       } catch (e) {
         sendResponse({ ok: false, error: e.message });
@@ -346,15 +448,18 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
           request.email,
           request.password,
         );
-        const withPlan = await syncAccountPlan(session);
-        await saveSession(browser?.storage?.local, {
-          ...withPlan.session,
-          plan: withPlan.plan,
-        });
+        await storeSyncSession(session);
         sendResponse({ ok: true });
       } catch (e) {
         sendResponse({ ok: false, error: e.message });
       }
+    } else if (request.action === "syncGoogleAvailable") {
+      const endpoint = request.endpoint || SYNC_DEFAULT_ENDPOINT;
+      const available =
+        Boolean(identityApi(browser)) && Boolean(await syncGoogleClientId(endpoint));
+      sendResponse({ ok: true, available });
+    } else if (request.action === "syncGoogleLogin") {
+      sendResponse(await googleSyncLogin(request));
     } else if (request.action === "syncLogout") {
       await clearSession(browser?.storage?.local);
       sendResponse({ ok: true });
@@ -374,17 +479,37 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
         const vault = await loadVault(browser?.storage?.local);
         const result = await syncVault(vault, encodingKey, session);
         await saveVault(browser?.storage?.local, result.vault);
+        // Les reglages suivent le carnet. Un echec ici n'annule pas la
+        // synchronisation du carnet, deja faite : il est seulement signale.
+        let current = result.session;
+        let settingsSynced = false;
+        try {
+          const synced = await syncSettings(await loadSettings(), encodingKey, current);
+          current = synced.session;
+          if (synced.applied) await applySettings(synced.settings);
+          settingsSynced = true;
+        } catch (e) {
+          console.error("TheCode: échec de la synchronisation des paramètres", e);
+        }
         // Un abonnement pris entre-temps doit se voir sans se reconnecter.
-        const withPlan = await syncAccountPlan(result.session);
+        const withPlan = await syncAccountPlan(current);
         await saveSession(browser?.storage?.local, {
           ...withPlan.session,
           plan: withPlan.plan,
         });
         sendResponse({
           ok: true,
-          entries: result.vault.entries.filter((e) => !e.deleted).length,
+          entries: result.vault.entries.filter((e) => !e.deleted).length - result.localOnly,
+          localOnly: result.localOnly,
           conflicts: result.conflicts,
+          settingsSynced,
         });
+      } catch (e) {
+        sendResponse({ ok: false, error: e.message });
+      }
+    } else if (VAULT_LOCK_ACTIONS.has(request.action)) {
+      try {
+        sendResponse(await handleVaultLock(request));
       } catch (e) {
         sendResponse({ ok: false, error: e.message });
       }
@@ -417,13 +542,12 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
 /**
  * Derive le mot de passe d'une entree.
  *
- * `version` permet de forcer : l'autoremplissage derive toujours en v2, et
- * l'ecran de generation propose la v1 en secours pour un site pas encore
- * migre. Sans elle, on suit ce que le carnet a enregistre.
+ * Une entree derive en v2. `version` vaut 1 seulement quand
+ * la popup demande l'ancien algorithme, en secours pour un site dont le mot de
+ * passe n'a pas encore ete change : la v1 n'existe plus qu'hors carnet.
  */
-async function passwordForEntry(entry, counter, version) {
-  const v = version ?? entry.v;
-  if (v >= 2) {
+async function passwordForEntry(entry, counter, version = 2) {
+  if (version !== 1) {
     return generatePasswordV2(entry.siteKey, encodingKey, entry.length, {
       useLower: entry.charset.lower,
       useUpper: entry.charset.upper,
@@ -444,6 +568,41 @@ async function passwordForEntry(entry, counter, version) {
     entry.charset.numbers,
   );
   return mdp;
+}
+
+/**
+ * Identifiant tel qu'il entre dans la derivation.
+ *
+ * Sans les espaces autour. `undefined` quand l'appelant n'en envoie pas (content.js) : on garde alors
+ * la premiere entree du domaine, comme avant. Borne : il est hache, mais un
+ * message peut contenir n'importe quoi.
+ */
+function normalizeLogin(login) {
+  // Les espaces autour ne comptent pas, comme sur les apps et le site.
+  return typeof login === "string" ? login.trim().slice(0, VAULT_LOGIN_MAX) : undefined;
+}
+
+/**
+ * Enregistre le compte affiche dans la popup : domaine + identifiant.
+ *
+ * Une entree existante ne voit changer que sa longueur et son jeu de
+ * caracteres, relus des parametres ; sinon une entree v2 nait. Rien ici ne
+ * peut produire une entree v1, meme quand la popup est reglee en v1.
+ */
+async function saveSite(domain, login) {
+  if (typeof domain !== "string" || !domain.trim()) {
+    return { ok: false, error: "aucun site detecte" };
+  }
+  const { lengthNumber, minState, majState, symState, chiState } = await loadParams();
+  const vault = await loadVault(browser?.storage?.local);
+  const { entry, updated } = upsertSiteEntry(vault, {
+    domain: domain.trim().toLowerCase(),
+    login: normalizeLogin(login) ?? "",
+    length: lengthNumber,
+    charset: { lower: minState, upper: majState, symbols: symState, numbers: chiState },
+  });
+  await saveVault(browser?.storage?.local, vault);
+  return { ok: true, updated, entry };
 }
 
 /**
@@ -497,14 +656,87 @@ async function saveCurrentSite(sender, login) {
       domains: [domain],
       length: lengthNumber,
       charset,
-      // Les entrees naissent en v2 : la v1 n'est plus qu'un secours explicite.
-      v: 2,
       // Borne : un champ de page peut contenir n'importe quoi.
-      login: typeof login === "string" ? login.slice(0, 120) : "",
+      login: normalizeLogin(login) ?? "",
     }),
   );
   await saveVault(browser?.storage?.local, vault);
   return { ok: true, updated: false, site: domain };
+}
+
+const VAULT_LOCK_ACTIONS = new Set([
+  "vaultLockStatus",
+  "vaultLockCreate",
+  "vaultLockVerify",
+  "vaultLockChange",
+  "vaultLockForget",
+  "vaultSessionLeave",
+  "vaultSessionResume",
+  "vaultSessionClear",
+]);
+
+/**
+ * Verrou de l'ecran carnet (shared/spec/vault-lock.md).
+ *
+ * Verifie ici plutot que dans la page : l'empreinte stockee ne transite pas
+ * jusqu'a elle. L'etat deverrouille vit dans la page ; ici n'est retenu que
+ * l'instant ou elle a ete quittee, pour la grace de 3 minutes (vault-session.js).
+ */
+const vaultSession = createVaultSession(browser?.storage?.session);
+
+async function handleVaultLock(request) {
+  const store = browser?.storage?.local;
+  const record = await loadVaultLock(store);
+
+  switch (request.action) {
+    case "vaultLockStatus":
+      return { ok: true, configured: Boolean(record) };
+
+    case "vaultLockCreate": {
+      // Une fois pose, le verrou ne se remplace qu'avec l'actuel ou en
+      // effacant le carnet : sinon n'importe quelle page de l'extension
+      // pourrait le reinitialiser.
+      if (record) return { ok: false, error: "un mot de passe de carnet existe deja" };
+      const weak = vaultLockPasswordError(request.password);
+      if (weak) return { ok: false, error: weak };
+      await saveVaultLock(store, await hashVaultPassword(request.password));
+      return { ok: true };
+    }
+
+    case "vaultLockVerify":
+      return { ok: true, unlocked: await verifyVaultPassword(request.password, record) };
+
+    case "vaultLockChange": {
+      if (!(await verifyVaultPassword(request.current, record))) {
+        return { ok: false, error: "mot de passe actuel incorrect" };
+      }
+      const weak = vaultLockPasswordError(request.next);
+      if (weak) return { ok: false, error: weak };
+      await saveVaultLock(store, await hashVaultPassword(request.next));
+      return { ok: true };
+    }
+
+    case "vaultLockForget":
+      // Seule issue sans le mot de passe : le carnet local part avec le
+      // verrou. La synchronisation le rapportera s'il existe sur le serveur.
+      await store.remove([VAULT_STORAGE_KEY]);
+      await clearVaultLock(store);
+      await vaultSession.clear();
+      return { ok: true };
+
+    case "vaultSessionLeave":
+      // L'heure est celle du fond, pas celle que la page annoncerait.
+      if (record) await vaultSession.leave(Date.now());
+      return { ok: true };
+
+    case "vaultSessionResume":
+      return { ok: true, unlocked: Boolean(record) && (await vaultSession.resume(Date.now())) };
+
+    case "vaultSessionClear":
+      await vaultSession.clear();
+      return { ok: true };
+  }
+  return { ok: false, error: "action inconnue" };
 }
 
 /** Chiffre le carnet courant. Rend la meme forme que l'action du meme nom. */
@@ -537,7 +769,19 @@ function setEncodingKeyForTests(key) {
   encodingKey = key;
 }
 
-async function generatePasswordForUrl(url) {
+/**
+ * `version` vaut 2 par defaut : c'est ce que rend le remplissage automatique.
+ * La popup peut demander la v1, en secours pour un site pas encore migre ;
+ * toute autre valeur retombe sur la v2.
+ *
+ * `login` vient de la popup, ou l'utilisateur le saisit. Absent (content.js),
+ * on retient la premiere entree du domaine, comme avant. Present, il designe
+ * le compte — domaine + identifiant — et entre dans la derivation v2 ; vide,
+ * il ne change rien au calcul. La v1 l'ignore.
+ */
+async function generatePasswordForUrl(url, version, login) {
+  const v = version === 1 ? 1 : 2;
+  const requestedLogin = normalizeLogin(login);
   if (!encodingKey) {
     return { error: "Aucune clé n'est définie. Ouvre l'extension TheCode et entre ta clé." };
   }
@@ -554,16 +798,24 @@ async function generatePasswordForUrl(url) {
     const hostname = u.hostname;
     const domain = getRegistrableDomain(hostname);
 
-    // Le carnet dit sous quelle clef deriver, avec quels reglages et en
-    // quelle version. L'ignorer rendrait un mot de passe v1 pour une entree
-    // v2 : faux, sans que rien ne le signale. Et le domaine saisi peut etre un
-    // alias — google.fr doit rendre le mot de passe de google.com.
+    // Le carnet dit sous quelle clef deriver et avec quels reglages. Le
+    // domaine saisi peut etre un alias — google.fr doit rendre le mot de passe
+    // de google.com.
     const vault = await loadVault(browser?.storage?.local);
-    const entry = findAllByDomain(vault, domain)[0];
+    const entry =
+      requestedLogin === undefined
+        ? findAllByDomain(vault, domain)[0]
+        : findByDomainAndLogin(vault, domain, requestedLogin);
 
     if (!entry) {
-      // Site inconnu : v2 aussi, c'est la version des entrees qui naissent.
-      const { security, bits, color } = await generatePassword(
+      // Site inconnu : v2 par defaut aussi, c'est la version des entrees qui
+      // naissent.
+      const {
+        mdp: v1Password,
+        security,
+        bits,
+        color,
+      } = await generatePassword(
         domain,
         encodingKey,
         lengthNumber,
@@ -572,13 +824,26 @@ async function generatePasswordForUrl(url) {
         symState,
         chiState,
       );
-      const mdp = await generatePasswordV2(domain, encodingKey, lengthNumber, {
-        useLower: minState,
-        useUpper: majState,
-        useSymbols: symState,
-        useNumbers: chiState,
-      });
-      return { password: mdp, site: domain, security, bits, color, known: false };
+      const mdp =
+        v === 1
+          ? v1Password
+          : await generatePasswordV2(domain, encodingKey, lengthNumber, {
+              useLower: minState,
+              useUpper: majState,
+              useSymbols: symState,
+              useNumbers: chiState,
+              login: requestedLogin || "",
+            });
+      return {
+        password: mdp,
+        site: domain,
+        login: requestedLogin || "",
+        security,
+        bits,
+        color,
+        known: false,
+        version: v,
+      };
     }
 
     const { security, bits, color } = await generatePassword(
@@ -591,19 +856,20 @@ async function generatePasswordForUrl(url) {
       entry.charset.numbers,
     );
 
-    // Toujours en v2, quelle que soit la version notee dans le carnet : le
-    // remplissage automatique ne propose pas de choix, il doit donc etre
-    // previsible. Un site encore en v1 se genere depuis la popup.
-    const mdp = await passwordForEntry(entry, entry.counter, 2);
+    // Les entrees sont toutes v2. La v1 ne se derive que sur demande de la
+    // popup, pour un site dont le mot de passe n'a pas encore ete change.
+    const mdp = await passwordForEntry(entry, entry.counter, v);
 
     return {
       password: mdp,
       site: domain,
       login: entry.login || "",
+      entryId: entry.id,
       security,
       bits,
       color,
       known: true,
+      version: v,
     };
   } catch (err) {
     return { error: err.message };
@@ -793,6 +1059,8 @@ if (typeof module !== "undefined") {
     generatePassword,
     generatePasswordForUrl,
     passwordForEntry,
+    saveSite,
+    normalizeLogin,
     exportVaultPayload,
     importVaultPayload,
     saveCurrentSite,
@@ -801,6 +1069,7 @@ if (typeof module !== "undefined") {
     registrableDomain,
     PRIVILEGED_ACTIONS,
     isFromExtensionPage,
+    googleSyncLogin,
     buildCharset,
     calculateEntropyBits,
     getSecurityLevel,
@@ -809,6 +1078,9 @@ if (typeof module !== "undefined") {
     getUniquePosition,
     hashToBigInt,
     normalizeParams,
+    loadSettings,
+    applySettings,
+    PARAMS_UPDATED_AT_KEY,
     clampLength,
     MIN_LENGTH,
     MAX_LENGTH,
