@@ -467,6 +467,7 @@ struct MainView: View {
         .onChange(of: lengthNumber) { newVal in
             // Le slider (ou un clamp) a bougé la valeur : on réaligne le champ.
             if lengthDraft != String(newVal) { lengthDraft = String(newVal) }
+            PasswordSettings.touch(UserDefaults(suiteName: appGroupID))
             generatePassword()
         }
         .onChange(of: lengthDraft) { newVal in
@@ -479,10 +480,22 @@ struct MainView: View {
         .onChange(of: lengthFieldFocused) { focused in
             if !focused { commitLengthDraft() }
         }
-        .onChange(of: minState) { _ in generatePassword() }
-        .onChange(of: majState) { _ in generatePassword() }
-        .onChange(of: symState) { _ in generatePassword() }
-        .onChange(of: chiState) { _ in generatePassword() }
+        .onChange(of: minState) { _ in
+            PasswordSettings.touch(UserDefaults(suiteName: appGroupID))
+            generatePassword()
+        }
+        .onChange(of: majState) { _ in
+            PasswordSettings.touch(UserDefaults(suiteName: appGroupID))
+            generatePassword()
+        }
+        .onChange(of: symState) { _ in
+            PasswordSettings.touch(UserDefaults(suiteName: appGroupID))
+            generatePassword()
+        }
+        .onChange(of: chiState) { _ in
+            PasswordSettings.touch(UserDefaults(suiteName: appGroupID))
+            generatePassword()
+        }
         .onChange(of: siteName) { newSite in
             vaultSaveMessage = nil
             prefillLogin(for: newSite)

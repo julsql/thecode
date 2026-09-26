@@ -475,6 +475,14 @@ struct VaultScreen: View {
                 SyncCredentialsStore.save(refreshed)
                 try VaultStore.save(result.vault, to: VaultStore.url())
 
+                // Réglages par défaut, après le carnet. Un échec ici ne remet
+                // pas en cause le carnet, déjà synchronisé et enregistré.
+                if let renewed = try? await PasswordSettings.syncShared(
+                    masterKey: masterKey, credentials: refreshed), renewed != refreshed
+                {
+                    SyncCredentialsStore.save(renewed)
+                }
+
                 await MainActor.run {
                     vault = result.vault
                     isLinked = true

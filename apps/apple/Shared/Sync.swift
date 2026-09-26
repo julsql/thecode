@@ -267,6 +267,74 @@ public struct Sync {
         }
     }
 
+    // MARK: - Réglages par défaut
+
+    /// Ce que la synchronisation des réglages a décidé.
+    public enum SettingsOutcome: Equatable {
+        /// La valeur distante est plus récente (ou à égalité) : à appliquer.
+        case applyRemote(SharedSettings)
+        /// La locale était plus récente, ou le compte n'en avait pas : poussée.
+        case pushedLocal
+        /// Blob distant indéchiffrable ou invalide : rien n'est touché, ni
+        /// localement ni sur le serveur.
+        case ignoredRemote
+    }
+
+    /// Synchronise les réglages par défaut. Voir shared/spec/default-settings.md.
+    ///
+    /// À appeler après la synchronisation du carnet. Tirer, garder le plus
+    /// récent (à égalité, le distant), pousser si le local l'emporte.
+    public func syncSettings(
+        _ local: SharedSettings, masterKey: String, credentials creds: SyncCredentials
+    ) async throws -> SettingsOutcome {
+        let key = try Transfer.deriveKey(masterKey)
+        let url = "\(creds.endpoint)/v1/settings"
+
+        // 204 : corps vide, donc ni nonce ni blob.
+        let pulled = try await call(url, method: "GET", bearer: creds.accessToken)
+        if let nonce = pulled["nonce"] as? String, let blob = pulled["blob"] as? String {
+            guard let remote = openSettings(nonce: nonce, blob: blob, key: key) else {
+                return .ignoredRemote
+            }
+            if remote.updatedAt >= local.updatedAt { return .applyRemote(remote) }
+        }
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let sealed = try Transfer.seal(try encoder.encode(local), with: key)
+        _ = try await call(
+            url, method: "PUT",
+            payload: [
+                "nonce": Base64URL.encode(sealed.nonce), "blob": Base64URL.encode(sealed.blob),
+            ],
+            bearer: creds.accessToken)
+        return .pushedLocal
+    }
+
+    /// Comme `syncSettings`, en renouvelant le jeton d'accès s'il a expiré.
+    /// Rend aussi les identifiants, éventuellement renouvelés.
+    public func syncSettingsRenewing(
+        _ local: SharedSettings, masterKey: String, credentials creds: SyncCredentials
+    ) async throws -> (SettingsOutcome, SyncCredentials) {
+        do {
+            return (try await syncSettings(local, masterKey: masterKey, credentials: creds), creds)
+        } catch let error as SyncError where error.status == 401 {
+            let renewed = try await refresh(creds).withPlan(creds.plan)
+            return (
+                try await syncSettings(local, masterKey: masterKey, credentials: renewed), renewed
+            )
+        }
+    }
+
+    /// Déchiffre et valide un blob de réglages ; `nil` s'il est inutilisable.
+    private func openSettings(nonce: String, blob: String, key: SymmetricKey) -> SharedSettings? {
+        guard let nonce = Base64URL.decode(nonce), let blob = Base64URL.decode(blob),
+            let plain = try? Transfer.open(nonce: nonce, blob: blob, with: key),
+            let settings = try? JSONDecoder().decode(SharedSettings.self, from: plain)
+        else { return nil }
+        return settings.validated()
+    }
+
     private func decodeRemote(
         _ pulled: [String: Any], fallbackUpdatedAt: String?, key: SymmetricKey
     ) throws -> Vault {
@@ -320,6 +388,33 @@ public struct Sync {
             ])
         }
         return ["base_revision": baseRevision, "entries": rows]
+    }
+}
+
+/// Réglages par défaut partagés par le compte : ceux d'un site absent du
+/// carnet. Voir shared/spec/default-settings.md.
+public struct SharedSettings: Codable, Equatable {
+    public static let minLength = 4
+    public static let maxLength = 40
+
+    public var length: Int
+    public var charset: Charset
+    public var updatedAt: String
+
+    public init(length: Int, charset: Charset, updatedAt: String) {
+        self.length = length
+        self.charset = charset
+        self.updatedAt = updatedAt
+    }
+
+    /// Longueur ramenée dans les bornes ; `nil` sans aucun jeu coché, qui ne
+    /// permettrait pas de générer.
+    func validated() -> SharedSettings? {
+        let c = charset
+        guard c.lower || c.upper || c.symbols || c.numbers else { return nil }
+        var copy = self
+        copy.length = min(Self.maxLength, max(Self.minLength, length))
+        return copy
     }
 }
 

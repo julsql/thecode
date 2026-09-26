@@ -26,6 +26,12 @@ private actor FakeVaultServer: SyncTransport {
     /// Plafond d'entrées du compte, rendu au pull ; nil : le serveur n'en dit rien.
     private let maxEntries: Int?
 
+    /// Réglages par défaut du compte : un seul blob, que le serveur ne lit pas.
+    private(set) var settings: [String: Any]?
+    private(set) var settingsPuts = 0
+
+    func seedSettings(_ value: [String: Any]?) { settings = value }
+
     init(validAccessToken: String = "access-1", maxEntries: Int? = nil) {
         self.validAccessToken = validAccessToken
         self.maxEntries = maxEntries
@@ -47,6 +53,16 @@ private actor FakeVaultServer: SyncTransport {
 
         guard bearer == validAccessToken else {
             return json(401, ["detail": "Jeton expiré"])
+        }
+        if url.hasSuffix("/v1/settings") {
+            if method == "PUT" {
+                settings =
+                    (try? JSONSerialization.jsonObject(with: body ?? Data())) as? [String: Any]
+                settingsPuts += 1
+                return SyncResponse(status: 204, body: Data())
+            }
+            guard let settings else { return SyncResponse(status: 204, body: Data()) }
+            return json(200, settings)
         }
         return method == "GET" ? pull() : push(body)
     }
@@ -314,5 +330,237 @@ struct SyncTests {
         #expect(Base64URL.encode(raw) == "-_8")
         #expect(Base64URL.decode("-_8") == raw)
         #expect(Base64URL.decode("+/8=") == raw)
+    }
+}
+
+// MARK: - Réglages par défaut
+
+private func settings(
+    length: Int = 20, symbols: Bool = true, at updatedAt: String
+) -> SharedSettings {
+    SharedSettings(length: length, charset: Charset(symbols: symbols), updatedAt: updatedAt)
+}
+
+/// Ce qu'un autre appareil aurait déposé sur le compte.
+private func sealedSettings(_ value: SharedSettings, masterKey: String = "clef") throws
+    -> [String: Any]
+{
+    let sealed = try Transfer.seal(
+        JSONEncoder().encode(value), with: Transfer.deriveKey(masterKey))
+    return ["nonce": Base64URL.encode(sealed.nonce), "blob": Base64URL.encode(sealed.blob)]
+}
+
+private func openSettings(_ row: [String: Any]?, masterKey: String = "clef") throws
+    -> SharedSettings
+{
+    let nonce = try #require(Base64URL.decode(row?["nonce"] as? String ?? ""))
+    let blob = try #require(Base64URL.decode(row?["blob"] as? String ?? ""))
+    return try JSONDecoder().decode(
+        SharedSettings.self,
+        from: Transfer.open(nonce: nonce, blob: blob, with: Transfer.deriveKey(masterKey)))
+}
+
+private func freshDefaults() -> UserDefaults {
+    let name = "thecode-tests-\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: name)!
+    defaults.removePersistentDomain(forName: name)
+    return defaults
+}
+
+@Suite("Synchronisation des réglages par défaut")
+struct SettingsSyncTests {
+
+    @Test("Sans réglages sur le compte, les locaux sont poussés, chiffrés")
+    func pushesWhenTheAccountHasNone() async throws {
+        let server = FakeVaultServer()
+        let local = settings(length: 32, symbols: false, at: "2026-01-15T10:30:00Z")
+
+        let outcome = try await Sync(transport: server)
+            .syncSettings(local, masterKey: "clef", credentials: credentials)
+
+        #expect(outcome == .pushedLocal)
+        #expect(try openSettings(await server.settings) == local)
+        let bodies = await server.sentBodies
+        #expect(!bodies.contains { $0.contains("updatedAt") || $0.contains("length") })
+    }
+
+    @Test("La valeur distante plus récente l'emporte, sans rien pousser")
+    func remoteNewerWins() async throws {
+        let server = FakeVaultServer()
+        let remote = settings(length: 12, at: "2026-02-01T00:00:00Z")
+        await server.seedSettings(try sealedSettings(remote))
+
+        let outcome = try await Sync(transport: server).syncSettings(
+            settings(at: "2026-01-01T00:00:00Z"), masterKey: "clef", credentials: credentials)
+
+        #expect(outcome == .applyRemote(remote))
+        #expect(await server.settingsPuts == 0)
+    }
+
+    @Test("À égalité, la distante l'emporte")
+    func tieGoesToRemote() async throws {
+        let server = FakeVaultServer()
+        let remote = settings(length: 12, at: "2026-02-01T00:00:00Z")
+        await server.seedSettings(try sealedSettings(remote))
+
+        let outcome = try await Sync(transport: server).syncSettings(
+            settings(length: 30, at: "2026-02-01T00:00:00Z"), masterKey: "clef",
+            credentials: credentials)
+
+        #expect(outcome == .applyRemote(remote))
+    }
+
+    @Test("La valeur locale plus récente remplace la distante")
+    func localNewerIsPushed() async throws {
+        let server = FakeVaultServer()
+        await server.seedSettings(
+            try sealedSettings(settings(length: 12, at: "2026-01-01T00:00:00Z")))
+        let local = settings(length: 30, at: "2026-03-01T00:00:00Z")
+
+        let outcome = try await Sync(transport: server)
+            .syncSettings(local, masterKey: "clef", credentials: credentials)
+
+        #expect(outcome == .pushedLocal)
+        #expect(try openSettings(await server.settings) == local)
+    }
+
+    @Test("Un blob d'une autre clef maîtresse est ignoré, des deux côtés")
+    func ignoresAnotherMasterKey() async throws {
+        let server = FakeVaultServer()
+        let foreign = try sealedSettings(settings(at: "2026-01-01T00:00:00Z"), masterKey: "autre")
+        await server.seedSettings(foreign)
+
+        let outcome = try await Sync(transport: server).syncSettings(
+            settings(length: 30, at: "2026-03-01T00:00:00Z"), masterKey: "clef",
+            credentials: credentials)
+
+        #expect(outcome == .ignoredRemote)
+        #expect(await server.settingsPuts == 0)
+        #expect(await server.settings?["blob"] as? String == foreign["blob"] as? String)
+    }
+
+    @Test("Des réglages distants sans aucun jeu sont ignorés")
+    func ignoresUnusableRemote() async throws {
+        let server = FakeVaultServer()
+        var empty = settings(at: "2026-05-01T00:00:00Z")
+        empty.charset = Charset(lower: false, upper: false, symbols: false, numbers: false)
+        await server.seedSettings(try sealedSettings(empty))
+
+        let outcome = try await Sync(transport: server).syncSettings(
+            settings(at: "2026-01-01T00:00:00Z"), masterKey: "clef", credentials: credentials)
+
+        #expect(outcome == .ignoredRemote)
+    }
+
+    @Test("Une longueur distante hors bornes est ramenée dans les bornes")
+    func clampsRemoteLength() async throws {
+        let server = FakeVaultServer()
+        await server.seedSettings(
+            try sealedSettings(settings(length: 99, at: "2026-05-01T00:00:00Z")))
+
+        let outcome = try await Sync(transport: server).syncSettings(
+            settings(at: "2026-01-01T00:00:00Z"), masterKey: "clef", credentials: credentials)
+
+        #expect(outcome == .applyRemote(settings(length: 40, at: "2026-05-01T00:00:00Z")))
+    }
+
+    @Test("Un jeton expiré est renouvelé, l'offre gardée")
+    func renewsAnExpiredToken() async throws {
+        let server = FakeVaultServer(validAccessToken: "expiré")
+        let creds = credentials.withPlan(SyncPlan.pro)
+
+        let (outcome, renewed) = try await Sync(transport: server).syncSettingsRenewing(
+            settings(at: "2026-01-01T00:00:00Z"), masterKey: "clef", credentials: creds)
+
+        #expect(outcome == .pushedLocal)
+        #expect(renewed.accessToken == "access-2")
+        #expect(renewed.plan == SyncPlan.pro)
+    }
+
+    // MARK: Réglages retenus sur l'appareil
+
+    @Test("Une modification locale est datée, une écriture identique ne l'est pas")
+    func touchDatesOnlyRealChanges() {
+        let defaults = freshDefaults()
+        defaults.set(24, forKey: PasswordSettings.Key.lengthNumber)
+        PasswordSettings.touch(defaults, now: "2026-01-01T00:00:00Z")
+        #expect(PasswordSettings.shared(from: defaults).updatedAt == "2026-01-01T00:00:00Z")
+
+        PasswordSettings.touch(defaults, now: "2026-02-01T00:00:00Z")
+        #expect(PasswordSettings.shared(from: defaults).updatedAt == "2026-01-01T00:00:00Z")
+
+        defaults.set(false, forKey: PasswordSettings.Key.symState)
+        PasswordSettings.touch(defaults, now: "2026-03-01T00:00:00Z")
+        let shared = PasswordSettings.shared(from: defaults)
+        #expect(shared.updatedAt == "2026-03-01T00:00:00Z")
+        #expect(shared.length == 24)
+        #expect(shared.charset.symbols == false)
+    }
+
+    @Test("Des réglages jamais modifiés perdent contre ceux du compte")
+    func neverTouchedLosesToRemote() {
+        let defaults = freshDefaults()
+        PasswordSettings.touch(defaults, now: "2026-09-01T00:00:00Z", datesFirstStamp: false)
+        #expect(PasswordSettings.shared(from: defaults).updatedAt == PasswordSettings.neverUpdated)
+    }
+
+    @Test("Des réglages appliqués ne sont pas redatés par l'écran qui les relit")
+    func appliedSettingsAreNotRedated() {
+        let defaults = freshDefaults()
+        let remote = settings(length: 12, symbols: false, at: "2026-02-01T00:00:00Z")
+
+        PasswordSettings.apply(remote, to: defaults)
+        PasswordSettings.touch(defaults, now: "2026-09-01T00:00:00Z")
+
+        #expect(PasswordSettings.shared(from: defaults) == remote)
+        #expect(defaults.integer(forKey: PasswordSettings.Key.lengthNumber) == 12)
+        #expect(defaults.bool(forKey: PasswordSettings.Key.symState) == false)
+    }
+
+    @Test("Deux appareils finissent sur les réglages les plus récents")
+    func twoDevicesConverge() async throws {
+        let server = FakeVaultServer()
+        let sync = Sync(transport: server)
+        let phone = freshDefaults()
+        let laptop = freshDefaults()
+
+        phone.set(16, forKey: PasswordSettings.Key.lengthNumber)
+        PasswordSettings.touch(phone, now: "2026-01-01T00:00:00Z")
+        try await PasswordSettings.syncShared(
+            masterKey: "clef", credentials: credentials, defaults: phone, sync: sync)
+
+        // Le portable n'a jamais rien modifié : il reprend ceux du compte.
+        try await PasswordSettings.syncShared(
+            masterKey: "clef", credentials: credentials, defaults: laptop, sync: sync)
+        #expect(PasswordSettings.load(from: laptop).length == 16)
+
+        laptop.set(false, forKey: PasswordSettings.Key.chiState)
+        PasswordSettings.touch(laptop, now: "2026-02-01T00:00:00Z")
+        try await PasswordSettings.syncShared(
+            masterKey: "clef", credentials: credentials, defaults: laptop, sync: sync)
+        try await PasswordSettings.syncShared(
+            masterKey: "clef", credentials: credentials, defaults: phone, sync: sync)
+
+        #expect(PasswordSettings.load(from: phone).chiState == false)
+        #expect(PasswordSettings.load(from: phone).length == 16)
+        #expect(PasswordSettings.shared(from: phone) == PasswordSettings.shared(from: laptop))
+    }
+
+    @Test("Une autre clef maîtresse ne touche pas aux réglages locaux")
+    func foreignBlobLeavesLocalAlone() async throws {
+        let server = FakeVaultServer()
+        await server.seedSettings(
+            try sealedSettings(
+                settings(length: 8, at: "2026-09-01T00:00:00Z"), masterKey: "autre"))
+        let defaults = freshDefaults()
+        defaults.set(30, forKey: PasswordSettings.Key.lengthNumber)
+        PasswordSettings.touch(defaults, now: "2026-01-01T00:00:00Z")
+
+        try await PasswordSettings.syncShared(
+            masterKey: "clef", credentials: credentials, defaults: defaults,
+            sync: Sync(transport: server))
+
+        #expect(PasswordSettings.load(from: defaults).length == 30)
+        #expect(await server.settingsPuts == 0)
     }
 }
