@@ -76,6 +76,12 @@ struct MainView: View {
     @State private var showNoPasswordAlert: Bool = false
     @State private var showVault: Bool = false
     @State private var vaultSaveMessage: String?
+    /// Entrée du carnet pour le compte affiché (domaine + identifiant) : le
+    /// bouton dit s'il crée une entrée ou met à jour celle qui existe.
+    @State private var vaultEntry: VaultEntry?
+    /// Mot de passe généré révélé : masqué par défaut, et remasqué à chaque
+    /// nouvelle génération.
+    @State private var showGenerated = false
     /// Proposition d'enregistrer au carnet un site qu'il ne connaît pas.
     @State private var showSaveProposal = false
     /// Comptes pour lesquels la proposition a été refusée, le temps de la
@@ -330,10 +336,11 @@ struct MainView: View {
 
                         if !generatedValue.isEmpty {
                             VStack(alignment: .leading, spacing: 4) {
-                                HStack {
-                                    TextField(L10n.t("Valeur générée", "Generated value"), text: $generatedValue)
-                                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                                        .disabled(true)
+                                // Une seule porte d'entrée vers le carnet : le
+                                // bouton vit à côté du mot de passe qu'il
+                                // enregistre.
+                                HStack(spacing: 10) {
+                                    generatedPasswordText
 
                                     Button(action: {
                                         UIPasteboard.general.string = generatedValue
@@ -342,7 +349,26 @@ struct MainView: View {
                                         Image(systemName: "doc.on.doc") // icône “copier”
                                     }
                                     .buttonStyle(BorderlessButtonStyle())
-                                    .padding(.leading, 8)
+                                    .accessibilityLabel(L10n.t("Copier", "Copy"))
+
+                                    Button(action: { showGenerated.toggle() }) {
+                                        Image(systemName: showGenerated ? "eye.slash" : "eye")
+                                    }
+                                    .buttonStyle(BorderlessButtonStyle())
+                                    .accessibilityLabel(
+                                        showGenerated
+                                            ? L10n.t("Cacher", "Hide")
+                                            : L10n.t("Voir", "Show"))
+
+                                    Button(action: saveToVault) {
+                                        Text(saveEntryTitle)
+                                            .font(.footnote)
+                                            .multilineTextAlignment(.center)
+                                            .lineLimit(2)
+                                    }
+                                    .buttonStyle(.bordered)
+                                    .controlSize(.small)
+                                    .fixedSize(horizontal: false, vertical: true)
                                 }
                                 // La version en cours doit se lire sans ouvrir
                                 // de menu : c'est elle qui décide quel mot de
@@ -352,16 +378,6 @@ struct MainView: View {
                                         + localizedSecurityLabel(securityLabel)
                                         + (useV1 ? "  ·  v1" : "  ·  v2"))
                                     .foregroundColor(securityColor)
-                                    .foregroundColor(.secondary)
-
-                                Button(action: saveToVault) {
-                                    HStack {
-                                        Image(systemName: "square.and.arrow.down")
-                                        Text(L10n.t("Enregistrer les réglages au carnet",
-                                                    "Save settings to vault"))
-                                    }
-                                }
-                                .padding(.top, 4)
 
                                 if let vaultSaveMessage {
                                     Text(vaultSaveMessage)
@@ -452,7 +468,8 @@ struct MainView: View {
                 refreshAutofillStatus()
                 restoreSession()
                 lengthDraft = String(lengthNumber)
-            refreshFingerprint(encodingKey)
+                refreshFingerprint(encodingKey)
+                refreshVaultEntry()
             }
             .onChange(of: scenePhase) { newPhase in
                 if newPhase == .active {
@@ -465,6 +482,7 @@ struct MainView: View {
                     // d'auth n'est plus révoquée : on ré-horodate la fenêtre
                     // de grâce pour qu'elle courre à partir de maintenant.
                     showRealKey = false
+                    showGenerated = false
                     generatedValue = ""
                     if unlocked { SessionLock.stamp() }
                 }
@@ -478,7 +496,11 @@ struct MainView: View {
             .sheet(isPresented: $showV2Notice) { v2NoticeSheet }
         // Session commune (vault-lock.md) : déverrouiller le carnet ouvre la
         // clef, le verrouiller la referme. On la relit au retour.
-        .sheet(isPresented: $showVault, onDismiss: restoreSession) {
+        // Au retour, le carnet a pu gagner ou perdre l'entrée affichée.
+        .sheet(isPresented: $showVault, onDismiss: {
+            restoreSession()
+            refreshVaultEntry()
+        }) {
                 VaultScreen(masterKey: encodingKey, isPresented: $showVault)
             }
             .alert(L10n.t("Aucun mot de passe à partager", "No password to share"), isPresented: $showNoPasswordAlert) {
@@ -490,9 +512,11 @@ struct MainView: View {
         .onChange(of: siteName) { newSite in
             vaultSaveMessage = nil
             prefillLogin(for: newSite)
+            refreshVaultEntry()
         }
         .onChange(of: loginName) { _ in
             vaultSaveMessage = nil
+            refreshVaultEntry()
             generatePassword()
         }
         .onChange(of: useV1) { _ in generatePassword() }
@@ -544,6 +568,36 @@ struct MainView: View {
     }
 
 
+    /// Le mot de passe généré, masqué tant qu'il n'est pas révélé.
+    private var generatedPasswordText: some View {
+        Text(GeneratedPassword.display(generatedValue, revealed: showGenerated))
+            .font(.body.monospaced())
+            .lineLimit(1)
+            .truncationMode(.middle)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(Color.secondary.opacity(0.4), lineWidth: 1))
+            .accessibilityLabel(
+                showGenerated
+                    ? generatedValue
+                    : L10n.t("Mot de passe masqué", "Hidden password"))
+    }
+
+    private var saveEntryTitle: String {
+        vaultEntry == nil
+            ? L10n.t("Enregistrer cette entrée", "Save this entry")
+            : L10n.t("Mettre à jour l'entrée", "Update the entry")
+    }
+
+    /// Relit l'entrée du compte affiché, appariée comme `Vault.upsert` : même
+    /// domaine, même identifiant.
+    private func refreshVaultEntry() {
+        vaultEntry = VaultStore.load().entry(site: siteName, login: trimmedLogin)
+    }
+
     /// Enregistre les réglages du site affiché.
     ///
     /// Le site est pris tel qu'il a été saisi : c'est lui qui a produit le mot
@@ -570,18 +624,25 @@ struct MainView: View {
                 "Le carnet n'a pas pu être enregistré.", "The vault could not be saved.")
             return
         }
+        let updated = vaultEntry != nil
+        vaultEntry = entry
 
         // Une entrée existante garde son siteKey : le réécrire changerait un
         // mot de passe déjà en service. On le dit plutôt que de laisser croire
         // que le mot de passe affiché est celui de l'entrée.
-        vaultSaveMessage =
-            entry.siteKey == site
-            ? L10n.t("« \(site) » enregistré au carnet.", "\"\(site)\" saved to the vault.")
-            : L10n.t(
+        if entry.siteKey != site {
+            vaultSaveMessage = L10n.t(
                 "« \(site) » enregistré. Attention : cette entrée génère son mot de passe "
                     + "depuis « \(entry.siteKey) », pas depuis ce que vous avez saisi.",
                 "\"\(site)\" saved. Careful: this entry generates its password from "
                     + "\"\(entry.siteKey)\", not from what you typed.")
+        } else if updated {
+            vaultSaveMessage = L10n.t(
+                "Entrée « \(site) » mise à jour.", "\"\(site)\" entry updated.")
+        } else {
+            vaultSaveMessage = L10n.t(
+                "« \(site) » enregistré au carnet.", "\"\(site)\" saved to the vault.")
+        }
     }
 
     /// Propose d'enregistrer le site quand le mot de passe vient d'être copié.
@@ -742,6 +803,8 @@ struct MainView: View {
         // Les bindings @AppStorage continuent de notifier les onChange,
         // mais on s'arrête ici tant que l'utilisateur ne s'est pas
         // authentifié.
+        // Chaque nouveau mot de passe repart masqué.
+        showGenerated = false
         guard unlocked else { return }
         if (siteName == "" || encodingKey == "" || (!minState && !majState && !symState && !chiState)) {
             return;

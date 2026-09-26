@@ -187,6 +187,17 @@ public struct Vault: Codable {
         return created
     }
 
+    /// L'entrée d'un compte, appariée comme `upsert(site:login:length:charset:)` :
+    /// même domaine, même identifiant (vide = l'entrée sans identifiant).
+    ///
+    /// Sert à dire, avant d'enregistrer, si l'on crée une entrée ou si l'on
+    /// met à jour celle qui existe.
+    public func entry(site: String, login: String) -> VaultEntry? {
+        let domain = site.trimmingCharacters(in: .whitespaces)
+        guard !domain.isEmpty else { return nil }
+        return findAll(domain: domain).first { ($0.login ?? "") == login }
+    }
+
     /// Enregistre les réglages d'un compte, apparié sur domaine + identifiant.
     ///
     /// L'identifiant entre dans la dérivation v2 : deux comptes d'un même site
