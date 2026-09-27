@@ -128,7 +128,9 @@ describe("generation pour une page", () => {
       expect(res.password).toBe(await generatePasswordV2("inconnu.fr", "clef", 20));
       expect(res.version).toBe(2);
     }
-  });
+    // Dix derivations a 600 000 iterations : plus que les 5 s par defaut
+    // quand la machine est chargee.
+  }, 30000);
 
   it("derive en v2 quand l'entree est en v2", async () => {
     const { worker, storage } = loadWorker();

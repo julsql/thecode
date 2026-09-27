@@ -121,7 +121,8 @@ test("une synchronisation sans clef est refusee, pas tentee", async () => {
   // Deriver sans clef maitresse n'aurait aucun sens : on refuse tot, avec un
   // message, plutot que d'echouer au chiffrement.
   expect(refused).toMatchObject({ ok: false });
-  expect((refused as { error: string }).error).toMatch(/clef/i);
+  // Message dans la langue du navigateur : anglais en CI.
+  expect((refused as { error: string }).error).toMatch(/clef|key/i);
 
   await page.close();
 });
