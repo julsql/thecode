@@ -66,7 +66,7 @@ CONFIDENTIALITÉ
 • Code source ouvert sous licence Apache 2.0.
 
 PARTOUT, AVEC LA MÊME CLEF
-Apps iPhone, iPad et Mac, application Android, extensions pour Chrome, Firefox, Edge, Brave et Safari, et le site thecode.julsql.fr. La même clef vous redonne les mêmes mots de passe sur chacun d'eux, même sans synchronisation.
+Apps iPhone, iPad et Mac, application Android, extensions pour Chrome, Firefox, Edge et Brave, et le site thecode.julsql.fr. La même clef vous redonne les mêmes mots de passe sur chacun d'eux, même sans synchronisation.
 
 GRATUIT, AVEC UNE OFFRE COMPLÈTE
 La génération, le carnet et le remplissage sont gratuits et illimités. Un compte gratuit synchronise quelques entrées sur trois appareils ; l'offre complète lève ces limites.

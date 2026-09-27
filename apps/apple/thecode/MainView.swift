@@ -917,7 +917,7 @@ Compte : synchronise automatiquement le carnet et les réglages par défaut entr
 
 Remplissage automatique : une fois TheCode activé dans les réglages du système, il propose le mot de passe et l'identifiant dans Safari et les apps.
 
-Partout, avec la même clef : apps iPhone, iPad, Mac et Android, extensions Chrome, Firefox, Edge, Brave et Safari, et le site thecode.julsql.fr. La même clef y redonne les mêmes mots de passe.
+Partout, avec la même clef : apps iPhone, iPad, Mac et Android, extensions Chrome, Firefox, Edge et Brave, et le site thecode.julsql.fr. La même clef y redonne les mêmes mots de passe.
 
 Sans compte, rien ne quitte l'appareil. Aucune publicité, aucun traceur, code source ouvert.
 """
@@ -937,7 +937,7 @@ Account: automatically syncs the vault and the default settings across your devi
 
 AutoFill: once TheCode is enabled in the system settings, it suggests the password and the username in Safari and apps.
 
-Everywhere, with the same key: iPhone, iPad, Mac and Android apps, Chrome, Firefox, Edge, Brave and Safari extensions, and the thecode.julsql.fr website. The same key gives back the same passwords on each of them.
+Everywhere, with the same key: iPhone, iPad, Mac and Android apps, Chrome, Firefox, Edge and Brave extensions, and the thecode.julsql.fr website. The same key gives back the same passwords on each of them.
 
 Without an account, nothing leaves the device. No ads, no trackers, open source.
 """

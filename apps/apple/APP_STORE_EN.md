@@ -66,7 +66,7 @@ PRIVACY
 • Open source under the Apache 2.0 licence.
 
 EVERYWHERE, WITH THE SAME KEY
-iPhone, iPad and Mac apps, the Android app, extensions for Chrome, Firefox, Edge, Brave and Safari, and the website thecode.julsql.fr. The same key gives you the same passwords on each of them, even without sync.
+iPhone, iPad and Mac apps, the Android app, extensions for Chrome, Firefox, Edge and Brave, and the website thecode.julsql.fr. The same key gives you the same passwords on each of them, even without sync.
 
 FREE, WITH A COMPLETE PLAN
 Generation, the vault and AutoFill are free and unlimited. A free account syncs a few entries across three devices; the complete plan lifts those limits.
