@@ -12,6 +12,17 @@ const root = path.join(__dirname, "..");
 const read = (name) => fs.readFileSync(path.join(root, name), "utf8");
 const locale = (lang) => JSON.parse(read(`_locales/${lang}/messages.json`));
 
+/** Le HTML sans ses commentaires, retires jusqu'a ce qu'il n'en reste aucun. */
+function withoutComments(html) {
+  let previous;
+  let out = html;
+  do {
+    previous = out;
+    out = out.replace(/<!--[\s\S]*?-->/g, "");
+  } while (out !== previous);
+  return out.replaceAll("<!--", "");
+}
+
 /** Clefs citees par une page : attributs data-i18n* et appels a msg(). */
 function usedKeys(page) {
   const html = fs.existsSync(path.join(root, `${page}.html`)) ? read(`${page}.html`) : "";
@@ -48,7 +59,7 @@ describe("traductions du popup", () => {
     (page) => {
       // Tout element feuille porteur de texte doit avoir un data-i18n (siteKey
       // excepte : c'est le nom technique du champ).
-      const html = read(`${page}.html`).replace(/<!--[\s\S]*?-->/g, "");
+      const html = withoutComments(read(`${page}.html`));
       const leaves = [...html.matchAll(/<([a-z0-9]+)([^>]*)>([^<]+)<\/\1>/g)]
         .filter(([, , , text]) => text.trim() && text.trim() !== "siteKey")
         .filter(([, , attrs]) => !attrs.includes("data-i18n"));
