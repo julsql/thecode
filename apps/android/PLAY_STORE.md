@@ -87,7 +87,7 @@ PARTOUT, AVEC LA MÊME CLEF
 
 • Application Android (vous y êtes)
 • Applications iPhone, iPad et Mac
-• Extensions pour Chrome, Firefox, Edge, Brave et Safari
+• Extensions pour Chrome, Firefox, Edge et Brave
 • Site thecode.julsql.fr
 
 La même clef vous redonne les mêmes mots de passe sur chacun d'eux, même sans synchronisation.

@@ -87,7 +87,7 @@ EVERYWHERE, WITH THE SAME KEY
 
 • Android app (you are here)
 • iPhone, iPad and Mac apps
-• Extensions for Chrome, Firefox, Edge, Brave and Safari
+• Extensions for Chrome, Firefox, Edge and Brave
 • Website thecode.julsql.fr
 
 The same key gives you the same passwords on each of them, even without sync.
