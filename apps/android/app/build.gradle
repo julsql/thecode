@@ -10,7 +10,7 @@ android {
         applicationId "fr.juliette.thecode"
         minSdk 21
         targetSdk 36
-        versionCode 13
+        versionCode 14
         versionName "2.3" // x-release-please-version
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
