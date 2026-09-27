@@ -27,7 +27,7 @@ export const translations = {
     home_tutorial_link: "Need help installing? See the tutorial",
     browser_chrome: "Chrome",
     browser_firefox: "Firefox",
-    browser_safari: "Safari",
+    browser_macos: "Mac App Store",
     browser_edge: "Edge",
     browser_opera: "Opera",
     browser_ios: "App Store",
@@ -35,7 +35,6 @@ export const translations = {
 
     btn_chrome: "Chrome",
     btn_firefox: "Firefox",
-    btn_safari: "Safari",
     btn_iphone: "iPhone",
     btn_android: "Google Play",
 
@@ -73,7 +72,7 @@ export const translations = {
       "Your passwords are never stored on a server, in a vault, or even on your device. There is nothing to steal.",
     about_why_b2_t: "Truly cross-platform",
     about_why_b2_p:
-      "Browser extensions for Chrome, Firefox and Safari. Native apps for iOS and Android. Same passwords everywhere.",
+      "Apps for iOS, iPadOS, macOS and Android. Browser extensions for Chrome, Firefox, Edge and Brave. Same passwords everywhere.",
     about_why_b3_t: "100% private",
     about_why_b3_p:
       "No account, no tracking, no analytics. TheCode does not need an internet connection to work.",
@@ -102,27 +101,26 @@ export const translations = {
     tutorial_firefox_s3: "Click the puzzle icon in the toolbar to pin TheCode.",
     tutorial_firefox_cta: "Open Firefox Add-ons",
 
-    tutorial_safari_h: "Safari (macOS)",
-    tutorial_safari_s1: "Install TheCode from the Mac App Store.",
-    tutorial_safari_s2: "Open Safari, go to Settings → Extensions.",
-    tutorial_safari_s3: "Tick the box next to TheCode to enable it.",
-    tutorial_safari_s4: "The TheCode icon appears in the Safari toolbar.",
-    tutorial_safari_cta: "Open the App Store",
-
-    tutorial_ios_h: "iPhone / iPad (Safari)",
+    tutorial_ios_h: "iPhone / iPad",
     tutorial_ios_intro:
-      "On iOS, browser extensions need to be enabled manually in Settings before they appear in Safari.",
+      "On iPhone and iPad, TheCode is a password AutoFill provider: once enabled, it fills your passwords in any app and any browser.",
     tutorial_ios_s1: 'Open the App Store and install "TheCode".',
-    tutorial_ios_s2:
-      "Open Settings → Apps → Safari → Extensions (on older iOS, Settings → Safari → Extensions).",
-    tutorial_ios_s3: 'Tap "TheCode", then turn the switch ON to allow the extension.',
+    tutorial_ios_s2: "Open the app and set your secret key.",
+    tutorial_ios_s3:
+      "Open Settings → General → AutoFill & Passwords and enable TheCode (on older iOS, Settings → Passwords → Password Options).",
     tutorial_ios_s4:
-      'Allow the requested permissions ("All Websites" → Allow) so TheCode can run on the page you are on.',
-    tutorial_ios_s5:
-      'Open Safari, tap the "ᴀA" button in the address bar → "Manage Extensions" → enable TheCode.',
-    tutorial_ios_s6:
-      "Tap the puzzle / extensions icon in Safari and pick TheCode to generate a password.",
+      "In any app or website, tap a password field, then pick TheCode above the keyboard to fill your password.",
     tutorial_ios_cta: "Open the App Store",
+
+    tutorial_macos_h: "Mac (macOS)",
+    tutorial_macos_intro:
+      "On Mac, TheCode is a password AutoFill provider: once enabled, it fills your passwords in any app and any browser.",
+    tutorial_macos_s1: "Install TheCode from the Mac App Store.",
+    tutorial_macos_s2: "Open the app and set your secret key.",
+    tutorial_macos_s3: "Open System Settings → General → AutoFill & Passwords and enable TheCode.",
+    tutorial_macos_s4:
+      "In any app or website, click a password field, then pick TheCode in the AutoFill suggestions.",
+    tutorial_macos_cta: "Open the App Store",
 
     tutorial_android_h: "Android",
     tutorial_android_s1: "Install TheCode from Google Play.",
@@ -475,7 +473,7 @@ export const translations = {
     home_tutorial_link: "Besoin d’aide pour installer ? Voir le tutoriel",
     browser_chrome: "Chrome",
     browser_firefox: "Firefox",
-    browser_safari: "Safari",
+    browser_macos: "Mac App Store",
     browser_edge: "Edge",
     browser_opera: "Opera",
     browser_ios: "App Store",
@@ -483,7 +481,6 @@ export const translations = {
 
     btn_chrome: "Chrome",
     btn_firefox: "Firefox",
-    btn_safari: "Safari",
     btn_iphone: "iPhone",
     btn_android: "Google Play",
 
@@ -524,7 +521,7 @@ export const translations = {
       "Vos mots de passe ne sont jamais stockés sur un serveur, dans un coffre-fort ni même sur votre appareil. Il n’y a rien à voler.",
     about_why_b2_t: "Vraiment multi-plateforme",
     about_why_b2_p:
-      "Extensions navigateur pour Chrome, Firefox et Safari. Applications natives iOS et Android. Les mêmes mots de passe partout.",
+      "Applications pour iOS, iPadOS, macOS et Android. Extensions navigateur pour Chrome, Firefox, Edge et Brave. Les mêmes mots de passe partout.",
     about_why_b3_t: "100% privé",
     about_why_b3_p:
       "Pas de compte, pas de pistage, pas d’analytique. TheCode n’a même pas besoin de connexion internet.",
@@ -555,27 +552,27 @@ export const translations = {
     tutorial_firefox_s3: "Cliquez sur l’icône puzzle de la barre pour épingler TheCode.",
     tutorial_firefox_cta: "Ouvrir Firefox Add-ons",
 
-    tutorial_safari_h: "Safari (macOS)",
-    tutorial_safari_s1: "Installez TheCode depuis le Mac App Store.",
-    tutorial_safari_s2: "Ouvrez Safari, puis Réglages → Extensions.",
-    tutorial_safari_s3: "Cochez la case à côté de TheCode pour l’activer.",
-    tutorial_safari_s4: "L’icône de TheCode apparaît dans la barre d’outils de Safari.",
-    tutorial_safari_cta: "Ouvrir l’App Store",
-
-    tutorial_ios_h: "iPhone / iPad (Safari)",
+    tutorial_ios_h: "iPhone / iPad",
     tutorial_ios_intro:
-      "Sur iOS, les extensions de navigateur doivent être autorisées manuellement dans les Réglages avant d’apparaître dans Safari.",
+      "Sur iPhone et iPad, TheCode est un fournisseur de remplissage automatique des mots de passe : une fois activé, il remplit vos mots de passe dans toutes les applications et tous les navigateurs.",
     tutorial_ios_s1: "Ouvrez l’App Store et installez « TheCode ».",
-    tutorial_ios_s2:
-      "Ouvrez Réglages → Apps → Safari → Extensions (sur les anciennes versions d’iOS : Réglages → Safari → Extensions).",
-    tutorial_ios_s3: "Touchez « TheCode », puis activez l’interrupteur pour autoriser l’extension.",
+    tutorial_ios_s2: "Ouvrez l’application et définissez votre clef secrète.",
+    tutorial_ios_s3:
+      "Ouvrez Réglages → Général → Remplissage automatique et mots de passe, puis activez TheCode (sur les anciennes versions d’iOS : Réglages → Mots de passe → Options des mots de passe).",
     tutorial_ios_s4:
-      "Acceptez les autorisations demandées (« Tous les sites web » → Autoriser) pour que TheCode fonctionne sur la page courante.",
-    tutorial_ios_s5:
-      "Ouvrez Safari, touchez le bouton « ᴀA » dans la barre d’adresse → « Gérer les extensions » → activez TheCode.",
-    tutorial_ios_s6:
-      "Touchez l’icône puzzle / extensions dans Safari et choisissez TheCode pour générer un mot de passe.",
+      "Dans n’importe quelle application ou site web, touchez un champ de mot de passe, puis choisissez TheCode au-dessus du clavier pour le remplir.",
     tutorial_ios_cta: "Ouvrir l’App Store",
+
+    tutorial_macos_h: "Mac (macOS)",
+    tutorial_macos_intro:
+      "Sur Mac, TheCode est un fournisseur de remplissage automatique des mots de passe : une fois activé, il remplit vos mots de passe dans toutes les applications et tous les navigateurs.",
+    tutorial_macos_s1: "Installez TheCode depuis le Mac App Store.",
+    tutorial_macos_s2: "Ouvrez l’application et définissez votre clef secrète.",
+    tutorial_macos_s3:
+      "Ouvrez Réglages Système → Général → Remplissage automatique et mots de passe, puis activez TheCode.",
+    tutorial_macos_s4:
+      "Dans n’importe quelle application ou site web, cliquez sur un champ de mot de passe, puis choisissez TheCode dans les suggestions de remplissage automatique.",
+    tutorial_macos_cta: "Ouvrir l’App Store",
 
     tutorial_android_h: "Android",
     tutorial_android_s1: "Installez TheCode depuis le Google Play Store.",
