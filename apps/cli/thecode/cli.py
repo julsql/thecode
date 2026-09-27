@@ -140,7 +140,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--register",
         metavar="EMAIL",
-        help="Crée un compte de synchronisation (demande un code d'invitation)",
+        help="Crée un compte de synchronisation (offre gratuite, sauf avec --code)",
+    )
+    parser.add_argument(
+        "--code",
+        default="",
+        help="Code à utiliser avec --register (invitation, offre complète ou à vie)",
     )
     parser.add_argument(
         "--logout",
@@ -431,8 +436,7 @@ def main(argv: list[str] | None = None) -> int:
         account_password = getpass.getpass(prompt)
         try:
             if args.register:
-                invite = getpass.getpass("Code d'invitation : ")
-                sync_register(args.endpoint, email, account_password, invite)
+                sync_register(args.endpoint, email, account_password, args.code)
                 print(f"✓ Compte créé pour {email}.", file=sys.stderr)
                 # L'offre, l'abonnement et les appareils se gèrent sur le
                 # site, et nulle part ailleurs : le dire ici évite de chercher

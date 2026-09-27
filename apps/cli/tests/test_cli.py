@@ -67,3 +67,24 @@ def test_algo_1_retrouve_lancien_mot_de_passe(capsys):
     code = main(["-p", "clef", "--algo", "1", "--show", "site"])
     assert code == 0
     assert capsys.readouterr().out.strip() == "u8YfpdVdK*#Bpy6(9f*5"
+
+
+def _register(monkeypatch, argv):
+    prompts, calls = [], []
+    monkeypatch.setattr("getpass.getpass", lambda prompt="": prompts.append(prompt) or "motdepasse")
+    monkeypatch.setattr(cli, "sync_register", lambda *a: calls.append(a))
+    code = main(["--register", "a@example.com", *argv])
+    return code, prompts, calls
+
+
+def test_register_sans_code_ne_demande_que_le_mot_de_passe(monkeypatch):
+    code, prompts, calls = _register(monkeypatch, [])
+    assert code == 0
+    assert len(prompts) == 1
+    assert calls[0][1:] == ("a@example.com", "motdepasse", "")
+
+
+def test_register_transmet_le_code(monkeypatch):
+    code, _, calls = _register(monkeypatch, ["--code", "TESTEUR"])
+    assert code == 0
+    assert calls[0][3] == "TESTEUR"
