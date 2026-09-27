@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.0.2](https://github.com/julsql/thecode/compare/android-v3.0.1...android-v3.0.2) (2026-09-27)
+
+
+### Bug Fixes
+
+* **android:** align native libraries on 16 KB pages ([3b66501](https://github.com/julsql/thecode/commit/3b6650112259a36ffe784be3a47bcd5a56f869ea))
+* **android:** align native libraries on 16 KB pages ([647fec9](https://github.com/julsql/thecode/commit/647fec9cd1a0169568ee167af9c558e71acc6391))
+
 ## [3.0.1](https://github.com/julsql/thecode/compare/android-v3.0.0...android-v3.0.1) (2026-09-27)
 
 
