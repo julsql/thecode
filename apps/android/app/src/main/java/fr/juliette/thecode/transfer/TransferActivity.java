@@ -11,6 +11,7 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import androidx.activity.EdgeToEdge;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
@@ -65,6 +66,9 @@ public class TransferActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // Bord à bord, comme Android 15 l'impose : la mise en page garde ses
+        // marges par fitsSystemWindows, les barres système restent lisibles.
+        EdgeToEdge.enable(this);
         setContentView(R.layout.activity_transfer);
 
         preferences = new Preferences(this);

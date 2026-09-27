@@ -29,6 +29,7 @@ import android.view.autofill.AutofillManager;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -168,6 +169,9 @@ public class MainActivity extends AppCompatActivity {
         int overlay = AlgoTheme.overlayFor(useV1);
         if (overlay != 0) getTheme().applyStyle(overlay, true);
         super.onCreate(savedInstanceState);
+        // Bord à bord, comme Android 15 l'impose : la mise en page garde ses
+        // marges par fitsSystemWindows, les barres système restent lisibles.
+        EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
         setSupportActionBar(findViewById(R.id.topAppBar));
 

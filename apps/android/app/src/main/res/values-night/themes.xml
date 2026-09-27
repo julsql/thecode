@@ -18,8 +18,6 @@
              par les versions anterieures, contrairement a un appel de methode.
              minSdk vaut 21, d'ou l'annotation. -->
         <item name="android:windowLightStatusBar" tools:targetApi="23">false</item>
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@color/background_dark</item>
 
         <item name="materialAlertDialogTheme">@style/ThemeOverlay.TheCode.MaterialAlertDialog</item>
     </style>
