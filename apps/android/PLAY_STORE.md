@@ -93,10 +93,10 @@ PARTOUT, AVEC LA MÊME CLEF
 La même clef vous redonne les mêmes mots de passe sur chacun d'eux, même sans synchronisation.
 
 ━━━━━━━━━━━━━━━━━━━━━
-GRATUIT, AVEC UNE OFFRE COMPLÈTE
+GRATUIT
 ━━━━━━━━━━━━━━━━━━━━━
 
-La génération, le carnet et le remplissage sont gratuits et illimités, sans publicité. Un compte gratuit synchronise quelques entrées sur trois appareils. L'offre complète lève ces limites.
+La génération, le carnet et le remplissage sont gratuits et illimités, sans publicité.
 
 ━━━━━━━━━━━━━━━━━━━━━
 COMMENT ÇA MARCHE ?

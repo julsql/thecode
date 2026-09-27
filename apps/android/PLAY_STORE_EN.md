@@ -93,10 +93,10 @@ EVERYWHERE, WITH THE SAME KEY
 The same key gives you the same passwords on each of them, even without sync.
 
 ━━━━━━━━━━━━━━━━━━━━━
-FREE, WITH A COMPLETE PLAN
+FREE
 ━━━━━━━━━━━━━━━━━━━━━
 
-Generation, the vault and autofill are free and unlimited, with no ads. A free account syncs a few entries across three devices. The complete plan lifts those limits.
+Generation, the vault and autofill are free and unlimited, with no ads.
 
 ━━━━━━━━━━━━━━━━━━━━━
 HOW IT WORKS

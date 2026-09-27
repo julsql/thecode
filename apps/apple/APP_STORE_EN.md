@@ -68,8 +68,8 @@ PRIVACY
 EVERYWHERE, WITH THE SAME KEY
 iPhone, iPad and Mac apps, the Android app, extensions for Chrome, Firefox, Edge and Brave, and the website thecode.julsql.fr. The same key gives you the same passwords on each of them, even without sync.
 
-FREE, WITH A COMPLETE PLAN
-Generation, the vault and AutoFill are free and unlimited. A free account syncs a few entries across three devices; the complete plan lifts those limits.
+FREE
+Generation, the vault and AutoFill are free and unlimited.
 
 HOW IT WORKS
 1. Pick a long master key and remember it: it cannot be recovered.
