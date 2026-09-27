@@ -17,5 +17,7 @@
 	<string>To read the encrypted QR code of a vault shown on another device. No image is saved or sent.</string>
 	<key>GoogleIOSClientID</key>
 	<string>$(GOOGLE_IOS_CLIENT_ID)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>
