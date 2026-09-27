@@ -9,15 +9,24 @@
       "id": "thecode@monnom.com",
       "strict_min_version": "140.0",
       "data_collection_permissions": {
-        "required": ["none"],
-        "optional": ["authenticationInfo", "personallyIdentifyingInfo"]
+        "required": [
+          "none"
+        ],
+        "optional": [
+          "authenticationInfo",
+          "personallyIdentifyingInfo"
+        ]
       }
     },
     "gecko_android": {
       "strict_min_version": "142.0"
     }
   },
-  "permissions": ["storage", "activeTab", "identity"],
+  "permissions": [
+    "storage",
+    "activeTab",
+    "identity"
+  ],
   "icons": {
     "48": "images/48.png",
     "96": "images/96.png",
@@ -25,11 +34,21 @@
     "256": "images/256.png",
     "512": "images/512.png"
   },
-  "host_permissions": ["<all_urls>", "https://*/*", "http://*/*"],
+  "host_permissions": [
+    "<all_urls>",
+    "https://*/*",
+    "http://*/*"
+  ],
   "web_accessible_resources": [
     {
-      "resources": ["images/128.png", "images/copy.svg", "data/public_suffix_list.dat"],
-      "matches": ["<all_urls>"]
+      "resources": [
+        "images/128.png",
+        "images/copy.svg",
+        "data/public_suffix_list.dat"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ],
   "background": {
@@ -46,8 +65,12 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_idle",
       "all_frames": true
     }
