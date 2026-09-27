@@ -658,6 +658,14 @@ describe("synchronisation automatique", () => {
     const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
     const wrapper = await mountGenerate();
     await generateFor(wrapper, "example.com");
+    // La saisie de la clef compte comme une ouverture : sa synchronisation part
+    // sur un vrai minuteur, que les faux ne peuvent pas annuler. Sur une CI
+    // lente, elle tomberait dans la fenêtre des 2 s : on la laisse finir.
+    await vi.waitFor(() => expect(vaultCalls().length).toBeGreaterThan(0), { timeout: 10000 });
+    await vi.waitFor(() =>
+      expect(wrapper.find(".sync-auto-status").text()).toContain("service injoignable"),
+    );
+    fetchMock.mockClear();
 
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     await wrapper.find("#saveEntry").trigger("click");
