@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.0.3](https://github.com/julsql/thecode/compare/android-v3.0.2...android-v3.0.3) (2026-09-27)
+
+
+### Bug Fixes
+
+* **android:** draw edge to edge the way Android 15 expects ([7a73874](https://github.com/julsql/thecode/commit/7a738748e177e758b8506edb4b0f87df36714f4b))
+* **android:** edge to edge on Android 15, R8 resource shrinking ([8b775a4](https://github.com/julsql/thecode/commit/8b775a49dfdc0d453e6acf4f568b345c2c4f0d4c))
+
 ## [3.0.2](https://github.com/julsql/thecode/compare/android-v3.0.1...android-v3.0.2) (2026-09-27)
 
 
