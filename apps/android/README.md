@@ -60,7 +60,7 @@ mot de passe est celui que TheCode aurait calculé.
 | ---------------- | --------------------------------------- |
 | Langage          | **Java 17**                             |
 | UI               | **XML + Material Components 3**         |
-| `minSdk`         | 21 (Android 5.0)                        |
+| `minSdk`         | 24 (Android 7.0)                        |
 | `targetSdk`      | 36                                      |
 | Build            | Gradle 9.4 / AGP 9.2                    |
 | Stockage chiffré | `EncryptedSharedPreferences` + Keystore |
