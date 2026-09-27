@@ -16,6 +16,7 @@ import android.widget.Toast;
 
 import android.os.Build;
 
+import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
@@ -91,6 +92,9 @@ public class VaultActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // Bord à bord, comme Android 15 l'impose : la mise en page garde ses
+        // marges par fitsSystemWindows, les barres système restent lisibles.
+        EdgeToEdge.enable(this);
         setContentView(R.layout.activity_vault);
 
         preferences = new Preferences(this);
