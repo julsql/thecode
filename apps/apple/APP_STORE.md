@@ -49,7 +49,7 @@ FONCTIONNALITÉS
 • Remplissage automatique sur iPhone, iPad et Mac : TheCode propose le mot de passe dans Safari et dans les apps, avec l'identifiant du compte
 • Carnet : retenez pour chaque site l'identifiant, la longueur et les caractères voulus — jamais le mot de passe
 • Enregistrement proposé par le système : TheCode ne retient un compte que s'il sait en recalculer le mot de passe
-• Verrou du carnet par Face ID, Touch ID ou mot de passe dédié
+• Verrou du carnet par Face ID, Touch ID ou votre clef maîtresse
 • Mot de passe masqué par défaut, affiché d'un geste
 • Longueur de 4 à 40 caractères, choix des minuscules, majuscules, chiffres, symboles
 • Réglages par défaut retenus, et partagés entre vos appareils si vous avez un compte
@@ -92,7 +92,8 @@ le répéter ici.
 ## 6. Nouveautés de cette version _(4 000 caractères max)_
 
 ```
-• Verrou du carnet : Face ID, Touch ID ou mot de passe dédié
+• Nouvel algorithme de calcul (v2) : migrez vos mots de passe site par site. L'ancien (v1) reste disponible en génération ponctuelle
+• Verrou du carnet : Face ID, Touch ID ou votre clef maîtresse
 • Carnet en v2, avec un identifiant par compte
 • Remplissage automatique avec l'identifiant, facultatif
 • Enregistrement proposé par le système, quand TheCode sait recalculer le mot de passe

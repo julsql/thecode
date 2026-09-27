@@ -61,7 +61,7 @@ FEATURES
 • Android autofill: TheCode offers the password inside apps and web pages, with the account's username
 • Vault: keep each site's username, length and characters — never the password
 • Save suggestions: a new site is offered to the vault
-• Vault lock with biometrics or a dedicated password
+• Vault lock with biometrics or your master key
 • Password masked by default, revealed with one tap
 • Length from 4 to 40 characters; lowercase, uppercase, digits, symbols
 • Default settings remembered, and shared across your devices with an account
@@ -118,7 +118,8 @@ _(≈ 2 900 characters)_
 **For this release**
 
 ```
-• Vault lock: biometrics or a dedicated password
+• New password algorithm (v2): migrate your passwords site by site. The previous one (v1) remains available for one-off generation
+• Vault lock: biometrics or your master key
 • v2 vault with a username per account
 • Autofill with the username
 • Offer to add a new site to the vault
@@ -128,7 +129,7 @@ _(≈ 2 900 characters)_
 • Sign in with Google
 ```
 
-_(≈ 310 characters)_
+_(≈ 410 characters)_
 
 ---
 
