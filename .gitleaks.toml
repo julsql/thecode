@@ -14,8 +14,8 @@ useDefault = true
 
 [allowlist]
 description = "Vecteurs de conformite et fixtures de test"
-# Les vecteurs sont volontairement identiques dans les six implementations :
-# c'est ce qui garantit qu'elles generent le meme mot de passe.
+# Les vecteurs sont volontairement identiques dans les cinq clients :
+# c'est ce qui garantit qu'ils generent le meme mot de passe.
 paths = ['''(^|/)test-vectors\.json$''']
 # Les mots de passe de fixture des tests : ils n'ouvrent rien, ils servent
 # seulement a passer la longueur minimale exigee a l'inscription. Ils sont

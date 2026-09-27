@@ -1,6 +1,6 @@
 """Conformite aux vecteurs partages (shared/test-vectors.json).
 
-Garde-fou garantissant que les 6 implementations de TheCode produisent
+Garde-fou garantissant que les 5 clients de TheCode produisent
 exactement le meme mot de passe. Une divergence d'un caractere = un
 utilisateur qui perd l'acces a ses comptes.
 

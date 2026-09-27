@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generated": "2026-09-17",
-  "README": "Source de verite partagee par les 6 implementations. NE JAMAIS modifier la section v1 : ces valeurs sont en production et un utilisateur en depend pour acceder a ses comptes. Toute divergence = perte d acces.",
+  "README": "Source de verite partagee par les 5 clients (site, extension, Android, Apple, CLI). NE JAMAIS modifier la section v1 : ces valeurs sont en production et un utilisateur en depend pour acceder a ses comptes. Toute divergence = perte d acces.",
   "v1": {
     "status": "frozen",
     "deprecation": "Retire des applications a T0+18 mois. Reste disponible via la page /legacy et le flag CLI --legacy.",
@@ -343,7 +343,7 @@
       "rendu identique a la v1 (convertToBase + applyCharsetReplacement)"
     ],
     "why": "La v1 hache SHA-256(site + clef) : sans separateur, ('google.com','abc') et ('google.co','mabc') collisionnent ; et sans KDF, un seul mot de passe qui fuite permet de retrouver la clef maitresse hors ligne. La v2 corrige les deux, et fait entrer login et counter dans la derivation.",
-    "coexistence": "La v2 ne remplace pas la v1 : le champ 'v' du carnet dit quelle version appliquer a quelle entree. Une entree existante reste en v1 et son mot de passe ne change pas.",
+    "coexistence": "La v2 est l'algorithme par defaut, carnet et remplissage automatique compris. La v1 ne sert plus qu'a une generation ponctuelle, pour retrouver l'ancien mot de passe d'un site pas encore migre : ses valeurs ne changent jamais.",
     "cases": [
       {
         "id": "v2-canonical",

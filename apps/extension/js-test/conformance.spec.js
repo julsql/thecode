@@ -2,7 +2,7 @@
  * Conformite aux vecteurs partages (shared/test-vectors.json).
  *
  * Ce fichier n'est pas un test comme les autres : c'est le garde-fou qui
- * garantit que les 6 implementations de TheCode produisent exactement le meme
+ * garantit que les 5 clients de TheCode produisent exactement le meme
  * mot de passe. Une divergence d'un seul caractere = un utilisateur qui perd
  * l'acces a ses comptes.
  *

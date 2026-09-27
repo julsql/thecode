@@ -1,7 +1,7 @@
 # Les vecteurs de conformite contiennent des mots de passe DERIVES de la
 # passphrase publique "clef" sur des sites fictifs. Ce sont des valeurs de
 # test, publiees depuis 2025 dans les depots d'origine, et necessaires pour
-# garantir que les six implementations produisent le meme resultat.
+# garantir que les cinq clients produisent le meme resultat.
 #
 # Les champs sont nommes 'master' et 'expected' plutot que 'key'/'password'
 # pour limiter les faux positifs ; cette exclusion sert de filet.
