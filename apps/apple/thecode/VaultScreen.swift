@@ -77,6 +77,9 @@ struct VaultScreen: View {
                     }
                 }
             }
+        // En pile, pas en colonnes : sur iPad, la barre latérale laissait
+        // l'écran vide.
+        .navigationViewStyle(.stack)
         .onAppear {
             lock.resume()
             vault = VaultStore.load()

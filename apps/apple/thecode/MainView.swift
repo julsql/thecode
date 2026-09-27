@@ -497,6 +497,9 @@ struct MainView: View {
                 InfoSheet(isPresented: $showInfoSheet)
             }
             .sheet(isPresented: $showV2Notice) { v2NoticeSheet }
+        // En pile, pas en colonnes : sur iPad, la barre latérale laissait
+        // l'écran vide tant qu'on n'ouvrait pas le menu.
+        .navigationViewStyle(.stack)
         // Session commune (vault-lock.md) : déverrouiller le carnet ouvre la
         // clef, le verrouiller la referme. On la relit au retour.
         // Au retour, le carnet a pu gagner ou perdre l'entrée affichée.
