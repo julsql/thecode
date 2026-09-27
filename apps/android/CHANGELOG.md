@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.0.1](https://github.com/julsql/thecode/compare/android-v3.0.0...android-v3.0.1) (2026-09-27)
+
+
+### Bug Fixes
+
+* **android:** fill the username along with the password ([2ad6576](https://github.com/julsql/thecode/commit/2ad6576882023107aabfe4f396d01003050d47ec))
+* **android:** readable autofill row and username fill ([3830046](https://github.com/julsql/thecode/commit/3830046fea43b7053bd0d5e3a8e797765f212423))
+* **android:** use theme-aware colors in the autofill suggestion row ([2b9720a](https://github.com/julsql/thecode/commit/2b9720a8894a1a9a2392b32997837446d9b9deca))
+
 ## [3.0.0](https://github.com/julsql/thecode/compare/android-v2.3.1...android-v3.0.0) (2026-09-27)
 
 

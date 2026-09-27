@@ -1,5 +1,15 @@
 # Changelog
 
+## [3.0.1](https://github.com/julsql/thecode/compare/apple-v3.0.0...apple-v3.0.1) (2026-09-27)
+
+
+### Bug Fixes
+
+* **apple:** name the Mac window and menus TheCode ([c76c5de](https://github.com/julsql/thecode/commit/c76c5de7208314066f56852a32ac40626974d5da))
+* **apple:** save the vault on macOS ([b97b711](https://github.com/julsql/thecode/commit/b97b711ba332494cc95177490394138ab36e3b6c))
+* **apple:** save the vault on macOS, full-width iPad, Mac window title ([de4bb2a](https://github.com/julsql/thecode/commit/de4bb2a970df3c19c335cc91703500c88d918a33))
+* **apple:** show the iPad screens full width ([017d3cc](https://github.com/julsql/thecode/commit/017d3ccc96426635718d67b59c4efce83570d5bd))
+
 ## [3.0.0](https://github.com/julsql/thecode/compare/apple-v2.3.1...apple-v3.0.0) (2026-09-27)
 
 
