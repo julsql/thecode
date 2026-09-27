@@ -682,5 +682,190 @@
   "content_locked": {
     "message": "TheCode is locked: open the extension to unlock it",
     "description": "In-page menu while the session is locked."
+  },
+  "content_no_key": {
+    "message": "No key set yet. Click to enter one",
+    "description": "In-page menu when no master key is set."
+  },
+  "content_for_login": {
+    "message": "For $VALUE$",
+    "description": "In-page menu: the account the password is for.",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "content_no_login": {
+    "message": "No username: type it first if the site uses one.",
+    "description": "In-page menu: no username found on the page."
+  },
+  "content_copied": {
+    "message": "Password copied",
+    "description": "In-page toast after copying."
+  },
+  "content_save_login": {
+    "message": "Save this site ($VALUE$) to the vault?",
+    "description": "In-page prompt after a sign-in, with the username.",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "content_save": {
+    "message": "Save this site to the vault?",
+    "description": "In-page prompt after a sign-in."
+  },
+  "content_saved": {
+    "message": "Saved.",
+    "description": "In-page prompt: entry saved."
+  },
+  "content_failed": {
+    "message": "Failed: $VALUE$",
+    "description": "In-page prompt: saving failed, with the reason.",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "content_unknown": {
+    "message": "unknown",
+    "description": "Unknown error reason."
+  },
+  "content_yes": {
+    "message": "Yes",
+    "description": "In-page prompt button."
+  },
+  "content_no": {
+    "message": "No",
+    "description": "In-page prompt button."
+  },
+  "transfer_page_title": {
+    "message": "TheCode — Transfer the vault",
+    "description": "Transfer page title."
+  },
+  "transfer_heading": {
+    "message": "Transfer the vault",
+    "description": "Transfer page heading."
+  },
+  "transfer_hint": {
+    "message": "The vault is encrypted with a key derived from your master key. A photo of the screen or the file alone reveals nothing.",
+    "description": "Transfer page explanation."
+  },
+  "transfer_show_qr": {
+    "message": "Show the QR code",
+    "description": "Transfer page button."
+  },
+  "transfer_download": {
+    "message": "Save a file",
+    "description": "Transfer page button."
+  },
+  "transfer_import": {
+    "message": "Import a file",
+    "description": "Transfer page button."
+  },
+  "transfer_scan_hint": {
+    "message": "Scan it from the app on your phone.",
+    "description": "Transfer page, under the QR code."
+  },
+  "transfer_working": {
+    "message": "Working…",
+    "description": "Transfer page status."
+  },
+  "transfer_saved": {
+    "message": "File saved.",
+    "description": "Transfer page status."
+  },
+  "transfer_reading": {
+    "message": "Reading…",
+    "description": "Transfer page status."
+  },
+  "transfer_file_name": {
+    "message": "thecode-vault.txt",
+    "description": "Name of the exported vault file."
+  },
+  "transfer_failed": {
+    "message": "Failed: $VALUE$",
+    "description": "Transfer page error, with the reason.",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "transfer_unknown": {
+    "message": "unknown",
+    "description": "Unknown error reason."
+  },
+  "transfer_merged": {
+    "message": "Vault merged: $VALUE$ entries.",
+    "description": "Transfer page, after an import.",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "transfer_merged_conflicts": {
+    "message": "Vault merged: $VALUE$ entries, $SECOND$ to check.",
+    "description": "Transfer page, after an import with conflicts.",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      },
+      "second": {
+        "content": "$2"
+      }
+    }
+  },
+  "error_entry_missing": {
+    "message": "Entry not found.",
+    "description": "Error shown by the popup, the vault or the in-page menu."
+  },
+  "error_no_key": {
+    "message": "No key set.",
+    "description": "Error shown by the popup, the vault or the in-page menu."
+  },
+  "error_no_session": {
+    "message": "Not signed in. Sign in first.",
+    "description": "Error shown by the popup, the vault or the in-page menu."
+  },
+  "error_no_site": {
+    "message": "No site detected.",
+    "description": "Error shown by the popup, the vault or the in-page menu."
+  },
+  "error_no_tab": {
+    "message": "No tab.",
+    "description": "Error shown by the popup, the vault or the in-page menu."
+  },
+  "error_bad_url": {
+    "message": "Unreadable address.",
+    "description": "Error shown by the popup, the vault or the in-page menu."
+  },
+  "error_bad_domain": {
+    "message": "Unreadable domain.",
+    "description": "Error shown by the popup, the vault or the in-page menu."
+  },
+  "error_empty_key": {
+    "message": "No key entered.",
+    "description": "Error shown by the popup, the vault or the in-page menu."
+  },
+  "error_vault_empty": {
+    "message": "The vault is empty.",
+    "description": "Error shown by the popup, the vault or the in-page menu."
+  },
+  "error_no_key_page": {
+    "message": "No key set: open the TheCode extension and enter your key.",
+    "description": "Error shown by the popup, the vault or the in-page menu."
+  },
+  "error_no_charset": {
+    "message": "Pick at least one kind of character.",
+    "description": "Error shown by the popup, the vault or the in-page menu."
+  },
+  "error_locked": {
+    "message": "TheCode is locked: open the extension to unlock it.",
+    "description": "Error shown by the popup, the vault or the in-page menu."
   }
 }

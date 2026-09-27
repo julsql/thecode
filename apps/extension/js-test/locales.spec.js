@@ -14,7 +14,7 @@ const locale = (lang) => JSON.parse(read(`_locales/${lang}/messages.json`));
 
 /** Clefs citees par une page : attributs data-i18n* et appels a msg(). */
 function usedKeys(page) {
-  const html = read(`${page}.html`);
+  const html = fs.existsSync(path.join(root, `${page}.html`)) ? read(`${page}.html`) : "";
   const js = read(`${page}.js`);
   return new Set([
     ...[...html.matchAll(/data-i18n(?:-[a-z-]+)?="([a-z0-9_]+)"/g)].map((m) => m[1]),
@@ -29,6 +29,10 @@ describe("traductions du popup", () => {
     ["popup", "fr"],
     ["vault-page", "en"],
     ["vault-page", "fr"],
+    ["transfer-page", "en"],
+    ["transfer-page", "fr"],
+    ["content", "en"],
+    ["content", "fr"],
   ])("toutes les clefs de %s existent en %s", (page, lang) => {
     const messages = locale(lang);
     expect([...usedKeys(page)].filter((key) => !messages[key])).toStrictEqual([]);
@@ -39,15 +43,18 @@ describe("traductions du popup", () => {
     expect(usedKeys("vault-page").size).toBeGreaterThan(40);
   });
 
-  it("aucun texte visible de l'ecran carnet n'echappe a la traduction", () => {
-    // Tout element feuille porteur de texte doit avoir un data-i18n (siteKey
-    // excepte : c'est le nom technique du champ).
-    const html = read("vault-page.html").replace(/<!--[\s\S]*?-->/g, "");
-    const leaves = [...html.matchAll(/<([a-z0-9]+)([^>]*)>([^<]+)<\/\1>/g)]
-      .filter(([, , , text]) => text.trim() && text.trim() !== "siteKey")
-      .filter(([, , attrs]) => !attrs.includes("data-i18n"));
-    expect(leaves.map(([whole]) => whole)).toStrictEqual([]);
-  });
+  it.each(["vault-page", "transfer-page"])(
+    "aucun texte visible de %s n'echappe a la traduction",
+    (page) => {
+      // Tout element feuille porteur de texte doit avoir un data-i18n (siteKey
+      // excepte : c'est le nom technique du champ).
+      const html = read(`${page}.html`).replace(/<!--[\s\S]*?-->/g, "");
+      const leaves = [...html.matchAll(/<([a-z0-9]+)([^>]*)>([^<]+)<\/\1>/g)]
+        .filter(([, , , text]) => text.trim() && text.trim() !== "siteKey")
+        .filter(([, , attrs]) => !attrs.includes("data-i18n"));
+      expect(leaves.map(([whole]) => whole)).toStrictEqual([]);
+    },
+  );
 
   it("l'anglais et le francais ont les memes clefs", () => {
     expect(Object.keys(locale("en")).sort()).toStrictEqual(Object.keys(locale("fr")).sort());
@@ -85,5 +92,19 @@ describe("traductions du popup", () => {
       .filter(([, { message }]) => forbidden.test(message))
       .map(([key]) => key);
     expect(offending).toStrictEqual([]);
+  });
+
+  it("la page de transfert charge les traductions", () => {
+    expect(read("transfer-page.html")).toMatch(/<script src="i18n.js" defer><\/script>/);
+    expect(read("transfer-page.js")).toMatch(/translatePage\(\)/);
+  });
+
+  it("le menu dans la page n'a plus de texte en dur", () => {
+    // Chaque texte montre passe par msg() : pas de chaine francaise nue
+    // affectee a innerText, ni de bouton libelle en dur.
+    const js = read("content.js");
+    expect(js).not.toMatch(/innerText = "[^"]*[a-zé]/);
+    expect(js).not.toMatch(/button\("[A-Z]/);
+    expect(js).not.toMatch(/fontFamily = "font-family"/);
   });
 });

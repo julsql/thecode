@@ -9,23 +9,26 @@
          et on perdrait le QR en changeant de fenetre pour le scanner. -->
     <script src="qr.js"></script>
     <script src="transfer.js"></script>
+    <script src="i18n.js" defer></script>
     <script src="transfer-page.js" defer></script>
-    <title>TheCode — Transférer le carnet</title>
+    <title data-i18n="transfer_page_title">TheCode — Transférer le carnet</title>
   </head>
 
   <body class="transfer-page">
-    <h3>Transférer le carnet</h3>
+    <h3 data-i18n="transfer_heading">Transférer le carnet</h3>
 
-    <p class="hint">
+    <p class="hint" data-i18n="transfer_hint">
       Le carnet est chiffré avec une clef dérivée de votre clef maîtresse. Une photo de l'écran ou
       le fichier seul ne révèlent rien.
     </p>
 
     <div>
-      <button id="showQr" type="button">Afficher le QR code</button>
-      <button id="download" type="button">Enregistrer un fichier</button>
+      <button id="showQr" type="button" data-i18n="transfer_show_qr">Afficher le QR code</button>
+      <button id="download" type="button" data-i18n="transfer_download">
+        Enregistrer un fichier
+      </button>
       <label class="import-file">
-        Importer un fichier
+        <span data-i18n="transfer_import">Importer un fichier</span>
         <input id="importFile" type="file" accept=".txt,.thecode,text/plain" />
       </label>
     </div>
@@ -34,7 +37,9 @@
 
     <div id="qr" hidden>
       <div id="qrModules"></div>
-      <p class="hint">Scannez-le depuis l'application sur votre téléphone.</p>
+      <p class="hint" data-i18n="transfer_scan_hint">
+        Scannez-le depuis l'application sur votre téléphone.
+      </p>
     </div>
   </body>
 </html>

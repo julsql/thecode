@@ -682,5 +682,190 @@
   "content_locked": {
     "message": "TheCode est verrouillé : ouvrez l'extension pour le déverrouiller",
     "description": "In-page menu while the session is locked."
+  },
+  "content_no_key": {
+    "message": "Aucune clef n'est renseignée. Cliquer pour rentrer une clef",
+    "description": "In-page menu when no master key is set."
+  },
+  "content_for_login": {
+    "message": "Pour $VALUE$",
+    "description": "In-page menu: the account the password is for.",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "content_no_login": {
+    "message": "Sans identifiant : saisissez-le avant si le site en utilise un.",
+    "description": "In-page menu: no username found on the page."
+  },
+  "content_copied": {
+    "message": "Mot de passe copié",
+    "description": "In-page toast after copying."
+  },
+  "content_save_login": {
+    "message": "Enregistrer ce site ($VALUE$) dans le carnet ?",
+    "description": "In-page prompt after a sign-in, with the username.",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "content_save": {
+    "message": "Enregistrer ce site dans le carnet ?",
+    "description": "In-page prompt after a sign-in."
+  },
+  "content_saved": {
+    "message": "Enregistré.",
+    "description": "In-page prompt: entry saved."
+  },
+  "content_failed": {
+    "message": "Échec : $VALUE$",
+    "description": "In-page prompt: saving failed, with the reason.",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "content_unknown": {
+    "message": "inconnu",
+    "description": "Unknown error reason."
+  },
+  "content_yes": {
+    "message": "Oui",
+    "description": "In-page prompt button."
+  },
+  "content_no": {
+    "message": "Non",
+    "description": "In-page prompt button."
+  },
+  "transfer_page_title": {
+    "message": "TheCode — Transférer le carnet",
+    "description": "Transfer page title."
+  },
+  "transfer_heading": {
+    "message": "Transférer le carnet",
+    "description": "Transfer page heading."
+  },
+  "transfer_hint": {
+    "message": "Le carnet est chiffré avec une clef dérivée de votre clef maîtresse. Une photo de l'écran ou le fichier seul ne révèlent rien.",
+    "description": "Transfer page explanation."
+  },
+  "transfer_show_qr": {
+    "message": "Afficher le QR code",
+    "description": "Transfer page button."
+  },
+  "transfer_download": {
+    "message": "Enregistrer un fichier",
+    "description": "Transfer page button."
+  },
+  "transfer_import": {
+    "message": "Importer un fichier",
+    "description": "Transfer page button."
+  },
+  "transfer_scan_hint": {
+    "message": "Scannez-le depuis l'application sur votre téléphone.",
+    "description": "Transfer page, under the QR code."
+  },
+  "transfer_working": {
+    "message": "Calcul en cours…",
+    "description": "Transfer page status."
+  },
+  "transfer_saved": {
+    "message": "Fichier enregistré.",
+    "description": "Transfer page status."
+  },
+  "transfer_reading": {
+    "message": "Lecture en cours…",
+    "description": "Transfer page status."
+  },
+  "transfer_file_name": {
+    "message": "thecode-carnet.txt",
+    "description": "Name of the exported vault file."
+  },
+  "transfer_failed": {
+    "message": "Impossible : $VALUE$",
+    "description": "Transfer page error, with the reason.",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "transfer_unknown": {
+    "message": "inconnu",
+    "description": "Unknown error reason."
+  },
+  "transfer_merged": {
+    "message": "Carnet fusionné : $VALUE$ entrées.",
+    "description": "Transfer page, after an import.",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "transfer_merged_conflicts": {
+    "message": "Carnet fusionné : $VALUE$ entrées, $SECOND$ à vérifier.",
+    "description": "Transfer page, after an import with conflicts.",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      },
+      "second": {
+        "content": "$2"
+      }
+    }
+  },
+  "error_entry_missing": {
+    "message": "Entrée introuvable.",
+    "description": "Error shown by the popup, the vault or the in-page menu."
+  },
+  "error_no_key": {
+    "message": "Aucune clef définie.",
+    "description": "Error shown by the popup, the vault or the in-page menu."
+  },
+  "error_no_session": {
+    "message": "Aucune session. Connectez-vous d'abord.",
+    "description": "Error shown by the popup, the vault or the in-page menu."
+  },
+  "error_no_site": {
+    "message": "Aucun site détecté.",
+    "description": "Error shown by the popup, the vault or the in-page menu."
+  },
+  "error_no_tab": {
+    "message": "Aucun onglet.",
+    "description": "Error shown by the popup, the vault or the in-page menu."
+  },
+  "error_bad_url": {
+    "message": "Adresse illisible.",
+    "description": "Error shown by the popup, the vault or the in-page menu."
+  },
+  "error_bad_domain": {
+    "message": "Domaine illisible.",
+    "description": "Error shown by the popup, the vault or the in-page menu."
+  },
+  "error_empty_key": {
+    "message": "Aucune clef saisie.",
+    "description": "Error shown by the popup, the vault or the in-page menu."
+  },
+  "error_vault_empty": {
+    "message": "Le carnet est vide.",
+    "description": "Error shown by the popup, the vault or the in-page menu."
+  },
+  "error_no_key_page": {
+    "message": "Aucune clef n'est définie : ouvrez l'extension TheCode et saisissez votre clef.",
+    "description": "Error shown by the popup, the vault or the in-page menu."
+  },
+  "error_no_charset": {
+    "message": "Choisissez au moins un type de caractères.",
+    "description": "Error shown by the popup, the vault or the in-page menu."
+  },
+  "error_locked": {
+    "message": "TheCode est verrouillé : ouvrez l'extension pour le déverrouiller.",
+    "description": "Error shown by the popup, the vault or the in-page menu."
   }
 }

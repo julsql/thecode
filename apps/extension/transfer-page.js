@@ -9,6 +9,8 @@ if (typeof browser === "undefined" && typeof chrome !== "undefined") {
   var browser = chrome;
 }
 
+translatePage();
+
 const statusLine = document.getElementById("status");
 const qrBox = document.getElementById("qr");
 const qrModules = document.getElementById("qrModules");
@@ -41,11 +43,13 @@ function requestPayload() {
 }
 
 document.getElementById("showQr").addEventListener("click", async () => {
-  say("Calcul en cours…");
+  say(msg("transfer_working", "Calcul en cours…"));
   const resp = await requestPayload();
   if (!resp?.ok) {
     qrBox.hidden = true;
-    say(`Impossible : ${resp?.error || "inconnu"}`);
+    say(
+      msg("transfer_failed", "Impossible : $1", resp?.error || msg("transfer_unknown", "inconnu")),
+    );
     return;
   }
 
@@ -68,24 +72,26 @@ document.getElementById("showQr").addEventListener("click", async () => {
     // Un carnet trop gros ne tient pas dans un QR : le dire plutot que
     // d'afficher un code tronque que rien ne saura lire.
     qrBox.hidden = true;
-    say(`Impossible : ${e.message}`);
+    say(msg("transfer_failed", "Impossible : $1", e.message));
   }
 });
 
 document.getElementById("download").addEventListener("click", async () => {
   const resp = await requestPayload();
   if (!resp?.ok) {
-    say(`Impossible : ${resp?.error || "inconnu"}`);
+    say(
+      msg("transfer_failed", "Impossible : $1", resp?.error || msg("transfer_unknown", "inconnu")),
+    );
     return;
   }
 
   const url = URL.createObjectURL(new Blob([resp.payload], { type: "text/plain" }));
   const link = document.createElement("a");
   link.href = url;
-  link.download = "thecode-carnet.txt";
+  link.download = msg("transfer_file_name", "thecode-carnet.txt");
   link.click();
   URL.revokeObjectURL(url);
-  say("Fichier enregistré.");
+  say(msg("transfer_saved", "Fichier enregistré."));
 });
 
 document.getElementById("importFile").addEventListener("change", async (event) => {
@@ -93,18 +99,29 @@ document.getElementById("importFile").addEventListener("change", async (event) =
   if (!file) return;
   event.target.value = "";
 
-  say("Lecture en cours…");
+  say(msg("transfer_reading", "Lecture en cours…"));
   const payload = (await file.text()).trim();
 
   browser.runtime.sendMessage({ action: "importVault", payload }, (resp) => {
     if (!resp?.ok) {
-      say(`Impossible : ${resp?.error || "inconnu"}`);
+      say(
+        msg(
+          "transfer_failed",
+          "Impossible : $1",
+          resp?.error || msg("transfer_unknown", "inconnu"),
+        ),
+      );
       return;
     }
     say(
       resp.conflicts
-        ? `Carnet fusionné : ${resp.entries} entrées, ${resp.conflicts} à vérifier.`
-        : `Carnet fusionné : ${resp.entries} entrées.`,
+        ? msg(
+            "transfer_merged_conflicts",
+            "Carnet fusionné : $1 entrées, $2 à vérifier.",
+            resp.entries,
+            resp.conflicts,
+          )
+        : msg("transfer_merged", "Carnet fusionné : $1 entrées.", resp.entries),
     );
   });
 });

@@ -3,18 +3,28 @@ if (typeof browser === "undefined") {
 }
 
 /**
+ * Message traduit, dans la langue du navigateur. `values` remplit $1, $2… ;
+ * le francais sert de secours quand l'API manque (tests).
+ */
+function msg(key, fallback, ...values) {
+  const subs = values.map(String);
+  const text = browser?.i18n?.getMessage?.(key, subs.length ? subs : undefined);
+  return text || subs.reduce((out, v, i) => out.replace(`$${i + 1}`, v), fallback);
+}
+
+/**
  * Texte du menu quand aucun mot de passe n'est propose. Session verrouillee
  * (shared/spec/vault-lock.md) : la clef est la mais inutilisable, il faut
  * ouvrir l'extension pour la ressaisir. Sinon, aucune clef n'est definie.
  */
 function menuNotice(response) {
   if (response?.locked) {
-    return (
-      browser?.i18n?.getMessage?.("content_locked") ||
-      "TheCode est verrouillé : ouvrez l'extension pour le déverrouiller"
+    return msg(
+      "content_locked",
+      "TheCode est verrouillé : ouvrez l'extension pour le déverrouiller",
     );
   }
-  return "Aucune clef n'est renseignée. Cliquer pour rentrer une clef";
+  return msg("content_no_key", "Aucune clef n'est renseignée. Cliquer pour rentrer une clef");
 }
 
 (function () {
@@ -127,8 +137,11 @@ function menuNotice(response) {
         accountNote.style.whiteSpace = "normal";
         accountNote.style.maxWidth = "260px";
         accountNote.innerText = response.login
-          ? `Pour ${response.login}`
-          : "Sans identifiant : saisissez-le avant si le site en utilise un.";
+          ? msg("content_for_login", "Pour $1", response.login)
+          : msg(
+              "content_no_login",
+              "Sans identifiant : saisissez-le avant si le site en utilise un.",
+            );
         pwdText.style.flexGrow = "1";
         pwdText.style.margin = "auto";
         pwdText.style.whiteSpace = "nowrap";
@@ -177,7 +190,7 @@ function menuNotice(response) {
 
           // Popup
           popup = document.createElement("div");
-          popup.innerText = "Mot de passe copié";
+          popup.innerText = msg("content_copied", "Mot de passe copié");
           popup.style.fontSize = "14px";
           popup.style.position = "fixed";
           popup.style.bottom = "20px";
@@ -285,8 +298,8 @@ function menuNotice(response) {
 
     const label = document.createElement("span");
     label.innerText = login
-      ? `Enregistrer ce site (${login}) dans le carnet ?`
-      : "Enregistrer ce site dans le carnet ?";
+      ? msg("content_save_login", "Enregistrer ce site ($1) dans le carnet ?", login)
+      : msg("content_save", "Enregistrer ce site dans le carnet ?");
     ask.appendChild(label);
 
     const answer = (yes) => {
@@ -295,7 +308,9 @@ function menuNotice(response) {
         return;
       }
       browser.runtime.sendMessage({ action: "saveCurrentSite", login }, (resp) => {
-        label.innerText = resp?.ok ? "Enregistré." : `Échec : ${resp?.error || "inconnu"}`;
+        label.innerText = resp?.ok
+          ? msg("content_saved", "Enregistré.")
+          : msg("content_failed", "Échec : $1", resp?.error || msg("content_unknown", "inconnu"));
         yesBtn.remove();
         noBtn.remove();
         setTimeout(() => removeMenu(input), 1500);
@@ -319,8 +334,8 @@ function menuNotice(response) {
       return b;
     };
 
-    const yesBtn = button("Oui", () => answer(true));
-    const noBtn = button("Non", () => answer(false));
+    const yesBtn = button(msg("content_yes", "Oui"), () => answer(true));
+    const noBtn = button(msg("content_no", "Non"), () => answer(false));
     ask.appendChild(yesBtn);
     ask.appendChild(noBtn);
 

@@ -130,7 +130,20 @@ function usableKey() {
 }
 
 /** Reponse des actions refusees tant que la session est verrouillee. */
-const SESSION_LOCKED_ERROR = "TheCode est verrouillé : ouvrez l'extension pour le déverrouiller.";
+/**
+ * Message d'erreur montre a l'utilisateur, dans la langue du navigateur. Le
+ * francais sert de secours quand l'API manque (tests).
+ */
+function errorText(key, fallback) {
+  return browser?.i18n?.getMessage?.(key) || fallback;
+}
+
+function sessionLockedError() {
+  return errorText(
+    "error_locked",
+    "TheCode est verrouillé : ouvrez l'extension pour le déverrouiller.",
+  );
+}
 
 /**
  * Actions qui ont besoin de la clef, ou qui montrent le carnet : refusees
@@ -462,7 +475,7 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
       return;
     }
     if (sessionLocked && LOCKED_REFUSED.has(request.action)) {
-      sendResponse({ ok: false, locked: true, error: SESSION_LOCKED_ERROR });
+      sendResponse({ ok: false, locked: true, error: sessionLockedError() });
       return;
     }
     if (request.action === "checkEncodingKey") {
@@ -545,9 +558,12 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
         const vault = await loadVault(browser?.storage?.local);
         const entry = vault.entries.find((e) => e.id === request.id && !e.deleted);
         if (!entry) {
-          sendResponse({ ok: false, error: "entree introuvable" });
+          sendResponse({
+            ok: false,
+            error: errorText("error_entry_missing", "Entrée introuvable."),
+          });
         } else if (!encodingKey) {
-          sendResponse({ ok: false, error: "aucune clef definie" });
+          sendResponse({ ok: false, error: errorText("error_no_key", "Aucune clef définie.") });
         } else if (!(await renewAllowed())) {
           sendResponse({ ok: false, error: RENEW_IS_PAID });
         } else {
@@ -565,7 +581,10 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
         const vault = await loadVault(browser?.storage?.local);
         const entry = vault.entries.find((e) => e.id === request.id && !e.deleted);
         if (!entry) {
-          sendResponse({ ok: false, error: "entree introuvable" });
+          sendResponse({
+            ok: false,
+            error: errorText("error_entry_missing", "Entrée introuvable."),
+          });
         } else if (!(await renewAllowed())) {
           sendResponse({ ok: false, error: RENEW_IS_PAID });
         } else {
@@ -637,11 +656,14 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
       // La clef maitresse ne quitte pas le service worker : la popup demande
       // la synchronisation, elle ne la fait pas elle-meme.
       if (!encodingKey) {
-        sendResponse({ ok: false, error: "Aucune clef definie." });
+        sendResponse({ ok: false, error: errorText("error_no_key", "Aucune clef définie.") });
         return;
       }
       if (!(await loadSession(browser?.storage?.local))) {
-        sendResponse({ ok: false, error: "Aucune session. Connectez-vous d'abord." });
+        sendResponse({
+          ok: false,
+          error: errorText("error_no_session", "Aucune session. Connectez-vous d'abord."),
+        });
         return;
       }
       sendResponse(await autoSync.runNow());
@@ -731,7 +753,7 @@ function normalizeLogin(login) {
  */
 async function saveSite(domain, login) {
   if (typeof domain !== "string" || !domain.trim()) {
-    return { ok: false, error: "aucun site detecte" };
+    return { ok: false, error: errorText("error_no_site", "Aucun site détecté.") };
   }
   const { lengthNumber, minState, majState, symState, chiState } = await loadParams();
   const vault = await loadVault(browser?.storage?.local);
@@ -759,18 +781,18 @@ async function saveSite(domain, login) {
  */
 async function saveCurrentSite(sender, login) {
   const url = sender?.tab?.url;
-  if (!url) return { ok: false, error: "aucun onglet" };
-  if (sessionLocked) return { ok: false, locked: true, error: SESSION_LOCKED_ERROR };
-  if (!encodingKey) return { ok: false, error: "aucune clef definie" };
+  if (!url) return { ok: false, error: errorText("error_no_tab", "Aucun onglet.") };
+  if (sessionLocked) return { ok: false, locked: true, error: sessionLockedError() };
+  if (!encodingKey) return { ok: false, error: errorText("error_no_key", "Aucune clef définie.") };
 
   await pslReady;
   let domain;
   try {
     domain = getRegistrableDomain(new URL(url).hostname);
   } catch {
-    return { ok: false, error: "adresse illisible" };
+    return { ok: false, error: errorText("error_bad_url", "Adresse illisible.") };
   }
-  if (!domain) return { ok: false, error: "domaine illisible" };
+  if (!domain) return { ok: false, error: errorText("error_bad_domain", "Domaine illisible.") };
 
   const vault = await loadVault(browser?.storage?.local);
   // Meme compte que celui qui a servi a generer : celui de l'identifiant de la
@@ -841,7 +863,8 @@ async function handleVaultLock(request) {
   switch (request.action) {
     case "vaultUnlock": {
       const key = request.encodingKey;
-      if (typeof key !== "string" || !key) return { ok: false, error: "aucune clef saisie" };
+      if (typeof key !== "string" || !key)
+        return { ok: false, error: errorText("error_empty_key", "Aucune clef saisie.") };
       if (encodingKey) {
         if (!sameMasterKey(key, encodingKey)) {
           return { ok: true, unlocked: false, reason: "otherKey" };
@@ -883,19 +906,19 @@ async function handleVaultLock(request) {
 
 /** Chiffre le carnet courant. Rend la meme forme que l'action du meme nom. */
 async function exportVaultPayload() {
-  if (sessionLocked) return { ok: false, locked: true, error: SESSION_LOCKED_ERROR };
+  if (sessionLocked) return { ok: false, locked: true, error: sessionLockedError() };
   const vault = await loadVault(browser?.storage?.local);
-  if (!encodingKey) return { ok: false, error: "aucune clef definie" };
+  if (!encodingKey) return { ok: false, error: errorText("error_no_key", "Aucune clef définie.") };
   if (!vault.entries.filter((e) => !e.deleted).length) {
-    return { ok: false, error: "le carnet est vide" };
+    return { ok: false, error: errorText("error_vault_empty", "Le carnet est vide.") };
   }
   return { ok: true, payload: await exportVault(vault, encodingKey) };
 }
 
 /** Fusionne un payload avec le carnet local. */
 async function importVaultPayload(payload) {
-  if (sessionLocked) return { ok: false, locked: true, error: SESSION_LOCKED_ERROR };
-  if (!encodingKey) return { ok: false, error: "aucune clef definie" };
+  if (sessionLocked) return { ok: false, locked: true, error: sessionLockedError() };
+  if (!encodingKey) return { ok: false, error: errorText("error_no_key", "Aucune clef définie.") };
   const incoming = await importVault(payload, encodingKey);
   // Fusion et jamais substitution : un import qui ecraserait effacerait les
   // entrees creees ici.
@@ -942,16 +965,21 @@ async function generatePasswordForUrl(url, version, login, { fromPage = false } 
   const requestedLogin = normalizeLogin(login);
   // Verrouillee, la session ne genere rien : ni pour la popup, ni pour le
   // menu injecte dans la page.
-  if (sessionLocked) return { error: SESSION_LOCKED_ERROR, locked: true };
+  if (sessionLocked) return { error: sessionLockedError(), locked: true };
   if (!encodingKey) {
-    return { error: "Aucune clé n'est définie. Ouvre l'extension TheCode et entre ta clé." };
+    return {
+      error: errorText(
+        "error_no_key_page",
+        "Aucune clef n'est définie : ouvrez l'extension TheCode et saisissez votre clef.",
+      ),
+    };
   }
   // Relecture systématique : le service worker peut avoir été recyclé depuis
   // le dernier réglage, et content.js n'envoie aucune option.
   const { lengthNumber, minState, majState, symState, chiState } = await loadParams();
 
   if (!minState && !majState && !symState && !chiState) {
-    return { error: "Il faut choisir des caractères" };
+    return { error: errorText("error_no_charset", "Choisissez au moins un type de caractères.") };
   }
   try {
     await pslReady;
