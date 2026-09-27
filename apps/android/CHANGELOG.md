@@ -1,6 +1,6 @@
 # Changelog
 
-## [3.0.0](https://github.com/julsql/thecode/compare/android-v3.0.0...android-v3.0.0) (2026-09-27)
+## [3.0.0](https://github.com/julsql/thecode/compare/android-v2.3.1...android-v3.0.0) (2026-09-27)
 
 
 ### ⚠ BREAKING CHANGES
@@ -117,7 +117,6 @@
 
 * **android:** write the synced vault off the main thread ([f45e83f](https://github.com/julsql/thecode/commit/f45e83f5e8525a4d4d92bc1698f3142c7d451fcc))
 
-## [3.0.0](https://github.com/julsql/thecode/compare/android-v2.3.1...android-v3.0.0) (2026-09-18)
 
 
 ### ⚠ BREAKING CHANGES

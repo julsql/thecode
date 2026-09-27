@@ -1,6 +1,6 @@
 # Changelog
 
-## [3.0.0](https://github.com/julsql/thecode/compare/extension-v3.0.0...extension-v3.0.0) (2026-09-27)
+## [3.0.0](https://github.com/julsql/thecode/compare/extension-v2.2.2...extension-v3.0.0) (2026-09-27)
 
 
 ### ⚠ BREAKING CHANGES
@@ -99,7 +99,6 @@
 * use the form's login in the in-page menu and explain the key above each vault ([a0fd072](https://github.com/julsql/thecode/commit/a0fd07293ea8e08751f7b5ab5be67c9b153e37cb))
 * **website:** keep a false "deleted" absent after a sync ([cec1e12](https://github.com/julsql/thecode/commit/cec1e12aeb785d3191f32eb020055a6c7f8a278f))
 
-## [3.0.0](https://github.com/julsql/thecode/compare/extension-v2.2.2...extension-v3.0.0) (2026-09-18)
 
 ### ⚠ BREAKING CHANGES
 
