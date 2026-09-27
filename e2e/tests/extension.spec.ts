@@ -65,8 +65,9 @@ test("sans clef definie, aucun mot de passe n'est injecte", async () => {
   await expect(page.locator(".pw-suggester-menu")).toBeVisible({ timeout: 5_000 });
 
   // Le menu invite a saisir une clef ; il ne doit surtout pas proposer de mot
-  // de passe, sans quoi il serait derivable sans secret.
-  await expect(page.locator(".pw-suggester-menu")).toContainText(/clef/i);
+  // de passe, sans quoi il serait derivable sans secret. Il suit la langue du
+  // navigateur : anglais en CI.
+  await expect(page.locator(".pw-suggester-menu")).toContainText(/clef|key/i);
   await expect(page.locator("#pass")).toHaveValue("");
 
   await page.close();
