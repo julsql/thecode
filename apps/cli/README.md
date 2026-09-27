@@ -98,8 +98,8 @@ site.
 
 ### Compte et synchronisation
 
-- `--register EMAIL` : crée un compte (demande le mot de passe du compte, puis un code d'invitation
-  facultatif : l'inscription est ouverte, laisser vide)
+- `--register EMAIL` : crée un compte, sur l'offre gratuite (demande le mot de passe du compte)
+- `--code CODE` : avec `--register`, applique un code (offre complète ou à vie)
 - `--login EMAIL` : se connecte (demande le mot de passe du compte)
 - `--logout` : oublie la session sur cet appareil
 - `--sync` : synchronise le carnet puis les réglages par défaut (tire, fusionne, pousse)

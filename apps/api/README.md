@@ -54,7 +54,7 @@ full list and defaults). The main ones:
 | `THECODE_ENVIRONMENT`                                         | `production` enforces a JWT secret                   |
 | `THECODE_DATABASE_URL`                                        | PostgreSQL URL (`postgresql+psycopg://…`)            |
 | `THECODE_JWT_SECRET`                                          | Token signing secret — required in production        |
-| `THECODE_REGISTRATION_MODE`                                   | `open`, `quota`, `invite` (default) or `closed`      |
+| `THECODE_REGISTRATION_MODE`                                   | `open` (default), `quota`, `invite` or `closed`      |
 | `THECODE_INVITE_CODE`                                         | Code required in `invite` mode                       |
 | `THECODE_CORS_ORIGINS`                                        | Browser origins allowed (comma-separated)            |
 | `THECODE_SITE_URL`                                            | Public website, for links in emails                  |
