@@ -8,7 +8,7 @@ android {
 
     defaultConfig {
         applicationId "fr.juliette.thecode"
-        minSdk 21
+        minSdk 24
         targetSdk 36
         versionCode 14
         versionName "3.0.0" // x-release-please-version
