@@ -49,7 +49,7 @@ FEATURES
 • AutoFill on iPhone, iPad and Mac: TheCode offers the password in Safari and in apps, with the account's username
 • Vault: keep each site's username, length and characters — never the password
 • System save prompts: TheCode only keeps an account when it can recompute its password
-• Vault lock with Face ID, Touch ID or a dedicated password
+• Vault lock with Face ID, Touch ID or your master key
 • Password masked by default, revealed with one tap
 • Length from 4 to 40 characters; lowercase, uppercase, digits, symbols
 • Default settings remembered, and shared across your devices with an account
@@ -91,7 +91,8 @@ _(86 characters)_ — "manager" is already in the name, which Apple indexes.
 ## 6. What's New in this version _(max 4,000 characters)_
 
 ```
-• Vault lock: Face ID, Touch ID or a dedicated password
+• New password algorithm (v2): migrate your passwords site by site. The previous one (v1) remains available for one-off generation
+• Vault lock: Face ID, Touch ID or your master key
 • v2 vault, with a username per account
 • AutoFill with the username, optional
 • System save prompts, when TheCode can recompute the password

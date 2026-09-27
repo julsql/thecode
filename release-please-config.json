@@ -24,37 +24,31 @@
           "path": "manifest-safari-firefox.json",
           "jsonpath": "$.version"
         }
-      ],
-      "release-as": "3.0.0"
+      ]
     },
     "apps/website": {
       "release-type": "node",
       "package-name": "website",
-      "component": "website",
-      "release-as": "3.0.0"
+      "component": "website"
     },
     "apps/cli": {
       "release-type": "python",
       "package-name": "thecode",
-      "component": "cli",
-      "release-as": "3.0.0"
+      "component": "cli"
     },
     "apps/android": {
       "release-type": "simple",
       "package-name": "android",
       "component": "android",
-      "extra-files": ["app/build.gradle"],
-      "release-as": "3.0.0"
+      "extra-files": ["app/build.gradle"]
     },
     "apps/apple": {
       "release-type": "simple",
       "package-name": "apple",
-      "component": "apple",
-      "release-as": "3.0.0"
+      "component": "apple"
     }
   },
   "bootstrap-sha": "affe3ccb43e2b76f09dc17d124402ba922405aa8",
   "_comment_bootstrap": "Les historiques importes des cinq depots contiennent des messages qui ne sont pas des conventional commits ('Initial commit', 'fix: params'...). release-please echouait en tentant de les parser. bootstrap-sha lui dit de ne pas remonter avant la creation du monorepo.",
-  "_comment_separate_pull_requests": "Une seule PR de release, et non une par application. Des PR separees touchent toutes .release-please-manifest.json, donc chaque merge mettait les autres en conflit — et release-please ne rebase pas ses PR quand main avance, il ne les met a jour que si le contenu de la release change. Regrouper supprime le probleme a la racine. Les tags restent par composant (extension-v3.0.0, apple-v3.0.0...), et les workflows de publication se declenchent par tag : poser un tag ne publie pas, ce qui laisse le choix du moment pour chaque boutique.",
-  "_comment_release_as": "Version 3.0.0 imposee a toutes les apps pour la sortie commune (carnet v2, synchro chiffree). A retirer apres la release : sinon chaque release suivante resterait en 3.0.0."
+  "_comment_separate_pull_requests": "Une seule PR de release, et non une par application. Des PR separees touchent toutes .release-please-manifest.json, donc chaque merge mettait les autres en conflit — et release-please ne rebase pas ses PR quand main avance, il ne les met a jour que si le contenu de la release change. Regrouper supprime le probleme a la racine. Les tags restent par composant (extension-v3.0.0, apple-v3.0.0...), et les workflows de publication se declenchent par tag : poser un tag ne publie pas, ce qui laisse le choix du moment pour chaque boutique."
 }

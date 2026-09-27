@@ -61,7 +61,7 @@ FONCTIONNALITÉS
 • Remplissage automatique Android : TheCode propose le mot de passe dans les apps et les pages web, avec l'identifiant du compte
 • Carnet : retenez pour chaque site l'identifiant, la longueur et les caractères voulus — jamais le mot de passe
 • Proposition d'enregistrement : un site nouveau est proposé au carnet
-• Verrou du carnet par biométrie ou mot de passe dédié
+• Verrou du carnet par biométrie ou votre clé maîtresse
 • Mot de passe masqué par défaut, affiché d'un geste
 • Longueur de 4 à 40 caractères, choix des minuscules, majuscules, chiffres, symboles
 • Réglages par défaut retenus, et partagés entre vos appareils si vous avez un compte
@@ -118,7 +118,8 @@ _(≈ 3 100 caractères)_
 **Pour cette version**
 
 ```
-• Verrou du carnet : biométrie ou mot de passe dédié
+• Nouvel algorithme de calcul (v2) : migrez vos mots de passe site par site. L'ancien (v1) reste disponible en génération ponctuelle
+• Verrou du carnet : biométrie ou votre clé maîtresse
 • Carnet en v2 et identifiant par compte
 • Remplissage automatique avec l'identifiant
 • Proposition d'ajouter un site nouveau au carnet
@@ -128,7 +129,7 @@ _(≈ 3 100 caractères)_
 • Connexion avec Google
 ```
 
-_(≈ 360 caractères)_
+_(≈ 485 caractères)_
 
 ---
 
