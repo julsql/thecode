@@ -102,7 +102,7 @@ import GithubIcon from "@/assets/github.png";
 import { useI18n } from "@/i18n";
 import type { TranslationKey } from "@/i18n";
 
-type PlatformId = "chrome" | "firefox" | "safari" | "edge" | "opera" | "ios" | "android";
+type PlatformId = "chrome" | "firefox" | "edge" | "opera" | "ios" | "macos" | "android";
 
 interface Platform {
   id: PlatformId;
@@ -130,12 +130,6 @@ const PLATFORMS: Record<PlatformId, Platform> = {
     url: FIREFOX_STORE,
     icon: FirefoxIcon,
   },
-  safari: {
-    id: "safari",
-    labelKey: "browser_safari",
-    url: APP_STORE,
-    icon: AppStoreIcon,
-  },
   edge: {
     id: "edge",
     labelKey: "browser_edge",
@@ -151,6 +145,12 @@ const PLATFORMS: Record<PlatformId, Platform> = {
   ios: {
     id: "ios",
     labelKey: "browser_ios",
+    url: APP_STORE,
+    icon: AppStoreIcon,
+  },
+  macos: {
+    id: "macos",
+    labelKey: "browser_macos",
     url: APP_STORE,
     icon: AppStoreIcon,
   },
@@ -170,7 +170,10 @@ function detectPlatform(): PlatformId {
   if (/Edg\//.test(ua)) return "edge";
   if (/OPR\/|Opera/.test(ua)) return "opera";
   if (/Firefox\//.test(ua)) return "firefox";
-  if (/Safari/.test(ua) && !/Chrome|Chromium/.test(ua)) return "safari";
+  // Safari sur Mac : pas d'extension Safari, on propose l'app macOS.
+  if (/Macintosh|Mac OS X/.test(ua) && /Safari/.test(ua) && !/Chrome|Chromium/.test(ua)) {
+    return "macos";
+  }
   if (/Chrome\/|Chromium/.test(ua)) return "chrome";
   return "chrome";
 }
@@ -187,15 +190,7 @@ export default defineComponent({
     });
 
     const others = computed(() => {
-      const order: PlatformId[] = [
-        "chrome",
-        "firefox",
-        "safari",
-        "edge",
-        "opera",
-        "ios",
-        "android",
-      ];
+      const order: PlatformId[] = ["chrome", "firefox", "edge", "opera", "ios", "macos", "android"];
       const seenUrls = new Set<string>([PLATFORMS[detected].url]);
       return order
         .filter((id) => id !== detected)
