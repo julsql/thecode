@@ -2,7 +2,7 @@
 
 Réponses prêtes à reporter dans la Play Console (« Sécurité des données »), App Store Connect
 (« Confidentialité de l'app »), le Chrome Web Store et addons.mozilla.org. Elles décrivent ce que
-fait le code au 26 septembre 2026 ; la politique de confidentialité publiée
+fait le code au 27 septembre 2026 (version 3.0.0) ; la politique de confidentialité publiée
 (`apps/website/src/legal/fr.ts`) dit la même chose, avec plus de détail.
 
 URL de la politique de confidentialité : https://thecode.julsql.fr/fr/privacy (anglais :
@@ -29,13 +29,14 @@ https://thecode.julsql.fr/en/privacy).
     aléatoire) est en clair ;
   - l'adresse IP, dans les journaux techniques.
 - **Jamais envoyés** : la clef maîtresse, les mots de passe (ils ne sont stockés nulle part), les
-  sites et identifiants du carnet en clair, le mot de passe ou la méthode du verrou du carnet, les
-  données biométriques, les images de la caméra.
+  sites et identifiants du carnet en clair, la méthode de verrouillage du carnet, les données
+  biométriques, les images de la caméra.
 - **Aucun SDK d'analyse, de publicité ou de suivi des plantages**, sur aucune plateforme.
 - **Chiffrement en transit** : HTTPS vers l'API.
-- **Suppression** : depuis la page du compte du site (https://thecode.julsql.fr/fr/account),
-  immédiate et définitive (`DELETE /v1/account`), abonnement résilié d'abord. Export complet :
-  `GET /v1/account/export`.
+- **Suppression** : depuis les apps (iOS, macOS, Android) ou la page du compte du site
+  (https://thecode.julsql.fr/fr/account), immédiate et définitive (`DELETE /v1/account`),
+  abonnement résilié d'abord. Pour un compte ouvert avec Apple, les jetons Apple sont révoqués
+  auprès d'Apple. Export complet : `GET /v1/account/export`.
 - **Sous-traitants** : hébergeur (UE), Stripe (paiement, sur le site uniquement), Google et Apple
   (connexion, si choisie), fournisseur de messagerie (courriers du compte).
 - **Paiement** : uniquement sur le site, via Stripe. Aucun achat intégré dans les apps.
@@ -44,12 +45,12 @@ https://thecode.julsql.fr/en/privacy).
 
 ### Vue d'ensemble
 
-| Question                                                                    | Réponse                                                                     |
-| --------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| L'app collecte-t-elle ou partage-t-elle des types de données obligatoires ? | **Oui** (uniquement si l'utilisateur crée un compte de synchronisation)     |
-| Toutes les données collectées sont-elles chiffrées en transit ?             | **Oui**                                                                     |
-| Proposez-vous un moyen de demander la suppression des données ?             | **Oui** — https://thecode.julsql.fr/fr/account (voir « Points à trancher ») |
-| L'app est-elle conforme aux Règles relatives aux familles ?                 | Non concernée (public cible : adultes)                                      |
+| Question                                                                    | Réponse                                                                 |
+| --------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| L'app collecte-t-elle ou partage-t-elle des types de données obligatoires ? | **Oui** (uniquement si l'utilisateur crée un compte de synchronisation) |
+| Toutes les données collectées sont-elles chiffrées en transit ?             | **Oui**                                                                 |
+| Proposez-vous un moyen de demander la suppression des données ?             | **Oui** — dans l'app, ou https://thecode.julsql.fr/fr/account           |
+| L'app est-elle conforme aux Règles relatives aux familles ?                 | Non concernée (public cible : adultes)                                  |
 
 ### Types de données
 
@@ -103,7 +104,8 @@ et de recherche, achats, utilisation, diagnostics, données sensibles).
   contient souvent le prénom de l'utilisateur : le déclarer en « Autres types de données », lié,
   « Fonctionnalités de l'app », est la réponse prudente.
 - **Suivi** : aucun. Pas d'App Tracking Transparency à demander.
-- **Suppression du compte** : depuis la page du compte du site (voir « Points à trancher »).
+- **Suppression du compte** : dans l'app (règle 5.1.1(v)), avec révocation des jetons « Se
+  connecter avec Apple ».
 
 Textes d'usage déjà en place : `NSCameraUsageDescription` (lecture du QR code d'un carnet).
 
@@ -122,7 +124,7 @@ Textes d'usage déjà en place : `NSCameraUsageDescription` (lecture du QR code 
 | Permission                    | Justification (à coller)                                                                                                                                                                                                                                           |
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `identity`                    | Used only for the optional "Continue with Google" sign-in to the encrypted sync account, through `identity.launchWebAuthFlow` (OpenID Connect, scopes `openid email`). The ID token is sent to our sync server to open the account; no other Google API is called. |
-| `storage`                     | Keeps the vault (sites, logins, settings — never passwords), the default settings, the vault-lock hash and the sync session on the device. The master key is held in `storage.session`, in memory only, and cleared when the browser closes.                       |
+| `storage`                     | Keeps the vault (sites, logins, settings — never passwords), the default settings and the sync session on the device. The master key is held in `storage.session`, in memory only, and cleared when the browser closes.                                            |
 | `activeTab`                   | Reads the URL of the current tab when the user opens the popup, to compute the password for that site.                                                                                                                                                             |
 | Host permissions `<all_urls>` | The content script must run on any site where the user logs in: it finds password fields and shows the computed password next to them. Nothing from the page is stored or sent.                                                                                    |
 | Remote code                   | **No.** All code is bundled in the package.                                                                                                                                                                                                                        |
@@ -151,25 +153,23 @@ Texte pour les notes aux relecteurs et la politique de confidentialité de la fi
 > the account password (for sign-in), the Google ID token, and the end-to-end encrypted vault.
 > No analytics, no tracking, no remote code.
 
-Consentement à la collecte (`data_collection_permissions`, exigé par AMO pour les nouvelles
-extensions) : non déclaré dans `manifest-safari-firefox.json` à ce jour. Valeur proposée, la
-synchronisation étant facultative : `"required": ["none"]` et
-`"optional": ["authenticationInfo", "personallyIdentifyingInfo"]`.
+Consentement à la collecte (`data_collection_permissions`, exigé par AMO) : déclaré dans
+`manifest-safari-firefox.json`, `"required": ["none"]` (rien sans compte) et
+`"optional": ["authenticationInfo", "personallyIdentifyingInfo"]` (compte de synchronisation).
+La clef n'existe qu'à partir de Firefox 140 (142 sur Android) : c'est la version minimale.
+`web-ext lint` ne remonte ni erreur ni avertissement.
+
+## Points réglés
+
+- **Suppression du compte depuis l'app** (Apple 5.1.1(v), Google Play) : présente sur iOS, macOS
+  et Android.
+- **Révocation des jetons Apple** à la suppression : faite par le serveur.
+- **Abonnement vendu hors store** : les apps n'affichent ni prix ni lien d'achat. Leurs liens
+  vers le compte portent `?from=app`, et le site y masque alors offres et abonnement.
 
 ## Points à trancher avant de soumettre
 
-1. **Suppression du compte depuis l'app.** Apple (règle 5.1.1(v)) et Google Play exigent qu'une
-   app qui permet de **créer** un compte (ici : « Continuer avec Google » sur Android, « Se
-   connecter avec Apple » et Google sur iOS/macOS) permette aussi d'en demander la suppression
-   depuis l'app. Aujourd'hui, la suppression n'existe que sur le site. Un lien direct vers
-   https://thecode.julsql.fr/fr/account depuis la section synchronisation peut suffire ; une
-   suppression dans l'app est plus sûre.
-2. **Révocation des jetons Apple.** Apple demande, à la suppression d'un compte ouvert avec « Se
-   connecter avec Apple », d'appeler son API de révocation. Le serveur ne le fait pas.
-3. **Abonnement vendu hors store.** L'offre complète se paie sur le site. Aucune des apps ne doit
-   inciter à payer ailleurs (lien, bouton, prix) sans passer par les programmes prévus par Apple
-   et Google : à vérifier dans les écrans de synchronisation.
-4. **Fournisseur de messagerie** : à nommer dans la politique si l'on veut une liste exhaustive
+1. **Fournisseur de messagerie** : à nommer dans la politique si l'on veut une liste exhaustive
    (la configuration par défaut pointe vers le SMTP de Gmail).
-5. **Durées non vérifiables dans le code** : journaux techniques « quelques jours », sauvegardes
+2. **Durées non vérifiables dans le code** : journaux techniques « quelques jours », sauvegardes
    « sept jours au maximum ». À confirmer côté hébergement.
