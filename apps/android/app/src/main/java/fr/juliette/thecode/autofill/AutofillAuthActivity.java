@@ -42,8 +42,13 @@ public class AutofillAuthActivity extends FragmentActivity {
      * pas encore : il entre dans la dérivation. Absent, le repli dérive sans.
      */
     public static final String EXTRA_LOGIN = "fr.juliette.thecode.autofill.LOGIN";
-    /** Champ identifiant du formulaire, rempli avec {@link #EXTRA_LOGIN}. */
+    /**
+     * Champ identifiant du formulaire, rempli avec l'identifiant du compte
+     * choisi selon {@link UsernameFill}.
+     */
     public static final String EXTRA_USERNAME_ID = "fr.juliette.thecode.autofill.USERNAME_ID";
+    /** Valeur du champ identifiant au moment de la suggestion. */
+    public static final String EXTRA_PAGE_LOGIN = "fr.juliette.thecode.autofill.PAGE_LOGIN";
 
     private String domain;
     private String entryId;
@@ -52,6 +57,8 @@ public class AutofillAuthActivity extends FragmentActivity {
     private String pageLogin;
     @Nullable
     private AutofillId usernameId;
+    @Nullable
+    private String typedLogin;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -63,6 +70,7 @@ public class AutofillAuthActivity extends FragmentActivity {
         entryId = intent.getStringExtra(EXTRA_ENTRY_ID);
         passwordIds = readAutofillIds(intent.getParcelableArrayExtra(EXTRA_PASSWORD_IDS));
         pageLogin = intent.getStringExtra(EXTRA_LOGIN);
+        typedLogin = intent.getStringExtra(EXTRA_PAGE_LOGIN);
         Parcelable username = intent.getParcelableExtra(EXTRA_USERNAME_ID);
         usernameId = username instanceof AutofillId ? (AutofillId) username : null;
 
@@ -162,11 +170,13 @@ public class AutofillAuthActivity extends FragmentActivity {
         for (AutofillId id : passwordIds) {
             builder.setValue(id, AutofillValue.forText(password));
         }
-        // Mot de passe dérivé avec l'identifiant de la page : on remet cet
-        // identifiant dans son champ (valeur inchangée), pour que le formulaire
-        // soumis porte celui qui redonne le mot de passe.
-        if (usernameId != null && resolution.entryId.isEmpty() && !resolution.login.isEmpty()) {
-            builder.setValue(usernameId, AutofillValue.forText(resolution.login));
+        // Le formulaire soumis doit porter l'identifiant qui redonne le mot de
+        // passe : celui du compte, écrit si le champ est vide ou le porte déjà
+        // (nouveau compte dérivé avec l'identifiant de la page compris). Un
+        // autre identifiant tapé reste en place.
+        String login = usernameId != null ? UsernameFill.loginToFill(resolution, typedLogin) : null;
+        if (login != null) {
+            builder.setValue(usernameId, AutofillValue.forText(login));
         }
         return builder.build();
     }

@@ -123,7 +123,7 @@ public class TheCodeAutofillService extends AutofillService {
                 prefs.getSyncCredentials() != null, resolutions);
 
         callback.onSuccess(buildAuthenticatedResponse(request, domain, resolutions, ids,
-                parsed.usernameId, proposeSave));
+                parsed.usernameId, pageLogin, proposeSave));
     }
 
     /**
@@ -224,11 +224,11 @@ public class TheCodeAutofillService extends AutofillService {
                                                     List<SiteResolution> resolutions,
                                                     AutofillId[] passwordIds,
                                                     @Nullable AutofillId usernameId,
-                                                    boolean proposeSave) {
+                                                    String pageLogin, boolean proposeSave) {
         FillResponse.Builder response = new FillResponse.Builder();
         for (int i = 0; i < resolutions.size(); i++) {
             response.addDataset(buildDataset(request, domain, resolutions.get(i), i, passwordIds,
-                    usernameId));
+                    usernameId, pageLogin));
         }
 
         // Le carnet ne connaît pas encore ce site : on demande au système de
@@ -247,7 +247,7 @@ public class TheCodeAutofillService extends AutofillService {
 
     private Dataset buildDataset(FillRequest request, String domain, SiteResolution resolution,
                                  int index, AutofillId[] passwordIds,
-                                 @Nullable AutofillId usernameId) {
+                                 @Nullable AutofillId usernameId, String pageLogin) {
         // Sans identifiant, le mot de passe est calculé (et sera enregistré)
         // sans : le saisir après le changerait. On le dit dans la suggestion.
         String label = resolution.login.isEmpty()
@@ -260,13 +260,18 @@ public class TheCodeAutofillService extends AutofillService {
         authIntent.putExtra(AutofillAuthActivity.EXTRA_ENTRY_ID, resolution.entryId);
         authIntent.putExtra(AutofillAuthActivity.EXTRA_PASSWORD_IDS, passwordIds);
         // Nouveau compte dérivé avec l'identifiant de la page : l'activité en
-        // a besoin pour redonner le même mot de passe, et remplit le champ
-        // identifiant avec la valeur déjà saisie.
+        // a besoin pour redonner le même mot de passe.
         if (resolution.entryId.isEmpty() && !resolution.login.isEmpty()) {
             authIntent.putExtra(AutofillAuthActivity.EXTRA_LOGIN, resolution.login);
-            if (usernameId != null) {
-                authIntent.putExtra(AutofillAuthActivity.EXTRA_USERNAME_ID, usernameId);
-            }
+        }
+        // Le champ identifiant reçoit l'identifiant du compte quand il est vide
+        // ou le porte déjà ; un autre identifiant tapé n'est pas écrasé
+        // (UsernameFill). L'activité revérifie après avoir relu le carnet.
+        boolean fillUsername = usernameId != null
+                && UsernameFill.loginToFill(resolution, pageLogin) != null;
+        if (fillUsername) {
+            authIntent.putExtra(AutofillAuthActivity.EXTRA_USERNAME_ID, usernameId);
+            authIntent.putExtra(AutofillAuthActivity.EXTRA_PAGE_LOGIN, pageLogin);
         }
 
         int flags = PendingIntent.FLAG_UPDATE_CURRENT;
@@ -290,6 +295,10 @@ public class TheCodeAutofillService extends AutofillService {
         datasetBuilder.setAuthentication(sender);
         for (AutofillId id : passwordIds) {
             datasetBuilder.setValue(id, null);
+        }
+        // Déclaré aussi : la suggestion s'offre depuis le champ identifiant.
+        if (fillUsername) {
+            datasetBuilder.setValue(usernameId, null);
         }
 
         // Présentation inline (barre du clavier) quand le clavier la supporte
