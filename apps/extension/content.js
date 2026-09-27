@@ -81,7 +81,7 @@ function menuNotice(response) {
           noKey.innerText = menuNotice(response);
           noKey.style.color = "#eaeaeaff";
           noKey.style.cursor = "pointer";
-          noKey.style.fontFamily = "font-family";
+          noKey.style.fontFamily = "system-ui, sans-serif";
           noKey.style.fontSize = "14px";
           noKey.style.margin = "auto";
           container.style.cursor = "pointer";
@@ -133,7 +133,7 @@ function menuNotice(response) {
         pwdText.style.margin = "auto";
         pwdText.style.whiteSpace = "nowrap";
         pwdText.style.cursor = "pointer";
-        pwdText.style.fontFamily = "font-family";
+        pwdText.style.fontFamily = "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
         pwdText.style.color = "white";
         pwdText.style.fontSize = "14px";
 
