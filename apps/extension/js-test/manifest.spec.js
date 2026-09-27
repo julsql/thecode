@@ -33,3 +33,14 @@ describe("manifeste Firefox / Safari", () => {
     expect(background.type).toBeUndefined();
   });
 });
+
+describe("declaration de collecte pour addons.mozilla.org", () => {
+  const { gecko } = JSON.parse(read("manifest-safari-firefox.json")).browser_specific_settings;
+
+  it("ne collecte rien sans compte, et seulement l'identite avec", () => {
+    expect(gecko.data_collection_permissions).toEqual({
+      required: ["none"],
+      optional: ["authenticationInfo", "personallyIdentifyingInfo"],
+    });
+  });
+});
