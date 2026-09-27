@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.0.1](https://github.com/julsql/thecode/compare/extension-v3.0.0...extension-v3.0.1) (2026-09-27)
+
+
+### Bug Fixes
+
+* **extension:** show the in-page password in a monospace font ([c0bf7e4](https://github.com/julsql/thecode/commit/c0bf7e4f8edbfd5825beb28fd7476fe2b583f5b8))
+* **extension:** translate the in-page menu, the transfer page and the errors ([bb36043](https://github.com/julsql/thecode/commit/bb3604386194145799d4589b6691d60cf96b0c52))
+* **extension:** translate the in-page menu, the transfer page and the errors ([965216d](https://github.com/julsql/thecode/commit/965216ded51897966a034a2c2299dd4508cfc3fc))
+
 ## [3.0.0](https://github.com/julsql/thecode/compare/extension-v2.2.2...extension-v3.0.0) (2026-09-27)
 
 

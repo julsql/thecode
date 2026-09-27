@@ -10,8 +10,8 @@ android {
         applicationId "fr.juliette.thecode"
         minSdk 24
         targetSdk 36
-        versionCode 15
-        versionName "3.0.0" // x-release-please-version
+        versionCode 14
+        versionName "3.0.1" // x-release-please-version
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
