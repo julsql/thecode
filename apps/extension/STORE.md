@@ -8,6 +8,9 @@ Justification des permissions, pratiques de confidentialité et notes pour les r
 
 Captures : 1280×800, 5 au maximum sur Chrome, les mêmes sur AMO.
 
+Pas d'énumération de navigateurs ou de plateformes dans la description : le Chrome Web Store
+la refuse comme « spam de mots-clés » (refus du 27 septembre 2026).
+
 ---
 
 ## 1. Nom
@@ -67,7 +70,7 @@ CONFIDENTIALITÉ
 • Code source ouvert sous licence Apache 2.0.
 
 PARTOUT, AVEC LA MÊME CLEF
-Extensions pour Chrome, Firefox, Edge et Brave, apps iPhone, iPad, Mac et Android, et le site thecode.julsql.fr. La même clef vous redonne les mêmes mots de passe sur chacun d'eux, même sans synchronisation.
+TheCode existe aussi en application mobile et de bureau, et sur le site thecode.julsql.fr. La même clef vous redonne les mêmes mots de passe partout, même sans synchronisation.
 
 GRATUIT
 La génération, le carnet et le remplissage sont gratuits et illimités. Un compte gratuit synchronise quelques entrées sur trois appareils ; l'offre complète, sur thecode.julsql.fr, lève ces limites.
@@ -110,7 +113,7 @@ PRIVACY
 • Open source under the Apache 2.0 licence.
 
 EVERYWHERE, WITH THE SAME KEY
-Extensions for Chrome, Firefox, Edge and Brave, iPhone, iPad, Mac and Android apps, and the website thecode.julsql.fr. The same key gives you back the same passwords on each of them, even without sync.
+TheCode also comes as a mobile and desktop app, and on the website thecode.julsql.fr. The same key gives you back the same passwords everywhere, even without sync.
 
 FREE
 Generation, the vault and filling are free and unlimited. A free account syncs a few entries across three devices; the complete plan, on thecode.julsql.fr, lifts those limits.
