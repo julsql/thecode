@@ -35,10 +35,9 @@ class Settings(BaseSettings):
     #: invite — il faut connaître le code d'invitation
     #: closed — plus aucune inscription
     #:
-    #: `invite` par défaut : un service de synchronisation de mots de passe
-    #: ouvert à tous dès le premier jour, sans limitation de débit ni
-    #: modération, est une invitation à l'abus.
-    registration_mode: str = "invite"
+    #: `open` par défaut : un compte ouvre l'offre gratuite, et un code saisi à
+    #: l'inscription (offre complète, à vie) s'applique quel que soit le mode.
+    registration_mode: str = "open"
 
     #: Comptes créés sans code, en mode `quota`. Au-delà, il faut un code de
     #: parrainage — c'est là que passera l'abonnement.
