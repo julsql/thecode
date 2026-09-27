@@ -2,47 +2,52 @@
 
 ## 🧩 Generate secure, deterministic passwords directly inside your browser
 
-Works on Chrome, Edge, Brave, Firefox (desktop & Android), and Safari
+Works on Chrome, Firefox (desktop), Edge and Brave
 
 ## ✨ Overview
 
-The TheCode Browser Extension automatically generates secure, unique passwords for every website using:
+The TheCode Browser Extension computes a secure, unique password for every website from:
 
-- the website domain, and
-- your secret key (session key)
+- the website domain (plus an optional username and a counter), and
+- your master key (session key)
 
 With TheCode, you never store passwords and never need to remember them.
 
-Just enter the same secret key again, and the extension will regenerate the exact same password for each website.
+Just enter the same master key again, and the extension will regenerate the exact same password for
+each website.
 
 ➡️ One key to unlock secure passwords everywhere.\
 ➡️ No stored password. Sync is optional and end-to-end encrypted.
 
 ## 🔧 Features
 
-- 🔍 Detects password fields on any website
-- ⚡ Suggests a deterministic password generated from your session key + domain
+- 🔍 Detects password fields on any website and offers the password in an in-page menu
+- ⚡ Algorithm v2 (PBKDF2-SHA256 + HMAC-SHA256); v1 stays available for one-off generation, to find
+  a password set before v2
 - 🔒 Never stores generated passwords
 - 💾 Your master key is kept in `storage.session`: in memory only, erased when the browser closes
 - 📒 A local vault remembers each site's login, length and characters — never the password
-- 🔄 Optional sync of the vault, end-to-end encrypted, with an email or Google account
-- 🌍 Works across Chrome, Edge, Brave, Firefox (desktop & Android), and Safari
-- 🧪 Password generation algorithm is fully unit-tested
+- 🔐 The vault opens with the master key; "Lock" locks the whole session
+- 📲 Transfer the vault without an account, by encrypted QR code or file (`TC2`)
+- 🔄 Optional account (email/password or Google): the vault and the default settings sync
+  automatically, end-to-end encrypted
+- 💪 Master key strength guidance and key fingerprint
+- 🧪 Password generation algorithm is fully unit-tested against the shared test vectors
 
-Your master key is never transmitted nor written to disk.
-All generation is performed locally within the browser.
+Your master key is never transmitted nor written to disk. All generation is performed locally within
+the browser.
 
 ## 🔐 How It Works
 
 1. You open the extension popup
-2. You enter your session key
+2. You enter your master key
 3. The background service worker holds the key in `storage.session` (memory only)
 4. When you visit a site, the extension:
 
 - detects password fields
-- identifies the domain
-- generates a deterministic password
-- injects it into the form field
+- identifies the domain and, if the vault knows it, the login
+- computes the deterministic password
+- offers to fill it into the form
 
 The key survives service worker restarts, but not a browser restart: it must then be re-entered.
 
@@ -51,79 +56,48 @@ The key survives service worker restarts, but not a browser restart: it must the
 You can download TheCode from the official browser extension stores:
 
 - [Chrome](https://chromewebstore.google.com/detail/thecode/jeknefpalcipdlnbeboefonmnlejepen)
-- [Edge](https://chromewebstore.google.com/detail/thecode/jeknefpalcipdlnbeboefonmnlejepen)
 - [Firefox](https://addons.mozilla.org/fr/firefox/addon/thecode/)
-- [Safari](https://apps.apple.com/app/thecode-password-manager/id6753169043)
+- [Edge](https://chromewebstore.google.com/detail/thecode/jeknefpalcipdlnbeboefonmnlejepen)
 - [Brave](https://chromewebstore.google.com/detail/thecode/jeknefpalcipdlnbeboefonmnlejepen)
 - and other Chromium-based browsers (see Chrome link)
 
-## 📦 Installation for developpment
+On iPhone, iPad and Mac, use the [Apple apps](../apple/README.md) and their AutoFill instead.
 
-Download the extension archive from the [Releases page](https://github.com/julsql/thecode/releases/).
+## 📦 Installation for development
+
+From the repository root, `make pack-extension` builds `dist/extension/chrome/` and
+`dist/extension/firefox/` (each with the right `manifest.json`), plus a zip of each.
 
 ### Chrome / Edge / Brave
 
-1. Download and unzip the extension archive
-2. Open:
-
-- `chrome://extensions`
-- or `edge://extensions`
-
+1. Run `make pack-extension`
+2. Open `chrome://extensions` or `edge://extensions`
 3. Enable Developer mode
 4. Click Load unpacked
-5. Select the extension folder (thecode-extension)
-6. Open the extension icon and enter your session key
+5. Select `dist/extension/chrome`
+6. Open the extension icon and enter your master key
 
 ### Firefox
 
-1. Download and unzip the extension archive
-2. Copy the `safari-firefox` manifest into the `manifest.json`
-3. Open: `about:debugging#/runtime/this-firefox`
-4. Click Load Temporary Add-on
-5. Select `manifest.json`
-6. Open the extension icon and enter your session key
-
-### Firefox for Android
-
-Firefox for Android only installs extensions that are signed by Mozilla
-(distributed through addons.mozilla.org) or loaded via Firefox Nightly's
-custom collection feature.
-
-To test the build locally with Firefox Nightly:
-
-1. Download and unzip the extension archive
-2. Copy the `firefox-android` manifest into the `manifest.json`
-3. In Firefox Nightly on Android, enable: Settings > About Firefox Nightly
-   (tap the logo 5 times) > Custom Add-on collection
-4. Provide your AMO collection containing the signed XPI of TheCode
-5. Open Settings > Add-ons, install TheCode, then open it from the menu and
-   enter your session key
-
-Production install: use the AMO listing once published
-([Firefox add-on page](https://addons.mozilla.org/fr/firefox/addon/thecode/)).
-
-### Safari
-
-1. Download and unzip the extension archive
-2. Copy the `safari-firefox` manifest into the `manifest.json`
-3. Enable Developer Mode in Safari
-4. Go to: `Safari > Settings > Developer`
-5. Click Add Extension…
-6. Select the extension folder
-7. Open the extension and enter your session key
+1. Run `make pack-extension`
+2. Open `about:debugging#/runtime/this-firefox`
+3. Click Load Temporary Add-on
+4. Select `dist/extension/firefox/manifest.json`
+5. Open the extension icon and enter your master key
 
 ## 🔒 Security & Behavior
 
 - Your master key is not logged, not synced, and never written to disk (`storage.session` only)
 - Generated passwords are never saved — only inserted into the active field
-- The vault screen is locked behind a vault password, kept as a PBKDF2 hash in `storage.local`
+- The vault screen opens with the master key, compared in constant time; no fingerprint of the key
+  is ever stored
 - Without an account, the extension contacts no server
 
 ## 🔏 Permissions & data
 
 | Permission                    | Why                                                                                                   |
 | ----------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `storage`                     | Vault, settings, vault-lock hash and sync session on the device; master key in `storage.session`      |
+| `storage`                     | Vault, settings and sync session on the device; master key in `storage.session`                       |
 | `activeTab`                   | Know the current tab's site when the popup opens                                                      |
 | `identity`                    | Only for the optional "Continue with Google" sign-in (`launchWebAuthFlow`, scopes `openid email`)     |
 | `<all_urls>` + content script | Find password fields on any login page and offer the computed password; nothing from the page is sent |
@@ -135,23 +109,23 @@ https://thecode.julsql.fr/en/privacy.
 
 ## 🧪 Testing
 
-The password generation algorithm and supporting logic are covered by unit tests to ensure deterministic, correct behavior.
+- Unit tests (Jest): `cd js-test && npm test`
+- Conformance with the shared vectors: `make test-conformance` from the repository root
+- End-to-end (Playwright): `make test-e2e` from the repository root
 
 ## 🛠 Development Notes
 
-- Chrome/Edge/Brave use the default manifest (or `chrome-brave-edge`)
-- Firefox desktop & Safari require the `safari-firefox` manifest
-- Firefox for Android requires the `firefox-android` manifest (adds the
-  `gecko_android` block, drops `theme_icons`, uses PNG toolbar icons)
-- Safari builds must be packaged through Xcode
-- MV3 service workers may stop/restart at any moment — the key lives in `storage.session`, never on disk
+- Chrome/Edge/Brave use `manifest-chrome-brave-edge.json` (service worker), also the default
+  `manifest.json`
+- Firefox desktop uses `manifest-safari-firefox.json` (background scripts)
+- MV3 service workers may stop/restart at any moment — the key lives in `storage.session`, never on
+  disk
 
 ## 🤝 Contributing
 
-Contributions are welcome!
-Bug fixes, browser improvements, UI changes, and manifest updates are all appreciated.
-Please open an issue or submit a pull request.
+Contributions are welcome! Bug fixes, browser improvements, UI changes, and manifest updates are all
+appreciated. Please open an issue or submit a pull request.
 
 ## 📄 License
 
-Distributed under the Apache License.
+Distributed under the Apache License 2.0 — see `LICENSE`.
