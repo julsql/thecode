@@ -79,7 +79,17 @@ public enum VaultStore {
 
         // Écriture atomique : une interruption ne doit pas laisser un carnet
         // tronqué, qui ferait perdre toutes les entrées.
-        try data.write(to: url, options: [.atomic, .completeFileProtection])
+        try data.write(to: url, options: Data.WritingOptions.atomic.union(protection))
+    }
+
+    /// Protection des données sur iOS. macOS la refuse (EPERM à l'écriture) :
+    /// le fichier y est protégé par le conteneur de l'app et FileVault.
+    private static var protection: Data.WritingOptions {
+        #if os(iOS)
+        return .completeFileProtection
+        #else
+        return []
+        #endif
     }
 
     /// Copies mises de côté pour ce carnet, par nom.
@@ -104,7 +114,7 @@ public enum VaultStore {
         let copy = url.deletingLastPathComponent().appendingPathComponent(
             "\(url.deletingPathExtension().lastPathComponent).unreadable-\(digest).json")
         if !FileManager.default.fileExists(atPath: copy.path) {
-            try data.write(to: copy, options: [.withoutOverwriting, .completeFileProtection])
+            try data.write(to: copy, options: Data.WritingOptions.withoutOverwriting.union(protection))
         }
         return copy
     }
