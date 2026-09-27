@@ -68,8 +68,8 @@ CONFIDENTIALITÉ
 PARTOUT, AVEC LA MÊME CLEF
 Apps iPhone, iPad et Mac, application Android, extensions pour Chrome, Firefox, Edge et Brave, et le site thecode.julsql.fr. La même clef vous redonne les mêmes mots de passe sur chacun d'eux, même sans synchronisation.
 
-GRATUIT, AVEC UNE OFFRE COMPLÈTE
-La génération, le carnet et le remplissage sont gratuits et illimités. Un compte gratuit synchronise quelques entrées sur trois appareils ; l'offre complète lève ces limites.
+GRATUIT
+La génération, le carnet et le remplissage sont gratuits et illimités.
 
 COMMENT ÇA MARCHE ?
 1. Choisissez une clef maîtresse longue et mémorisez-la : elle ne peut pas être récupérée.
