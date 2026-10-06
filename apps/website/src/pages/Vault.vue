@@ -230,9 +230,15 @@ export default defineComponent({
     const syncConnected = Boolean(loadSession());
 
     // Synchronisation automatique avec la clef de la session.
-    useAutoSync(clef, () => {
-      if (view.value === "unlocked") refreshEntries();
-    });
+    // Écran du carnet : il surveille le compte (`live`) pour montrer sans
+    // rechargement ce qu'un autre appareil vient d'y écrire.
+    const { syncNow } = useAutoSync(
+      clef,
+      () => {
+        if (view.value === "unlocked") refreshEntries();
+      },
+      { live: true },
+    );
 
     const heading = ref<HTMLElement | null>(null);
     const unlockInput = ref<HTMLInputElement | null>(null);
@@ -313,6 +319,8 @@ export default defineComponent({
       typedKey.value = "";
       if (outcome === "unlocked" || outcome === "keySet") {
         enterUnlocked(outcome === "keySet" ? "vault_unlocked_key_set" : "vault_unlocked");
+        // Le carnet affiché doit être celui du compte, pas celui d'avant.
+        syncNow();
         return;
       }
       error.value = t(outcome === "otherKey" ? "vault_err_other_key" : "vault_err_empty");

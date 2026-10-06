@@ -5,6 +5,9 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import {
   forgetMasterKey,
+  keepMasterKey,
+  KEPT_KEY,
+  restoreMasterKey,
   locked,
   lockSession,
   masterKey,
@@ -13,12 +16,15 @@ import {
   unlockWithMasterKey,
   usableMasterKey,
 } from "@/masterKey";
-import { VAULT_SESSION_KEY } from "@/vaultSession";
+import { VAULT_GRACE_MS, VAULT_SESSION_KEY } from "@/vaultSession";
 
 const SESSION_KEY = "clef";
 const OTHER_KEY = "autre clef";
 
-beforeEach(() => resetMasterKeyForTests());
+beforeEach(() => {
+  sessionStorage.clear();
+  resetMasterKeyForTests();
+});
 
 describe("comparaison des clefs", () => {
   it("reconnaît la même clef, y compris hors ASCII", () => {
@@ -101,5 +107,76 @@ describe("verrou de la session", () => {
     forgetMasterKey();
     expect(masterKey.value).toBe("");
     expect(locked.value).toBe(false);
+  });
+});
+
+describe("clef gardée le temps d'un rechargement", () => {
+  const T0 = 1_000_000;
+
+  /** La page se ferme avec la clef, la suivante démarre sans rien en mémoire. */
+  function reload(leftAt = T0) {
+    masterKey.value = SESSION_KEY;
+    keepMasterKey(leftAt);
+    resetMasterKeyForTests();
+  }
+
+  it("la reprend au chargement suivant, dans les 3 minutes", () => {
+    reload();
+    expect(restoreMasterKey(T0 + VAULT_GRACE_MS)).toBe(true);
+    expect(masterKey.value).toBe(SESSION_KEY);
+    expect(locked.value).toBe(false);
+  });
+
+  it("ne la laisse dans le stockage que le temps du rechargement", () => {
+    reload();
+    restoreMasterKey(T0 + 1);
+    expect(sessionStorage.getItem(KEPT_KEY)).toBeNull();
+  });
+
+  it("l'oublie au-delà de 3 minutes, ou si l'horloge a reculé", () => {
+    reload();
+    expect(restoreMasterKey(T0 + VAULT_GRACE_MS + 1)).toBe(false);
+    expect(masterKey.value).toBe("");
+    expect(sessionStorage.getItem(KEPT_KEY)).toBeNull();
+
+    reload();
+    expect(restoreMasterKey(T0 - 1)).toBe(false);
+    expect(masterKey.value).toBe("");
+  });
+
+  it("ne confie rien sans clef, ni session verrouillée", () => {
+    keepMasterKey(T0);
+    expect(sessionStorage.getItem(KEPT_KEY)).toBeNull();
+
+    masterKey.value = SESSION_KEY;
+    keepMasterKey(T0);
+    lockSession();
+    keepMasterKey(T0 + 1);
+    expect(sessionStorage.getItem(KEPT_KEY)).toBeNull();
+  });
+
+  it("ignore une valeur altérée et un stockage inaccessible", () => {
+    sessionStorage.setItem(KEPT_KEY, "{pas du json");
+    expect(restoreMasterKey(T0)).toBe(false);
+    sessionStorage.setItem(KEPT_KEY, JSON.stringify({ key: 12, leftAt: T0 }));
+    expect(restoreMasterKey(T0)).toBe(false);
+    expect(masterKey.value).toBe("");
+
+    const broken = {
+      getItem: () => {
+        throw new Error("SecurityError");
+      },
+      setItem: () => {
+        throw new Error("SecurityError");
+      },
+      removeItem: () => {
+        throw new Error("SecurityError");
+      },
+    };
+    masterKey.value = SESSION_KEY;
+    expect(() => keepMasterKey(T0, broken)).not.toThrow();
+    resetMasterKeyForTests();
+    expect(restoreMasterKey(T0, broken)).toBe(false);
+    expect(restoreMasterKey(T0, null)).toBe(false);
   });
 });
