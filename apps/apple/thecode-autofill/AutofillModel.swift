@@ -79,6 +79,20 @@ final class AutofillModel: ObservableObject {
         }
     }
 
+    /// « Remplir » demande un identifiant : s'en passer est un choix, qui a
+    /// son propre bouton. Une entrée choisie dans la liste a déjà son mot de
+    /// passe, l'identifiant n'y est qu'un confort.
+    var canFillTyped: Bool {
+        typedFill != nil && (pinned != nil || !AutofillLogin.normalize(login).isEmpty)
+    }
+
+    /// « Ignorer » : le compte sans identifiant du site.
+    func fillWithoutLogin() {
+        login = ""
+        separateAccount = false
+        fillTyped()
+    }
+
     /// Remplit avec l'identifiant saisi.
     func fillTyped() {
         guard let fill = typedFill else { return }
