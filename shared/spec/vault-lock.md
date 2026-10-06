@@ -37,8 +37,7 @@ Pas de biométrie fiable dans un navigateur : déverrouiller, c'est **saisir la
 clef maîtresse**.
 
 - **Une clef est déjà définie dans la session** (extension :
-  `storage.session` ; site : le champ clef du générateur, en mémoire — voir
-  « Rechargement du site ») : la clef
+  `storage.session` ; site : le champ clef du générateur, en mémoire) : la clef
   saisie doit être **la même**, comparée en temps constant. Une clef différente
   est refusée, avec l'indication que ce n'est pas la même clef que celle en
   cours d'utilisation.
@@ -63,18 +62,6 @@ session du navigateur) pour survivre à la fermeture de l'écran carnet. Il n'es
 qu'un horodatage : aucun secret n'y est stocké. « Verrouiller » l'efface : le
 carnet se referme aussitôt, et la grâce ne rouvre jamais une session
 verrouillée.
-
-### Rechargement du site
-
-Recharger la page ne fait pas ressaisir la clef. Quand la page se ferme
-(`pagehide`), le site confie la clef à `sessionStorage` — propre à l'onglet,
-vidé à sa fermeture — avec l'instant de sortie. Au chargement suivant il la
-reprend si moins de **3 minutes** se sont écoulées, et l'efface du stockage
-dans tous les cas : elle n'y reste que le temps du rechargement, jamais
-pendant que la page vit. Au-delà, ou onglet fermé, la clef est oubliée.
-
-Une session verrouillée ou sans clef ne confie rien : après rechargement, il
-n'y a plus de clef et la saisie suivante devient celle de la session.
 
 ## Verrouiller
 
@@ -106,7 +93,8 @@ Où le trouver :
   du service worker ;
 - **site** : dans l'écran carnet et à côté du champ clef du générateur.
   Verrouillé, le générateur masque le mot de passe, la copie et
-  l'enregistrement et propose de déverrouiller.
+  l'enregistrement et propose de déverrouiller. Recharger la page oublie la
+  clef, comme avant.
 
 « Effacer » reste distinct : il **oublie** la clef (et le verrou avec elle).
 

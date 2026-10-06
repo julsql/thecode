@@ -1,13 +1,9 @@
 /**
- * Clef maîtresse de la session, en mémoire tant que la page vit.
+ * Clef maîtresse de la session, en mémoire seulement.
  *
  * Partagée entre le générateur (son champ clef) et l'écran carnet, qui s'ouvre
  * avec elle : il n'existe pas de mot de passe de carnet. Aucune empreinte de
  * la clef n'est stockée, nulle part. Voir shared/spec/vault-lock.md.
- *
- * Recharger la page ne la fait pas ressaisir : elle est confiée à
- * sessionStorage au moment où la page se ferme, et reprise au chargement
- * suivant s'il vient dans la grâce de 3 minutes (`installKeyKeeper`).
  *
  * « Verrouiller » ferme toute la session : la clef reste en mémoire mais ne
  * sert plus à rien (ni génération, ni carnet, ni synchronisation) tant
@@ -15,7 +11,7 @@
  */
 
 import { computed, ref } from "vue";
-import { clearSession, isWithinGrace } from "@/vaultSession";
+import { clearSession } from "@/vaultSession";
 
 export const masterKey = ref("");
 
@@ -79,69 +75,6 @@ export function lockSession(): boolean {
 export function forgetMasterKey(): void {
   masterKey.value = "";
   locked.value = false;
-}
-
-/** Où la clef attend le chargement suivant : propre à l'onglet. */
-export const KEPT_KEY = "thecode.keptKey";
-
-type KeyStore = Pick<Storage, "getItem" | "setItem" | "removeItem">;
-
-/** sessionStorage peut manquer ou lever (navigation privée, cookies bloqués). */
-function keyStore(): KeyStore | null {
-  try {
-    return globalThis.sessionStorage ?? null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * La page se ferme : confie la clef au chargement suivant. Une session
- * verrouillée ou sans clef ne confie rien, et efface ce qui attendait.
- */
-export function keepMasterKey(now: number = Date.now(), store = keyStore()): void {
-  try {
-    if (!masterKey.value || locked.value) store?.removeItem(KEPT_KEY);
-    else store?.setItem(KEPT_KEY, JSON.stringify({ key: masterKey.value, leftAt: now }));
-  } catch {
-    // Sans stockage, recharger redemandera la clef : sûr.
-  }
-}
-
-/**
- * Reprend la clef confiée par la page précédente, si elle l'a été il y a
- * moins de 3 minutes. Elle est effacée du stockage dans tous les cas : elle
- * n'y reste que le temps d'un rechargement.
- */
-export function restoreMasterKey(now: number = Date.now(), store = keyStore()): boolean {
-  try {
-    const raw = store?.getItem(KEPT_KEY);
-    store?.removeItem(KEPT_KEY);
-    if (!raw || masterKey.value) return false;
-    const kept = JSON.parse(raw) as { key?: unknown; leftAt?: unknown };
-    if (typeof kept.key !== "string" || !kept.key || typeof kept.leftAt !== "number") return false;
-    if (!isWithinGrace(kept.leftAt, now)) return false;
-    masterKey.value = kept.key;
-    locked.value = false;
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/** Au chargement du site : reprend la clef, et la confiera à la fermeture. */
-export function installKeyKeeper(): void {
-  restoreMasterKey();
-  window.addEventListener("pagehide", () => keepMasterKey());
-  // Page ressortie du cache du navigateur : sa mémoire est intacte, la copie
-  // n'a plus de raison d'attendre.
-  window.addEventListener("pageshow", () => {
-    try {
-      keyStore()?.removeItem(KEPT_KEY);
-    } catch {
-      // Rien à effacer si le stockage est inaccessible.
-    }
-  });
 }
 
 /** Tests : chaque cas repart d'une session sans clef. */
