@@ -151,6 +151,13 @@ public class AutofillAuthActivity extends FragmentActivity {
 
         Intent reply = new Intent();
         reply.putExtra(AutofillManager.EXTRA_AUTHENTICATION_RESULT, dataset);
+        // Éphémère : le système applique ce Dataset une fois et garde la
+        // suggestion d'origine. Sinon il la remplace par celui-ci, qui n'a pas
+        // de présentation pour la barre du clavier : champ vidé puis retouché,
+        // plus rien n'était proposé avant de recharger la page.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            reply.putExtra(AutofillManager.EXTRA_AUTHENTICATION_RESULT_EPHEMERAL_DATASET, true);
+        }
         setResult(RESULT_OK, reply);
         finish();
     }
