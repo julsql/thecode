@@ -99,6 +99,99 @@ struct AutoSyncScheduler {
     }
 }
 
+/// Écriture locale qu'aucune synchronisation n'a encore portée sur le compte :
+/// la passe a échoué, ou le processus s'est arrêté avant elle. Gardée dans le
+/// groupe d'apps : l'extension AutoFill la pose, l'app la lit.
+///
+/// Un jeton plutôt qu'un booléen : une passe ne l'efface que s'il n'a pas
+/// changé depuis son départ, sans quoi elle effacerait une écriture arrivée
+/// pendant qu'elle tournait.
+enum SyncPending {
+    static let key = "syncPendingToken"
+
+    static var shared: UserDefaults? { UserDefaults(suiteName: VaultStore.appGroupID) }
+
+    static func mark(in defaults: UserDefaults? = shared) {
+        defaults?.set(UUID().uuidString, forKey: key)
+    }
+
+    static func token(in defaults: UserDefaults? = shared) -> String? {
+        defaults?.string(forKey: key)
+    }
+
+    static func clear(ifStill token: String?, in defaults: UserDefaults? = shared) {
+        guard let token, defaults?.string(forKey: key) == token else { return }
+        defaults?.removeObject(forKey: key)
+    }
+}
+
+/// Une seule passe à la fois entre l'app et l'extension AutoFill, qui sont
+/// deux processus : elles renouvellent le même jeton rotatif et écrivent le
+/// même carnet.
+///
+/// Un fichier créé de façon exclusive, pas un verrou du noyau : iOS tue un
+/// processus suspendu qui en tient un dans un conteneur partagé. Un bail
+/// abandonné (processus arrêté en route) est repris une fois périmé.
+struct SyncLease {
+    static let filename = "sync.lease"
+    /// Au-delà, le bail est tenu pour abandonné.
+    static let staleAfter: TimeInterval = 25
+
+    let url: URL
+
+    /// Prend le bail, en attendant celui qui le tient. `nil` sans dossier
+    /// partagé (rien à protéger) ou si la tâche est annulée.
+    static func acquire(
+        in directory: URL? = VaultStore.url()?.deletingLastPathComponent(),
+        staleAfter: TimeInterval = SyncLease.staleAfter,
+        poll: TimeInterval = 0.2
+    ) async -> SyncLease? {
+        guard let url = directory?.appendingPathComponent(filename) else { return nil }
+        while !Task.isCancelled {
+            let fd = open(url.path, O_CREAT | O_EXCL | O_WRONLY, 0o600)
+            if fd >= 0 {
+                close(fd)
+                return SyncLease(url: url)
+            }
+            guard errno == EEXIST else { return nil }
+            let taken =
+                (try? FileManager.default.attributesOfItem(atPath: url.path))?[.modificationDate]
+                as? Date
+            if let taken, Date().timeIntervalSince(taken) < staleAfter {
+                try? await Task.sleep(nanoseconds: UInt64(poll * 1_000_000_000))
+            } else {
+                // Périmé, ou disparu entre-temps : on retente aussitôt.
+                try? FileManager.default.removeItem(at: url)
+            }
+        }
+        return nil
+    }
+
+    func release() {
+        try? FileManager.default.removeItem(at: url)
+    }
+}
+
+#if os(iOS)
+    /// Demande au système de ne pas suspendre le processus tant qu'une
+    /// écriture attend sa synchronisation : enregistrer puis passer aussitôt
+    /// à Safari ne doit pas laisser l'entrée sur le téléphone.
+    final class ExpiringHold: @unchecked Sendable {
+        private let done = DispatchSemaphore(value: 0)
+
+        init(reason: String) {
+            let done = self.done
+            ProcessInfo.processInfo.performExpiringActivity(withReason: reason) { expired in
+                // Temps écoulé : on libère le bloc en attente, le système
+                // n'attendra pas plus.
+                if expired { done.signal() } else { done.wait() }
+            }
+        }
+
+        func release() { done.signal() }
+    }
+#endif
+
 /// Lance la synchronisation pour tous les écrans, et garde son dernier état.
 @MainActor
 final class AutoSync: ObservableObject {
@@ -121,6 +214,14 @@ final class AutoSync: ObservableObject {
     private let credentials: () -> SyncCredentials?
     private let masterKey: () -> String
     private let perform: Perform
+    private let isPending: () -> Bool
+    private let markPending: () -> Void
+    /// Le rattrapage à l'ouverture n'a pas encore été tenté depuis la
+    /// dernière écriture (ou le lancement).
+    private var pendingRetry = true
+    #if os(iOS)
+        private var hold: ExpiringHold?
+    #endif
 
     init(
         clock: @escaping () -> Date = Date.init,
@@ -131,8 +232,12 @@ final class AutoSync: ObservableObject {
         masterKey: @escaping () -> String = { SecureKeyStore.read() },
         perform: @escaping Perform = { key, creds in
             try await AutoSync.syncEverything(masterKey: key, credentials: creds)
-        }
+        },
+        isPending: @escaping () -> Bool = { SyncPending.token() != nil },
+        markPending: @escaping () -> Void = { SyncPending.mark() }
     ) {
+        self.isPending = isPending
+        self.markPending = markPending
         self.clock = clock
         self.sleep = sleep
         self.credentials = credentials
@@ -148,8 +253,36 @@ final class AutoSync: ObservableObject {
 
     /// Demande une synchronisation ; ignorée quand elle ne peut pas partir.
     func request(_ trigger: AutoSyncTrigger) {
+        // Notée avant de savoir si elle peut partir : sans clef ou sans
+        // réseau, c'est ce qui la fera partir à la prochaine ouverture.
+        if trigger == .write {
+            markPending()
+            pendingRetry = true
+        }
         guard Self.isEligible(credentials: credentials(), masterKey: masterKey()) else { return }
-        handle(scheduler.request(trigger, now: clock()))
+
+        #if os(iOS)
+            if trigger != .open, hold == nil { hold = ExpiringHold(reason: "thecode.sync") }
+        #endif
+        var action = scheduler.request(trigger, now: clock())
+        // Une écriture restée sur l'appareil n'attend pas l'espacement des
+        // ouvertures. Une seule fois par écriture : un échec qui dure
+        // (plafond, hors ligne) ne relance pas une passe à chaque écran.
+        if trigger == .open, action == .none, !scheduler.isRunning, pendingRetry, isPending() {
+            pendingRetry = false
+            action = scheduler.request(.write, now: clock())
+        }
+        handle(action)
+        releaseHoldIfIdle()
+    }
+
+    /// Plus rien n'attend ni ne tourne : le système peut suspendre l'app.
+    private func releaseHoldIfIdle() {
+        #if os(iOS)
+            guard !scheduler.isRunning, scheduler.pendingTicket == nil else { return }
+            hold?.release()
+            hold = nil
+        #endif
     }
 
     /// Le bouton « Synchroniser ».
@@ -249,6 +382,7 @@ final class AutoSync: ObservableObject {
         guard let creds = credentials(), Self.isEligible(credentials: creds, masterKey: key)
         else {
             handle(scheduler.finish())
+            releaseHoldIfIdle()
             return
         }
 
@@ -270,6 +404,7 @@ final class AutoSync: ObservableObject {
             self.isRunning = false
             if succeeded { self.completedRuns += 1 }
             self.handle(self.scheduler.finish())
+            self.releaseHoldIfIdle()
         }
     }
 
@@ -300,6 +435,15 @@ final class AutoSync: ObservableObject {
     nonisolated static func syncEverything(
         masterKey: String, credentials: SyncCredentials
     ) async throws -> Sync.Result {
+        // L'app et l'extension AutoFill ne passent jamais en même temps. Les
+        // jetons sont relus une fois le bail pris : l'autre a pu les
+        // renouveler pendant l'attente, et les anciens ne valent plus rien.
+        let lease = await SyncLease.acquire()
+        defer { lease?.release() }
+        try Task.checkCancellation()
+        let credentials = SyncCredentialsStore.load() ?? credentials
+        let pending = SyncPending.token()
+
         let result = try await Sync().syncRenewing(
             VaultStore.load(), masterKey: masterKey, credentials: credentials)
 
@@ -324,6 +468,9 @@ final class AutoSync: ObservableObject {
             SyncCredentialsStore.save(renewed)
             creds = renewed
         }
+
+        // Le carnet est parti : plus rien n'est dû, sauf écriture entre-temps.
+        SyncPending.clear(ifStill: pending)
 
         return Sync.Result(
             vault: vault, conflicts: result.conflicts, localOnly: result.localOnly,

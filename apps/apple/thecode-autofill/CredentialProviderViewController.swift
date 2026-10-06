@@ -137,6 +137,7 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
             if case .save(let entry) = outcome {
                 vault.entries.append(entry)
                 saved = (try? VaultStore.save(vault)) != nil
+                if saved { SyncPending.mark() }
                 // Avant de rendre la main : l'extension peut être arrêtée
                 // aussitôt la requête terminée.
                 if saved { await AutoSync.syncAfterExtensionWrite() }
@@ -230,7 +231,9 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
             charset: Charset(
                 lower: settings.minState, upper: settings.majState,
                 symbols: settings.symState, numbers: settings.chiState))
-        try? VaultStore.save(vault)
+        // Due tant qu'une passe ne l'a pas portée : si celle de l'extension
+        // est interrompue, l'app la rattrape à son ouverture.
+        if (try? VaultStore.save(vault)) != nil { SyncPending.mark() }
     }
 
     private func generatePassword(domainName: String, resolution: SiteResolution) -> String {
