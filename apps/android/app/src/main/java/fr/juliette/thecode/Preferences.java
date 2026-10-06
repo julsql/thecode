@@ -34,6 +34,7 @@ public final class Preferences {
     public static final String KEY_DARK_MODE = "darkMode";
     public static final String KEY_LAST_UNLOCK_AT = "lastUnlockAt";
     public static final String KEY_V2_NOTICE_SEEN = "v2NoticeSeen";
+    public static final String KEY_SYNC_PENDING = "syncPending";
     public static final String KEY_SYNC_ENDPOINT = "syncEndpoint";
     public static final String KEY_SYNC_ACCESS = "syncAccessToken";
     public static final String KEY_SYNC_REFRESH = "syncRefreshToken";
@@ -203,6 +204,13 @@ public final class Preferences {
     }
 
     /** Vrai une fois l'annonce du passage a la v2 lue et fermee. */
+    /**
+     * Une écriture locale n'est pas encore partie sur le compte : la
+     * synchronisation a échoué, ou le processus s'est arrêté avant elle.
+     */
+    public boolean isSyncPending() { return prefs.getBoolean(KEY_SYNC_PENDING, false); }
+    public void setSyncPending(boolean v) { prefs.edit().putBoolean(KEY_SYNC_PENDING, v).apply(); }
+
     public boolean getV2NoticeSeen() { return prefs.getBoolean(KEY_V2_NOTICE_SEEN, false); }
     public void setV2NoticeSeen() { prefs.edit().putBoolean(KEY_V2_NOTICE_SEEN, true).apply(); }
 

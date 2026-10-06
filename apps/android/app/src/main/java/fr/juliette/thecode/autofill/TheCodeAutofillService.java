@@ -33,6 +33,7 @@ import java.util.List;
 
 import android.service.autofill.SaveInfo;
 
+import fr.juliette.thecode.AutoSync;
 import fr.juliette.thecode.Code;
 import fr.juliette.thecode.CodeV2;
 import fr.juliette.thecode.Preferences;
@@ -48,6 +49,13 @@ import fr.juliette.thecode.R;
  */
 @RequiresApi(Build.VERSION_CODES.O)
 public class TheCodeAutofillService extends AutofillService {
+    /**
+     * Attente maximale de la synchronisation avant de répondre à
+     * l'enregistrement : courte, le système n'attend pas le service
+     * indéfiniment. Au-delà, l'entrée part à la prochaine ouverture de l'app.
+     */
+    private static final long SAVE_SYNC_TIMEOUT_MS = 4_000;
+
 
     @Override
     public void onCreate() {
@@ -173,8 +181,15 @@ public class TheCodeAutofillService extends AutofillService {
 
         // PBKDF2 à 600 000 itérations : hors du fil principal du service.
         new Thread(() -> {
-            String login = loginToStore(masterKey, domain, submitted, username,
+            String fromForm = loginToStore(masterKey, domain, submitted, username,
                     length, lower, upper, symbols, numbers);
+            // Page sans champ identifiant reconnu : celui saisi dans notre
+            // fenêtre est le seul à pouvoir redonner ce mot de passe.
+            String typed = TypedLoginHint.recall(domain, android.os.SystemClock.elapsedRealtime());
+            String login = fromForm != null || typed == null
+                    ? fromForm
+                    : loginToStore(masterKey, domain, submitted, typed,
+                            length, lower, upper, symbols, numbers);
             android.os.Handler main = new android.os.Handler(android.os.Looper.getMainLooper());
             if (login == null) {
                 main.post(() -> callback.onFailure(getString(R.string.autofill_save_foreign)));
@@ -192,6 +207,9 @@ public class TheCodeAutofillService extends AutofillService {
             // service.
             vault.upsertAccount(domain, login, length, lower, upper, symbols, numbers);
             vault.save(this);
+            // Avant de répondre : une fois le service délié, rien ne garantit
+            // que le processus vive assez pour la synchronisation différée.
+            AutoSync.get(this).flush(SAVE_SYNC_TIMEOUT_MS);
             main.post(callback::onSuccess);
         }).start();
     }
@@ -250,7 +268,9 @@ public class TheCodeAutofillService extends AutofillService {
                                  @Nullable AutofillId usernameId, String pageLogin) {
         // Sans identifiant, le mot de passe est calculé (et sera enregistré)
         // sans : le saisir après le changerait. On le dit dans la suggestion.
-        String label = resolution.login.isEmpty()
+        // Compte inconnu sans identifiant : il sera demandé au toucher, il
+        // n'y a rien à prévenir.
+        String label = resolution.login.isEmpty() && !resolution.entryId.isEmpty()
                 ? resolution.label + " · " + getString(R.string.autofill_no_login)
                 : resolution.label;
         RemoteViews presentation = buildPresentation(label);
@@ -267,8 +287,12 @@ public class TheCodeAutofillService extends AutofillService {
         // Le champ identifiant reçoit l'identifiant du compte quand il est vide
         // ou le porte déjà ; un autre identifiant tapé n'est pas écrasé
         // (UsernameFill). L'activité revérifie après avoir relu le carnet.
+        // Compte inconnu et rien de lu dans la page : l'activité demande
+        // l'identifiant, et l'écrit dans le champ s'il y en a un.
+        boolean askLogin = resolution.entryId.isEmpty() && resolution.login.isEmpty();
+        if (askLogin) authIntent.putExtra(AutofillAuthActivity.EXTRA_ASK_LOGIN, true);
         boolean fillUsername = usernameId != null
-                && UsernameFill.loginToFill(resolution, pageLogin) != null;
+                && (askLogin || UsernameFill.loginToFill(resolution, pageLogin) != null);
         if (fillUsername) {
             authIntent.putExtra(AutofillAuthActivity.EXTRA_USERNAME_ID, usernameId);
             authIntent.putExtra(AutofillAuthActivity.EXTRA_PAGE_LOGIN, pageLogin);

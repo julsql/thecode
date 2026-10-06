@@ -69,6 +69,26 @@ function findByDomainAndLogin(vault, domain, login = "") {
  * longueur et son jeu de caracteres — jamais son siteKey, qui produit le mot
  * de passe. Sinon, une entree nait avec cet identifiant.
  */
+/**
+ * Identifiants a proposer pour un site : ceux qui servent deja ailleurs dans
+ * le carnet, les plus utilises d'abord (a egalite, ordre alphabetique), sans
+ * ceux que le site a deja. Meme regle sur tous les clients.
+ */
+function loginSuggestions(vault, domain, limit = 3) {
+  const site = (domain || "").trim().toLowerCase();
+  const taken = new Set(findAllByDomain(vault, site).map((e) => (e.login || "").trim()));
+  const uses = new Map();
+  for (const entry of vault.entries || []) {
+    const login = (entry.login || "").trim();
+    if (entry.deleted || !login || taken.has(login)) continue;
+    uses.set(login, (uses.get(login) || 0) + 1);
+  }
+  return [...uses]
+    .sort(([a, x], [b, y]) => y - x || (a < b ? -1 : a > b ? 1 : 0))
+    .slice(0, limit)
+    .map(([login]) => login);
+}
+
 function upsertSiteEntry(vault, { domain, login = "", length, charset }) {
   const existing = findByDomainAndLogin(vault, domain, login);
   if (existing) {
@@ -289,6 +309,7 @@ if (typeof module !== "undefined") {
     findByDomain,
     findAllByDomain,
     findByDomainAndLogin,
+    loginSuggestions,
     upsertSiteEntry,
     VAULT_LOGIN_MAX,
     mergeVaults,

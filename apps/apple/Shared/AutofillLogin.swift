@@ -54,11 +54,13 @@ public enum AutofillLogin {
     /// - Parameter pinned: entrée choisie dans la liste (une entrée sans
     ///   identifiant) ; elle l'emporte, l'identifiant saisi ne sert alors qu'à
     ///   être rendu au formulaire.
+    /// - Parameter separate: l'identifiant saisi désigne un autre compte que
+    ///   l'unique entrée sans identifiant du site : on ne la réutilise pas.
     /// - Returns: `nil` sans domaine. Un identifiant vide désigne le compte
     ///   sans identifiant du site (existant, ou nouveau).
     public static func resolve(
         login typed: String, domain: String, vault: Vault, pinned: String? = nil,
-        length: Int, charset: Charset
+        separate: Bool = false, length: Int, charset: Charset
     ) -> Fill? {
         let login = normalize(typed)
         let site = domain.trimmingCharacters(in: .whitespaces).lowercased()
@@ -72,7 +74,7 @@ public enum AutofillLogin {
         if let entry = entries.first(where: { ($0.login ?? "") == login }) {
             return Fill(resolution: SiteResolution(entry: entry), user: login, isNew: false)
         }
-        if entries.count == 1, (entries[0].login ?? "").isEmpty {
+        if !separate, entries.count == 1, (entries[0].login ?? "").isEmpty {
             return Fill(resolution: SiteResolution(entry: entries[0]), user: login, isNew: false)
         }
 
@@ -83,5 +85,31 @@ public enum AutofillLogin {
         entry.length = length
         entry.charset = charset
         return Fill(resolution: SiteResolution(entry: entry), user: login, isNew: true)
+    }
+
+    /// Vrai quand l'identifiant saisi retombe sur l'unique entrée sans
+    /// identifiant du site : il sera rendu au formulaire, mais le mot de passe
+    /// reste celui de cette entrée. La vue le dit, et propose d'en faire un
+    /// compte à part (`separate`).
+    public static func keepsLoginlessEntry(_ fill: Fill) -> Bool {
+        !fill.isNew && !fill.user.isEmpty && normalize(fill.resolution.login).isEmpty
+    }
+
+    /// Identifiants à proposer d'un geste pour un site : ceux du carnet, les
+    /// plus utilisés d'abord (à égalité, ordre alphabétique), sans ceux que le
+    /// site a déjà. Le système ne dit pas l'identifiant du formulaire ; c'est
+    /// le plus souvent l'un de ceux qui servent ailleurs.
+    public static func suggestions(vault: Vault, domain: String, limit: Int = 3) -> [String] {
+        let site = domain.trimmingCharacters(in: .whitespaces).lowercased()
+        let taken = Set(vault.findAll(domain: site).map { normalize($0.login ?? "") })
+        var uses: [String: Int] = [:]
+        for entry in vault.entries where entry.deleted != true {
+            let login = normalize(entry.login ?? "")
+            if !login.isEmpty, !taken.contains(login) { uses[login, default: 0] += 1 }
+        }
+        return uses
+            .sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }
+            .prefix(limit)
+            .map(\.key)
     }
 }

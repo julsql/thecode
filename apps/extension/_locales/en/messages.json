@@ -867,5 +867,21 @@
   "error_locked": {
     "message": "TheCode is locked: open the extension to unlock it.",
     "description": "Error shown by the popup, the vault or the in-page menu."
+  },
+  "content_ask_login": {
+    "message": "Your username on this site",
+    "description": "In-page menu: asks for the username when none was found on the page."
+  },
+  "content_ask_login_note": {
+    "message": "It is part of the password: it cannot be added later without changing it.",
+    "description": "In-page menu: why the username is asked before the password is shown."
+  },
+  "content_ask_login_ok": {
+    "message": "OK",
+    "description": "In-page menu: confirms the typed username."
+  },
+  "content_ask_login_skip": {
+    "message": "Skip",
+    "description": "In-page menu: computes the password without a username."
   }
 }

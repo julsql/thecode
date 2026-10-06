@@ -3,7 +3,7 @@
  * renouvellement. Voir shared/spec/vault-lock.md.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { resetAutoSyncForTests } from "@/autoSync";
+import { LIVE_SYNC_INTERVAL_MS, LIVE_SYNC_RETRY_MS, resetAutoSyncForTests } from "@/autoSync";
 import { mount } from "@vue/test-utils";
 import { createRouter, createMemoryHistory } from "vue-router";
 import Vault from "@/pages/Vault.vue";
@@ -381,15 +381,123 @@ describe("synchronisation automatique", () => {
       timeout: 10000,
     });
 
+    // Le déverrouillage a déjà synchronisé une fois.
+    await vi.waitFor(() => expect(w.find(".sync-auto-status").exists()).toBe(true));
+    const before = vaultCalls().length;
+
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     await button(w, "Confirmer").trigger("click");
     await vi.advanceTimersByTimeAsync(1999);
-    expect(vaultCalls()).toHaveLength(0);
+    expect(vaultCalls()).toHaveLength(before);
     await vi.advanceTimersByTimeAsync(1);
     vi.useRealTimers();
 
-    await vi.waitFor(() => expect(vaultCalls().length).toBeGreaterThan(0), { timeout: 10000 });
+    await vi.waitFor(() => expect(vaultCalls().length).toBeGreaterThan(before), {
+      timeout: 10000,
+    });
     await vi.waitFor(() => expect(w.find(".sync-auto-status").text()).toContain("injoignable"));
+  }, 30000);
+});
+
+describe("mise à jour en direct", () => {
+  /** Compte dont le carnet est vide : seule sa révision bouge. */
+  function account() {
+    const state = { revision: 4 };
+    const urls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (!String(url).includes("/v1/vault")) return Promise.reject(new Error("hors ligne"));
+        urls.push(String(url).replace("http://localhost:0", ""));
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ revision: state.revision, entries: [] }),
+        } as Response);
+      }),
+    );
+    return { state, urls };
+  }
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("synchronise dès le déverrouillage, sans attendre", async () => {
+    signInAs("pro");
+    const { urls } = account();
+    const w = await mountVault();
+    expect(urls).toHaveLength(0);
+
+    await unlock(w);
+
+    await vi.waitFor(() => expect(urls).toStrictEqual(["/v1/vault"]), { timeout: 10000 });
+  }, 30000);
+
+  it("surveille la révision et ne resynchronise que si elle a bougé", async () => {
+    signInAs("pro");
+    const { state, urls } = account();
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const w = await mountVault();
+    await unlock(w);
+    await vi.waitFor(() => expect(urls).toStrictEqual(["/v1/vault"]), { timeout: 10000 });
+
+    // Rien de neuf : des regards, pas de synchronisation.
+    const full = () => urls.filter((url) => url === "/v1/vault").length;
+    await vi.waitFor(() => {
+      vi.advanceTimersByTime(LIVE_SYNC_INTERVAL_MS);
+      expect(urls.at(-1)).toBe("/v1/vault?since=4");
+    });
+    expect(full()).toBe(1);
+
+    // Un autre appareil a écrit : le carnet est retiré, une seule fois.
+    state.revision = 5;
+    vi.advanceTimersByTime(LIVE_SYNC_INTERVAL_MS);
+    await vi.waitFor(() => expect(full()).toBe(2), { timeout: 10000 });
+    await vi.waitFor(() => {
+      vi.advanceTimersByTime(LIVE_SYNC_INTERVAL_MS);
+      expect(urls.at(-1)).toBe("/v1/vault?since=5");
+    });
+    expect(full()).toBe(2);
+  }, 30000);
+
+  it("après un échec, attend avant de retenter", async () => {
+    signInAs("pro");
+    const calls = () =>
+      vi.mocked(fetch).mock.calls.filter(([url]) => String(url).includes("/v1/vault")).length;
+    const now = vi.spyOn(Date, "now");
+    now.mockReturnValue(1_000_000);
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const w = await mountVault();
+    await unlock(w);
+    await vi.waitFor(() => expect(w.find(".sync-auto-status").exists()).toBe(true));
+    const failed = calls();
+
+    vi.advanceTimersByTime(LIVE_SYNC_INTERVAL_MS * 3);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(calls()).toBe(failed);
+
+    now.mockReturnValue(1_000_000 + LIVE_SYNC_RETRY_MS);
+    vi.advanceTimersByTime(LIVE_SYNC_INTERVAL_MS);
+    await vi.waitFor(() => expect(calls()).toBeGreaterThan(failed));
+  }, 30000);
+
+  it("ne surveille rien onglet masqué, ni une fois l'écran quitté", async () => {
+    signInAs("pro");
+    const { urls } = account();
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const w = await mountVault();
+    await unlock(w);
+    await vi.waitFor(() => expect(urls).toHaveLength(1), { timeout: 10000 });
+
+    vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+    vi.advanceTimersByTime(LIVE_SYNC_INTERVAL_MS);
+    vi.restoreAllMocks();
+    w.unmount();
+    vi.advanceTimersByTime(LIVE_SYNC_INTERVAL_MS * 3);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(urls).toHaveLength(1);
   }, 30000);
 });
 

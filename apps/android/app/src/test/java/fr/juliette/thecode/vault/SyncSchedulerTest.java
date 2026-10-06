@@ -257,6 +257,22 @@ public class SyncSchedulerTest {
     }
 
     @Test
+    public void aWriteIsReportedEvenWhenNothingCanLeave() throws Exception {
+        // Sans clef ni compte rien ne part, mais l'écriture reste due : c'est
+        // ce qui la fera partir à la prochaine ouverture.
+        ready = false;
+        SyncScheduler s = inlineScheduler();
+        int[] writes = {0};
+        s.watchVaultWrites(() -> writes[0]++);
+
+        new Vault().save(tmp.newFolder());
+        time.advance(SyncScheduler.DEBOUNCE_MS);
+
+        assertEquals(1, writes[0]);
+        assertEquals(0, runs);
+    }
+
+    @Test
     public void writingTheSyncResultDoesNotLoop() throws Exception {
         SyncScheduler s = inlineScheduler();
         s.watchVaultWrites();

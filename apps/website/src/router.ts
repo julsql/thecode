@@ -20,7 +20,7 @@ import { DEFAULT_LANG } from "./i18n/translations";
 const routes: Array<RouteRecordRaw> = [
   { path: "/", redirect: `/${DEFAULT_LANG}` },
   { path: "/generate", redirect: `/${DEFAULT_LANG}/generate` },
-  { path: "/vault", redirect: `/${DEFAULT_LANG}/vault` },
+  { path: "/vault", redirect: `/${DEFAULT_LANG}/account/vault` },
   { path: "/privacy", redirect: `/${DEFAULT_LANG}/privacy` },
   { path: "/about", redirect: `/${DEFAULT_LANG}/about` },
   { path: "/tutorial", redirect: `/${DEFAULT_LANG}/tutorial` },
@@ -39,13 +39,16 @@ const routes: Array<RouteRecordRaw> = [
       { path: "", component: Home },
       { path: "legacy", component: Legacy },
       { path: "generate", component: Generate },
-      // Gestion du carnet, derrière un verrou local : voir shared/spec/vault-lock.md.
-      { path: "vault", component: Vault },
+      // Ancienne adresse du carnet, quand il avait son onglet.
+      { path: "vault", redirect: (to) => `/${String(to.params.lang)}/account/vault` },
       { path: "privacy", component: Privacy },
       { path: "about", component: About },
       { path: "tutorial", component: Tutorial },
       { path: "contact", component: Contact },
       { path: "account", component: Account },
+      // Gestion du carnet, une rubrique du compte, derrière un verrou local :
+      // voir shared/spec/vault-lock.md.
+      { path: "account/vault", component: Vault },
       // Le lien de verification arrive par courrier : il doit tomber sur une
       // page qui confirme toute seule, sans demander de se connecter d'abord.
       { path: "account/verify", component: AccountVerify },

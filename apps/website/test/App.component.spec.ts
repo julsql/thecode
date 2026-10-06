@@ -48,3 +48,15 @@ describe("liens vers les tarifs", () => {
     expect(pricingLinks(wrapper)).toHaveLength(0);
   });
 });
+
+describe("carnet", () => {
+  it("n'a pas d'onglet : il s'ouvre depuis le compte", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.reject(new Error("hors ligne"))),
+    );
+    const { wrapper } = await mountAt("/fr/account");
+    const hrefs = wrapper.findAll("a").map((a) => a.attributes("href") ?? "");
+    expect(hrefs.filter((href) => href.endsWith("/vault"))).toHaveLength(0);
+  });
+});

@@ -9,15 +9,19 @@ import android.util.Log;
 import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.WorkerThread;
 
 import org.json.JSONException;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import fr.juliette.thecode.vault.DefaultSettings;
 import fr.juliette.thecode.vault.Sync;
@@ -73,6 +77,10 @@ public final class AutoSync {
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private final List<Listener> listeners = new CopyOnWriteArrayList<>();
     private final AtomicBoolean manualRequested = new AtomicBoolean();
+    /** Écritures locales vues par ce processus. */
+    private final AtomicInteger writes = new AtomicInteger();
+    /** Le rattrapage à l'ouverture n'a pas encore été tenté dans ce processus. */
+    private final AtomicBoolean pendingRetry = new AtomicBoolean(true);
     private final SyncScheduler scheduler;
     @Nullable
     private Preferences preferences;
@@ -105,13 +113,67 @@ public final class AutoSync {
      */
     public static void install(@NonNull Context context) {
         AutoSync sync = get(context);
-        sync.scheduler.watchVaultWrites();
+        sync.scheduler.watchVaultWrites(sync::markPending);
         Preferences.setSettingsListener(sync.scheduler::onChange);
     }
 
     /** Ouverture de l'app ou d'un écran, retour au premier plan. */
     public void onOpen() {
-        scheduler.onOpen();
+        // Une écriture restée sur l'appareil n'attend pas l'espacement des
+        // ouvertures : elle a déjà trop attendu. Une seule fois par écriture :
+        // un échec qui dure (plafond, hors ligne) ne doit pas relancer une
+        // synchronisation à chaque écran ouvert.
+        if (preferences().isSyncPending() && pendingRetry.compareAndSet(true, false)) {
+            scheduler.onChange();
+        } else {
+            scheduler.onOpen();
+        }
+    }
+
+    /** Une écriture locale reste due tant qu'une synchronisation ne l'a pas portée. */
+    private void markPending() {
+        writes.incrementAndGet();
+        pendingRetry.set(true);
+        preferences().setSyncPending(true);
+    }
+
+    /**
+     * Enregistrement hors écran (remplissage automatique) : synchronise tout
+     * de suite et attend la fin, au plus {@code timeoutMs}. Le système peut
+     * arrêter le processus dès que le service a répondu : rendre la main
+     * avant, c'est laisser l'entrée sur l'appareil jusqu'à la prochaine
+     * ouverture de l'app.
+     */
+    @WorkerThread
+    public void flush(long timeoutMs) {
+        if (!isReady()) return;
+        // Une passe par jeton : celle qui tournait déjà a lu le carnet avant
+        // l'écriture, sa fin ne dit rien de l'entrée. On attend donc la
+        // relance, jusqu'à ce que plus rien ne soit dû ou ne tourne.
+        Semaphore finished = new Semaphore(0);
+        Listener listener = new Listener() {
+            @Override
+            public void onSyncStatus(@NonNull String status) { }
+
+            @Override
+            public void onSyncFinished(@NonNull Outcome outcome) {
+                finished.release();
+            }
+        };
+        long deadline = SystemClock.elapsedRealtime() + timeoutMs;
+        addListener(listener);
+        try {
+            scheduler.runNow();
+            while (true) {
+                long left = deadline - SystemClock.elapsedRealtime();
+                if (left <= 0 || !finished.tryAcquire(left, TimeUnit.MILLISECONDS)) break;
+                if (!preferences().isSyncPending() || !scheduler.isRunning()) break;
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } finally {
+            removeListener(listener);
+        }
     }
 
     /** Bouton « Synchroniser ». */
@@ -156,6 +218,9 @@ public final class AutoSync {
         if (masterKey.isEmpty() || credentials == null) return;
 
         publishStatus(app.getString(R.string.sync_running));
+        // Relevé avant de lire le carnet : une écriture pendant l'appel reste
+        // due, et un processus arrêté en route laisse le drapeau levé.
+        int writesBefore = writes.get();
         try {
             Sync sync = new Sync();
             Vault local = Vault.load(app);
@@ -169,6 +234,7 @@ public final class AutoSync {
             if (prefs.getSyncCredentials() != null) prefs.setSyncCredentials(withPlan);
             boolean settingsChanged = syncDefaultSettings(prefs, sync, masterKey, withPlan);
             Vault saved = writeBack(local, result.vault);
+            if (writes.get() == writesBefore) prefs.setSyncPending(false);
 
             int kept = -result.localOnly;
             for (VaultEntry entry : saved.entries) {

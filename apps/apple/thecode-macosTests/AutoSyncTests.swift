@@ -163,6 +163,105 @@ struct AutoSyncTriggerTests {
         #expect(sync.status != nil)
     }
 
+    @Test func aPendingWriteSkipsTheOpenSpacingOnce() async {
+        let recorder = Recorder()
+        var pending = true
+        let sync = AutoSync(
+            clock: { t0 }, sleep: { _ in },
+            credentials: { linked }, masterKey: { sampleKey },
+            perform: { _, creds in
+                recorder.runs += 1
+                throw SyncError(status: 0, message: "offline")
+            },
+            isPending: { pending }, markPending: { pending = true })
+
+        sync.request(.open)
+        await settle(sync)
+        #expect(recorder.runs == 1)
+
+        // Dans les 30 s, l'ouverture suivante serait ignorée : l'écriture due
+        // la fait partir quand même, une fois.
+        sync.request(.open)
+        await settle(sync)
+        #expect(recorder.runs == 2)
+
+        // L'échec dure : les ouvertures suivantes retrouvent l'espacement.
+        sync.request(.open)
+        await settle(sync)
+        #expect(recorder.runs == 2)
+
+        // Une nouvelle écriture rouvre ce droit.
+        sync.request(.write)
+        await settle(sync)
+        sync.request(.open)
+        await settle(sync)
+        #expect(recorder.runs == 4)
+    }
+
+    @Test func aWriteIsRememberedEvenWhenNothingCanLeave() async {
+        let recorder = Recorder()
+        var marks = 0
+        let sync = AutoSync(
+            clock: { t0 }, sleep: { _ in },
+            credentials: { linked }, masterKey: { "" },
+            perform: { _, creds in
+                recorder.runs += 1
+                return Sync.Result(vault: Vault(), conflicts: [], localOnly: 0, credentials: creds)
+            },
+            isPending: { marks > 0 }, markPending: { marks += 1 })
+
+        sync.request(.write)
+        sync.request(.open)
+        await settle(sync)
+
+        #expect(marks == 1)
+        #expect(recorder.runs == 0)
+    }
+
+    @Test func pendingTokenIsOnlyClearedByTheRunThatSawIt() {
+        let suite = "sync-pending-tests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        #expect(SyncPending.token(in: defaults) == nil)
+        SyncPending.mark(in: defaults)
+        let seen = SyncPending.token(in: defaults)
+        #expect(seen != nil)
+
+        // Une écriture pendant la passe : elle reste due.
+        SyncPending.mark(in: defaults)
+        SyncPending.clear(ifStill: seen, in: defaults)
+        #expect(SyncPending.token(in: defaults) != nil)
+
+        SyncPending.clear(ifStill: SyncPending.token(in: defaults), in: defaults)
+        #expect(SyncPending.token(in: defaults) == nil)
+        SyncPending.clear(ifStill: nil, in: defaults)
+    }
+
+    @Test func leaseIsExclusiveAndAStaleOneIsTaken() async throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("lease-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let first = try #require(await SyncLease.acquire(in: dir))
+
+        // Tenu : un second demandeur attend, et l'obtient à la libération.
+        let waiter = Task { await SyncLease.acquire(in: dir, poll: 0.01) }
+        try await Task.sleep(nanoseconds: 50_000_000)
+        #expect(FileManager.default.fileExists(atPath: first.url.path))
+        first.release()
+        let second = try #require(await waiter.value)
+
+        // Abandonné par un processus arrêté : repris une fois périmé.
+        let third = await SyncLease.acquire(in: dir, staleAfter: 0, poll: 0.01)
+        #expect(third != nil)
+        third?.release()
+        #expect(!FileManager.default.fileExists(atPath: second.url.path))
+
+        #expect(await SyncLease.acquire(in: nil) == nil)
+    }
+
     @Test func nothingLeavesWithoutAccount() async {
         let recorder = Recorder()
         let sync = makeSync(recorder, credentials: nil)

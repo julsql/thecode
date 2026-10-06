@@ -208,6 +208,27 @@ Règles :
 - **Sans clef maîtresse** saisie, rien ne part : le carnet est chiffré avec elle.
 - Le bouton « Synchroniser » reste, pour forcer une synchronisation immédiate.
 
+### Écran du carnet, sur le site
+
+L'écran du carnet doit montrer le compte, pas ce que le navigateur en savait :
+
+- **au déverrouillage**, il synchronise tout de suite, sans regroupement ni
+  espacement ;
+- **tant qu'il est affiché**, il surveille le compte : toutes les 5 secondes,
+  `GET /v1/vault?since=<révision de sa dernière synchronisation>`. Si la
+  révision rendue diffère, il synchronise et rafraîchit la liste. Rien ne part
+  onglet masqué, sans clef, session verrouillée, ou pendant une
+  synchronisation ; revenir sur l'onglet regarde aussitôt ;
+- **après un échec** (autre clef, plafond, coupure), la veille attend
+  60 secondes avant de retenter : une synchronisation qui échouera encore ne
+  doit pas repartir toutes les 5 secondes.
+
+Cette veille impose au site de **ne pousser que ce qui diffère du serveur**
+(forme canonique de `vault-merge.md`), et rien du tout si rien ne diffère :
+chaque `POST` fait monter la révision, et deux écrans qui la surveillent se
+relanceraient sans fin. Les autres clients peuvent encore tout renvoyer ; ils
+ne surveillent pas la révision.
+
 ## Limites
 
 Le serveur refuse une entrée dépassant `max_blob_bytes` et un compte dépassant
@@ -530,5 +551,5 @@ nom de site ni identifiant ne passe en clair sur le réseau.
   `entry_id`, une entrée dont l'`id` ne correspond pas à la ligne, une entrée
   chiffrée sans `aad` (v1), les réglages présentés comme une entrée et
   inversement (`as` dit lequel des deux déchiffrements appliquer).
-Le chiffrement n'est pas ce qui a cassé jusqu'ici, c'est le JSON autour — un
-champ inventé, un défaut ajouté, et la fusion diverge.
+  Le chiffrement n'est pas ce qui a cassé jusqu'ici, c'est le JSON autour — un
+  champ inventé, un défaut ajouté, et la fusion diverge.
