@@ -19,7 +19,7 @@ import {
   syncVault,
   SyncError,
 } from "@/sync";
-import { loadVault, saveVault } from "@/vault";
+import { loadVault, mergeVaults, saveVault } from "@/vault";
 import { createSyncScheduler, type SyncRun } from "@/syncScheduler";
 
 export interface SyncOutcome {
@@ -49,7 +49,10 @@ export async function syncEverything(masterKey: string): Promise<SyncOutcome> {
   const session = loadSession();
   if (!session) throw new SyncError("no session");
   const result = await syncVault(loadVault(), masterKey, session);
-  saveVault(result.vault);
+  // Une entrée enregistrée ou supprimée pendant l'aller-retour n'est pas dans
+  // ce résultat : on fusionne avec le carnet relu plutôt que de l'écraser.
+  // Elle partira à la synchronisation que son écriture a demandée.
+  saveVault(mergeVaults(loadVault(), result.vault).vault);
   saveSession(result.session);
   knownRevision = result.revision;
   // Les réglages suivent le carnet. Un échec ici n'annule pas la
