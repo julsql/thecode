@@ -27,8 +27,53 @@ function menuNotice(response) {
   return msg("content_no_key", "Aucune clef n'est renseignée. Cliquer pour rentrer une clef");
 }
 
+const LOGIN_FIELD_TYPES = new Set(["text", "email", "tel"]);
+const LOGIN_WORDS = /user|login|e-?mail|identifiant|courriel|utilisateur|pseudo/i;
+
+/**
+ * Choisit l'identifiant parmi les champs places avant le mot de passe, dans
+ * l'ordre de la page. Chaque champ est decrit par ses proprietes (`type` est
+ * la propriete, « text » quand l'attribut manque), pas par un selecteur : un
+ * `<input name="user">` sans attribut `type` echappe a `input[type="text"]`.
+ *
+ * Du plus sur au moins sur, le dernier de chaque sorte :
+ * 1. le champ qui se declare (`autocomplete` username ou email, type email),
+ *    meme masque : un formulaire en deux etapes le garde pour ca ;
+ * 2. un champ visible dont le nom, l'id, l'indication ou le libelle parle
+ *    d'identifiant ;
+ * 3. avec `anyField`, le dernier champ visible rempli : une page peut en
+ *    contenir d'autres, un champ de recherche par exemple.
+ */
+function pickLogin(fields, { anyField = true } = {}) {
+  let declared = "";
+  let named = "";
+  let last = "";
+  for (const field of fields) {
+    const value = (field.value || "").trim();
+    if (!value || value.length > 120) continue;
+    const type = (field.type || "text").toLowerCase();
+    const autocomplete = (field.autocomplete || "").toLowerCase().split(/\s+/);
+    const declares = autocomplete.includes("username") || autocomplete.includes("email");
+    if (declares && type !== "password") {
+      declared = value;
+      continue;
+    }
+    if (!LOGIN_FIELD_TYPES.has(type)) continue;
+    if (type === "email") {
+      declared = value;
+      continue;
+    }
+    if (!field.visible) continue;
+    last = value;
+    const texts = [field.name, field.id, field.placeholder, field.ariaLabel];
+    if (texts.some((text) => LOGIN_WORDS.test(text || ""))) named = value;
+  }
+  return declared || named || (anyField ? last : "");
+}
+
 (function () {
-  // En test (Node), seul menuNotice est charge : pas de page a equiper.
+  // En test (Node), seuls menuNotice et pickLogin sont charges : pas de page
+  // a equiper.
   if (typeof document === "undefined") return;
   const MENU_CLASS = "pw-suggester-menu";
   let listInput = [];
@@ -161,7 +206,9 @@ function menuNotice(response) {
             removeMenu(input);
             return;
           }
-          offerToSave(menu, input);
+          // L'identifiant qui a servi au calcul, pas celui du champ relu
+          // maintenant : l'entree doit redonner ce mot de passe-ci.
+          offerToSave(menu, input, response.login || "");
         });
 
         container.addEventListener("mouseover", () => {
@@ -258,22 +305,28 @@ function menuNotice(response) {
    * peut poser les deux champs cote a cote sans les rattacher.
    */
   function findLogin(input) {
-    const scope = input.form || document;
-    const candidates = scope.querySelectorAll(
-      'input[type="email"], input[autocomplete="username"], input[type="text"], input[type="tel"]',
-    );
+    const before = (scope) =>
+      [...scope.querySelectorAll("input")]
+        .filter(
+          (field) =>
+            field !== input &&
+            field.compareDocumentPosition(input) & Node.DOCUMENT_POSITION_FOLLOWING,
+        )
+        .map((field) => ({
+          value: field.value,
+          type: field.type,
+          autocomplete: field.getAttribute("autocomplete"),
+          name: field.name,
+          id: field.id,
+          placeholder: field.placeholder,
+          ariaLabel: field.getAttribute("aria-label"),
+          visible: field.getClientRects().length > 0,
+        }));
 
-    let best = "";
-    for (const field of candidates) {
-      const value = (field.value || "").trim();
-      if (!value || value.length > 120) continue;
-      // Le dernier champ rempli avant le mot de passe est le bon candidat :
-      // une page peut en contenir d'autres, un champ de recherche par exemple.
-      if (field.compareDocumentPosition(input) & Node.DOCUMENT_POSITION_FOLLOWING) {
-        best = value;
-      }
-    }
-    return best;
+    if (!input.form) return pickLogin(before(document));
+    // Hors du formulaire, seul un champ qui dit etre l'identifiant compte :
+    // le reste de la page a ses propres champs.
+    return pickLogin(before(input.form)) || pickLogin(before(document), { anyField: false });
   }
 
   /**
@@ -283,9 +336,8 @@ function menuNotice(response) {
    * Rien n'est ecrit sans reponse : le carnet est ce qui dit quels reglages
    * appliquer a quel site, une entree posee par erreur se paie plus tard.
    */
-  function offerToSave(menu, input) {
+  function offerToSave(menu, input, login) {
     input.__pwAsking = true;
-    const login = findLogin(input);
 
     const ask = document.createElement("div");
     ask.style.display = "flex";
@@ -383,5 +435,5 @@ function menuNotice(response) {
 })();
 
 if (typeof module !== "undefined") {
-  module.exports = { menuNotice };
+  module.exports = { menuNotice, pickLogin };
 }
