@@ -16,7 +16,7 @@ import org.json.JSONException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -147,20 +147,28 @@ public final class AutoSync {
     @WorkerThread
     public void flush(long timeoutMs) {
         if (!isReady()) return;
-        CountDownLatch done = new CountDownLatch(1);
+        // Une passe par jeton : celle qui tournait déjà a lu le carnet avant
+        // l'écriture, sa fin ne dit rien de l'entrée. On attend donc la
+        // relance, jusqu'à ce que plus rien ne soit dû ou ne tourne.
+        Semaphore finished = new Semaphore(0);
         Listener listener = new Listener() {
             @Override
             public void onSyncStatus(@NonNull String status) { }
 
             @Override
             public void onSyncFinished(@NonNull Outcome outcome) {
-                done.countDown();
+                finished.release();
             }
         };
+        long deadline = SystemClock.elapsedRealtime() + timeoutMs;
         addListener(listener);
         try {
             scheduler.runNow();
-            done.await(timeoutMs, TimeUnit.MILLISECONDS);
+            while (true) {
+                long left = deadline - SystemClock.elapsedRealtime();
+                if (left <= 0 || !finished.tryAcquire(left, TimeUnit.MILLISECONDS)) break;
+                if (!preferences().isSyncPending() || !scheduler.isRunning()) break;
+            }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         } finally {
