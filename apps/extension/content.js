@@ -78,7 +78,11 @@ function pickLogin(fields, { anyField = true } = {}) {
   const MENU_CLASS = "pw-suggester-menu";
   let listInput = [];
 
-  function createMenuFor(input) {
+  /**
+   * @param asked identifiant donne dans le menu lui-meme (« » pour
+   *   « Ignorer ») : il remplace celui du formulaire, et n'est pas redemande.
+   */
+  function createMenuFor(input, asked) {
     // Déjà créé ?
     if (input.__pwSuggesterMenu || listInput.includes(input)) return;
     listInput.push(input);
@@ -87,7 +91,7 @@ function pickLogin(fields, { anyField = true } = {}) {
     // L'identifiant deja saisi entre dans le calcul, comme dans la popup : sans
     // lui, le mot de passe propose ici differait de celui de la popup, et
     // celui enregistre ensuite (avec l'identifiant) ne l'aurait pas redonne.
-    const login = findLogin(input);
+    const login = asked === undefined ? findLogin(input) : asked;
     browser.runtime.sendMessage(
       // Rien de saisi : on n'envoie rien, et le premier compte du site sert.
       { action: "generatePassword", url: location.href, login: login || undefined },
@@ -129,6 +133,14 @@ function pickLogin(fields, { anyField = true } = {}) {
         logo.style.width = "18px";
         logo.style.height = "18px";
         logo.style.objectFit = "contain";
+
+        // Compte inconnu du carnet et aucun identifiant trouve dans la page :
+        // on le demande avant de proposer un mot de passe, puisqu'il entre
+        // dans son calcul.
+        if (asked === undefined && response?.password && !response.known && !response.login) {
+          askLogin(menu, input);
+          return;
+        }
 
         // ➤  AUCUNE CLEF DISPONIBLE
         if (!response || response.error) {
@@ -369,22 +381,7 @@ function pickLogin(fields, { anyField = true } = {}) {
       });
     };
 
-    const button = (text, onClick) => {
-      const b = document.createElement("button");
-      b.innerText = text;
-      b.style.cursor = "pointer";
-      b.style.border = "1px solid rgba(255,255,255,0.4)";
-      b.style.background = "transparent";
-      b.style.color = "white";
-      b.style.borderRadius = "4px";
-      b.style.padding = "2px 10px";
-      b.style.fontSize = "13px";
-      b.addEventListener("click", (e) => {
-        e.stopPropagation();
-        onClick();
-      });
-      return b;
-    };
+    const button = menuButton;
 
     const yesBtn = button(msg("content_yes", "Oui"), () => answer(true));
     const noBtn = button(msg("content_no", "Non"), () => answer(false));
@@ -393,6 +390,117 @@ function pickLogin(fields, { anyField = true } = {}) {
 
     menu.innerHTML = "";
     menu.appendChild(ask);
+  }
+
+  function menuButton(text, onClick) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.innerText = text;
+    b.style.cursor = "pointer";
+    b.style.border = "1px solid rgba(255,255,255,0.4)";
+    b.style.background = "transparent";
+    b.style.color = "white";
+    b.style.borderRadius = "4px";
+    b.style.padding = "2px 10px";
+    b.style.fontSize = "13px";
+    b.addEventListener("click", (e) => {
+      e.stopPropagation();
+      onClick();
+    });
+    return b;
+  }
+
+  /**
+   * Demande l'identifiant du compte dans le menu. « Ignorer » propose le mot
+   * de passe sans identifiant : c'est un choix, pas un champ oublie.
+   */
+  function askLogin(menu, input) {
+    // Le champ du menu prend le focus : le menu ne doit pas se refermer.
+    input.__pwAsking = true;
+
+    const ask = document.createElement("form");
+    ask.style.display = "flex";
+    ask.style.flexWrap = "wrap";
+    ask.style.alignItems = "center";
+    ask.style.gap = "8px";
+    ask.style.padding = "4px 8px";
+    ask.style.color = "white";
+    ask.style.fontSize = "13px";
+    ask.style.maxWidth = "320px";
+
+    const label = document.createElement("label");
+    label.innerText = msg("content_ask_login", "Identifiant du compte sur ce site");
+    label.style.flexBasis = "100%";
+
+    const field = document.createElement("input");
+    field.type = "text";
+    field.autocomplete = "off";
+    field.spellcheck = false;
+    field.maxLength = 120;
+    field.setAttribute("aria-label", label.innerText);
+    field.style.flex = "1";
+    field.style.minWidth = "140px";
+    field.style.padding = "3px 6px";
+    field.style.borderRadius = "4px";
+    field.style.border = "1px solid rgba(255,255,255,0.4)";
+    field.style.background = "white";
+    field.style.color = "black";
+    field.style.fontSize = "13px";
+
+    const note = document.createElement("div");
+    note.innerText = msg(
+      "content_ask_login_note",
+      "Il entre dans le mot de passe : il ne pourra pas être ajouté ensuite sans le changer.",
+    );
+    note.style.flexBasis = "100%";
+    note.style.fontSize = "11px";
+    note.style.color = "rgba(255,255,255,0.75)";
+
+    // Le menu repart avec la reponse : le mot de passe s'affiche comme
+    // d'habitude, calcule avec cet identifiant ou sans.
+    const answer = (login) => {
+      removeMenu(input);
+      createMenuFor(input, login);
+      input.focus();
+    };
+    ask.addEventListener("submit", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const login = field.value.trim();
+      if (login) answer(login);
+    });
+    // Les raccourcis de la page ne doivent pas reagir a ce qu'on tape ici.
+    for (const type of ["keydown", "keyup", "keypress"]) {
+      field.addEventListener(type, (e) => {
+        e.stopPropagation();
+        if (type === "keydown" && e.key === "Escape") removeMenu(input);
+      });
+    }
+    // Sorti du menu sans repondre (clic ailleurs dans la page) : il se
+    // referme, comme le menu du mot de passe quand son champ perd le focus.
+    ask.addEventListener("focusout", (e) => {
+      if (ask.contains(e.relatedTarget) || e.relatedTarget === input) return;
+      setTimeout(() => {
+        if (input.__pwSuggesterMenu === menu && !ask.contains(document.activeElement)) {
+          removeMenu(input);
+        }
+      }, 150);
+    });
+
+    const okBtn = menuButton(msg("content_ask_login_ok", "Valider"), () => {
+      const login = field.value.trim();
+      if (login) answer(login);
+      else field.focus();
+    });
+    const skipBtn = menuButton(msg("content_ask_login_skip", "Ignorer"), () => answer(""));
+
+    ask.appendChild(label);
+    ask.appendChild(field);
+    ask.appendChild(okBtn);
+    ask.appendChild(skipBtn);
+    ask.appendChild(note);
+    menu.appendChild(ask);
+    field.focus();
   }
 
   function removeMenu(input) {

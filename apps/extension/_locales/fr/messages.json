@@ -867,5 +867,21 @@
   "error_locked": {
     "message": "TheCode est verrouillé : ouvrez l'extension pour le déverrouiller.",
     "description": "Error shown by the popup, the vault or the in-page menu."
+  },
+  "content_ask_login": {
+    "message": "Identifiant du compte sur ce site",
+    "description": "In-page menu: asks for the username when none was found on the page."
+  },
+  "content_ask_login_note": {
+    "message": "Il entre dans le mot de passe : il ne pourra pas être ajouté ensuite sans le changer.",
+    "description": "In-page menu: why the username is asked before the password is shown."
+  },
+  "content_ask_login_ok": {
+    "message": "Valider",
+    "description": "In-page menu: confirms the typed username."
+  },
+  "content_ask_login_skip": {
+    "message": "Ignorer",
+    "description": "In-page menu: computes the password without a username."
   }
 }
