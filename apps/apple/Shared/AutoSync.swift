@@ -7,9 +7,9 @@
 //  décide quand lancer, et on lance sans jamais bloquer l'écran : le résultat
 //  n'est qu'une ligne d'état dans la zone de synchronisation du carnet.
 //
-//  Dans Shared pour servir aux deux apps. L'extension AutoFill le compile
-//  aussi sans s'en servir : ses enregistrements partent à la prochaine
-//  ouverture de l'app.
+//  Dans Shared pour servir aux deux apps. L'extension AutoFill n'a pas
+//  d'ordonnanceur : après un enregistrement elle lance une passe, au mieux
+//  (`syncAfterExtensionWrite`), et l'app rattrape à sa prochaine ouverture.
 //
 
 import Combine
@@ -274,6 +274,15 @@ final class AutoSync: ObservableObject {
     }
 
     // MARK: - La passe
+
+    /// Écriture hors de l'app (extension AutoFill) : une passe tout de suite,
+    /// au mieux. Sans elle l'entrée attendrait le prochain passage de l'app au
+    /// premier plan. Un échec ne dit rien : l'app synchronisera à son tour.
+    nonisolated static func syncAfterExtensionWrite() async {
+        let key = SecureKeyStore.read()
+        guard !key.isEmpty, let credentials = SyncCredentialsStore.load() else { return }
+        _ = try? await syncEverything(masterKey: key, credentials: credentials)
+    }
 
     /// Carnet, offre du compte, réglages : ce que faisait le bouton du carnet.
     nonisolated static func syncEverything(

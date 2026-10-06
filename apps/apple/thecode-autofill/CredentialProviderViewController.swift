@@ -135,6 +135,9 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
             if case .save(let entry) = outcome {
                 vault.entries.append(entry)
                 saved = (try? VaultStore.save(vault)) != nil
+                // Avant de rendre la main : l'extension peut être arrêtée
+                // aussitôt la requête terminée.
+                if saved { await AutoSync.syncAfterExtensionWrite() }
             }
             await MainActor.run { self.finishSave(saved: saved) }
         }
@@ -162,6 +165,7 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
         // eux, un autre appareil ne saurait pas les rejouer.
         if saveToVault, !password.isEmpty {
             rememberAccount(fill.resolution.siteKey, login: fill.user)
+            syncInBackground()
         }
         guard !password.isEmpty else {
             // Cas pathologique : clé absente, ou aucun charset coché dans l'app.
@@ -197,6 +201,21 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
     }
 
     // MARK: – Génération
+
+    /// Envoie l'entrée enregistrée sans retarder le remplissage : le système
+    /// laisse à l'extension le temps de finir, ou l'interrompt — l'app
+    /// synchronisera alors à sa prochaine ouverture.
+    private func syncInBackground() {
+        ProcessInfo.processInfo.performExpiringActivity(withReason: "thecode.sync") { expired in
+            guard !expired else { return }
+            let done = DispatchSemaphore(value: 0)
+            Task.detached {
+                await AutoSync.syncAfterExtensionWrite()
+                done.signal()
+            }
+            done.wait()
+        }
+    }
 
     /// Enregistre le compte (domaine + identifiant) avec les réglages en vigueur.
     private func rememberAccount(_ domain: String, login: String) {
