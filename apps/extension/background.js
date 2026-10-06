@@ -532,6 +532,12 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
       } catch (e) {
         sendResponse({ ok: false, error: e.message });
       }
+    } else if (request.action === "loginSuggestions") {
+      try {
+        sendResponse(await loginSuggestionsForTab(sender, request.domain));
+      } catch {
+        sendResponse({ ok: true, logins: [] });
+      }
     } else if (request.action === "saveCurrentSite") {
       try {
         const res = await saveCurrentSite(sender, request.login);
@@ -785,6 +791,31 @@ async function saveSite(domain, login) {
  * Le login, lui, vient de la page : c'est le champ que l'utilisateur vient de
  * remplir. Il est borne, et affiche avant confirmation.
  */
+/**
+ * Identifiants du carnet a proposer dans le menu de la page.
+ *
+ * Ils viennent d'autres sites : rien ne sort sans clef utilisable (session
+ * verrouillee comprise), et seulement pour l'onglet qui les demande.
+ */
+async function loginSuggestionsForTab(sender, popupDomain) {
+  if (!usableKey()) return { ok: true, logins: [] };
+  let domain;
+  if (isFromExtensionPage(sender)) {
+    // La popup dit le site qu'elle affiche ; une page web, jamais.
+    domain = typeof popupDomain === "string" ? popupDomain : "";
+  } else {
+    await pslReady;
+    try {
+      domain = getRegistrableDomain(new URL(sender?.tab?.url).hostname);
+    } catch {
+      return { ok: true, logins: [] };
+    }
+  }
+  if (!domain) return { ok: true, logins: [] };
+  const vault = await loadVault(browser?.storage?.local);
+  return { ok: true, logins: loginSuggestions(vault, domain) };
+}
+
 async function saveCurrentSite(sender, login) {
   const url = sender?.tab?.url;
   if (!url) return { ok: false, error: errorText("error_no_tab", "Aucun onglet.") };

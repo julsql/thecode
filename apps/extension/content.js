@@ -418,6 +418,11 @@ function pickLogin(fields, { anyField = true } = {}) {
     // Le champ du menu prend le focus : le menu ne doit pas se refermer.
     input.__pwAsking = true;
 
+    // Racine fermee : les identifiants proposes viennent d'autres sites du
+    // carnet, les scripts de la page ne doivent pas pouvoir les lire.
+    const host = document.createElement("div");
+    const root = host.attachShadow({ mode: "closed" });
+
     const ask = document.createElement("form");
     ask.style.display = "flex";
     ask.style.flexWrap = "wrap";
@@ -481,7 +486,7 @@ function pickLogin(fields, { anyField = true } = {}) {
     ask.addEventListener("focusout", (e) => {
       if (ask.contains(e.relatedTarget) || e.relatedTarget === input) return;
       setTimeout(() => {
-        if (input.__pwSuggesterMenu === menu && !ask.contains(document.activeElement)) {
+        if (input.__pwSuggesterMenu === menu && !root.activeElement) {
           removeMenu(input);
         }
       }, 150);
@@ -498,8 +503,23 @@ function pickLogin(fields, { anyField = true } = {}) {
     ask.appendChild(field);
     ask.appendChild(okBtn);
     ask.appendChild(skipBtn);
+    // Les identifiants deja au carnet, d'un geste : c'est le plus souvent
+    // l'un d'eux.
+    const suggestions = document.createElement("div");
+    suggestions.style.display = "flex";
+    suggestions.style.flexWrap = "wrap";
+    suggestions.style.gap = "6px";
+    suggestions.style.flexBasis = "100%";
+    browser.runtime.sendMessage({ action: "loginSuggestions" }, (resp) => {
+      for (const login of resp?.logins || []) {
+        suggestions.appendChild(menuButton(login, () => answer(login)));
+      }
+    });
+
+    ask.appendChild(suggestions);
     ask.appendChild(note);
-    menu.appendChild(ask);
+    root.appendChild(ask);
+    menu.appendChild(host);
     field.focus();
   }
 
