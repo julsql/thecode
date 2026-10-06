@@ -265,17 +265,6 @@
             </p>
           </section>
 
-          <!-- Le carnet est une rubrique du compte, pas un onglet du site. -->
-          <section class="panel">
-            <h3 class="panel-title">{{ t("vault_title") }}</h3>
-            <p class="panel-lead">{{ t("acc_vault_lead") }}</p>
-            <div class="panel-actions">
-              <router-link id="openVault" class="ghost-btn" :to="localePath('account/vault')">
-                {{ t("acc_vault_open") }}
-              </router-link>
-            </div>
-          </section>
-
           <section class="panel">
             <h3 class="panel-title">{{ t("acc_sign_in_title") }}</h3>
             <!-- Les deux portes d'entrée du compte, côte à côte : on ne ferme
@@ -542,6 +531,18 @@
             <p class="hint">{{ t("acc_sync_hint") }}</p>
           </section>
         </template>
+        <!-- Le carnet est une rubrique du compte, pas un onglet du site. Hors
+             des deux branches : il vit dans le navigateur et sert aussi sans
+             compte. -->
+        <section class="panel">
+          <h3 class="panel-title">{{ t("vault_title") }}</h3>
+          <p class="panel-lead">{{ t("acc_vault_lead") }}</p>
+          <div class="panel-actions">
+            <router-link id="openVault" class="ghost-btn" :to="localePath('account/vault')">
+              {{ t("acc_vault_open") }}
+            </router-link>
+          </div>
+        </section>
       </div>
     </div>
   </div>

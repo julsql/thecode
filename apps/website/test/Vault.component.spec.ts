@@ -3,7 +3,7 @@
  * renouvellement. Voir shared/spec/vault-lock.md.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { LIVE_SYNC_INTERVAL_MS, resetAutoSyncForTests } from "@/autoSync";
+import { LIVE_SYNC_INTERVAL_MS, LIVE_SYNC_RETRY_MS, resetAutoSyncForTests } from "@/autoSync";
 import { mount } from "@vue/test-utils";
 import { createRouter, createMemoryHistory } from "vue-router";
 import Vault from "@/pages/Vault.vue";
@@ -459,6 +459,27 @@ describe("mise à jour en direct", () => {
       expect(urls.at(-1)).toBe("/v1/vault?since=5");
     });
     expect(full()).toBe(2);
+  }, 30000);
+
+  it("après un échec, attend avant de retenter", async () => {
+    signInAs("pro");
+    const calls = () =>
+      vi.mocked(fetch).mock.calls.filter(([url]) => String(url).includes("/v1/vault")).length;
+    const now = vi.spyOn(Date, "now");
+    now.mockReturnValue(1_000_000);
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const w = await mountVault();
+    await unlock(w);
+    await vi.waitFor(() => expect(w.find(".sync-auto-status").exists()).toBe(true));
+    const failed = calls();
+
+    vi.advanceTimersByTime(LIVE_SYNC_INTERVAL_MS * 3);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(calls()).toBe(failed);
+
+    now.mockReturnValue(1_000_000 + LIVE_SYNC_RETRY_MS);
+    vi.advanceTimersByTime(LIVE_SYNC_INTERVAL_MS);
+    await vi.waitFor(() => expect(calls()).toBeGreaterThan(failed));
   }, 30000);
 
   it("ne surveille rien onglet masqué, ni une fois l'écran quitté", async () => {

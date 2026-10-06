@@ -218,7 +218,10 @@ L'écran du carnet doit montrer le compte, pas ce que le navigateur en savait :
   `GET /v1/vault?since=<révision de sa dernière synchronisation>`. Si la
   révision rendue diffère, il synchronise et rafraîchit la liste. Rien ne part
   onglet masqué, sans clef, session verrouillée, ou pendant une
-  synchronisation ; revenir sur l'onglet regarde aussitôt.
+  synchronisation ; revenir sur l'onglet regarde aussitôt ;
+- **après un échec** (autre clef, plafond, coupure), la veille attend
+  60 secondes avant de retenter : une synchronisation qui échouera encore ne
+  doit pas repartir toutes les 5 secondes.
 
 Cette veille impose au site de **ne pousser que ce qui diffère du serveur**
 (forme canonique de `vault-merge.md`), et rien du tout si rien ne diffère :

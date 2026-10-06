@@ -91,13 +91,21 @@ let knownRevision: number | null = null;
 /** Écart entre deux regards de la veille (`live`) sur la révision du compte. */
 export const LIVE_SYNC_INTERVAL_MS = 5000;
 
+/** Après un échec, la veille attend avant de retenter une synchronisation. */
+export const LIVE_SYNC_RETRY_MS = 60000;
+let retryAt = 0;
+
 /**
  * Un seul appel au service à la fois : synchronisation et veille renouvellent
  * le même jeton rotatif, et deux renouvellements simultanés en perdraient un.
+ * Le verrou du navigateur étend la règle aux autres onglets du site, qui
+ * partagent la session ; à défaut, elle ne vaut que pour celui-ci.
  */
 let queue: Promise<unknown> = Promise.resolve();
 function exclusive<T>(task: () => Promise<T>): Promise<T> {
-  const next = queue.then(task, task);
+  const locks = globalThis.navigator?.locks;
+  const guarded = locks ? () => locks.request("thecode.sync", task) as Promise<T> : task;
+  const next = queue.then(guarded, guarded);
   queue = next.catch(() => {});
   return next;
 }
@@ -120,6 +128,9 @@ function build() {
     onResult: (outcome: SyncRun<SyncOutcome>) => {
       if ("skipped" in outcome) return;
       lastSyncFailure.value = outcome.ok ? null : syncFailureCode(outcome.error);
+      // Mauvaise clef, plafond, coupure : la veille ne doit pas retenter
+      // toutes les 5 secondes une synchronisation qui échouera encore.
+      retryAt = outcome.ok ? 0 : Date.now() + LIVE_SYNC_RETRY_MS;
       if (outcome.ok) lender?.onSynced?.(outcome.value);
     },
   });
@@ -146,6 +157,7 @@ export async function checkRemote(): Promise<void> {
   if (checking || !loadSession() || !masterKey()) return;
   if (document.visibilityState !== "visible") return;
   if (autoSync.pending || autoSync.running) return;
+  if (Date.now() < retryAt) return;
   checking = true;
   try {
     const since = knownRevision;
@@ -214,5 +226,6 @@ export function resetAutoSyncForTests(): void {
   lastSyncFailure.value = null;
   knownRevision = null;
   checking = false;
+  retryAt = 0;
   queue = Promise.resolve();
 }
