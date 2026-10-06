@@ -278,10 +278,22 @@ final class AutoSync: ObservableObject {
     /// Écriture hors de l'app (extension AutoFill) : une passe tout de suite,
     /// au mieux. Sans elle l'entrée attendrait le prochain passage de l'app au
     /// premier plan. Un échec ne dit rien : l'app synchronisera à son tour.
-    nonisolated static func syncAfterExtensionWrite() async {
+    ///
+    /// - Parameter timeout: au-delà, la passe est annulée et on rend la main :
+    ///   le système n'attend pas une extension indéfiniment.
+    nonisolated static func syncAfterExtensionWrite(timeout: TimeInterval = 4) async {
         let key = SecureKeyStore.read()
         guard !key.isEmpty, let credentials = SyncCredentialsStore.load() else { return }
-        _ = try? await syncEverything(masterKey: key, credentials: credentials)
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask {
+                _ = try? await syncEverything(masterKey: key, credentials: credentials)
+            }
+            group.addTask {
+                try? await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
+            }
+            await group.next()
+            group.cancelAll()
+        }
     }
 
     /// Carnet, offre du compte, réglages : ce que faisait le bouton du carnet.

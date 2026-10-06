@@ -208,6 +208,8 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
     /// laisse à l'extension le temps de finir, ou l'interrompt — l'app
     /// synchronisera alors à sa prochaine ouverture.
     private func syncInBackground() {
+        // La passe se borne elle-même (`timeout`) : le bloc ne retient donc
+        // jamais l'extension au-delà, même si le système dit le temps écoulé.
         ProcessInfo.processInfo.performExpiringActivity(withReason: "thecode.sync") { expired in
             guard !expired else { return }
             let done = DispatchSemaphore(value: 0)
