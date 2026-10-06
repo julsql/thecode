@@ -49,8 +49,12 @@ import fr.juliette.thecode.R;
  */
 @RequiresApi(Build.VERSION_CODES.O)
 public class TheCodeAutofillService extends AutofillService {
-    /** Attente maximale de la synchronisation avant de répondre à l'enregistrement. */
-    private static final long SAVE_SYNC_TIMEOUT_MS = 10_000;
+    /**
+     * Attente maximale de la synchronisation avant de répondre à
+     * l'enregistrement : courte, le système n'attend pas le service
+     * indéfiniment. Au-delà, l'entrée part à la prochaine ouverture de l'app.
+     */
+    private static final long SAVE_SYNC_TIMEOUT_MS = 4_000;
 
 
     @Override

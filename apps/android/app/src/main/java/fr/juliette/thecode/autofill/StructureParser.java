@@ -75,9 +75,10 @@ final class StructureParser {
             }
             if (parsed.passwordValue == null) parsed.passwordValue = textValue(node);
         } else if (isUsernameField(node)) {
-            // Le premier seulement : un formulaire en porte rarement deux, et
-            // une barre de recherche plus bas ne doit pas passer pour lui.
-            if (parsed.usernameId == null) {
+            // Le dernier avant le mot de passe : une recherche ou une lettre
+            // d'information plus haut dans la page ne doit pas passer pour
+            // lui, ni une barre de recherche plus bas.
+            if (parsed.usernameId == null || parsed.passwordIds.isEmpty()) {
                 parsed.usernameId = node.getAutofillId();
                 parsed.usernameValue = textValue(node);
             }
