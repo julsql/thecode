@@ -13,7 +13,7 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 import android.view.autofill.AutofillId;
 import android.view.autofill.AutofillManager;
 import android.view.autofill.AutofillValue;
@@ -30,6 +30,7 @@ import androidx.fragment.app.FragmentActivity;
 import android.service.autofill.Dataset;
 
 import fr.juliette.thecode.Generator;
+import fr.juliette.thecode.vault.LoginSuggestions;
 import fr.juliette.thecode.vault.SiteResolution;
 import fr.juliette.thecode.vault.Vault;
 import fr.juliette.thecode.Preferences;
@@ -74,6 +75,7 @@ public class AutofillAuthActivity extends FragmentActivity {
     private AutofillId usernameId;
     @Nullable
     private String typedLogin;
+    private boolean askLogin;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -94,8 +96,17 @@ public class AutofillAuthActivity extends FragmentActivity {
             return;
         }
 
-        if (intent.getBooleanExtra(EXTRA_ASK_LOGIN, false)) askLogin();
-        else promptBiometric();
+        askLogin = intent.getBooleanExtra(EXTRA_ASK_LOGIN, false);
+        promptBiometric();
+    }
+
+    /**
+     * Authentifié : rien du carnet n'est montré avant, pas même les
+     * identifiants proposés, qui viennent d'autres sites.
+     */
+    private void afterAuthentication() {
+        if (askLogin) askLogin();
+        else fillAndFinish();
     }
 
     /**
@@ -112,9 +123,27 @@ public class AutofillAuthActivity extends FragmentActivity {
         // Ce champ est le nôtre : le remplissage automatique n'a rien à y faire.
         field.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO);
         int margin = Math.round(20 * getResources().getDisplayMetrics().density);
-        FrameLayout box = new FrameLayout(this);
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
         box.setPadding(margin, margin / 2, margin, 0);
         box.addView(field);
+
+        // Les identifiants déjà au carnet, d'un geste : c'est le plus souvent
+        // l'un d'eux.
+        LinearLayout suggestions = new LinearLayout(this);
+        suggestions.setOrientation(LinearLayout.VERTICAL);
+        for (String login : LoginSuggestions.of(Vault.load(this), domain,
+                LoginSuggestions.DEFAULT_LIMIT)) {
+            Button suggestion = new Button(this, null, android.R.attr.borderlessButtonStyle);
+            suggestion.setText(login);
+            suggestion.setAllCaps(false);
+            suggestion.setOnClickListener(v -> {
+                field.setText(login);
+                field.setSelection(login.length());
+            });
+            suggestions.addView(suggestion);
+        }
+        box.addView(suggestions);
 
         AlertDialog dialog = new AlertDialog.Builder(this)
                 .setTitle(getString(R.string.autofill_ask_login_title, domain))
@@ -123,11 +152,11 @@ public class AutofillAuthActivity extends FragmentActivity {
                 .setPositiveButton(R.string.autofill_ask_login_fill, (d, which) -> {
                     pageLogin = SiteResolution.normalizeLogin(field.getText().toString());
                     TypedLoginHint.remember(domain, pageLogin, SystemClock.elapsedRealtime());
-                    promptBiometric();
+                    fillAndFinish();
                 })
                 .setNeutralButton(R.string.autofill_ask_login_skip, (d, which) -> {
                     TypedLoginHint.forget();
-                    promptBiometric();
+                    fillAndFinish();
                 })
                 .setNegativeButton(android.R.string.cancel, (d, which) -> cancelAndFinish())
                 .setOnCancelListener(d -> cancelAndFinish())
@@ -169,7 +198,7 @@ public class AutofillAuthActivity extends FragmentActivity {
         if (bm.canAuthenticate(auth) != BiometricManager.BIOMETRIC_SUCCESS) {
             // Aucune méthode d'auth disponible : l'utilisateur a déjà déverrouillé
             // son appareil pour atteindre ce point — on remplit directement.
-            fillAndFinish();
+            afterAuthentication();
             return;
         }
 
@@ -178,7 +207,7 @@ public class AutofillAuthActivity extends FragmentActivity {
                 new BiometricPrompt.AuthenticationCallback() {
                     @Override
                     public void onAuthenticationSucceeded(@NonNull BiometricPrompt.AuthenticationResult result) {
-                        fillAndFinish();
+                        afterAuthentication();
                     }
 
                     @Override
