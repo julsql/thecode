@@ -9,6 +9,9 @@
 
     <div class="content-container fadeIn">
       <div class="vault-card" :aria-busy="busy">
+        <router-link class="link-btn" :to="localePath('account')">
+          ← {{ t("vault_back_account") }}
+        </router-link>
         <!-- Deux zones toujours présentes : une région live ajoutée au moment
              du message n'est pas annoncée par tous les lecteurs d'écran. -->
         <p class="hint status" role="status" aria-live="polite">{{ status }}</p>

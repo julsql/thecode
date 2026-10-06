@@ -589,6 +589,15 @@ describe("page du compte", () => {
       expect(wrapper.text()).toContain("site web");
     });
 
+    it("ouvre le carnet depuis le compte", async () => {
+      fakeService();
+      const wrapper = await mountAccount();
+
+      const link = wrapper.find("#openVault");
+      expect(link.text()).toBe("Ouvrir le carnet");
+      expect(link.attributes("href")).toBe("/fr/account/vault");
+    });
+
     it("présente une session du site comme un navigateur", async () => {
       const service = fakeService();
       service.state.devices = [
