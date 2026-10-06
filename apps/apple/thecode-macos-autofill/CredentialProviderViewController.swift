@@ -97,10 +97,11 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
 
         model.domain = domain
         model.accounts = vault.findAll(domain: domain).map(SiteResolution.init(entry:))
-        model.resolveLogin = { login, pinned in
+        model.suggestions = AutofillLogin.suggestions(vault: vault, domain: domain)
+        model.resolveLogin = { login, pinned, separate in
             AutofillLogin.resolve(
                 login: login, domain: domain, vault: vault, pinned: pinned,
-                length: settings.length, charset: charset)
+                separate: separate, length: settings.length, charset: charset)
         }
     }
 
