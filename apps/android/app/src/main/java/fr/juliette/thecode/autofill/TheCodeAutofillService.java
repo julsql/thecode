@@ -181,8 +181,15 @@ public class TheCodeAutofillService extends AutofillService {
 
         // PBKDF2 à 600 000 itérations : hors du fil principal du service.
         new Thread(() -> {
-            String login = loginToStore(masterKey, domain, submitted, username,
+            String fromForm = loginToStore(masterKey, domain, submitted, username,
                     length, lower, upper, symbols, numbers);
+            // Page sans champ identifiant reconnu : celui saisi dans notre
+            // fenêtre est le seul à pouvoir redonner ce mot de passe.
+            String typed = TypedLoginHint.recall(domain, android.os.SystemClock.elapsedRealtime());
+            String login = fromForm != null || typed == null
+                    ? fromForm
+                    : loginToStore(masterKey, domain, submitted, typed,
+                            length, lower, upper, symbols, numbers);
             android.os.Handler main = new android.os.Handler(android.os.Looper.getMainLooper());
             if (login == null) {
                 main.post(() -> callback.onFailure(getString(R.string.autofill_save_foreign)));
@@ -261,7 +268,9 @@ public class TheCodeAutofillService extends AutofillService {
                                  @Nullable AutofillId usernameId, String pageLogin) {
         // Sans identifiant, le mot de passe est calculé (et sera enregistré)
         // sans : le saisir après le changerait. On le dit dans la suggestion.
-        String label = resolution.login.isEmpty()
+        // Compte inconnu sans identifiant : il sera demandé au toucher, il
+        // n'y a rien à prévenir.
+        String label = resolution.login.isEmpty() && !resolution.entryId.isEmpty()
                 ? resolution.label + " · " + getString(R.string.autofill_no_login)
                 : resolution.label;
         RemoteViews presentation = buildPresentation(label);
@@ -278,8 +287,12 @@ public class TheCodeAutofillService extends AutofillService {
         // Le champ identifiant reçoit l'identifiant du compte quand il est vide
         // ou le porte déjà ; un autre identifiant tapé n'est pas écrasé
         // (UsernameFill). L'activité revérifie après avoir relu le carnet.
+        // Compte inconnu et rien de lu dans la page : l'activité demande
+        // l'identifiant, et l'écrit dans le champ s'il y en a un.
+        boolean askLogin = resolution.entryId.isEmpty() && resolution.login.isEmpty();
+        if (askLogin) authIntent.putExtra(AutofillAuthActivity.EXTRA_ASK_LOGIN, true);
         boolean fillUsername = usernameId != null
-                && UsernameFill.loginToFill(resolution, pageLogin) != null;
+                && (askLogin || UsernameFill.loginToFill(resolution, pageLogin) != null);
         if (fillUsername) {
             authIntent.putExtra(AutofillAuthActivity.EXTRA_USERNAME_ID, usernameId);
             authIntent.putExtra(AutofillAuthActivity.EXTRA_PAGE_LOGIN, pageLogin);

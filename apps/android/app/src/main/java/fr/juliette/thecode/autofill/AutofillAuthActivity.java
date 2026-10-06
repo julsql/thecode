@@ -4,6 +4,16 @@ import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Parcelable;
+import android.os.SystemClock;
+import android.app.AlertDialog;
+import android.text.Editable;
+import android.text.InputType;
+import android.text.TextWatcher;
+import android.view.View;
+import android.view.WindowManager;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.view.autofill.AutofillId;
 import android.view.autofill.AutofillManager;
 import android.view.autofill.AutofillValue;
@@ -49,6 +59,11 @@ public class AutofillAuthActivity extends FragmentActivity {
     public static final String EXTRA_USERNAME_ID = "fr.juliette.thecode.autofill.USERNAME_ID";
     /** Valeur du champ identifiant au moment de la suggestion. */
     public static final String EXTRA_PAGE_LOGIN = "fr.juliette.thecode.autofill.PAGE_LOGIN";
+    /**
+     * Compte inconnu du carnet et aucun identifiant lu dans la page : on le
+     * demande avant de calculer, puisqu'il entre dans le mot de passe.
+     */
+    public static final String EXTRA_ASK_LOGIN = "fr.juliette.thecode.autofill.ASK_LOGIN";
 
     private String domain;
     private String entryId;
@@ -79,7 +94,66 @@ public class AutofillAuthActivity extends FragmentActivity {
             return;
         }
 
-        promptBiometric();
+        if (intent.getBooleanExtra(EXTRA_ASK_LOGIN, false)) askLogin();
+        else promptBiometric();
+    }
+
+    /**
+     * Demande l'identifiant du compte. « Ignorer » calcule sans : c'est un
+     * choix, pas un champ laissé vide.
+     */
+    private void askLogin() {
+        EditText field = new EditText(this);
+        field.setHint(R.string.autofill_ask_login_hint);
+        field.setSingleLine(true);
+        field.setInputType(InputType.TYPE_CLASS_TEXT
+                | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
+                | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+        // Ce champ est le nôtre : le remplissage automatique n'a rien à y faire.
+        field.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO);
+        int margin = Math.round(20 * getResources().getDisplayMetrics().density);
+        FrameLayout box = new FrameLayout(this);
+        box.setPadding(margin, margin / 2, margin, 0);
+        box.addView(field);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle(getString(R.string.autofill_ask_login_title, domain))
+                .setMessage(R.string.autofill_ask_login_message)
+                .setView(box)
+                .setPositiveButton(R.string.autofill_ask_login_fill, (d, which) -> {
+                    pageLogin = SiteResolution.normalizeLogin(field.getText().toString());
+                    TypedLoginHint.remember(domain, pageLogin, SystemClock.elapsedRealtime());
+                    promptBiometric();
+                })
+                .setNeutralButton(R.string.autofill_ask_login_skip, (d, which) -> {
+                    TypedLoginHint.forget();
+                    promptBiometric();
+                })
+                .setNegativeButton(android.R.string.cancel, (d, which) -> cancelAndFinish())
+                .setOnCancelListener(d -> cancelAndFinish())
+                .create();
+        dialog.setOnShowListener(d -> {
+            Button fill = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            fill.setEnabled(false);
+            field.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) { }
+
+                @Override
+                public void afterTextChanged(Editable s) {
+                    fill.setEnabled(!s.toString().trim().isEmpty());
+                }
+            });
+            field.requestFocus();
+        });
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setSoftInputMode(
+                    WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
+        }
+        dialog.show();
     }
 
     private void promptBiometric() {
