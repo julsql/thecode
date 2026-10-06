@@ -31,16 +31,32 @@ final class AutofillModel: ObservableObject {
     /// formulaire ; vide, on remplit le compte sans identifiant du site.
     @Published var login: String = ""
 
+    /// L'identifiant saisi est celui d'un autre compte que l'entrée sans
+    /// identifiant du site : il aura son propre mot de passe.
+    @Published var separateAccount = false
+
+    /// Identifiants du carnet à proposer d'un geste.
+    @Published var suggestions: [String] = []
+
     /// Réponse de l'utilisatrice. iOS n'a pas d'équivalent au dialogue que le
     /// système Android pose après coup : on demande donc avant de remplir.
     @Published var saveToVault = false
 
     /// Ce que le ViewController sait du carnet : de quoi résoudre un
     /// identifiant saisi.
-    var resolveLogin: (_ login: String, _ pinned: String?) -> AutofillLogin.Fill? = { _, _ in nil }
+    var resolveLogin: (_ login: String, _ pinned: String?, _ separate: Bool) -> AutofillLogin.Fill? =
+        { _, _, _ in nil }
 
     /// Le remplissage correspondant à la saisie (`nil` sans domaine).
-    var typedFill: AutofillLogin.Fill? { resolveLogin(login, pinned?.entryId) }
+    var typedFill: AutofillLogin.Fill? { resolveLogin(login, pinned?.entryId, separateAccount) }
+
+    /// L'identifiant saisi retombe sur le compte sans identifiant du site : on
+    /// laisse choisir d'en faire un compte à part.
+    var offersSeparateAccount: Bool {
+        guard pinned == nil else { return false }
+        if separateAccount { return !AutofillLogin.normalize(login).isEmpty }
+        return typedFill.map(AutofillLogin.keepsLoginlessEntry) ?? false
+    }
 
     /// Le compte saisi est inconnu du carnet : on propose de l'enregistrer.
     var canSave: Bool { typedFill?.isNew ?? false }

@@ -99,6 +99,32 @@ struct ContentView: View {
                         .submitLabel(.go)
                         .onSubmit { model.fillTyped() }
 
+                    // Faute de pouvoir lire le formulaire : les identifiants
+                    // qui servent déjà ailleurs, d'un geste.
+                    if model.pinned == nil, !model.suggestions.isEmpty {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(model.suggestions, id: \.self) { suggestion in
+                                    Button(suggestion) { model.login = suggestion }
+                                        .buttonStyle(.bordered)
+                                        .controlSize(.small)
+                                        .disabled(model.busy)
+                                }
+                            }
+                        }
+                    }
+
+                    // Le site a un compte sans identifiant : par défaut on
+                    // garde son mot de passe. Le dire, et laisser choisir.
+                    if model.offersSeparateAccount {
+                        Toggle(isOn: $model.separateAccount) {
+                            Text(L10n.t(
+                                "C'est un autre compte que « \(model.accounts.first?.label ?? model.domain) » : lui donner son propre mot de passe",
+                                "This is a different account from “\(model.accounts.first?.label ?? model.domain)”: give it its own password"))
+                                .font(.footnote)
+                        }
+                    }
+
                     // L'identifiant entre dans le mot de passe (v2) : l'ajouter après
                     // en changerait le mot de passe. On le dit avant de remplir. Inutile
                     // pour une entrée choisie : son mot de passe n'en dépend pas.
