@@ -4,7 +4,9 @@ import android.app.assist.AssistStructure;
 import android.os.Build;
 import android.text.InputType;
 import android.text.TextUtils;
+import android.util.Pair;
 import android.view.View;
+import android.view.ViewStructure;
 import android.view.autofill.AutofillId;
 import android.view.autofill.AutofillValue;
 
@@ -147,7 +149,38 @@ final class StructureParser {
             return true;
         }
 
-        return matchesUsernameKeyword(node.getHint()) || matchesUsernameKeyword(node.getIdEntry());
+        if (matchesUsernameKeyword(node.getHint()) || matchesUsernameKeyword(node.getIdEntry())) {
+            return true;
+        }
+
+        // Page web : ni indice ni id Android, le champ ne se décrit que par
+        // ses attributs HTML (`<input name="user">`).
+        ViewStructure.HtmlInfo html = node.getHtmlInfo();
+        if (html == null || html.getAttributes() == null) return false;
+        for (Pair<String, String> attribute : html.getAttributes()) {
+            if (matchesUsernameAttribute(attribute.first, attribute.second)) return true;
+        }
+        return false;
+    }
+
+    /** Attribut HTML qui désigne un champ identifiant. */
+    static boolean matchesUsernameAttribute(String name, String value) {
+        if (name == null || value == null) return false;
+        String v = value.toLowerCase();
+        switch (name.toLowerCase()) {
+            case "type":
+                return v.equals("email");
+            case "autocomplete":
+                return v.contains("username") || v.contains("email");
+            case "name":
+            case "id":
+            case "placeholder":
+            case "aria-label":
+            case "label":
+                return matchesUsernameKeyword(v);
+            default:
+                return false;
+        }
     }
 
     /** Mots qui désignent un champ identifiant, en anglais et en français. */

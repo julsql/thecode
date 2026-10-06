@@ -9,14 +9,17 @@ import android.util.Log;
 import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.WorkerThread;
 
 import org.json.JSONException;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import fr.juliette.thecode.vault.DefaultSettings;
@@ -105,13 +108,47 @@ public final class AutoSync {
      */
     public static void install(@NonNull Context context) {
         AutoSync sync = get(context);
-        sync.scheduler.watchVaultWrites();
+        sync.scheduler.watchVaultWrites(() -> sync.preferences().setSyncPending(true));
         Preferences.setSettingsListener(sync.scheduler::onChange);
     }
 
     /** Ouverture de l'app ou d'un écran, retour au premier plan. */
     public void onOpen() {
-        scheduler.onOpen();
+        // Une écriture restée sur l'appareil n'attend pas l'espacement des
+        // ouvertures : elle a déjà trop attendu.
+        if (preferences().isSyncPending()) scheduler.onChange();
+        else scheduler.onOpen();
+    }
+
+    /**
+     * Enregistrement hors écran (remplissage automatique) : synchronise tout
+     * de suite et attend la fin, au plus {@code timeoutMs}. Le système peut
+     * arrêter le processus dès que le service a répondu : rendre la main
+     * avant, c'est laisser l'entrée sur l'appareil jusqu'à la prochaine
+     * ouverture de l'app.
+     */
+    @WorkerThread
+    public void flush(long timeoutMs) {
+        if (!isReady()) return;
+        CountDownLatch done = new CountDownLatch(1);
+        Listener listener = new Listener() {
+            @Override
+            public void onSyncStatus(@NonNull String status) { }
+
+            @Override
+            public void onSyncFinished(@NonNull Outcome outcome) {
+                done.countDown();
+            }
+        };
+        addListener(listener);
+        try {
+            scheduler.runNow();
+            done.await(timeoutMs, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } finally {
+            removeListener(listener);
+        }
     }
 
     /** Bouton « Synchroniser ». */
@@ -156,6 +193,9 @@ public final class AutoSync {
         if (masterKey.isEmpty() || credentials == null) return;
 
         publishStatus(app.getString(R.string.sync_running));
+        // Baissé avant de lire le carnet : une écriture pendant l'appel le
+        // relève, et reste due.
+        prefs.setSyncPending(false);
         try {
             Sync sync = new Sync();
             Vault local = Vault.load(app);
@@ -193,6 +233,7 @@ public final class AutoSync {
                     ? app.getString(R.string.sync_limit_reached)
                     : app.getString(R.string.sync_failed, e.getMessage());
             Log.w(TAG, "Synchronisation impossible : " + e.getMessage());
+            prefs.setSyncPending(true);
             publishStatus(message);
             finish(new Outcome(manual, false, false, message));
         }

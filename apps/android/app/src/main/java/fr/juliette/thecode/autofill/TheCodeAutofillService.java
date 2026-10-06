@@ -33,6 +33,7 @@ import java.util.List;
 
 import android.service.autofill.SaveInfo;
 
+import fr.juliette.thecode.AutoSync;
 import fr.juliette.thecode.Code;
 import fr.juliette.thecode.CodeV2;
 import fr.juliette.thecode.Preferences;
@@ -48,6 +49,9 @@ import fr.juliette.thecode.R;
  */
 @RequiresApi(Build.VERSION_CODES.O)
 public class TheCodeAutofillService extends AutofillService {
+    /** Attente maximale de la synchronisation avant de répondre à l'enregistrement. */
+    private static final long SAVE_SYNC_TIMEOUT_MS = 10_000;
+
 
     @Override
     public void onCreate() {
@@ -192,6 +196,9 @@ public class TheCodeAutofillService extends AutofillService {
             // service.
             vault.upsertAccount(domain, login, length, lower, upper, symbols, numbers);
             vault.save(this);
+            // Avant de répondre : une fois le service délié, rien ne garantit
+            // que le processus vive assez pour la synchronisation différée.
+            AutoSync.get(this).flush(SAVE_SYNC_TIMEOUT_MS);
             main.post(callback::onSuccess);
         }).start();
     }
