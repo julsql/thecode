@@ -2,7 +2,13 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- seo:page -->
+    <meta name="theme-color" content="#1a1d1c" />
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="apple-touch-icon" href="/logo.png" />
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
+    <link rel="preconnect" href="https://img.icons8.com" />
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
@@ -10,13 +16,32 @@
       referrerpolicy="no-referrer"
     />
     <link href="/src/style.css" rel="stylesheet" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TheCode — deterministic password generator</title>
-    <meta
-      name="description"
-      content="TheCode generates a unique, strong password for every site from a single master key. Nothing is stored: same key, same site, same password, on every device."
-    />
-    <link rel="canonical" href="https://thecode.julsql.fr/en" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "https://thecode.julsql.fr/#website",
+            "name": "TheCode",
+            "url": "https://thecode.julsql.fr/",
+            "inLanguage": ["en", "fr"]
+          },
+          {
+            "@type": "WebApplication",
+            "name": "TheCode",
+            "url": "https://thecode.julsql.fr/en",
+            "description": "Free, open-source password manager that stores nothing: it regenerates every password from a single secret key.",
+            "applicationCategory": "SecurityApplication",
+            "operatingSystem": "Web, iOS, macOS, Android, Chrome, Firefox",
+            "image": "https://thecode.julsql.fr/logo.png",
+            "isAccessibleForFree": true,
+            "sameAs": ["https://github.com/julsql/thecode"],
+            "isPartOf": { "@id": "https://thecode.julsql.fr/#website" }
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
     <div id="app"></div>

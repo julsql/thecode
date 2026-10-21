@@ -3,7 +3,7 @@
        prochaine fois ; seule la case à cocher la retire pour de bon. -->
   <div v-if="showV2Notice" class="modal-backdrop" @click.self="closeV2Notice">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="v2NoticeTitle">
-      <h3 id="v2NoticeTitle">{{ t("v2_notice_title") }}</h3>
+      <h2 id="v2NoticeTitle">{{ t("v2_notice_title") }}</h2>
       <p>{{ t("v2_notice_intro") }}</p>
       <p>{{ t("v2_notice_detail") }}</p>
       <label class="modal-check">
@@ -1218,9 +1218,13 @@ input[type="text"]:read-only {
   box-shadow: var(--shadow-strong);
 }
 
-.modal h3 {
+.modal h2 {
   margin: 0 0 12px;
   font-size: 1.05rem;
+  /* Titre de dialogue, pas de section : neutralise le style des h2 de la page. */
+  color: inherit;
+  letter-spacing: normal;
+  text-transform: none;
 }
 
 .modal p {

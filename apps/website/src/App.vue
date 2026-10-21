@@ -205,14 +205,14 @@
         <div class="footer-grid">
           <div class="footer-col footer-brand-col">
             <router-link :to="localePath('')" class="footer-brand">
-              <img :src="Logo" alt="TheCode" class="footer-logo" />
+              <img :src="Logo" alt="TheCode" class="footer-logo" loading="lazy" decoding="async" />
               <span>TheCode</span>
             </router-link>
             <p class="footer-tag">{{ t("footer_tagline") }}</p>
           </div>
 
           <div class="footer-col">
-            <h4>{{ t("footer_links_product") }}</h4>
+            <h2 class="footer-heading">{{ t("footer_links_product") }}</h2>
             <router-link :to="localePath('')">{{ t("nav_home") }}</router-link>
             <router-link :to="localePath('about')">{{ t("nav_about") }}</router-link>
             <router-link :to="localePath('generate')">{{ t("nav_generator") }}</router-link>
@@ -224,14 +224,14 @@
           </div>
 
           <div class="footer-col">
-            <h4>{{ t("footer_links_resources") }}</h4>
+            <h2 class="footer-heading">{{ t("footer_links_resources") }}</h2>
             <router-link :to="localePath('tutorial')">{{ t("nav_tutorial") }}</router-link>
             <router-link :to="localePath('contact')">{{ t("nav_contact") }}</router-link>
             <a href="https://github.com/julsql/thecode" target="_blank" rel="noopener">GitHub</a>
           </div>
 
           <div class="footer-col">
-            <h4>{{ t("footer_links_legal") }}</h4>
+            <h2 class="footer-heading">{{ t("footer_links_legal") }}</h2>
             <router-link :to="localePath('privacy')">{{ t("nav_privacy") }}</router-link>
             <!-- Les mentions légales attendent l'identité de l'éditrice : une
                  page pleine de « à compléter » ne renseigne personne. Remplir
@@ -632,7 +632,7 @@ export default defineComponent({
   max-width: 260px;
 }
 
-.footer-col h4 {
+.footer-col .footer-heading {
   margin: 0 0 4px;
   font-size: 0.8rem;
   letter-spacing: 0.6px;

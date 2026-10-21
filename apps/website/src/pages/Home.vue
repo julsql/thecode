@@ -58,7 +58,14 @@
       <h2>{{ t("features_title") }}</h2>
       <div class="feature-list">
         <div class="feature fadeIn">
-          <img src="https://img.icons8.com/?size=500&id=13534&format=png&color=ffffff" alt="" />
+          <img
+            src="https://img.icons8.com/?size=500&id=13534&format=png&color=ffffff"
+            alt=""
+            width="56"
+            height="56"
+            loading="lazy"
+            decoding="async"
+          />
           <h3>{{ t("feature_security_title") }}</h3>
           <p>{{ t("feature_security_p1") }}</p>
           <p>{{ t("feature_security_p2") }}</p>
@@ -67,6 +74,10 @@
           <img
             src="https://img.icons8.com/?size=500&id=pcD8bVCCf7dC&format=png&color=ffffff"
             alt=""
+            width="56"
+            height="56"
+            loading="lazy"
+            decoding="async"
           />
           <h3>{{ t("feature_memory_title") }}</h3>
           <p>{{ t("feature_memory_p1") }}</p>
@@ -76,13 +87,24 @@
           <img
             src="https://img.icons8.com/?size=500&id=GbRPcEhEje0f&format=png&color=ffffff"
             alt=""
+            width="56"
+            height="56"
+            loading="lazy"
+            decoding="async"
           />
           <h3>{{ t("feature_multi_title") }}</h3>
           <p>{{ t("feature_multi_p1") }}</p>
           <p>{{ t("feature_multi_p2") }}</p>
         </div>
         <div class="feature fadeIn delay-3">
-          <img src="https://img.icons8.com/?size=500&id=13814&format=png&color=ffffff" alt="" />
+          <img
+            src="https://img.icons8.com/?size=500&id=13814&format=png&color=ffffff"
+            alt=""
+            width="56"
+            height="56"
+            loading="lazy"
+            decoding="async"
+          />
           <h3>{{ t("feature_offline_title") }}</h3>
           <p>{{ t("feature_offline_p1") }}</p>
         </div>
