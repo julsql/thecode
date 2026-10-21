@@ -16,6 +16,7 @@ import Legal from "./pages/Legal.vue";
 import { identityPublished } from "@/legal/identity";
 import Terms from "./pages/Terms.vue";
 import { DEFAULT_LANG } from "./i18n/translations";
+import { syncHead } from "./seo";
 
 const routes: Array<RouteRecordRaw> = [
   { path: "/", redirect: `/${DEFAULT_LANG}` },
@@ -74,6 +75,10 @@ const router = createRouter({
   scrollBehavior() {
     return { top: 0 };
   },
+});
+
+router.afterEach((to) => {
+  syncHead(to.path, typeof to.params.lang === "string" ? to.params.lang : DEFAULT_LANG);
 });
 
 export default router;

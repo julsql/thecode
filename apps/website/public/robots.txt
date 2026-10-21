@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /en/vault
+Disallow: /fr/vault
+Disallow: /en/account
+Disallow: /fr/account
+Disallow: /vault
+Disallow: /account
+
+Sitemap: https://thecode.julsql.fr/sitemap.xml

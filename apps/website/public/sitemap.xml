@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://thecode.julsql.fr/en</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://thecode.julsql.fr/en"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://thecode.julsql.fr/fr"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://thecode.julsql.fr/en"/>
+    <lastmod>2026-10-21</lastmod>
+  </url>
+  <url>
+    <loc>https://thecode.julsql.fr/fr</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://thecode.julsql.fr/en"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://thecode.julsql.fr/fr"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://thecode.julsql.fr/en"/>
+    <lastmod>2026-10-21</lastmod>
+  </url>
+  <url>
+    <loc>https://thecode.julsql.fr/en/generate</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://thecode.julsql.fr/en/generate"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://thecode.julsql.fr/fr/generate"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://thecode.julsql.fr/en/generate"/>
+    <lastmod>2026-10-21</lastmod>
+  </url>
+  <url>
+    <loc>https://thecode.julsql.fr/fr/generate</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://thecode.julsql.fr/en/generate"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://thecode.julsql.fr/fr/generate"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://thecode.julsql.fr/en/generate"/>
+    <lastmod>2026-10-21</lastmod>
+  </url>
+  <url>
+    <loc>https://thecode.julsql.fr/en/tutorial</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://thecode.julsql.fr/en/tutorial"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://thecode.julsql.fr/fr/tutorial"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://thecode.julsql.fr/en/tutorial"/>
+    <lastmod>2026-10-21</lastmod>
+  </url>
+  <url>
+    <loc>https://thecode.julsql.fr/fr/tutorial</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://thecode.julsql.fr/en/tutorial"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://thecode.julsql.fr/fr/tutorial"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://thecode.julsql.fr/en/tutorial"/>
+    <lastmod>2026-10-21</lastmod>
+  </url>
+  <url>
+    <loc>https://thecode.julsql.fr/en/about</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://thecode.julsql.fr/en/about"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://thecode.julsql.fr/fr/about"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://thecode.julsql.fr/en/about"/>
+    <lastmod>2026-10-21</lastmod>
+  </url>
+  <url>
+    <loc>https://thecode.julsql.fr/fr/about</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://thecode.julsql.fr/en/about"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://thecode.julsql.fr/fr/about"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://thecode.julsql.fr/en/about"/>
+    <lastmod>2026-10-21</lastmod>
+  </url>
+  <url>
+    <loc>https://thecode.julsql.fr/en/pricing</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://thecode.julsql.fr/en/pricing"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://thecode.julsql.fr/fr/pricing"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://thecode.julsql.fr/en/pricing"/>
+    <lastmod>2026-10-21</lastmod>
+  </url>
+  <url>
+    <loc>https://thecode.julsql.fr/fr/pricing</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://thecode.julsql.fr/en/pricing"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://thecode.julsql.fr/fr/pricing"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://thecode.julsql.fr/en/pricing"/>
+    <lastmod>2026-10-21</lastmod>
+  </url>
+  <url>
+    <loc>https://thecode.julsql.fr/en/contact</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://thecode.julsql.fr/en/contact"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://thecode.julsql.fr/fr/contact"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://thecode.julsql.fr/en/contact"/>
+    <lastmod>2026-10-21</lastmod>
+  </url>
+  <url>
+    <loc>https://thecode.julsql.fr/fr/contact</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://thecode.julsql.fr/en/contact"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://thecode.julsql.fr/fr/contact"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://thecode.julsql.fr/en/contact"/>
+    <lastmod>2026-10-21</lastmod>
+  </url>
+  <url>
+    <loc>https://thecode.julsql.fr/en/privacy</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://thecode.julsql.fr/en/privacy"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://thecode.julsql.fr/fr/privacy"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://thecode.julsql.fr/en/privacy"/>
+    <lastmod>2026-10-21</lastmod>
+  </url>
+  <url>
+    <loc>https://thecode.julsql.fr/fr/privacy</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://thecode.julsql.fr/en/privacy"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://thecode.julsql.fr/fr/privacy"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://thecode.julsql.fr/en/privacy"/>
+    <lastmod>2026-10-21</lastmod>
+  </url>
+  <url>
+    <loc>https://thecode.julsql.fr/en/terms</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://thecode.julsql.fr/en/terms"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://thecode.julsql.fr/fr/terms"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://thecode.julsql.fr/en/terms"/>
+    <lastmod>2026-10-21</lastmod>
+  </url>
+  <url>
+    <loc>https://thecode.julsql.fr/fr/terms</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://thecode.julsql.fr/en/terms"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://thecode.julsql.fr/fr/terms"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://thecode.julsql.fr/en/terms"/>
+    <lastmod>2026-10-21</lastmod>
+  </url>
+</urlset>
