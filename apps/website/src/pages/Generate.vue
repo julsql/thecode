@@ -288,7 +288,9 @@
                  derrière le verrou de l'écran carnet : le générateur ne fait
                  qu'enregistrer. Voir shared/spec/vault-lock.md. -->
             <p class="hint">
-              <router-link :to="localePath('vault')">{{ t("gen_vault_manage") }}</router-link>
+              <router-link :to="localePath('account/vault')">{{
+                t("gen_vault_manage")
+              }}</router-link>
             </p>
           </section>
 

@@ -13,7 +13,14 @@
 
 import { normalizeSettings, type DefaultSettings } from "@/settings";
 import { aesKey, b64d, b64dOrNull, b64e, concatBytes, pbkdf2Bits } from "@/transfer";
-import { mergeVaults, selectForPush, type Conflict, type Vault, type VaultEntry } from "@/vault";
+import {
+  canonicalJson,
+  mergeVaults,
+  selectForPush,
+  type Conflict,
+  type Vault,
+  type VaultEntry,
+} from "@/vault";
 
 export const DEFAULT_ENDPOINT = "https://thecode-api.julsql.fr";
 const SESSION_KEY = "thecode.session";
@@ -476,7 +483,14 @@ export async function syncVault(
   vault: Vault,
   masterKey: string,
   session: Session,
-): Promise<{ vault: Vault; conflicts: Conflict[]; localOnly: number; session: Session }> {
+): Promise<{
+  vault: Vault;
+  conflicts: Conflict[];
+  localOnly: number;
+  session: Session;
+  /** Révision du compte après cette synchronisation. */
+  revision: number;
+}> {
   const account = await accountSalt(session);
   const key = await deriveSyncKey(masterKey, account.salt);
 
@@ -509,15 +523,39 @@ export async function syncVault(
         )
       : { push: merged.entries, localOnly: [] };
 
+  // Seul ce qui diffère du serveur part. Tout renvoyer ferait monter la
+  // révision à chaque synchronisation : deux écrans qui la surveillent
+  // (`remoteRevision`) se relanceraient l'un l'autre sans fin.
+  const known = new Map(remote.entries.map((e) => [e.id, canonicalJson(e)]));
+  const changed = push.filter((e) => known.get(e.id) !== canonicalJson(e));
+  const done = { vault: merged, conflicts, localOnly: localOnly.length };
+  if (!changed.length) {
+    return { ...done, session: pulled.session, revision: pulled.result.revision };
+  }
+
   const payload = {
     base_revision: pulled.result.revision,
-    entries: await Promise.all(push.map((e) => encryptEntry(e, key))),
+    entries: await Promise.all(changed.map((e) => encryptEntry(e, key))),
   };
   const pushed = await withFreshToken(pulled.session, (token) =>
     request(`${session.endpoint}/v1/vault`, { payload, token }),
   );
 
-  return { vault: merged, conflicts, localOnly: localOnly.length, session: pushed.session };
+  return { ...done, session: pushed.session, revision: pushed.result.revision };
+}
+
+/**
+ * Révision du carnet sur le compte, sans rien télécharger d'autre que ce qui
+ * a changé depuis `since` : de quoi savoir si un autre appareil a écrit.
+ */
+export async function remoteRevision(
+  session: Session,
+  since: number,
+): Promise<{ revision: number; session: Session }> {
+  const pulled = await withFreshToken(session, (token) =>
+    request(`${session.endpoint}/v1/vault?since=${since}`, { token }),
+  );
+  return { revision: pulled.result.revision, session: pulled.session };
 }
 
 function settingsTime(updatedAt: string): number {

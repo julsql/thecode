@@ -39,10 +39,40 @@ final class AutofillModel: ObservableObject {
 
     /// Ce que le ViewController sait du carnet : de quoi résoudre un
     /// identifiant saisi.
-    var resolveLogin: (_ login: String, _ pinned: String?) -> AutofillLogin.Fill? = { _, _ in nil }
+    var resolveLogin: (_ login: String, _ pinned: String?, _ separate: Bool) -> AutofillLogin.Fill? =
+        { _, _, _ in nil }
+
+    /// L'identifiant saisi est celui d'un autre compte que l'entrée sans
+    /// identifiant du site : il aura son propre mot de passe.
+    @Published var separateAccount = false
+
+    /// Identifiants du carnet à proposer d'un geste.
+    @Published var suggestions: [String] = []
 
     /// Le remplissage correspondant à la saisie (`nil` sans domaine).
-    var typedFill: AutofillLogin.Fill? { resolveLogin(login, pinned?.entryId) }
+    var typedFill: AutofillLogin.Fill? { resolveLogin(login, pinned?.entryId, separateAccount) }
+
+    /// L'identifiant saisi retombe sur le compte sans identifiant du site : on
+    /// laisse choisir d'en faire un compte à part.
+    var offersSeparateAccount: Bool {
+        guard pinned == nil else { return false }
+        if separateAccount { return !AutofillLogin.normalize(login).isEmpty }
+        return typedFill.map(AutofillLogin.keepsLoginlessEntry) ?? false
+    }
+
+    /// « Remplir » demande un identifiant : s'en passer est un choix, qui a
+    /// son propre bouton. Une entrée choisie dans la liste a déjà son mot de
+    /// passe, l'identifiant n'y est qu'un confort.
+    var canFillTyped: Bool {
+        typedFill != nil && (pinned != nil || !AutofillLogin.normalize(login).isEmpty)
+    }
+
+    /// « Ignorer » : le compte sans identifiant du site.
+    func fillWithoutLogin() {
+        login = ""
+        separateAccount = false
+        fillTyped()
+    }
 
     /// Le compte saisi est inconnu du carnet : on propose de l'enregistrer.
     var canSave: Bool { typedFill?.isNew ?? false }

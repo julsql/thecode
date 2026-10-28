@@ -105,6 +105,51 @@ struct AutofillLoginTests {
         #expect(!fill.isNew)
     }
 
+    @Test("Compte à part : l'entrée sans identifiant n'est pas réutilisée")
+    func separateAccountSkipsTheLoginlessEntry() throws {
+        let only = entry()
+        let fill = try #require(
+            AutofillLogin.resolve(
+                login: "moi", domain: "site.fr", vault: Vault(entries: [only]), separate: true,
+                length: 24, charset: charset))
+
+        #expect(fill.isNew)
+        #expect(fill.resolution.login == "moi")
+        #expect(fill.resolution.entryId != only.id)
+    }
+
+    @Test("Signale l'identifiant qui retombe sur le compte sans identifiant")
+    func tellsWhenTheLoginlessEntryIsKept() throws {
+        let kept = try #require(resolve("moi", vault: Vault(entries: [entry()])))
+        #expect(AutofillLogin.keepsLoginlessEntry(kept))
+
+        let empty = try #require(resolve("", vault: Vault(entries: [entry()])))
+        #expect(!AutofillLogin.keepsLoginlessEntry(empty))
+        let known = try #require(resolve("alice", vault: Vault(entries: [entry(login: "alice")])))
+        #expect(!AutofillLogin.keepsLoginlessEntry(known))
+        let new = try #require(resolve("bob", vault: Vault(entries: [])))
+        #expect(!AutofillLogin.keepsLoginlessEntry(new))
+    }
+
+    @Test("Propose les identifiants du carnet, les plus utilisés d'abord")
+    func suggestsTheLoginsUsedElsewhere() {
+        var gone = entry("vieux.fr", login: "ancien")
+        gone.deleted = true
+        let vault = Vault(entries: [
+            entry("a.fr", login: "zoe"), entry("b.fr", login: "moi@exemple.fr"),
+            entry("c.fr", login: " moi@exemple.fr "), entry("d.fr", login: "alice"),
+            entry("e.fr"), gone, entry("site.fr", login: "alice"),
+        ])
+
+        // « alice » est déjà un compte du site : il a son bouton.
+        #expect(
+            AutofillLogin.suggestions(vault: vault, domain: "site.fr") == ["moi@exemple.fr", "zoe"])
+        // À égalité d'usage, l'ordre alphabétique.
+        #expect(AutofillLogin.suggestions(vault: vault, domain: "autre.fr", limit: 2)
+            == ["alice", "moi@exemple.fr"])
+        #expect(AutofillLogin.suggestions(vault: Vault(entries: []), domain: "site.fr").isEmpty)
+    }
+
     @Test("Un autre identifiant qu'une seule entrée qui en porte un : nouveau compte")
     func otherLoginIsAnotherAccount() throws {
         let fill = try #require(resolve("bob", vault: Vault(entries: [entry(login: "alice")])))

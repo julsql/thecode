@@ -75,13 +75,15 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
             lower: settings.minState, upper: settings.majState,
             symbols: settings.symState, numbers: settings.chiState)
         let accounts = vault.findAll(domain: domain).map(SiteResolution.init(entry:))
+        let suggestions = AutofillLogin.suggestions(vault: vault, domain: domain)
         Task { @MainActor in
             model.domain = domain
             model.accounts = accounts
-            model.resolveLogin = { login, pinned in
+            model.suggestions = suggestions
+            model.resolveLogin = { login, pinned, separate in
                 AutofillLogin.resolve(
                     login: login, domain: domain, vault: vault, pinned: pinned,
-                    length: settings.length, charset: charset)
+                    separate: separate, length: settings.length, charset: charset)
             }
         }
     }
@@ -135,6 +137,10 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
             if case .save(let entry) = outcome {
                 vault.entries.append(entry)
                 saved = (try? VaultStore.save(vault)) != nil
+                if saved { SyncPending.mark() }
+                // Avant de rendre la main : l'extension peut être arrêtée
+                // aussitôt la requête terminée.
+                if saved { await AutoSync.syncAfterExtensionWrite() }
             }
             await MainActor.run { self.finishSave(saved: saved) }
         }
@@ -162,6 +168,7 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
         // eux, un autre appareil ne saurait pas les rejouer.
         if saveToVault, !password.isEmpty {
             rememberAccount(fill.resolution.siteKey, login: fill.user)
+            syncInBackground()
         }
         guard !password.isEmpty else {
             // Cas pathologique : clé absente, ou aucun charset coché dans l'app.
@@ -198,6 +205,23 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
 
     // MARK: – Génération
 
+    /// Envoie l'entrée enregistrée sans retarder le remplissage : le système
+    /// laisse à l'extension le temps de finir, ou l'interrompt — l'app
+    /// synchronisera alors à sa prochaine ouverture.
+    private func syncInBackground() {
+        // La passe se borne elle-même (`timeout`) : le bloc ne retient donc
+        // jamais l'extension au-delà, même si le système dit le temps écoulé.
+        ProcessInfo.processInfo.performExpiringActivity(withReason: "thecode.sync") { expired in
+            guard !expired else { return }
+            let done = DispatchSemaphore(value: 0)
+            Task.detached {
+                await AutoSync.syncAfterExtensionWrite()
+                done.signal()
+            }
+            done.wait()
+        }
+    }
+
     /// Enregistre le compte (domaine + identifiant) avec les réglages en vigueur.
     private func rememberAccount(_ domain: String, login: String) {
         let settings = PasswordSettings.load(from: UserDefaults(suiteName: appGroupID))
@@ -207,7 +231,9 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
             charset: Charset(
                 lower: settings.minState, upper: settings.majState,
                 symbols: settings.symState, numbers: settings.chiState))
-        try? VaultStore.save(vault)
+        // Due tant qu'une passe ne l'a pas portée : si celle de l'extension
+        // est interrompue, l'app la rattrape à son ouverture.
+        if (try? VaultStore.save(vault)) != nil { SyncPending.mark() }
     }
 
     private func generatePassword(domainName: String, resolution: SiteResolution) -> String {

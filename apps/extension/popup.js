@@ -480,12 +480,18 @@ function refreshVault(domain, message) {
     );
 
     loginOptions.innerHTML = "";
-    for (const login of new Set(matches.map((e) => e.login || ""))) {
-      if (!login) continue;
+    const offer = (login) => {
+      if (!login) return;
       const option = document.createElement("option");
       option.value = login;
       loginOptions.appendChild(option);
-    }
+    };
+    // Les comptes du site d'abord, puis les identifiants qui servent ailleurs.
+    for (const login of new Set(matches.map((e) => e.login || ""))) offer(login);
+    browser.runtime.sendMessage({ action: "loginSuggestions", domain }, (suggested) => {
+      if (domain !== currentDomain) return;
+      for (const login of suggested?.logins || []) offer(login);
+    });
 
     const known = Boolean(currentEntryId);
     vaultStatus.textContent = known

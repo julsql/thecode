@@ -4,6 +4,16 @@ import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Parcelable;
+import android.os.SystemClock;
+import android.app.AlertDialog;
+import android.text.Editable;
+import android.text.InputType;
+import android.text.TextWatcher;
+import android.view.View;
+import android.view.WindowManager;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.view.autofill.AutofillId;
 import android.view.autofill.AutofillManager;
 import android.view.autofill.AutofillValue;
@@ -20,6 +30,7 @@ import androidx.fragment.app.FragmentActivity;
 import android.service.autofill.Dataset;
 
 import fr.juliette.thecode.Generator;
+import fr.juliette.thecode.vault.LoginSuggestions;
 import fr.juliette.thecode.vault.SiteResolution;
 import fr.juliette.thecode.vault.Vault;
 import fr.juliette.thecode.Preferences;
@@ -49,6 +60,11 @@ public class AutofillAuthActivity extends FragmentActivity {
     public static final String EXTRA_USERNAME_ID = "fr.juliette.thecode.autofill.USERNAME_ID";
     /** Valeur du champ identifiant au moment de la suggestion. */
     public static final String EXTRA_PAGE_LOGIN = "fr.juliette.thecode.autofill.PAGE_LOGIN";
+    /**
+     * Compte inconnu du carnet et aucun identifiant lu dans la page : on le
+     * demande avant de calculer, puisqu'il entre dans le mot de passe.
+     */
+    public static final String EXTRA_ASK_LOGIN = "fr.juliette.thecode.autofill.ASK_LOGIN";
 
     private String domain;
     private String entryId;
@@ -59,6 +75,7 @@ public class AutofillAuthActivity extends FragmentActivity {
     private AutofillId usernameId;
     @Nullable
     private String typedLogin;
+    private boolean askLogin;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -79,7 +96,93 @@ public class AutofillAuthActivity extends FragmentActivity {
             return;
         }
 
+        askLogin = intent.getBooleanExtra(EXTRA_ASK_LOGIN, false);
         promptBiometric();
+    }
+
+    /**
+     * Authentifié : rien du carnet n'est montré avant, pas même les
+     * identifiants proposés, qui viennent d'autres sites.
+     */
+    private void afterAuthentication() {
+        if (askLogin) askLogin();
+        else fillAndFinish();
+    }
+
+    /**
+     * Demande l'identifiant du compte. « Ignorer » calcule sans : c'est un
+     * choix, pas un champ laissé vide.
+     */
+    private void askLogin() {
+        EditText field = new EditText(this);
+        field.setHint(R.string.autofill_ask_login_hint);
+        field.setSingleLine(true);
+        field.setInputType(InputType.TYPE_CLASS_TEXT
+                | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
+                | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+        // Ce champ est le nôtre : le remplissage automatique n'a rien à y faire.
+        field.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO);
+        int margin = Math.round(20 * getResources().getDisplayMetrics().density);
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(margin, margin / 2, margin, 0);
+        box.addView(field);
+
+        // Les identifiants déjà au carnet, d'un geste : c'est le plus souvent
+        // l'un d'eux.
+        LinearLayout suggestions = new LinearLayout(this);
+        suggestions.setOrientation(LinearLayout.VERTICAL);
+        for (String login : LoginSuggestions.of(Vault.load(this), domain,
+                LoginSuggestions.DEFAULT_LIMIT)) {
+            Button suggestion = new Button(this, null, android.R.attr.borderlessButtonStyle);
+            suggestion.setText(login);
+            suggestion.setAllCaps(false);
+            suggestion.setOnClickListener(v -> {
+                field.setText(login);
+                field.setSelection(login.length());
+            });
+            suggestions.addView(suggestion);
+        }
+        box.addView(suggestions);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle(getString(R.string.autofill_ask_login_title, domain))
+                .setMessage(R.string.autofill_ask_login_message)
+                .setView(box)
+                .setPositiveButton(R.string.autofill_ask_login_fill, (d, which) -> {
+                    pageLogin = SiteResolution.normalizeLogin(field.getText().toString());
+                    TypedLoginHint.remember(domain, pageLogin, SystemClock.elapsedRealtime());
+                    fillAndFinish();
+                })
+                .setNeutralButton(R.string.autofill_ask_login_skip, (d, which) -> {
+                    TypedLoginHint.forget();
+                    fillAndFinish();
+                })
+                .setNegativeButton(android.R.string.cancel, (d, which) -> cancelAndFinish())
+                .setOnCancelListener(d -> cancelAndFinish())
+                .create();
+        dialog.setOnShowListener(d -> {
+            Button fill = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            fill.setEnabled(false);
+            field.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) { }
+
+                @Override
+                public void afterTextChanged(Editable s) {
+                    fill.setEnabled(!s.toString().trim().isEmpty());
+                }
+            });
+            field.requestFocus();
+        });
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setSoftInputMode(
+                    WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
+        }
+        dialog.show();
     }
 
     private void promptBiometric() {
@@ -95,7 +198,7 @@ public class AutofillAuthActivity extends FragmentActivity {
         if (bm.canAuthenticate(auth) != BiometricManager.BIOMETRIC_SUCCESS) {
             // Aucune méthode d'auth disponible : l'utilisateur a déjà déverrouillé
             // son appareil pour atteindre ce point — on remplit directement.
-            fillAndFinish();
+            afterAuthentication();
             return;
         }
 
@@ -104,7 +207,7 @@ public class AutofillAuthActivity extends FragmentActivity {
                 new BiometricPrompt.AuthenticationCallback() {
                     @Override
                     public void onAuthenticationSucceeded(@NonNull BiometricPrompt.AuthenticationResult result) {
-                        fillAndFinish();
+                        afterAuthentication();
                     }
 
                     @Override
@@ -151,6 +254,13 @@ public class AutofillAuthActivity extends FragmentActivity {
 
         Intent reply = new Intent();
         reply.putExtra(AutofillManager.EXTRA_AUTHENTICATION_RESULT, dataset);
+        // Éphémère : le système applique ce Dataset une fois et garde la
+        // suggestion d'origine. Sinon il la remplace par celui-ci, qui n'a pas
+        // de présentation pour la barre du clavier : champ vidé puis retouché,
+        // plus rien n'était proposé avant de recharger la page.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            reply.putExtra(AutofillManager.EXTRA_AUTHENTICATION_RESULT_EPHEMERAL_DATASET, true);
+        }
         setResult(RESULT_OK, reply);
         finish();
     }

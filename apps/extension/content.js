@@ -27,13 +27,62 @@ function menuNotice(response) {
   return msg("content_no_key", "Aucune clef n'est renseignée. Cliquer pour rentrer une clef");
 }
 
+const LOGIN_FIELD_TYPES = new Set(["text", "email", "tel"]);
+const LOGIN_WORDS = /user|login|e-?mail|identifiant|courriel|utilisateur|pseudo/i;
+
+/**
+ * Choisit l'identifiant parmi les champs places avant le mot de passe, dans
+ * l'ordre de la page. Chaque champ est decrit par ses proprietes (`type` est
+ * la propriete, « text » quand l'attribut manque), pas par un selecteur : un
+ * `<input name="user">` sans attribut `type` echappe a `input[type="text"]`.
+ *
+ * Du plus sur au moins sur, le dernier de chaque sorte :
+ * 1. le champ qui se declare (`autocomplete` username ou email, type email),
+ *    meme masque : un formulaire en deux etapes le garde pour ca ;
+ * 2. un champ visible dont le nom, l'id, l'indication ou le libelle parle
+ *    d'identifiant ;
+ * 3. avec `anyField`, le dernier champ visible rempli : une page peut en
+ *    contenir d'autres, un champ de recherche par exemple.
+ */
+function pickLogin(fields, { anyField = true } = {}) {
+  let declared = "";
+  let named = "";
+  let last = "";
+  for (const field of fields) {
+    const value = (field.value || "").trim();
+    if (!value || value.length > 120) continue;
+    const type = (field.type || "text").toLowerCase();
+    const autocomplete = (field.autocomplete || "").toLowerCase().split(/\s+/);
+    const declares = autocomplete.includes("username") || autocomplete.includes("email");
+    if (declares && type !== "password") {
+      declared = value;
+      continue;
+    }
+    if (!LOGIN_FIELD_TYPES.has(type)) continue;
+    if (type === "email") {
+      declared = value;
+      continue;
+    }
+    if (!field.visible) continue;
+    last = value;
+    const texts = [field.name, field.id, field.placeholder, field.ariaLabel];
+    if (texts.some((text) => LOGIN_WORDS.test(text || ""))) named = value;
+  }
+  return declared || named || (anyField ? last : "");
+}
+
 (function () {
-  // En test (Node), seul menuNotice est charge : pas de page a equiper.
+  // En test (Node), seuls menuNotice et pickLogin sont charges : pas de page
+  // a equiper.
   if (typeof document === "undefined") return;
   const MENU_CLASS = "pw-suggester-menu";
   let listInput = [];
 
-  function createMenuFor(input) {
+  /**
+   * @param asked identifiant donne dans le menu lui-meme (« » pour
+   *   « Ignorer ») : il remplace celui du formulaire, et n'est pas redemande.
+   */
+  function createMenuFor(input, asked) {
     // Déjà créé ?
     if (input.__pwSuggesterMenu || listInput.includes(input)) return;
     listInput.push(input);
@@ -42,7 +91,7 @@ function menuNotice(response) {
     // L'identifiant deja saisi entre dans le calcul, comme dans la popup : sans
     // lui, le mot de passe propose ici differait de celui de la popup, et
     // celui enregistre ensuite (avec l'identifiant) ne l'aurait pas redonne.
-    const login = findLogin(input);
+    const login = asked === undefined ? findLogin(input) : asked;
     browser.runtime.sendMessage(
       // Rien de saisi : on n'envoie rien, et le premier compte du site sert.
       { action: "generatePassword", url: location.href, login: login || undefined },
@@ -84,6 +133,14 @@ function menuNotice(response) {
         logo.style.width = "18px";
         logo.style.height = "18px";
         logo.style.objectFit = "contain";
+
+        // Compte inconnu du carnet et aucun identifiant trouve dans la page :
+        // on le demande avant de proposer un mot de passe, puisqu'il entre
+        // dans son calcul.
+        if (asked === undefined && response?.password && !response.known && !response.login) {
+          askLogin(menu, input);
+          return;
+        }
 
         // ➤  AUCUNE CLEF DISPONIBLE
         if (!response || response.error) {
@@ -161,7 +218,9 @@ function menuNotice(response) {
             removeMenu(input);
             return;
           }
-          offerToSave(menu, input);
+          // L'identifiant qui a servi au calcul, pas celui du champ relu
+          // maintenant : l'entree doit redonner ce mot de passe-ci.
+          offerToSave(menu, input, response.login || "");
         });
 
         container.addEventListener("mouseover", () => {
@@ -258,22 +317,28 @@ function menuNotice(response) {
    * peut poser les deux champs cote a cote sans les rattacher.
    */
   function findLogin(input) {
-    const scope = input.form || document;
-    const candidates = scope.querySelectorAll(
-      'input[type="email"], input[autocomplete="username"], input[type="text"], input[type="tel"]',
-    );
+    const before = (scope) =>
+      [...scope.querySelectorAll("input")]
+        .filter(
+          (field) =>
+            field !== input &&
+            field.compareDocumentPosition(input) & Node.DOCUMENT_POSITION_FOLLOWING,
+        )
+        .map((field) => ({
+          value: field.value,
+          type: field.type,
+          autocomplete: field.getAttribute("autocomplete"),
+          name: field.name,
+          id: field.id,
+          placeholder: field.placeholder,
+          ariaLabel: field.getAttribute("aria-label"),
+          visible: field.getClientRects().length > 0,
+        }));
 
-    let best = "";
-    for (const field of candidates) {
-      const value = (field.value || "").trim();
-      if (!value || value.length > 120) continue;
-      // Le dernier champ rempli avant le mot de passe est le bon candidat :
-      // une page peut en contenir d'autres, un champ de recherche par exemple.
-      if (field.compareDocumentPosition(input) & Node.DOCUMENT_POSITION_FOLLOWING) {
-        best = value;
-      }
-    }
-    return best;
+    if (!input.form) return pickLogin(before(document));
+    // Hors du formulaire, seul un champ qui dit etre l'identifiant compte :
+    // le reste de la page a ses propres champs.
+    return pickLogin(before(input.form)) || pickLogin(before(document), { anyField: false });
   }
 
   /**
@@ -283,9 +348,8 @@ function menuNotice(response) {
    * Rien n'est ecrit sans reponse : le carnet est ce qui dit quels reglages
    * appliquer a quel site, une entree posee par erreur se paie plus tard.
    */
-  function offerToSave(menu, input) {
+  function offerToSave(menu, input, login) {
     input.__pwAsking = true;
-    const login = findLogin(input);
 
     const ask = document.createElement("div");
     ask.style.display = "flex";
@@ -317,22 +381,7 @@ function menuNotice(response) {
       });
     };
 
-    const button = (text, onClick) => {
-      const b = document.createElement("button");
-      b.innerText = text;
-      b.style.cursor = "pointer";
-      b.style.border = "1px solid rgba(255,255,255,0.4)";
-      b.style.background = "transparent";
-      b.style.color = "white";
-      b.style.borderRadius = "4px";
-      b.style.padding = "2px 10px";
-      b.style.fontSize = "13px";
-      b.addEventListener("click", (e) => {
-        e.stopPropagation();
-        onClick();
-      });
-      return b;
-    };
+    const button = menuButton;
 
     const yesBtn = button(msg("content_yes", "Oui"), () => answer(true));
     const noBtn = button(msg("content_no", "Non"), () => answer(false));
@@ -341,6 +390,137 @@ function menuNotice(response) {
 
     menu.innerHTML = "";
     menu.appendChild(ask);
+  }
+
+  function menuButton(text, onClick) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.innerText = text;
+    b.style.cursor = "pointer";
+    b.style.border = "1px solid rgba(255,255,255,0.4)";
+    b.style.background = "transparent";
+    b.style.color = "white";
+    b.style.borderRadius = "4px";
+    b.style.padding = "2px 10px";
+    b.style.fontSize = "13px";
+    b.addEventListener("click", (e) => {
+      e.stopPropagation();
+      onClick();
+    });
+    return b;
+  }
+
+  /**
+   * Demande l'identifiant du compte dans le menu. « Ignorer » propose le mot
+   * de passe sans identifiant : c'est un choix, pas un champ oublie.
+   */
+  function askLogin(menu, input) {
+    // Le champ du menu prend le focus : le menu ne doit pas se refermer.
+    input.__pwAsking = true;
+
+    // Racine fermee : les identifiants proposes viennent d'autres sites du
+    // carnet, les scripts de la page ne doivent pas pouvoir les lire.
+    const host = document.createElement("div");
+    const root = host.attachShadow({ mode: "closed" });
+
+    const ask = document.createElement("form");
+    ask.style.display = "flex";
+    ask.style.flexWrap = "wrap";
+    ask.style.alignItems = "center";
+    ask.style.gap = "8px";
+    ask.style.padding = "4px 8px";
+    ask.style.color = "white";
+    ask.style.fontSize = "13px";
+    ask.style.maxWidth = "320px";
+
+    const label = document.createElement("label");
+    label.innerText = msg("content_ask_login", "Identifiant du compte sur ce site");
+    label.style.flexBasis = "100%";
+
+    const field = document.createElement("input");
+    field.type = "text";
+    field.autocomplete = "off";
+    field.spellcheck = false;
+    field.maxLength = 120;
+    field.setAttribute("aria-label", label.innerText);
+    field.style.flex = "1";
+    field.style.minWidth = "140px";
+    field.style.padding = "3px 6px";
+    field.style.borderRadius = "4px";
+    field.style.border = "1px solid rgba(255,255,255,0.4)";
+    field.style.background = "white";
+    field.style.color = "black";
+    field.style.fontSize = "13px";
+
+    const note = document.createElement("div");
+    note.innerText = msg(
+      "content_ask_login_note",
+      "Il entre dans le mot de passe : il ne pourra pas être ajouté ensuite sans le changer.",
+    );
+    note.style.flexBasis = "100%";
+    note.style.fontSize = "11px";
+    note.style.color = "rgba(255,255,255,0.75)";
+
+    // Le menu repart avec la reponse : le mot de passe s'affiche comme
+    // d'habitude, calcule avec cet identifiant ou sans.
+    const answer = (login) => {
+      removeMenu(input);
+      createMenuFor(input, login);
+      input.focus();
+    };
+    ask.addEventListener("submit", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const login = field.value.trim();
+      if (login) answer(login);
+    });
+    // Les raccourcis de la page ne doivent pas reagir a ce qu'on tape ici.
+    for (const type of ["keydown", "keyup", "keypress"]) {
+      field.addEventListener(type, (e) => {
+        e.stopPropagation();
+        if (type === "keydown" && e.key === "Escape") removeMenu(input);
+      });
+    }
+    // Sorti du menu sans repondre (clic ailleurs dans la page) : il se
+    // referme, comme le menu du mot de passe quand son champ perd le focus.
+    ask.addEventListener("focusout", (e) => {
+      if (ask.contains(e.relatedTarget) || e.relatedTarget === input) return;
+      setTimeout(() => {
+        if (input.__pwSuggesterMenu === menu && !root.activeElement) {
+          removeMenu(input);
+        }
+      }, 150);
+    });
+
+    const okBtn = menuButton(msg("content_ask_login_ok", "Valider"), () => {
+      const login = field.value.trim();
+      if (login) answer(login);
+      else field.focus();
+    });
+    const skipBtn = menuButton(msg("content_ask_login_skip", "Ignorer"), () => answer(""));
+
+    ask.appendChild(label);
+    ask.appendChild(field);
+    ask.appendChild(okBtn);
+    ask.appendChild(skipBtn);
+    // Les identifiants deja au carnet, d'un geste : c'est le plus souvent
+    // l'un d'eux.
+    const suggestions = document.createElement("div");
+    suggestions.style.display = "flex";
+    suggestions.style.flexWrap = "wrap";
+    suggestions.style.gap = "6px";
+    suggestions.style.flexBasis = "100%";
+    browser.runtime.sendMessage({ action: "loginSuggestions" }, (resp) => {
+      for (const login of resp?.logins || []) {
+        suggestions.appendChild(menuButton(login, () => answer(login)));
+      }
+    });
+
+    ask.appendChild(suggestions);
+    ask.appendChild(note);
+    root.appendChild(ask);
+    menu.appendChild(host);
+    field.focus();
   }
 
   function removeMenu(input) {
@@ -383,5 +563,5 @@ function menuNotice(response) {
 })();
 
 if (typeof module !== "undefined") {
-  module.exports = { menuNotice };
+  module.exports = { menuNotice, pickLogin };
 }

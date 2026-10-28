@@ -193,4 +193,9 @@
     <string name="vault_delete_done">« %1$s » supprimé.</string>
     <string name="vault_same_key_hint">Si vous ne voyez pas tous vos mots de passe, vérifiez que vous utilisez la même clef.</string>
     <string name="autofill_no_login">sans identifiant : saisissez-le avant si le site en utilise un</string>
+    <string name="autofill_ask_login_title">Identifiant pour %1$s</string>
+    <string name="autofill_ask_login_message">L\'identifiant entre dans le calcul du mot de passe : il ne pourra pas être ajouté ensuite sans le changer. Ignorer calcule le mot de passe sans identifiant.</string>
+    <string name="autofill_ask_login_hint">Identifiant</string>
+    <string name="autofill_ask_login_fill">Remplir</string>
+    <string name="autofill_ask_login_skip">Ignorer</string>
 </resources>

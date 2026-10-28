@@ -234,7 +234,7 @@ describe("carnet et empreinte", () => {
 
     // La gestion vit derrière le verrou : plus de liste ni de renouvellement ici.
     expect(wrapper.text()).not.toContain("Renouveler");
-    expect(wrapper.find('a[href="/fr/vault"]').exists()).toBe(true);
+    expect(wrapper.find('a[href="/fr/account/vault"]').exists()).toBe(true);
   });
 
   it("ne genere rien sans site", async () => {
