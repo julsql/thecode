@@ -21,6 +21,34 @@ time, on every device. No password is ever stored — each one is recomputed on 
 Five clients share one algorithm, plus an optional sync API — which is exactly why this is a
 monorepo.
 
+## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/website.png" alt="Website" width="90%">
+</p>
+
+### iPhone · Android
+
+<p align="center">
+  <img src="docs/screenshots/iphone-generate.png" alt="iPhone: generator" width="24%">
+  <img src="docs/screenshots/iphone-vault.png" alt="iPhone: vault" width="24%">
+  <img src="docs/screenshots/android-generate.png" alt="Android: generator" width="24%">
+  <img src="docs/screenshots/android-autofill.png" alt="Android: autofill" width="24%">
+</p>
+
+### macOS
+
+<p align="center">
+  <img src="docs/screenshots/macos-generate.png" alt="macOS app" width="90%">
+</p>
+
+### Browser extensions
+
+<p align="center">
+  <img src="docs/screenshots/extension-popup.png" alt="Extension popup" width="49%">
+  <img src="docs/screenshots/extension-autofill.png" alt="In-page suggestion" width="49%">
+</p>
+
 ## Layout
 
 | Path              | What it is                                                                      |
