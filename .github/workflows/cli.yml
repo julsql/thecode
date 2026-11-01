@@ -21,9 +21,9 @@ jobs:
         # La borne basse vient de requires-python dans pyproject.toml.
         python: ["3.9", "3.13"]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - run: ./scripts/check-shared.sh
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python }}
       - run: pip install -e '.[test]' ruff pytest-cov
