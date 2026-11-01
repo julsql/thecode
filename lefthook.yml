@@ -15,7 +15,11 @@ pre-commit:
 
     prettier:
       glob: "*.{js,ts,vue,json,css,html,md}"
-      exclude: "(^|/)(node_modules|dist|build|coverage)/"
+      exclude:
+        - "**/node_modules/**"
+        - "**/dist/**"
+        - "**/build/**"
+        - "**/coverage/**"
       run: npx --yes prettier@3 --print-width 100 --check {staged_files}
 
     ruff:
