@@ -15,7 +15,9 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    # ubuntu-latest (26.04) n'a plus de build Python 3.9 : on reste sur 24.04
+    # tant que requires-python garde 3.9 comme borne basse.
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         # La borne basse vient de requires-python dans pyproject.toml.
