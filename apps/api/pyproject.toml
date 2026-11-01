@@ -30,7 +30,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-test = ["pytest>=9.2", "pytest-cov>=7.1", "httpx>=0.28.1", "ruff>=0.17", "testcontainers[postgres]>=4.15"]
+test = ["pytest>=9.2", "pytest-cov>=7.1", "httpx2>=2.16", "ruff>=0.17", "testcontainers[postgres]>=4.15"]
 
 [tool.setuptools]
 packages = ["thecode_api", "thecode_api.routes"]

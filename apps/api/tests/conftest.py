@@ -45,7 +45,7 @@ def postgres_url() -> str:
         yield existing
         return
 
-    from testcontainers.postgres import PostgresContainer
+    from testcontainers.community.postgres import PostgresContainer
 
     with PostgresContainer("postgres:16-alpine", driver="psycopg") as container:
         yield container.get_connection_url()
@@ -82,7 +82,7 @@ def settings(postgres_url):
     get_settings.cache_clear()
     test_settings = Settings(
         database_url=postgres_url,
-        jwt_secret="secret-de-test-uniquement",
+        jwt_secret="secret-de-test-uniquement-32-octets-min",
         environment="test",
         max_entries_per_account=50,
         max_blob_bytes=1024,
