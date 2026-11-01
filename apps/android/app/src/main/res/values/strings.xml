@@ -193,4 +193,9 @@
     <string name="vault_delete_done">"%1$s" deleted.</string>
     <string name="vault_same_key_hint">If you don\'t see all your passwords, check that you are using the same key.</string>
     <string name="autofill_no_login">no username: type it first if the site uses one</string>
+    <string name="autofill_ask_login_title">Username for %1$s</string>
+    <string name="autofill_ask_login_message">The username is part of the password: it cannot be added later without changing it. Skip computes the password without a username.</string>
+    <string name="autofill_ask_login_hint">Username</string>
+    <string name="autofill_ask_login_fill">Fill</string>
+    <string name="autofill_ask_login_skip">Skip</string>
 </resources>

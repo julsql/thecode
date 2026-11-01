@@ -92,7 +92,15 @@ public final class SyncScheduler {
      * ({@link Vault#saveSynced}) non.
      */
     public void watchVaultWrites() {
-        Vault.setWriteListener(this::onChange);
+        watchVaultWrites(() -> { });
+    }
+
+    /** @param onWrite appelé à chaque écriture, avant la demande de synchronisation */
+    public void watchVaultWrites(@NonNull Runnable onWrite) {
+        Vault.setWriteListener(() -> {
+            onWrite.run();
+            onChange();
+        });
     }
 
     /** Bouton « Synchroniser » : tout de suite, sans jamais doubler une en cours. */

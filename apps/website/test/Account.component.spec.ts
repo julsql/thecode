@@ -589,6 +589,23 @@ describe("page du compte", () => {
       expect(wrapper.text()).toContain("site web");
     });
 
+    it("ouvre le carnet depuis le compte", async () => {
+      localStorage.clear();
+      fakeService();
+      const anonymous = await mountAccount();
+      // Le carnet sert aussi sans compte : la rubrique ne dépend pas de la session.
+      expect(anonymous.find("#openVault").exists()).toBe(true);
+    });
+
+    it("ouvre le carnet depuis le compte connecté", async () => {
+      fakeService();
+      const wrapper = await mountAccount();
+
+      const link = wrapper.find("#openVault");
+      expect(link.text()).toBe("Ouvrir le carnet");
+      expect(link.attributes("href")).toBe("/fr/account/vault");
+    });
+
     it("présente une session du site comme un navigateur", async () => {
       const service = fakeService();
       service.state.devices = [

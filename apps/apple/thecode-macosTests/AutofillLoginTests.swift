@@ -50,4 +50,46 @@ struct AutofillLoginTests {
         #expect(fill.resolution.login == "")
         #expect(fill.user == "moi")
     }
+
+    @Test func separateAccountSkipsTheLoginlessEntry() throws {
+        let only = VaultEntry(siteKey: "julsql.fr", domains: ["julsql.fr"])
+        let fill = try #require(
+            AutofillLogin.resolve(
+                login: "moi", domain: "julsql.fr", vault: Vault(entries: [only]), separate: true,
+                length: 20, charset: Charset()))
+
+        #expect(fill.isNew)
+        #expect(fill.resolution.login == "moi")
+        #expect(fill.resolution.entryId != only.id)
+    }
+
+    @Test func tellsWhenTheLoginlessEntryIsKept() throws {
+        let loginless = Vault(entries: [VaultEntry(siteKey: "julsql.fr", domains: ["julsql.fr"])])
+        #expect(AutofillLogin.keepsLoginlessEntry(try #require(resolve("moi", vault: loginless))))
+        #expect(!AutofillLogin.keepsLoginlessEntry(try #require(resolve("", vault: loginless))))
+        #expect(
+            !AutofillLogin.keepsLoginlessEntry(try #require(resolve("bob", vault: Vault()))))
+    }
+
+    @Test func suggestsTheLoginsUsedElsewhere() {
+        func entry(_ site: String, _ login: String? = nil) -> VaultEntry {
+            VaultEntry(siteKey: site, domains: [site], login: login)
+        }
+        var gone = entry("vieux.fr", "ancien")
+        gone.deleted = true
+        let vault = Vault(entries: [
+            entry("a.fr", "zoe"), entry("b.fr", "moi@exemple.fr"),
+            entry("c.fr", " moi@exemple.fr "), entry("d.fr", "alice"),
+            entry("e.fr"), gone, entry("julsql.fr", "alice"),
+        ])
+
+        // « alice » est déjà un compte du site : il a son bouton.
+        #expect(
+            AutofillLogin.suggestions(vault: vault, domain: "julsql.fr")
+                == ["moi@exemple.fr", "zoe"])
+        #expect(
+            AutofillLogin.suggestions(vault: vault, domain: "autre.fr", limit: 2)
+                == ["alice", "moi@exemple.fr"])
+        #expect(AutofillLogin.suggestions(vault: Vault(), domain: "julsql.fr").isEmpty)
+    }
 }

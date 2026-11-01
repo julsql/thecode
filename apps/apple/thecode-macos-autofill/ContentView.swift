@@ -73,15 +73,38 @@ struct ContentView: View {
                     .textContentType(.username)
                     .disableAutocorrection(true)
                     .focused($loginFocused)
-                    .onSubmit { model.fillTyped() }
+                    .onSubmit { if model.canFillTyped { model.fillTyped() } }
+
+                // Faute de pouvoir lire le formulaire : les identifiants qui
+                // servent déjà ailleurs, d'un geste.
+                if model.pinned == nil, !model.suggestions.isEmpty {
+                    HStack(spacing: 8) {
+                        ForEach(model.suggestions, id: \.self) { suggestion in
+                            Button(suggestion) { model.login = suggestion }
+                                .controlSize(.small)
+                                .disabled(model.busy)
+                        }
+                    }
+                }
+
+                // Le site a un compte sans identifiant : par défaut on garde
+                // son mot de passe. Le dire, et laisser choisir.
+                if model.offersSeparateAccount {
+                    Toggle(isOn: $model.separateAccount) {
+                        Text(L10n.t(
+                            "C'est un autre compte que « \(model.accounts.first?.label ?? model.domain) » : lui donner son propre mot de passe",
+                            "This is a different account from “\(model.accounts.first?.label ?? model.domain)”: give it its own password"))
+                            .font(.footnote)
+                    }
+                }
 
                 // L'identifiant entre dans le mot de passe (v2) : l'ajouter après
                 // en changerait le mot de passe. On le dit avant de remplir. Inutile
                 // pour une entrée choisie : son mot de passe n'en dépend pas.
                 if model.pinned == nil {
                     Text(L10n.t(
-                        "Facultatif. Sans identifiant, le mot de passe est calculé et enregistré sans : saisissez-le maintenant si le site en utilise un, il ne pourra pas être ajouté ensuite sans changer le mot de passe.",
-                        "Optional. Without a username, the password is computed and saved without one: type it now if the site uses one, it can't be added later without changing the password."))
+                        "L'identifiant entre dans le calcul du mot de passe : il ne pourra pas être ajouté ensuite sans le changer. « Ignorer » calcule et enregistre le mot de passe sans identifiant.",
+                        "The username is part of the password: it can't be added later without changing it. “Skip” computes and saves the password without a username."))
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -105,9 +128,16 @@ struct ContentView: View {
                 if model.busy {
                     ProgressView().controlSize(.small)
                 }
+                // S'en passer est un choix explicite, pas un champ laissé vide.
+                if model.pinned == nil {
+                    Button(L10n.t("Ignorer : sans identifiant", "Skip: no username")) {
+                        model.fillWithoutLogin()
+                    }
+                    .disabled(model.busy || model.domain.isEmpty)
+                }
                 Button(L10n.t("Remplir", "Fill")) { model.fillTyped() }
                     .keyboardShortcut(.defaultAction)
-                    .disabled(model.busy || model.typedFill == nil)
+                    .disabled(model.busy || !model.canFillTyped)
             }
         }
         .frame(minWidth: 320, minHeight: 300)

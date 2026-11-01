@@ -26,6 +26,7 @@ import {
   deriveSyncKey,
   encryptEntry,
   openSettings,
+  remoteRevision,
   syncVault,
   VAULT_TAMPERED_MESSAGES,
   VaultTamperedError,
@@ -267,6 +268,41 @@ describe("synchronisation", () => {
     ]);
   });
 
+  it("ne pousse rien quand rien ne diffère du serveur", async () => {
+    // Deux écrans qui surveillent la révision se relanceraient sans fin si
+    // chaque synchronisation la faisait monter.
+    const first = await syncVault(vaultWith("google.com", "moi"), "clef", SESSION);
+    const again = await syncVault(first.vault, "clef", SESSION);
+
+    expect(server.sent).toHaveLength(1);
+    expect(first.revision).toBe(1);
+    expect(again.revision).toBe(1);
+    expect(server.revision).toBe(1);
+  });
+
+  it("ne pousse que ce qui a changé", async () => {
+    const first = await syncVault(vaultWith("google.com", "moi"), "clef", SESSION);
+    const added = newEntry("github.com", { domains: ["github.com"], login: "julsql" });
+    first.vault.entries.push(added);
+
+    const second = await syncVault(first.vault, "clef", SESSION);
+
+    const pushed = JSON.parse(server.sent[1]!).entries.map(
+      (row: { entry_id: string }) => row.entry_id,
+    );
+    expect(pushed).toStrictEqual([added.id]);
+    expect(second.revision).toBe(2);
+  });
+
+  it("dit la révision du compte sans synchroniser", async () => {
+    await syncVault(vaultWith("google.com", "moi"), "clef", SESSION);
+
+    const remote = await remoteRevision(SESSION, 0);
+
+    expect(remote.revision).toBe(1);
+    expect(server.sent).toHaveLength(1);
+  });
+
   it("laisse absent un deleted qui vaut faux", async () => {
     // La représentation canonique départage les écritures simultanées :
     // écrire « deleted: false » ici ferait désigner un gagnant différent des
@@ -328,7 +364,7 @@ describe("synchronisation", () => {
       } as Response),
     );
 
-    await expect(syncVault(emptyVault(), "clef", SESSION)).rejects.toThrow(/409/);
+    await expect(syncVault(vaultWith("google.com", "moi"), "clef", SESSION)).rejects.toThrow(/409/);
   });
 
   it("déchiffre une ligne produite par une autre implémentation", async () => {

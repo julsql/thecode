@@ -415,7 +415,11 @@ async function syncEverything() {
   if (!usableKey() || !session) return { ok: false, skipped: true };
   const vault = await loadVault(browser?.storage?.local);
   const result = await syncVault(vault, encodingKey, session);
-  await saveVault(browser?.storage?.local, result.vault);
+  // Une entree enregistree pendant l'aller-retour n'est pas dans ce resultat :
+  // on fusionne avec le carnet relu plutot que de l'ecraser. Elle partira a la
+  // synchronisation que son enregistrement a demandee.
+  const latest = await loadVault(browser?.storage?.local);
+  await saveVault(browser?.storage?.local, mergeVaults(latest, result.vault).vault);
   // Les reglages suivent le carnet. Un echec ici n'annule pas la
   // synchronisation du carnet, deja faite : il est seulement signale.
   let current = result.session;
@@ -486,6 +490,8 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
     } else if (request.action === "setEncodingKey") {
       try {
         await rememberKey(request.encodingKey);
+        // La clef vient d'etre saisie : ce qui attendait peut partir.
+        scheduleAutoSync();
         sendResponse({ ok: true });
       } catch (e) {
         sendResponse({ ok: false, error: e.message });
@@ -525,6 +531,12 @@ browser?.runtime.onMessage.addListener((request, sender, sendResponse) => {
         sendResponse(res);
       } catch (e) {
         sendResponse({ ok: false, error: e.message });
+      }
+    } else if (request.action === "loginSuggestions") {
+      try {
+        sendResponse(await loginSuggestionsForTab(sender, request.domain));
+      } catch {
+        sendResponse({ ok: true, logins: [] });
       }
     } else if (request.action === "saveCurrentSite") {
       try {
@@ -779,6 +791,31 @@ async function saveSite(domain, login) {
  * Le login, lui, vient de la page : c'est le champ que l'utilisateur vient de
  * remplir. Il est borne, et affiche avant confirmation.
  */
+/**
+ * Identifiants du carnet a proposer dans le menu de la page.
+ *
+ * Ils viennent d'autres sites : rien ne sort sans clef utilisable (session
+ * verrouillee comprise), et seulement pour l'onglet qui les demande.
+ */
+async function loginSuggestionsForTab(sender, popupDomain) {
+  if (!usableKey()) return { ok: true, logins: [] };
+  let domain;
+  if (isFromExtensionPage(sender)) {
+    // La popup dit le site qu'elle affiche ; une page web, jamais.
+    domain = typeof popupDomain === "string" ? popupDomain : "";
+  } else {
+    await pslReady;
+    try {
+      domain = getRegistrableDomain(new URL(sender?.tab?.url).hostname);
+    } catch {
+      return { ok: true, logins: [] };
+    }
+  }
+  if (!domain) return { ok: true, logins: [] };
+  const vault = await loadVault(browser?.storage?.local);
+  return { ok: true, logins: loginSuggestions(vault, domain) };
+}
+
 async function saveCurrentSite(sender, login) {
   const url = sender?.tab?.url;
   if (!url) return { ok: false, error: errorText("error_no_tab", "Aucun onglet.") };
@@ -871,10 +908,12 @@ async function handleVaultLock(request) {
         }
         // La bonne clef rouvre toute la session, pas seulement le carnet.
         await setSessionLocked(false);
+        scheduleAutoSync();
         return { ok: true, unlocked: true };
       }
       // Nouvelle session : la clef saisie devient celle de la session.
       await rememberKey(key);
+      scheduleAutoSync();
       return { ok: true, unlocked: true, keySet: true };
     }
 

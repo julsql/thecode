@@ -246,6 +246,19 @@ describe("synchronisation automatique dans le service worker", () => {
     expect(store.syncLastStatus).toBeUndefined();
   });
 
+  it("synchronise ce qui attendait une fois la clef saisie", async () => {
+    const { send } = loadWorker({ syncSession: SESSION });
+    await send({ action: "saveSite", domain: "example.com" });
+    await settle(5000);
+    expect(syncCalls()).toHaveLength(0);
+
+    await send({ action: "setEncodingKey", encodingKey: "clef" });
+    await jest.advanceTimersByTimeAsync(2000);
+    await until(() => syncCalls().length > 0);
+
+    expect(syncCalls().length).toBeGreaterThan(0);
+  });
+
   it("ne synchronise rien sans session", async () => {
     const { send, store } = loadWorker();
     await send({ action: "setEncodingKey", encodingKey: "clef" });
