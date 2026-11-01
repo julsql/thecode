@@ -6,13 +6,21 @@ build-backend = "setuptools.build_meta"
 name = "thecode"
 version = "3.0.0"
 description = "Génération déterministe de mots de passe à partir d'un site et d'une clef."
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 authors = [{ name = "Jul SQL" }]
 license = { text = "MIT" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
 dependencies = ["pyperclip>=1.11", "cryptography>=50"]
 
 [project.optional-dependencies]
-test = ["pytest>=7", "pytest-cov>=7.1"]
+test = ["pytest>=9.2", "pytest-cov>=7.1"]
 
 [project.scripts]
 thecode = "thecode.cli:main"

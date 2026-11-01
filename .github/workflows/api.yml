@@ -20,6 +20,11 @@ env:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # La borne basse vient de requires-python dans pyproject.toml ; la
+        # borne haute suit l'image de production (Dockerfile).
+        python: ["3.11", "3.13"]
     # Les tests tournent sur le moteur de production. Tester sur SQLite
     # reviendrait a ne pas tester : types, contraintes, cascades et fuseaux
     # horaires y different, et un bug Postgres y passerait inapercu.
@@ -42,7 +47,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.13"
+          python-version: ${{ matrix.python }}
       - run: pip install -e '.[test]'
         working-directory: apps/api
       - run: ruff check .
