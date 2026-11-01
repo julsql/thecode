@@ -19,7 +19,7 @@ jobs:
     strategy:
       matrix:
         # La borne basse vient de requires-python dans pyproject.toml.
-        python: ["3.11", "3.14"]
+        python: ["3.11", "3.15"]
     steps:
       - uses: actions/checkout@v7
       - run: ./scripts/check-shared.sh

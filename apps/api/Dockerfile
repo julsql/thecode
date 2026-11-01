@@ -3,7 +3,7 @@
 # Multi-stage : les outils de compilation de psycopg ne doivent pas se
 # retrouver dans l'image finale.
 
-FROM python:3.13-slim AS builder
+FROM python:3.15-slim AS builder
 
 WORKDIR /build
 RUN python -m venv /opt/venv
@@ -13,7 +13,7 @@ COPY pyproject.toml ./
 COPY thecode_api ./thecode_api
 RUN pip install --no-cache-dir .
 
-FROM python:3.13-slim
+FROM python:3.15-slim
 
 # Utilisateur non privilégié : un service exposé sur Internet n'a aucune raison
 # de tourner en root.
