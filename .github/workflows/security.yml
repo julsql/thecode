@@ -73,7 +73,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 26
       - name: npm audit (extension)
         working-directory: apps/extension/js-test
         run: npm audit --audit-level=high
