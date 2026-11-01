@@ -24,7 +24,7 @@ jobs:
       matrix:
         # La borne basse vient de requires-python dans pyproject.toml ; la
         # borne haute suit l'image de production (Dockerfile).
-        python: ["3.11", "3.13"]
+        python: ["3.11", "3.15"]
     # Les tests tournent sur le moteur de production. Tester sur SQLite
     # reviendrait a ne pas tester : types, contraintes, cascades et fuseaux
     # horaires y different, et un bug Postgres y passerait inapercu.

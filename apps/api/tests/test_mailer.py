@@ -23,7 +23,7 @@ from thecode_api.config import Settings
 @pytest.fixture
 def smtp_settings():
     return Settings(
-        jwt_secret="secret-de-test-uniquement",
+        jwt_secret="secret-de-test-uniquement-32-octets-min",
         environment="test",
         mail_transport="smtp",
         mail_host="smtp.exemple.fr",
