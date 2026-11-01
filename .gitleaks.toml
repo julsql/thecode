@@ -27,4 +27,6 @@ regexes = [
   '''MotDePasseAssezLong\d''',
   '''Un(Autre|Nouveau)MotDePasse\d+''',
   '''EncoreUnAutre\d+''',
+  # Secret JWT des fixtures de l'API : il ne signe que des jetons de test.
+  '''secret-de-test-uniquement[\w-]*''',
 ]
