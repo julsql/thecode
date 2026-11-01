@@ -645,7 +645,7 @@ public class VaultActivity extends AppCompatActivity {
         dialog.setOnShowListener(d -> {
             android.widget.Button ok = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
             ok.setTextColor(com.google.android.material.color.MaterialColors.getColor(
-                    ok, com.google.android.material.R.attr.colorError));
+                    ok, androidx.appcompat.R.attr.colorError));
             Runnable validate = () -> ok.setEnabled(
                     Sync.emailMatches(email.getText().toString(), identity.email)
                             && (!identity.hasPassword || password.length() > 0));

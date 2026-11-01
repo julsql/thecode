@@ -24,7 +24,7 @@ export const V2_PREFIX = "thecode/v2";
  * seconde, PBKDF2 à 600 000 itérations ramène chaque essai à quelques centaines
  * de millisecondes.
  */
-export async function deriveMasterKeyV2(key: string): Promise<Uint8Array> {
+export async function deriveMasterKeyV2(key: string): Promise<Uint8Array<ArrayBuffer>> {
   const material = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(key),
@@ -53,7 +53,7 @@ export async function deriveMasterKeyV2(key: string): Promise<Uint8Array> {
  * ("google.co", "mabc").
  */
 export async function seedV2(
-  master: Uint8Array,
+  master: Uint8Array<ArrayBuffer>,
   site: string,
   login = "",
   counter = 1,
@@ -95,7 +95,7 @@ export interface V2Options {
   login?: string;
   counter?: number;
   /** Clef déjà dérivée : le KDF coûte cher, on ne le repaie pas par site. */
-  master?: Uint8Array | null;
+  master?: Uint8Array<ArrayBuffer> | null;
 }
 
 /**

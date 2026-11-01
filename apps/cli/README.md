@@ -1,7 +1,7 @@
 # thecode (CLI)
 
 [![tests](https://github.com/julsql/thecode/actions/workflows/cli.yml/badge.svg)](https://github.com/julsql/thecode/actions/workflows/cli.yml)
-[![Python](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 Version ligne de commande de TheCode. Génère un mot de passe déterministe à partir d'une clef
