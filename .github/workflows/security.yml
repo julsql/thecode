@@ -27,11 +27,11 @@ jobs:
     name: secrets commis
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: gitleaks
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -43,7 +43,7 @@ jobs:
       matrix:
         language: [javascript-typescript, python, java-kotlin]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       # L'input s'appelle `languages` au pluriel. Avec `language`, il est
       # ignore en silence et l'auto-detection prend le dessus : elle trouve du
       # Swift (apps/apple) et echoue, Swift n'etant analysable que sur macOS.
@@ -69,9 +69,9 @@ jobs:
     name: dependances vulnerables
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - name: npm audit (extension)
@@ -81,7 +81,7 @@ jobs:
         working-directory: apps/website
         run: npm audit --audit-level=high
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
       - name: pip-audit (cli)
@@ -94,9 +94,9 @@ jobs:
     name: image du site
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Build sans push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: apps/website
           push: false
