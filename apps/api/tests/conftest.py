@@ -47,7 +47,7 @@ def postgres_url() -> str:
 
     from testcontainers.community.postgres import PostgresContainer
 
-    with PostgresContainer("postgres:16-alpine", driver="psycopg") as container:
+    with PostgresContainer("postgres:18-alpine", driver="psycopg") as container:
         yield container.get_connection_url()
 
 
