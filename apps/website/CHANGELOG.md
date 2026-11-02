@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.1.0](https://github.com/julsql/thecode/compare/website-v3.0.0...website-v3.1.0) (2026-11-02)
+
+
+### Features
+
+* **website:** add per-page SEO metadata and prerendered heads ([3915a98](https://github.com/julsql/thecode/commit/3915a98668c89e640db255cdc8fd628e31bb14e6))
+* **website:** add Umami page view tracking ([#35](https://github.com/julsql/thecode/issues/35)) ([32b7dba](https://github.com/julsql/thecode/commit/32b7dba2763edd2b2c64ea6f7565bacaec06e881))
+
+
+### Bug Fixes
+
+* **website:** bump vue, vite and vitest to patch vulnerable dependencies ([#37](https://github.com/julsql/thecode/issues/37)) ([2a15ccd](https://github.com/julsql/thecode/commit/2a15ccd6ea5901b8b6fc69b1b4bb9cebc29da6ab))
+* **website:** serve robots.txt and sitemap.xml instead of SPA fallback ([692b5aa](https://github.com/julsql/thecode/commit/692b5aa6eda0455aacd936b83dc0d7b0bec6f6dd))
+
 ## [3.0.0](https://github.com/julsql/thecode/compare/website-v2.0.0...website-v3.0.0) (2026-09-27)
 
 
